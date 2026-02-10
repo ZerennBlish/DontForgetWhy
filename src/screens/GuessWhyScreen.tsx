@@ -17,6 +17,7 @@ import {
   getRandomSkipMessage,
 } from '../data/guessWhyMessages';
 import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
+import { addForgetEntry } from '../services/forgetLog';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GuessWhy'>;
@@ -81,6 +82,16 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     ]).start();
   };
 
+  const logForget = (resultType: 'loss' | 'skip') => {
+    addForgetEntry({
+      alarmNote: alarm.note,
+      alarmNickname: alarm.nickname,
+      alarmIcon: alarm.icon,
+      alarmCategory: alarm.category,
+      result: resultType,
+    });
+  };
+
   const handleIconGuess = (iconId: string, iconEmoji: string) => {
     if (result) return;
 
@@ -92,6 +103,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       setAttemptsLeft(remaining);
       if (remaining <= 0) {
         recordLoss();
+        logForget('loss');
         setResult({ type: 'lose', message: getRandomLoseMessage() });
       } else {
         triggerShake();
@@ -113,6 +125,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       setTypedGuess('');
       if (remaining <= 0) {
         recordLoss();
+        logForget('loss');
         setResult({ type: 'lose', message: getRandomLoseMessage() });
       } else {
         triggerShake();
@@ -123,6 +136,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const handleSkip = () => {
     if (result) return;
     recordSkip();
+    logForget('skip');
     setResult({ type: 'skip', message: getRandomSkipMessage() });
   };
 

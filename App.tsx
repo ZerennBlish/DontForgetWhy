@@ -10,6 +10,7 @@ import AlarmFireScreen from './src/screens/AlarmFireScreen';
 import GuessWhyScreen from './src/screens/GuessWhyScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import MemoryScoreScreen from './src/screens/MemoryScoreScreen';
+import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import { loadAlarms } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
 import type { RootStackParamList } from './src/navigation/types';
@@ -87,6 +88,11 @@ export default function App() {
           <Stack.Screen
             name="MemoryScore"
             component={MemoryScoreScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="ForgetLog"
+            component={ForgetLogScreen}
             options={{ animation: 'slide_from_right' }}
           />
         </Stack.Navigator>

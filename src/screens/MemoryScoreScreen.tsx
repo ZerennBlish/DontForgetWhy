@@ -90,6 +90,14 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
       </View>
 
+      <TouchableOpacity
+        style={styles.forgetLogBtn}
+        onPress={() => navigation.navigate('ForgetLog')}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.forgetLogBtnText}>{'\u{1F4DC}'} What Did I Forget?</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.resetBtn} onPress={handleReset} activeOpacity={0.7}>
         <Text style={styles.resetBtnText}>Reset Stats</Text>
       </TouchableOpacity>
@@ -176,9 +184,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2A3E',
     marginVertical: 4,
   },
-  resetBtn: {
+  forgetLogBtn: {
     marginHorizontal: 16,
     marginTop: 24,
+    backgroundColor: '#1E1E2E',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  forgetLogBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4A90D9',
+  },
+  resetBtn: {
+    marginHorizontal: 16,
+    marginTop: 12,
     backgroundColor: '#3A1A1A',
     borderRadius: 16,
     paddingVertical: 16,
