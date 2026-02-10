@@ -15,6 +15,7 @@ interface AlarmCardProps {
   alarm: Alarm;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit: (alarm: Alarm) => void;
   onPress: (alarm: Alarm) => void;
 }
 
@@ -25,7 +26,7 @@ function getDetailLine(alarm: Alarm): string {
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, onToggle, onDelete, onPress }: AlarmCardProps) {
+export default function AlarmCard({ alarm, onToggle, onDelete, onEdit, onPress }: AlarmCardProps) {
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -77,9 +78,14 @@ export default function AlarmCard({ alarm, onToggle, onDelete, onPress }: AlarmC
           trackColor={{ false: '#555', true: '#4A90D9' }}
           thumbColor={alarm.enabled ? '#fff' : '#999'}
         />
-        <TouchableOpacity onPress={() => onDelete(alarm.id)} style={styles.deleteBtn}>
-          <Text style={styles.deleteText}>Delete</Text>
-        </TouchableOpacity>
+        <View style={styles.btnRow}>
+          <TouchableOpacity onPress={() => onEdit(alarm)} style={styles.editBtn}>
+            <Text style={styles.editText}>{'\u270F\uFE0F'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onDelete(alarm.id)} style={styles.deleteBtn}>
+            <Text style={styles.deleteText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -137,6 +143,21 @@ const styles = StyleSheet.create({
   },
   peekIcon: {
     fontSize: 18,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  editBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#1A2A44',
+  },
+  editText: {
+    color: '#4A90D9',
+    fontSize: 13,
+    fontWeight: '600',
   },
   deleteBtn: {
     paddingHorizontal: 12,

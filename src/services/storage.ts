@@ -27,6 +27,24 @@ export async function addAlarm(alarm: Alarm): Promise<Alarm[]> {
   return alarms;
 }
 
+export async function updateAlarm(updatedAlarm: Alarm): Promise<Alarm[]> {
+  const alarms = await loadAlarms();
+  const updated: Alarm[] = [];
+  for (const a of alarms) {
+    if (a.id !== updatedAlarm.id) {
+      updated.push(a);
+      continue;
+    }
+    if (a.notificationId) {
+      await cancelNotification(a.notificationId);
+    }
+    const notificationId = await scheduleAlarm(updatedAlarm);
+    updated.push({ ...updatedAlarm, notificationId });
+  }
+  await saveAlarms(updated);
+  return updated;
+}
+
 export async function deleteAlarm(id: string): Promise<Alarm[]> {
   const alarms = await loadAlarms();
   const alarm = alarms.find(a => a.id === id);

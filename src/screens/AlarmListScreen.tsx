@@ -54,6 +54,10 @@ export default function AlarmListScreen({ navigation }: Props) {
     ]);
   };
 
+  const handleEdit = (alarm: Alarm) => {
+    navigation.navigate('CreateAlarm', { alarm });
+  };
+
   const handlePress = (alarm: Alarm) => {
     if (guessWhyEnabled) {
       navigation.navigate('GuessWhy', { alarm });
@@ -132,6 +136,7 @@ export default function AlarmListScreen({ navigation }: Props) {
                 alarm={item}
                 onToggle={handleToggle}
                 onDelete={handleDelete}
+                onEdit={handleEdit}
                 onPress={handlePress}
               />
             )}

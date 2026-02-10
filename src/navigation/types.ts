@@ -2,7 +2,7 @@ import { Alarm } from '../types/alarm';
 
 export type RootStackParamList = {
   AlarmList: undefined;
-  CreateAlarm: undefined;
+  CreateAlarm: { alarm?: Alarm } | undefined;
   AlarmFire: { alarm: Alarm };
   GuessWhy: { alarm: Alarm };
   Settings: undefined;

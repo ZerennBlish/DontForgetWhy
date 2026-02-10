@@ -13,7 +13,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 import type { AlarmCategory } from '../types/alarm';
-import { addAlarm } from '../services/storage';
+import { addAlarm, updateAlarm } from '../services/storage';
 import { scheduleAlarm, requestPermissions } from '../services/notifications';
 import { getRandomQuote } from '../services/quotes';
 import { getRandomPlaceholder } from '../data/placeholders';
@@ -39,14 +39,25 @@ function categoryFromIcon(emoji: string | null): AlarmCategory {
   return iconCategoryMap[emoji] || 'general';
 }
 
-export default function CreateAlarmScreen({ navigation }: Props) {
-  const [hours, setHours] = useState('08');
-  const [minutes, setMinutes] = useState('00');
-  const [nickname, setNickname] = useState('');
-  const [note, setNote] = useState('');
+export default function CreateAlarmScreen({ route, navigation }: Props) {
+  const existingAlarm = route.params?.alarm;
+  const isEditing = !!existingAlarm;
+
+  const [hours, setHours] = useState(
+    existingAlarm ? existingAlarm.time.split(':')[0] : '08'
+  );
+  const [minutes, setMinutes] = useState(
+    existingAlarm ? existingAlarm.time.split(':')[1] : '00'
+  );
+  const [nickname, setNickname] = useState(existingAlarm?.nickname || '');
+  const [note, setNote] = useState(existingAlarm?.note || '');
   const [placeholder] = useState(getRandomPlaceholder);
-  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
-  const [selectedPrivate, setSelectedPrivate] = useState(false);
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(
+    existingAlarm?.icon || null
+  );
+  const [selectedPrivate, setSelectedPrivate] = useState(
+    existingAlarm?.private || false
+  );
 
   const handleIconPress = (emoji: string) => {
     setSelectedIcon(selectedIcon === emoji ? null : emoji);
@@ -68,29 +79,43 @@ export default function CreateAlarmScreen({ navigation }: Props) {
     const m = Math.min(59, Math.max(0, parseInt(minutes, 10) || 0));
     const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 
-    const alarm = {
-      id: uuidv4(),
-      time,
-      nickname: nickname.trim() || undefined,
-      note: note.trim(),
-      quote: getRandomQuote(),
-      enabled: true,
-      recurring: false,
-      days: [],
-      category: categoryFromIcon(selectedIcon),
-      icon: selectedIcon || undefined,
-      private: selectedPrivate,
-      createdAt: new Date().toISOString(),
-    };
+    if (isEditing) {
+      const updated = {
+        ...existingAlarm,
+        time,
+        nickname: nickname.trim() || undefined,
+        note: note.trim(),
+        category: categoryFromIcon(selectedIcon),
+        icon: selectedIcon || undefined,
+        private: selectedPrivate,
+      };
+      await updateAlarm(updated);
+    } else {
+      const alarm = {
+        id: uuidv4(),
+        time,
+        nickname: nickname.trim() || undefined,
+        note: note.trim(),
+        quote: getRandomQuote(),
+        enabled: true,
+        recurring: false,
+        days: [],
+        category: categoryFromIcon(selectedIcon),
+        icon: selectedIcon || undefined,
+        private: selectedPrivate,
+        createdAt: new Date().toISOString(),
+      };
 
-    const notificationId = await scheduleAlarm(alarm);
-    await addAlarm({ ...alarm, notificationId });
+      const notificationId = await scheduleAlarm(alarm);
+      await addAlarm({ ...alarm, notificationId });
+    }
+
     navigation.goBack();
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>New Alarm</Text>
+      <Text style={styles.heading}>{isEditing ? 'Edit Alarm' : 'New Alarm'}</Text>
 
       <View style={styles.timeContainer}>
         <TextInput
@@ -170,7 +195,9 @@ export default function CreateAlarmScreen({ navigation }: Props) {
       </View>
 
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-        <Text style={styles.saveBtnText}>Save Alarm</Text>
+        <Text style={styles.saveBtnText}>
+          {isEditing ? 'Update Alarm' : 'Save Alarm'}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
