@@ -15,6 +15,7 @@ import { AlarmCategory } from '../types/alarm';
 import { addAlarm } from '../services/storage';
 import { scheduleAlarm, requestPermissions } from '../services/notifications';
 import { getRandomQuote } from '../services/quotes';
+import { getRandomPlaceholder } from '../data/placeholders';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
@@ -30,7 +31,9 @@ const categories: { key: AlarmCategory; label: string; icon: string }[] = [
 export default function CreateAlarmScreen({ navigation }: Props) {
   const [hours, setHours] = useState('08');
   const [minutes, setMinutes] = useState('00');
+  const [nickname, setNickname] = useState('');
   const [note, setNote] = useState('');
+  const [placeholder] = useState(getRandomPlaceholder);
   const [category, setCategory] = useState<AlarmCategory>('general');
 
   const handleSave = async () => {
@@ -52,6 +55,7 @@ export default function CreateAlarmScreen({ navigation }: Props) {
     const alarm = {
       id: uuidv4(),
       time,
+      nickname: nickname.trim() || undefined,
       note: note.trim(),
       quote: getRandomQuote(),
       enabled: true,
@@ -92,12 +96,22 @@ export default function CreateAlarmScreen({ navigation }: Props) {
         />
       </View>
 
+      <Text style={styles.label}>Nickname (shows on lock screen)</Text>
+      <TextInput
+        style={styles.nicknameInput}
+        value={nickname}
+        onChangeText={setNickname}
+        placeholder="e.g. Pill O'Clock, Dog Time, Morning Stuff"
+        placeholderTextColor="#555"
+        maxLength={40}
+      />
+
       <Text style={styles.label}>Why are you setting this alarm?</Text>
       <TextInput
         style={styles.noteInput}
         value={note}
         onChangeText={setNote}
-        placeholder="e.g. Take your meds — you'll feel off all day if you skip"
+        placeholder={placeholder}
         placeholderTextColor="#555"
         multiline
         maxLength={200}
@@ -182,6 +196,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#B0B0CC',
     marginBottom: 10,
+  },
+  nicknameInput: {
+    backgroundColor: '#1E1E2E',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#EAEAFF',
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: '#2A2A3E',
+    marginBottom: 24,
   },
   noteInput: {
     backgroundColor: '#1E1E2E',

@@ -27,7 +27,7 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
       title: `⏰ ${alarm.category.toUpperCase()}`,
-      body: alarm.note,
+      body: alarm.nickname || alarm.note,
       subtitle: alarm.quote,
       sound: true,
       data: { alarmId: alarm.id },

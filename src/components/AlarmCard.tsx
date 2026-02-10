@@ -30,7 +30,7 @@ export default function AlarmCard({ alarm, onToggle, onDelete, onPress }: AlarmC
           {formatTime(alarm.time)}
         </Text>
         <Text style={[styles.note, !alarm.enabled && styles.textDisabled]} numberOfLines={1}>
-          {alarm.note}
+          {alarm.nickname ? `${alarm.nickname} 🔒` : alarm.note}
         </Text>
         <Text style={[styles.category, !alarm.enabled && styles.textDisabled]}>
           {categoryLabels[alarm.category]}

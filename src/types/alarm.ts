@@ -1,6 +1,7 @@
 export interface Alarm {
   id: string;
   time: string;
+  nickname?: string;
   note: string;
   quote: string;
   enabled: boolean;
