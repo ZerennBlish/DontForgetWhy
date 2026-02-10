@@ -1,0 +1,7 @@
+import { Alarm } from '../types/alarm';
+
+export type RootStackParamList = {
+  AlarmList: undefined;
+  CreateAlarm: undefined;
+  AlarmFire: { alarm: Alarm };
+};
