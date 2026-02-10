@@ -24,9 +24,13 @@ export async function requestPermissions(): Promise<boolean> {
 export async function scheduleAlarm(alarm: Alarm): Promise<string> {
   const [hours, minutes] = alarm.time.split(':').map(Number);
 
+  const title = alarm.icon
+    ? `${alarm.icon} ${alarm.category.toUpperCase()}`
+    : `\u23F0 ${alarm.category.toUpperCase()}`;
+
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
-      title: `⏰ ${alarm.category.toUpperCase()}`,
+      title,
       body: alarm.nickname || alarm.note,
       subtitle: alarm.quote,
       sound: true,

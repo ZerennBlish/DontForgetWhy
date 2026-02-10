@@ -11,22 +11,32 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
-import { AlarmCategory } from '../types/alarm';
+import type { AlarmCategory } from '../types/alarm';
 import { addAlarm } from '../services/storage';
 import { scheduleAlarm, requestPermissions } from '../services/notifications';
 import { getRandomQuote } from '../services/quotes';
 import { getRandomPlaceholder } from '../data/placeholders';
+import guessWhyIcons from '../data/guessWhyIcons';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
 
-const categories: { key: AlarmCategory; label: string; icon: string }[] = [
-  { key: 'meds', label: 'Meds', icon: '💊' },
-  { key: 'appointment', label: 'Appt', icon: '📅' },
-  { key: 'task', label: 'Task', icon: '✅' },
-  { key: 'self-care', label: 'Self-Care', icon: '🧘' },
-  { key: 'general', label: 'General', icon: '🔔' },
-];
+const iconCategoryMap: Record<string, AlarmCategory> = {
+  '\u{1F48A}': 'meds',
+  '\u{1FA7A}': 'appointment',
+  '\u{1F4C5}': 'appointment',
+  '\u{1F465}': 'task',
+  '\u{1F476}': 'general',
+  '\u26BD': 'self-care',
+  '\u{1F3CB}\uFE0F': 'self-care',
+  '\u{1F634}': 'self-care',
+  '\u{1F6BF}': 'self-care',
+};
+
+function categoryFromIcon(emoji: string | null): AlarmCategory {
+  if (!emoji) return 'general';
+  return iconCategoryMap[emoji] || 'general';
+}
 
 export default function CreateAlarmScreen({ navigation }: Props) {
   const [hours, setHours] = useState('08');
@@ -34,11 +44,15 @@ export default function CreateAlarmScreen({ navigation }: Props) {
   const [nickname, setNickname] = useState('');
   const [note, setNote] = useState('');
   const [placeholder] = useState(getRandomPlaceholder);
-  const [category, setCategory] = useState<AlarmCategory>('general');
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
+
+  const handleIconPress = (emoji: string) => {
+    setSelectedIcon(selectedIcon === emoji ? null : emoji);
+  };
 
   const handleSave = async () => {
-    if (!note.trim()) {
-      Alert.alert('Note Required', "What's the reason for this alarm? That's the whole point.");
+    if (!note.trim() && !selectedIcon) {
+      Alert.alert('Hold Up', "Hold up \u2014 give this alarm at least a note or an icon so you'll know what it's for.");
       return;
     }
 
@@ -61,7 +75,8 @@ export default function CreateAlarmScreen({ navigation }: Props) {
       enabled: true,
       recurring: false,
       days: [],
-      category,
+      category: categoryFromIcon(selectedIcon),
+      icon: selectedIcon || undefined,
       createdAt: new Date().toISOString(),
     };
 
@@ -119,27 +134,19 @@ export default function CreateAlarmScreen({ navigation }: Props) {
       />
       <Text style={styles.charCount}>{note.length}/200</Text>
 
-      <Text style={styles.label}>Category</Text>
-      <View style={styles.categoryRow}>
-        {categories.map((c) => (
+      <Text style={styles.label}>What's it for?</Text>
+      <View style={styles.iconGrid}>
+        {guessWhyIcons.map((icon) => (
           <TouchableOpacity
-            key={c.key}
+            key={icon.id}
             style={[
-              styles.categoryChip,
-              category === c.key && styles.categoryChipActive,
+              styles.iconCell,
+              selectedIcon === icon.emoji && styles.iconCellActive,
             ]}
-            onPress={() => setCategory(c.key)}
+            onPress={() => handleIconPress(icon.emoji)}
             activeOpacity={0.7}
           >
-            <Text style={styles.categoryIcon}>{c.icon}</Text>
-            <Text
-              style={[
-                styles.categoryText,
-                category === c.key && styles.categoryTextActive,
-              ]}
-            >
-              {c.label}
-            </Text>
+            <Text style={styles.iconEmoji}>{icon.emoji}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -225,37 +232,28 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 24,
   },
-  categoryRow: {
+  iconGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
     marginBottom: 40,
   },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  iconCell: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#1E1E2E',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#2A2A3E',
-    gap: 6,
   },
-  categoryChipActive: {
+  iconCellActive: {
     backgroundColor: '#1A2A44',
     borderColor: '#4A90D9',
   },
-  categoryIcon: {
-    fontSize: 16,
-  },
-  categoryText: {
-    fontSize: 14,
-    color: '#7A7A9E',
-    fontWeight: '500',
-  },
-  categoryTextActive: {
-    color: '#4A90D9',
+  iconEmoji: {
+    fontSize: 22,
   },
   saveBtn: {
     backgroundColor: '#4A90D9',

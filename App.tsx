@@ -7,7 +7,10 @@ import * as Notifications from 'expo-notifications';
 import AlarmListScreen from './src/screens/AlarmListScreen';
 import CreateAlarmScreen from './src/screens/CreateAlarmScreen';
 import AlarmFireScreen from './src/screens/AlarmFireScreen';
+import GuessWhyScreen from './src/screens/GuessWhyScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import { loadAlarms } from './src/services/storage';
+import { loadSettings } from './src/services/settings';
 import type { RootStackParamList } from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -33,7 +36,12 @@ export default function App() {
           const alarms = await loadAlarms();
           const alarm = alarms.find((a) => a.id === alarmId);
           if (alarm && navigationRef.current) {
-            navigationRef.current.navigate('AlarmFire', { alarm });
+            const settings = await loadSettings();
+            if (settings.guessWhyEnabled) {
+              navigationRef.current.navigate('GuessWhy', { alarm });
+            } else {
+              navigationRef.current.navigate('AlarmFire', { alarm });
+            }
           }
         }
       }
@@ -64,6 +72,16 @@ export default function App() {
             name="AlarmFire"
             component={AlarmFireScreen}
             options={{ animation: 'fade', gestureEnabled: false }}
+          />
+          <Stack.Screen
+            name="GuessWhy"
+            component={GuessWhyScreen}
+            options={{ animation: 'fade', gestureEnabled: false }}
+          />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{ animation: 'slide_from_right' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

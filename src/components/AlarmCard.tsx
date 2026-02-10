@@ -4,11 +4,11 @@ import { Alarm, AlarmCategory } from '../types/alarm';
 import { formatTime } from '../utils/time';
 
 const categoryLabels: Record<AlarmCategory, string> = {
-  meds: '💊 Meds',
-  appointment: '📅 Appt',
-  task: '✅ Task',
-  'self-care': '🧘 Self-Care',
-  general: '🔔 General',
+  meds: '\u{1F48A} Meds',
+  appointment: '\u{1F4C5} Appt',
+  task: '\u2705 Task',
+  'self-care': '\u{1F9D8} Self-Care',
+  general: '\u{1F514} General',
 };
 
 interface AlarmCardProps {
@@ -30,11 +30,17 @@ export default function AlarmCard({ alarm, onToggle, onDelete, onPress }: AlarmC
           {formatTime(alarm.time)}
         </Text>
         <Text style={[styles.note, !alarm.enabled && styles.textDisabled]} numberOfLines={1}>
-          {alarm.nickname ? `${alarm.nickname} 🔒` : alarm.note}
+          {alarm.nickname ? `${alarm.nickname} \u{1F512}` : alarm.note}
         </Text>
-        <Text style={[styles.category, !alarm.enabled && styles.textDisabled]}>
-          {categoryLabels[alarm.category]}
-        </Text>
+        {alarm.icon ? (
+          <Text style={[styles.iconDisplay, !alarm.enabled && styles.textDisabled]}>
+            {alarm.icon}
+          </Text>
+        ) : (
+          <Text style={[styles.category, !alarm.enabled && styles.textDisabled]}>
+            {categoryLabels[alarm.category]}
+          </Text>
+        )}
       </View>
       <View style={styles.right}>
         <Switch
@@ -84,6 +90,10 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 13,
     color: '#7A7A9E',
+    marginTop: 4,
+  },
+  iconDisplay: {
+    fontSize: 20,
     marginTop: 4,
   },
   textDisabled: {

@@ -12,6 +12,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
 import { loadAlarms, deleteAlarm, toggleAlarm } from '../services/storage';
 import { cancelAlarm } from '../services/notifications';
+import { loadSettings } from '../services/settings';
+import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import AlarmCard from '../components/AlarmCard';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -19,10 +21,14 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AlarmList'>;
 
 export default function AlarmListScreen({ navigation }: Props) {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
+  const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
+  const [stats, setStats] = useState<GuessWhyStats | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       loadAlarms().then(setAlarms);
+      loadSettings().then((s) => setGuessWhyEnabled(s.guessWhyEnabled));
+      loadStats().then(setStats);
     }, [])
   );
 
@@ -47,21 +53,53 @@ export default function AlarmListScreen({ navigation }: Props) {
   };
 
   const handlePress = (alarm: Alarm) => {
-    navigation.navigate('AlarmFire', { alarm });
+    if (guessWhyEnabled) {
+      navigation.navigate('GuessWhy', { alarm });
+    } else {
+      navigation.navigate('AlarmFire', { alarm });
+    }
   };
+
+  const hasPlayed = stats && (stats.wins > 0 || stats.losses > 0 || stats.skips > 0);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Don't Forget Why</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Don't Forget Why</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.7}
+            style={styles.settingsBtn}
+          >
+            <Text style={styles.settingsIcon}>{'\u2699\uFE0F'}</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.subtitle}>
           {alarms.filter(a => a.enabled).length} active alarm{alarms.filter(a => a.enabled).length !== 1 ? 's' : ''}
         </Text>
+        {hasPlayed && (
+          <View style={styles.streakRow}>
+            <Text
+              style={[
+                styles.streakText,
+                { color: stats.streak > 0 ? '#4A90D9' : '#FF6B6B' },
+              ]}
+            >
+              {stats.streak > 0
+                ? `\u{1F525} ${stats.streak} in a row`
+                : '\u{1F480} Streak broken'}
+            </Text>
+            {stats.bestStreak > 0 && (
+              <Text style={styles.bestStreakText}>Best: {stats.bestStreak}</Text>
+            )}
+          </View>
+        )}
       </View>
 
       {alarms.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>⏰</Text>
+          <Text style={styles.emptyIcon}>{'\u23F0'}</Text>
           <Text style={styles.emptyText}>No alarms yet</Text>
           <Text style={styles.emptySubtext}>
             Tap + to create your first reminder
@@ -105,15 +143,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 28,
     fontWeight: '800',
     color: '#EAEAFF',
   },
+  settingsBtn: {
+    padding: 4,
+  },
+  settingsIcon: {
+    fontSize: 24,
+  },
   subtitle: {
     fontSize: 14,
     color: '#7A7A9E',
     marginTop: 4,
+  },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 8,
+  },
+  streakText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  bestStreakText: {
+    fontSize: 13,
+    color: '#7A7A9E',
   },
   list: {
     paddingHorizontal: 16,

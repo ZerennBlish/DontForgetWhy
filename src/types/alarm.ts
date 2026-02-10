@@ -8,6 +8,7 @@ export interface Alarm {
   recurring: boolean;
   days: number[];
   category: AlarmCategory;
+  icon?: string;
   createdAt: string;
   notificationId?: string;
 }
