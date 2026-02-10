@@ -9,6 +9,7 @@ export interface Alarm {
   days: number[];
   category: AlarmCategory;
   icon?: string;
+  private: boolean;
   createdAt: string;
   notificationId?: string;
 }

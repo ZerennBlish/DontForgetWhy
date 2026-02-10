@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Switch,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -45,6 +46,7 @@ export default function CreateAlarmScreen({ navigation }: Props) {
   const [note, setNote] = useState('');
   const [placeholder] = useState(getRandomPlaceholder);
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
+  const [selectedPrivate, setSelectedPrivate] = useState(false);
 
   const handleIconPress = (emoji: string) => {
     setSelectedIcon(selectedIcon === emoji ? null : emoji);
@@ -77,6 +79,7 @@ export default function CreateAlarmScreen({ navigation }: Props) {
       days: [],
       category: categoryFromIcon(selectedIcon),
       icon: selectedIcon || undefined,
+      private: selectedPrivate,
       createdAt: new Date().toISOString(),
     };
 
@@ -149,6 +152,21 @@ export default function CreateAlarmScreen({ navigation }: Props) {
             <Text style={styles.iconEmoji}>{icon.emoji}</Text>
           </TouchableOpacity>
         ))}
+      </View>
+
+      <View style={styles.toggleCard}>
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>Private Alarm</Text>
+          <Switch
+            value={selectedPrivate}
+            onValueChange={setSelectedPrivate}
+            trackColor={{ false: '#2A2A3E', true: '#4A90D9' }}
+            thumbColor={selectedPrivate ? '#EAEAFF' : '#7A7A9E'}
+          />
+        </View>
+        <Text style={styles.toggleDescription}>
+          Hides details on the alarm list. Tap the eye icon to peek.
+        </Text>
       </View>
 
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
@@ -236,7 +254,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 40,
+    marginBottom: 24,
   },
   iconCell: {
     width: 48,
@@ -254,6 +272,32 @@ const styles = StyleSheet.create({
   },
   iconEmoji: {
     fontSize: 22,
+  },
+  toggleCard: {
+    backgroundColor: '#1E1E2E',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#2A2A3E',
+    marginBottom: 24,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  toggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#EAEAFF',
+    flex: 1,
+    marginRight: 12,
+  },
+  toggleDescription: {
+    fontSize: 14,
+    color: '#7A7A9E',
+    marginTop: 12,
+    lineHeight: 20,
   },
   saveBtn: {
     backgroundColor: '#4A90D9',

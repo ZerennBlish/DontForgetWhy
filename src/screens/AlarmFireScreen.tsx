@@ -1,35 +1,49 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatTime } from '../utils/time';
+import { getSnoozeMessage } from '../data/snoozeMessages';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmFire'>;
 
 const categoryEmoji: Record<string, string> = {
-  meds: '💊',
-  appointment: '📅',
-  task: '✅',
-  'self-care': '🧘',
-  general: '🔔',
+  meds: '\u{1F48A}',
+  appointment: '\u{1F4C5}',
+  task: '\u2705',
+  'self-care': '\u{1F9D8}',
+  general: '\u{1F514}',
 };
+
+const snoozeButtonLabels = [
+  'Snooze 5 min',
+  'Snooze Again',
+  '...Snooze Again',
+  'Fine, Snooze',
+];
 
 export default function AlarmFireScreen({ route, navigation }: Props) {
   const { alarm } = route.params;
+  const [snoozeCount, setSnoozeCount] = useState(0);
+  const [snoozeMessage, setSnoozeMessage] = useState<string | null>(null);
 
   const handleDismiss = () => {
     navigation.goBack();
   };
 
   const handleSnooze = () => {
-    // In a full implementation, this would reschedule 5 min later
-    navigation.goBack();
+    const newCount = snoozeCount + 1;
+    setSnoozeCount(newCount);
+    setSnoozeMessage(getSnoozeMessage(newCount));
   };
+
+  const snoozeLabel =
+    snoozeButtonLabels[Math.min(snoozeCount, snoozeButtonLabels.length - 1)];
 
   return (
     <View style={styles.container}>
       <View style={styles.top}>
-        <Text style={styles.emoji}>{categoryEmoji[alarm.category] ?? '🔔'}</Text>
+        <Text style={styles.emoji}>{categoryEmoji[alarm.category] ?? '\u{1F514}'}</Text>
         <Text style={styles.time}>{formatTime(alarm.time)}</Text>
         <Text style={styles.categoryLabel}>{alarm.category.toUpperCase()}</Text>
       </View>
@@ -38,6 +52,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         <Text style={styles.note}>{alarm.note}</Text>
         <View style={styles.divider} />
         <Text style={styles.quote}>"{alarm.quote}"</Text>
+        {snoozeMessage && (
+          <Text style={styles.snoozeMessage}>{snoozeMessage}</Text>
+        )}
       </View>
 
       <View style={styles.bottom}>
@@ -46,7 +63,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
           onPress={handleSnooze}
           activeOpacity={0.8}
         >
-          <Text style={styles.snoozeBtnText}>Snooze 5 min</Text>
+          <Text style={styles.snoozeBtnText}>{snoozeLabel}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -115,6 +132,15 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 26,
     paddingHorizontal: 12,
+  },
+  snoozeMessage: {
+    fontSize: 15,
+    color: '#FF6B6B',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    lineHeight: 22,
+    marginTop: 16,
+    paddingHorizontal: 16,
   },
   bottom: {
     gap: 12,

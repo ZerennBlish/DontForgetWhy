@@ -14,6 +14,7 @@ import { loadAlarms, deleteAlarm, toggleAlarm } from '../services/storage';
 import { cancelAlarm } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
+import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -23,6 +24,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
+  const [appQuote] = useState(getRandomAppOpenQuote);
 
   useFocusEffect(
     useCallback(() => {
@@ -67,13 +69,24 @@ export default function AlarmListScreen({ navigation }: Props) {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Don't Forget Why</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Settings')}
-            activeOpacity={0.7}
-            style={styles.settingsBtn}
-          >
-            <Text style={styles.settingsIcon}>{'\u2699\uFE0F'}</Text>
-          </TouchableOpacity>
+          <View style={styles.headerIcons}>
+            {hasPlayed && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('MemoryScore')}
+                activeOpacity={0.7}
+                style={styles.headerBtn}
+              >
+                <Text style={styles.headerBtnIcon}>{'\u{1F3C6}'}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Settings')}
+              activeOpacity={0.7}
+              style={styles.headerBtn}
+            >
+              <Text style={styles.headerBtnIcon}>{'\u2699\uFE0F'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <Text style={styles.subtitle}>
           {alarms.filter(a => a.enabled).length} active alarm{alarms.filter(a => a.enabled).length !== 1 ? 's' : ''}
@@ -104,22 +117,28 @@ export default function AlarmListScreen({ navigation }: Props) {
           <Text style={styles.emptySubtext}>
             Tap + to create your first reminder
           </Text>
+          <Text style={styles.emptyQuote}>{appQuote}</Text>
         </View>
       ) : (
-        <FlatList
-          data={alarms}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <AlarmCard
-              alarm={item}
-              onToggle={handleToggle}
-              onDelete={handleDelete}
-              onPress={handlePress}
-            />
-          )}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
+        <>
+          <View style={styles.quoteCard}>
+            <Text style={styles.quoteText}>{appQuote}</Text>
+          </View>
+          <FlatList
+            data={alarms}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <AlarmCard
+                alarm={item}
+                onToggle={handleToggle}
+                onDelete={handleDelete}
+                onPress={handlePress}
+              />
+            )}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
+        </>
       )}
 
       <TouchableOpacity
@@ -153,10 +172,15 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#EAEAFF',
   },
-  settingsBtn: {
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerBtn: {
     padding: 4,
   },
-  settingsIcon: {
+  headerBtnIcon: {
     fontSize: 24,
   },
   subtitle: {
@@ -177,6 +201,19 @@ const styles = StyleSheet.create({
   bestStreakText: {
     fontSize: 13,
     color: '#7A7A9E',
+  },
+  quoteCard: {
+    backgroundColor: '#1E1E2E',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  quoteText: {
+    fontSize: 15,
+    color: '#B0B0CC',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   list: {
     paddingHorizontal: 16,
@@ -201,6 +238,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     marginTop: 6,
+  },
+  emptyQuote: {
+    fontSize: 15,
+    color: '#B0B0CC',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 32,
   },
   fab: {
     position: 'absolute',

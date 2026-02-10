@@ -18,10 +18,28 @@ const defaultStats: GuessWhyStats = {
   bestStreak: 0,
 };
 
+function ensureNumber(value: unknown): number {
+  return typeof value === 'number' && !Number.isNaN(value) ? value : 0;
+}
+
+function validateStats(parsed: Record<string, unknown>): GuessWhyStats {
+  return {
+    wins: ensureNumber(parsed.wins),
+    losses: ensureNumber(parsed.losses),
+    skips: ensureNumber(parsed.skips),
+    streak: ensureNumber(parsed.streak),
+    bestStreak: ensureNumber(parsed.bestStreak),
+  };
+}
+
 export async function loadStats(): Promise<GuessWhyStats> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return { ...defaultStats };
-  return JSON.parse(raw);
+  try {
+    return validateStats(JSON.parse(raw));
+  } catch {
+    return { ...defaultStats };
+  }
 }
 
 async function saveStats(stats: GuessWhyStats): Promise<void> {

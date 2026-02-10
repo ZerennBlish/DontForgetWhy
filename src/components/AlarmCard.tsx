@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { Alarm, AlarmCategory } from '../types/alarm';
 import { formatTime } from '../utils/time';
@@ -18,7 +18,33 @@ interface AlarmCardProps {
   onPress: (alarm: Alarm) => void;
 }
 
+function getDetailLine(alarm: Alarm): string {
+  if (alarm.icon && alarm.nickname) return `${alarm.icon} ${alarm.nickname}`;
+  if (alarm.icon) return alarm.icon;
+  if (alarm.nickname) return `${alarm.nickname} \u{1F512}`;
+  return alarm.note;
+}
+
 export default function AlarmCard({ alarm, onToggle, onDelete, onPress }: AlarmCardProps) {
+  const [revealed, setRevealed] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const handlePeek = () => {
+    setRevealed(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setRevealed(false), 3000);
+  };
+
+  const isHidden = alarm.private && !revealed;
+  const detailText = isHidden ? '\u{1F512} Private Alarm' : getDetailLine(alarm);
+  const detailStyle = isHidden ? styles.privateText : styles.detail;
+
   return (
     <TouchableOpacity
       style={[styles.card, !alarm.enabled && styles.cardDisabled]}
@@ -29,20 +55,22 @@ export default function AlarmCard({ alarm, onToggle, onDelete, onPress }: AlarmC
         <Text style={[styles.time, !alarm.enabled && styles.textDisabled]}>
           {formatTime(alarm.time)}
         </Text>
-        <Text style={[styles.note, !alarm.enabled && styles.textDisabled]} numberOfLines={1}>
-          {alarm.nickname ? `${alarm.nickname} \u{1F512}` : alarm.note}
+        <Text
+          style={[detailStyle, !alarm.enabled && styles.textDisabled]}
+          numberOfLines={1}
+        >
+          {detailText}
         </Text>
-        {alarm.icon ? (
-          <Text style={[styles.iconDisplay, !alarm.enabled && styles.textDisabled]}>
-            {alarm.icon}
-          </Text>
-        ) : (
-          <Text style={[styles.category, !alarm.enabled && styles.textDisabled]}>
-            {categoryLabels[alarm.category]}
-          </Text>
-        )}
+        <Text style={[styles.category, !alarm.enabled && styles.textDisabled]}>
+          {categoryLabels[alarm.category]}
+        </Text>
       </View>
       <View style={styles.right}>
+        {alarm.private && (
+          <TouchableOpacity onPress={handlePeek} style={styles.peekBtn} activeOpacity={0.6}>
+            <Text style={styles.peekIcon}>{'\u{1F441}'}</Text>
+          </TouchableOpacity>
+        )}
         <Switch
           value={alarm.enabled}
           onValueChange={() => onToggle(alarm.id)}
@@ -82,18 +110,19 @@ const styles = StyleSheet.create({
     color: '#EAEAFF',
     letterSpacing: -1,
   },
-  note: {
+  detail: {
     fontSize: 15,
     color: '#B0B0CC',
+    marginTop: 4,
+  },
+  privateText: {
+    fontSize: 15,
+    color: '#7A7A9E',
     marginTop: 4,
   },
   category: {
     fontSize: 13,
     color: '#7A7A9E',
-    marginTop: 4,
-  },
-  iconDisplay: {
-    fontSize: 20,
     marginTop: 4,
   },
   textDisabled: {
@@ -102,6 +131,12 @@ const styles = StyleSheet.create({
   right: {
     alignItems: 'center',
     gap: 10,
+  },
+  peekBtn: {
+    padding: 4,
+  },
+  peekIcon: {
+    fontSize: 18,
   },
   deleteBtn: {
     paddingHorizontal: 12,

@@ -43,12 +43,28 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const [result, setResult] = useState<ResultState>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  const checkGuess = (guess: string): boolean => {
-    const noteLower = alarm.note.toLowerCase();
+  const checkIconGuess = (iconId: string, iconEmoji: string): boolean => {
+    // Direct icon match
+    if (alarm.icon && alarm.icon === iconEmoji) return true;
+    // Category match
+    if (alarm.category === iconId) return true;
+    // Note keyword match
+    if (alarm.note && alarm.note.toLowerCase().includes(iconId.toLowerCase())) return true;
+
+    return false;
+  };
+
+  const checkTypeGuess = (guess: string): boolean => {
     const guessLower = guess.toLowerCase().trim();
 
-    if (alarm.category === guessLower) return true;
-    if (noteLower.includes(guessLower)) return true;
+    // Check if typed text appears in the alarm note
+    if (alarm.note && alarm.note.toLowerCase().includes(guessLower)) return true;
+
+    // For icon-only alarms (no note), check if typed text matches the icon id
+    if (!alarm.note && alarm.icon) {
+      const matchedIcon = guessWhyIcons.find((i) => i.emoji === alarm.icon);
+      if (matchedIcon && matchedIcon.id.toLowerCase().includes(guessLower)) return true;
+    }
 
     return false;
   };
@@ -65,10 +81,10 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     ]).start();
   };
 
-  const handleIconGuess = (iconId: string) => {
+  const handleIconGuess = (iconId: string, iconEmoji: string) => {
     if (result) return;
 
-    if (checkGuess(iconId)) {
+    if (checkIconGuess(iconId, iconEmoji)) {
       recordWin();
       setResult({ type: 'win', message: getRandomWinMessage() });
     } else {
@@ -88,7 +104,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     const trimmed = typedGuess.trim();
     if (trimmed.length < 3) return;
 
-    if (checkGuess(trimmed)) {
+    if (checkTypeGuess(trimmed)) {
       recordWin();
       setResult({ type: 'win', message: getRandomWinMessage() });
     } else {
@@ -128,11 +144,13 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
         ? 'Show Me'
         : 'Yeah Yeah...';
 
+  const displayEmoji = alarm.icon || categoryEmoji[alarm.category] || '\u{1F514}';
+
   return (
     <View style={styles.container}>
       {/* Top section */}
       <View style={styles.top}>
-        <Text style={styles.emoji}>{categoryEmoji[alarm.category] ?? '\u{1F514}'}</Text>
+        <Text style={styles.emoji}>{displayEmoji}</Text>
         <Text style={styles.time}>{formatTime(alarm.time)}</Text>
         <Text style={styles.categoryLabel}>{alarm.category.toUpperCase()}</Text>
       </View>
@@ -173,7 +191,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
               <TouchableOpacity
                 key={icon.id}
                 style={styles.iconCell}
-                onPress={() => handleIconGuess(icon.id)}
+                onPress={() => handleIconGuess(icon.id, icon.emoji)}
                 activeOpacity={0.6}
               >
                 <Text style={styles.iconEmoji}>{icon.emoji}</Text>

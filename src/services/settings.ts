@@ -13,7 +13,11 @@ const defaultSettings: AppSettings = {
 export async function loadSettings(): Promise<AppSettings> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return { ...defaultSettings };
-  return { ...defaultSettings, ...JSON.parse(raw) };
+  try {
+    return { ...defaultSettings, ...JSON.parse(raw) };
+  } catch {
+    return { ...defaultSettings };
+  }
 }
 
 export async function saveSettings(settings: AppSettings): Promise<void> {

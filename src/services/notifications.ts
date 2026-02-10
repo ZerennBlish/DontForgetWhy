@@ -28,11 +28,19 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
     ? `${alarm.icon} ${alarm.category.toUpperCase()}`
     : `\u23F0 ${alarm.category.toUpperCase()}`;
 
+  let body: string;
+  if (alarm.nickname) {
+    body = alarm.nickname;
+  } else if (alarm.icon) {
+    body = alarm.icon;
+  } else {
+    body = 'Time to do the thing!';
+  }
+
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
       title,
-      body: alarm.nickname || alarm.note,
-      subtitle: alarm.quote,
+      body,
       sound: true,
       data: { alarmId: alarm.id },
     },

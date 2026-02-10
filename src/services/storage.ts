@@ -8,7 +8,9 @@ export async function loadAlarms(): Promise<Alarm[]> {
   const data = await AsyncStorage.getItem(STORAGE_KEY);
   if (!data) return [];
   try {
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
   } catch {
     return [];
   }

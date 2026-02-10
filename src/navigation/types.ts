@@ -6,4 +6,5 @@ export type RootStackParamList = {
   AlarmFire: { alarm: Alarm };
   GuessWhy: { alarm: Alarm };
   Settings: undefined;
+  MemoryScore: undefined;
 };
