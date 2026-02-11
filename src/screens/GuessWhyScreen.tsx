@@ -38,19 +38,18 @@ type ResultState =
 
 export default function GuessWhyScreen({ route, navigation }: Props) {
   const { alarm } = route.params;
-  const [mode, setMode] = useState<'icons' | 'type'>('icons');
+  const hasIcon = Boolean(alarm.icon);
+  const [mode, setMode] = useState<'icons' | 'type'>(hasIcon ? 'icons' : 'type');
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [typedGuess, setTypedGuess] = useState('');
   const [result, setResult] = useState<ResultState>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   const checkIconGuess = (iconId: string, iconEmoji: string): boolean => {
-    // Direct icon match
+    // Direct icon match (exact equality)
     if (alarm.icon && alarm.icon === iconEmoji) return true;
-    // Category match
+    // Category match (exact equality)
     if (alarm.category === iconId) return true;
-    // Note keyword match
-    if (alarm.note && alarm.note.toLowerCase().includes(iconId.toLowerCase())) return true;
 
     return false;
   };
@@ -174,9 +173,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
         {/* Mode toggle */}
         <View style={styles.modeToggle}>
           <TouchableOpacity
-            style={[styles.modeBtn, mode === 'icons' && styles.modeBtnActive]}
-            onPress={() => setMode('icons')}
-            activeOpacity={0.7}
+            style={[styles.modeBtn, mode === 'icons' && styles.modeBtnActive, !hasIcon && styles.modeBtnDisabled]}
+            onPress={() => hasIcon && setMode('icons')}
+            activeOpacity={hasIcon ? 0.7 : 1}
           >
             <Text style={[styles.modeBtnText, mode === 'icons' && styles.modeBtnTextActive]}>
               Icons
@@ -324,6 +323,9 @@ const styles = StyleSheet.create({
   },
   modeBtnActive: {
     backgroundColor: '#4A90D9',
+  },
+  modeBtnDisabled: {
+    opacity: 0.35,
   },
   modeBtnText: {
     fontSize: 14,

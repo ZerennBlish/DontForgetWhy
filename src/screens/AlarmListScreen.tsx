@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,17 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
+import type { ActiveTimer } from '../types/timer';
 import { loadAlarms, deleteAlarm, toggleAlarm } from '../services/storage';
 import { cancelAlarm } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
+import {
+  loadActiveTimers,
+  saveActiveTimers,
+  addActiveTimer,
+  removeActiveTimer,
+} from '../services/timerStorage';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import TimerScreen from './TimerScreen';
@@ -21,12 +28,26 @@ import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmList'>;
 
+function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
+  const now = Date.now();
+  return timers.map((t) => {
+    if (!t.isRunning) return t;
+    const elapsed = Math.floor(
+      (now - new Date(t.startedAt).getTime()) / 1000
+    );
+    const remaining = Math.max(0, t.totalSeconds - elapsed);
+    return { ...t, remainingSeconds: remaining, isRunning: remaining > 0 };
+  });
+}
+
 export default function AlarmListScreen({ navigation }: Props) {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
   const [appQuote] = useState(getRandomAppOpenQuote);
   const [tab, setTab] = useState<'alarms' | 'timers'>('alarms');
+  const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
+  const alertedRef = useRef<Set<string>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
@@ -35,6 +56,67 @@ export default function AlarmListScreen({ navigation }: Props) {
       loadStats().then(setStats);
     }, [])
   );
+
+  // Load active timers on mount
+  useEffect(() => {
+    loadActiveTimers().then((loaded) => {
+      loaded.forEach((t) => {
+        if (t.remainingSeconds <= 0 && !t.isRunning) {
+          alertedRef.current.add(t.id);
+        }
+      });
+      const recalculated = recalculateTimers(loaded);
+      setActiveTimers(recalculated);
+      const needsSave = recalculated.some(
+        (t, i) => t.remainingSeconds !== loaded[i].remainingSeconds
+      );
+      if (needsSave) saveActiveTimers(recalculated);
+    });
+  }, []);
+
+  // Tick every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveTimers((prev) => {
+        const hasRunning = prev.some(
+          (t) => t.isRunning && t.remainingSeconds > 0
+        );
+        if (!hasRunning) return prev;
+
+        let completed = false;
+        const updated = prev.map((t) => {
+          if (!t.isRunning || t.remainingSeconds <= 0) return t;
+          const remaining = t.remainingSeconds - 1;
+          if (remaining <= 0) {
+            completed = true;
+            return { ...t, remainingSeconds: 0, isRunning: false };
+          }
+          return { ...t, remainingSeconds: remaining };
+        });
+
+        if (completed) saveActiveTimers(updated);
+        return updated;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Alert for completed timers
+  useEffect(() => {
+    for (const timer of activeTimers) {
+      if (
+        timer.remainingSeconds <= 0 &&
+        !timer.isRunning &&
+        !alertedRef.current.has(timer.id)
+      ) {
+        alertedRef.current.add(timer.id);
+        Alert.alert(
+          '\u23F0 Timer Done!',
+          `${timer.icon} ${timer.label} is done!`
+        );
+      }
+    }
+  }, [activeTimers]);
 
   const handleToggle = async (id: string) => {
     const updated = await toggleAlarm(id);
@@ -66,6 +148,34 @@ export default function AlarmListScreen({ navigation }: Props) {
     } else {
       navigation.navigate('AlarmFire', { alarm });
     }
+  };
+
+  const handleAddTimer = async (timer: ActiveTimer) => {
+    const updated = await addActiveTimer(timer);
+    setActiveTimers(updated);
+  };
+
+  const handleRemoveTimer = async (id: string) => {
+    const updated = await removeActiveTimer(id);
+    setActiveTimers(updated);
+  };
+
+  const handleTogglePause = (id: string) => {
+    setActiveTimers((prev) => {
+      const updated = prev.map((t) => {
+        if (t.id !== id) return t;
+        if (t.isRunning) {
+          return { ...t, isRunning: false };
+        }
+        const elapsed = t.totalSeconds - t.remainingSeconds;
+        const newStartedAt = new Date(
+          Date.now() - elapsed * 1000
+        ).toISOString();
+        return { ...t, isRunning: true, startedAt: newStartedAt };
+      });
+      saveActiveTimers(updated);
+      return updated;
+    });
   };
 
   const hasPlayed = stats && (stats.wins > 0 || stats.losses > 0 || stats.skips > 0);
@@ -181,7 +291,12 @@ export default function AlarmListScreen({ navigation }: Props) {
           </TouchableOpacity>
         </>
       ) : (
-        <TimerScreen />
+        <TimerScreen
+          activeTimers={activeTimers}
+          onAddTimer={handleAddTimer}
+          onRemoveTimer={handleRemoveTimer}
+          onTogglePause={handleTogglePause}
+        />
       )}
     </View>
   );

@@ -50,7 +50,15 @@ export async function loadActiveTimers(): Promise<ActiveTimer[]> {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item: unknown): item is ActiveTimer =>
+        item !== null &&
+        typeof item === 'object' &&
+        typeof (item as Record<string, unknown>).id === 'string' &&
+        typeof (item as Record<string, unknown>).totalSeconds === 'number' &&
+        typeof (item as Record<string, unknown>).remainingSeconds === 'number'
+    );
   } catch {
     return [];
   }

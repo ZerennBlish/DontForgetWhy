@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Modal,
   TextInput,
   Dimensions,
@@ -15,16 +14,12 @@ import type { TimerPreset, ActiveTimer } from '../types/timer';
 import {
   loadPresets,
   saveCustomDuration,
-  loadActiveTimers,
-  saveActiveTimers,
-  addActiveTimer,
-  removeActiveTimer,
   recordPresetUsage,
   loadRecentPresetIds,
 } from '../services/timerStorage';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const PRESET_CARD_WIDTH = (SCREEN_WIDTH - 32 - 20) / 3;
+const PRESET_CARD_WIDTH = (SCREEN_WIDTH - 32 - 16) / 3;
 
 function formatCountdown(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -43,87 +38,29 @@ function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)} min`;
 }
 
-function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
-  const now = Date.now();
-  return timers.map((t) => {
-    if (!t.isRunning) return t;
-    const elapsed = Math.floor(
-      (now - new Date(t.startedAt).getTime()) / 1000
-    );
-    const remaining = Math.max(0, t.totalSeconds - elapsed);
-    return { ...t, remainingSeconds: remaining, isRunning: remaining > 0 };
-  });
+interface TimerScreenProps {
+  activeTimers: ActiveTimer[];
+  onAddTimer: (timer: ActiveTimer) => void;
+  onRemoveTimer: (id: string) => void;
+  onTogglePause: (id: string) => void;
 }
 
-export default function TimerScreen() {
+export default function TimerScreen({
+  activeTimers,
+  onAddTimer,
+  onRemoveTimer,
+  onTogglePause,
+}: TimerScreenProps) {
   const [presets, setPresets] = useState<TimerPreset[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
-  const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const [customModal, setCustomModal] = useState<TimerPreset | null>(null);
   const [customMinutes, setCustomMinutes] = useState('');
-  const alertedRef = useRef<Set<string>>(new Set());
+  const [customSeconds, setCustomSeconds] = useState('');
 
   useEffect(() => {
-    loadActiveTimers().then((loaded) => {
-      loaded.forEach((t) => {
-        if (t.remainingSeconds <= 0 && !t.isRunning) {
-          alertedRef.current.add(t.id);
-        }
-      });
-      const recalculated = recalculateTimers(loaded);
-      setActiveTimers(recalculated);
-      const needsSave = recalculated.some(
-        (t, i) => t.remainingSeconds !== loaded[i].remainingSeconds
-      );
-      if (needsSave) saveActiveTimers(recalculated);
-    });
     loadPresets().then(setPresets);
     loadRecentPresetIds().then(setRecentIds);
   }, []);
-
-  // Tick every second
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveTimers((prev) => {
-        const hasRunning = prev.some(
-          (t) => t.isRunning && t.remainingSeconds > 0
-        );
-        if (!hasRunning) return prev;
-
-        let completed = false;
-        const updated = prev.map((t) => {
-          if (!t.isRunning || t.remainingSeconds <= 0) return t;
-          const remaining = t.remainingSeconds - 1;
-          if (remaining <= 0) {
-            completed = true;
-            return { ...t, remainingSeconds: 0, isRunning: false };
-          }
-          return { ...t, remainingSeconds: remaining };
-        });
-
-        if (completed) saveActiveTimers(updated);
-        return updated;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Alert for completed timers
-  useEffect(() => {
-    for (const timer of activeTimers) {
-      if (
-        timer.remainingSeconds <= 0 &&
-        !timer.isRunning &&
-        !alertedRef.current.has(timer.id)
-      ) {
-        alertedRef.current.add(timer.id);
-        Alert.alert(
-          '\u23F0 Timer Done!',
-          `${timer.icon} ${timer.label} is done!`
-        );
-      }
-    }
-  }, [activeTimers]);
 
   // Split presets into recent, rest, and custom
   const { recentPresets, restPresets, customPreset } = useMemo(() => {
@@ -163,53 +100,31 @@ export default function TimerScreen() {
       startedAt: new Date().toISOString(),
       isRunning: true,
     };
-    const updated = await addActiveTimer(timer);
-    setActiveTimers(updated);
-  };
-
-  const handleRemoveTimer = async (id: string) => {
-    const updated = await removeActiveTimer(id);
-    setActiveTimers(updated);
-  };
-
-  const handleTogglePause = (id: string) => {
-    setActiveTimers((prev) => {
-      const updated = prev.map((t) => {
-        if (t.id !== id) return t;
-        if (t.isRunning) {
-          return { ...t, isRunning: false };
-        }
-        const elapsed = t.totalSeconds - t.remainingSeconds;
-        const newStartedAt = new Date(
-          Date.now() - elapsed * 1000
-        ).toISOString();
-        return { ...t, isRunning: true, startedAt: newStartedAt };
-      });
-      saveActiveTimers(updated);
-      return updated;
-    });
+    onAddTimer(timer);
   };
 
   const handleLongPress = (preset: TimerPreset) => {
-    const currentMinutes = Math.floor(
-      (preset.customSeconds || preset.seconds) / 60
-    );
-    setCustomMinutes(currentMinutes > 0 ? currentMinutes.toString() : '');
+    const total = preset.customSeconds || preset.seconds;
+    const mins = Math.floor(total / 60);
+    const secs = total % 60;
+    setCustomMinutes(mins > 0 ? mins.toString() : '');
+    setCustomSeconds(secs > 0 ? secs.toString() : '');
     setCustomModal(preset);
   };
 
   const handleSaveCustom = async () => {
     if (!customModal) return;
-    const mins = parseInt(customMinutes, 10);
-    if (!mins || mins <= 0) {
+    const mins = parseInt(customMinutes, 10) || 0;
+    const secs = parseInt(customSeconds, 10) || 0;
+    const totalSeconds = mins * 60 + secs;
+    if (totalSeconds <= 0) {
       setCustomModal(null);
       return;
     }
-    const seconds = mins * 60;
-    await saveCustomDuration(customModal.id, seconds);
+    await saveCustomDuration(customModal.id, totalSeconds);
     setPresets((prev) =>
       prev.map((p) =>
-        p.id === customModal.id ? { ...p, customSeconds: seconds } : p
+        p.id === customModal.id ? { ...p, customSeconds: totalSeconds } : p
       )
     );
     setCustomModal(null);
@@ -261,7 +176,7 @@ export default function TimerScreen() {
                 <View style={styles.activeActions}>
                   {timer.remainingSeconds > 0 && (
                     <TouchableOpacity
-                      onPress={() => handleTogglePause(timer.id)}
+                      onPress={() => onTogglePause(timer.id)}
                       style={styles.actionBtn}
                       activeOpacity={0.7}
                     >
@@ -271,7 +186,7 @@ export default function TimerScreen() {
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
-                    onPress={() => handleRemoveTimer(timer.id)}
+                    onPress={() => onRemoveTimer(timer.id)}
                     style={styles.cancelBtn}
                     activeOpacity={0.7}
                   >
@@ -314,18 +229,35 @@ export default function TimerScreen() {
               {customModal?.icon} {customModal?.label}
             </Text>
             <Text style={styles.modalSubtitle}>
-              Set custom duration (minutes)
+              Set custom duration
             </Text>
-            <TextInput
-              style={styles.modalInput}
-              value={customMinutes}
-              onChangeText={(t) => setCustomMinutes(t.replace(/[^0-9]/g, ''))}
-              keyboardType="number-pad"
-              placeholder="Minutes"
-              placeholderTextColor="#555"
-              autoFocus
-              maxLength={4}
-            />
+            <View style={styles.modalInputRow}>
+              <View style={styles.modalInputGroup}>
+                <TextInput
+                  style={styles.modalInput}
+                  value={customMinutes}
+                  onChangeText={(t) => setCustomMinutes(t.replace(/[^0-9]/g, ''))}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor="#555"
+                  autoFocus
+                  maxLength={4}
+                />
+                <Text style={styles.modalInputLabel}>min</Text>
+              </View>
+              <View style={styles.modalInputGroup}>
+                <TextInput
+                  style={styles.modalInput}
+                  value={customSeconds}
+                  onChangeText={(t) => setCustomSeconds(t.replace(/[^0-9]/g, ''))}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor="#555"
+                  maxLength={2}
+                />
+                <Text style={styles.modalInputLabel}>sec</Text>
+              </View>
+            </View>
             <View style={styles.modalBtns}>
               <TouchableOpacity
                 onPress={() => setCustomModal(null)}
@@ -435,27 +367,27 @@ const styles = StyleSheet.create({
   presetGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   presetCard: {
     width: PRESET_CARD_WIDTH,
     backgroundColor: '#1E1E2E',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     alignItems: 'center',
   },
   presetIcon: {
-    fontSize: 24,
-    marginBottom: 4,
+    fontSize: 20,
+    marginBottom: 2,
   },
   presetLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#EAEAFF',
     textAlign: 'center',
   },
   presetDuration: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#7A7A9E',
     marginTop: 2,
   },
@@ -493,6 +425,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
+  modalInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  modalInputGroup: {
+    flex: 1,
+    alignItems: 'center',
+  },
   modalInput: {
     backgroundColor: '#121220',
     borderRadius: 12,
@@ -504,7 +445,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     borderWidth: 1,
     borderColor: '#2A2A3E',
-    marginBottom: 20,
+    width: '100%',
+  },
+  modalInputLabel: {
+    fontSize: 13,
+    color: '#7A7A9E',
+    marginTop: 6,
   },
   modalBtns: {
     flexDirection: 'row',

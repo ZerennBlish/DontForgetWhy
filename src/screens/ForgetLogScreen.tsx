@@ -24,6 +24,7 @@ const categoryEmoji: Record<string, string> = {
 
 function formatTimestamp(iso: string): string {
   const date = new Date(iso);
+  if (isNaN(date.getTime())) return 'Unknown date';
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',

@@ -10,7 +10,14 @@ export async function loadAlarms(): Promise<Alarm[]> {
   try {
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed)) return [];
-    return parsed;
+    return parsed.filter(
+      (item: unknown): item is Alarm =>
+        item !== null &&
+        typeof item === 'object' &&
+        typeof (item as Record<string, unknown>).id === 'string' &&
+        typeof (item as Record<string, unknown>).time === 'string' &&
+        typeof (item as Record<string, unknown>).note === 'string'
+    );
   } catch {
     return [];
   }
@@ -38,8 +45,12 @@ export async function updateAlarm(updatedAlarm: Alarm): Promise<Alarm[]> {
     if (a.notificationId) {
       await cancelNotification(a.notificationId);
     }
-    const notificationId = await scheduleAlarm(updatedAlarm);
-    updated.push({ ...updatedAlarm, notificationId });
+    if (updatedAlarm.enabled) {
+      const notificationId = await scheduleAlarm(updatedAlarm);
+      updated.push({ ...updatedAlarm, notificationId });
+    } else {
+      updated.push({ ...updatedAlarm, notificationId: undefined });
+    }
   }
   await saveAlarms(updated);
   return updated;

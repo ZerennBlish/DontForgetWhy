@@ -18,7 +18,14 @@ export async function loadForgetLog(): Promise<ForgetEntry[]> {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item: unknown): item is ForgetEntry =>
+        item !== null &&
+        typeof item === 'object' &&
+        typeof (item as Record<string, unknown>).id === 'string' &&
+        typeof (item as Record<string, unknown>).timestamp === 'string'
+    );
   } catch {
     return [];
   }
