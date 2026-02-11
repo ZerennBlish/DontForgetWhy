@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import TimerScreen from './TimerScreen';
+import { useTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmList'>;
@@ -41,6 +42,7 @@ function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
 }
 
 export default function AlarmListScreen({ navigation }: Props) {
+  const { colors } = useTheme();
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
@@ -48,6 +50,150 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [tab, setTab] = useState<'alarms' | 'timers'>('alarms');
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const alertedRef = useRef<Set<string>>(new Set());
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingTop: 60,
+      paddingHorizontal: 20,
+      paddingBottom: 16,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: colors.textPrimary,
+    },
+    headerIcons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    headerBtn: {
+      padding: 4,
+    },
+    headerBtnIcon: {
+      fontSize: 24,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      padding: 2,
+      marginTop: 12,
+    },
+    tab: {
+      flex: 1,
+      borderRadius: 20,
+      paddingHorizontal: 20,
+      paddingVertical: 8,
+      alignItems: 'center',
+    },
+    tabActive: {
+      backgroundColor: colors.accent,
+    },
+    tabText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    tabTextActive: {
+      color: colors.textPrimary,
+    },
+    streakRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+      gap: 8,
+    },
+    streakText: {
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    bestStreakText: {
+      fontSize: 13,
+      color: colors.textTertiary,
+    },
+    quoteCard: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      marginHorizontal: 16,
+      marginBottom: 12,
+    },
+    quoteText: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      textAlign: 'center',
+    },
+    list: {
+      paddingHorizontal: 16,
+      paddingBottom: 100,
+    },
+    empty: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingBottom: 80,
+    },
+    emptyIcon: {
+      fontSize: 48,
+      marginBottom: 12,
+    },
+    emptyText: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 6,
+    },
+    emptyQuote: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      marginTop: 16,
+      paddingHorizontal: 32,
+    },
+    fab: {
+      position: 'absolute',
+      bottom: 36,
+      right: 24,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 8,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+    },
+    fabText: {
+      fontSize: 32,
+      color: colors.textPrimary,
+      fontWeight: '300',
+      marginTop: -2,
+    },
+  }), [colors]);
 
   useFocusEffect(
     useCallback(() => {
@@ -234,7 +380,7 @@ export default function AlarmListScreen({ navigation }: Props) {
             <Text
               style={[
                 styles.streakText,
-                { color: stats.streak > 0 ? '#4A90D9' : '#FF6B6B' },
+                { color: stats.streak > 0 ? colors.accent : colors.red },
               ]}
             >
               {stats.streak > 0
@@ -301,147 +447,3 @@ export default function AlarmListScreen({ navigation }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121220',
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#EAEAFF',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  headerBtn: {
-    padding: 4,
-  },
-  headerBtnIcon: {
-    fontSize: 24,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#7A7A9E',
-    marginTop: 4,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#1E1E2E',
-    borderRadius: 20,
-    padding: 2,
-    marginTop: 12,
-  },
-  tab: {
-    flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  tabActive: {
-    backgroundColor: '#4A90D9',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7A7A9E',
-  },
-  tabTextActive: {
-    color: '#fff',
-  },
-  streakRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 8,
-  },
-  streakText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  bestStreakText: {
-    fontSize: 13,
-    color: '#7A7A9E',
-  },
-  quoteCard: {
-    backgroundColor: '#1E1E2E',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  quoteText: {
-    fontSize: 15,
-    color: '#B0B0CC',
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
-  },
-  empty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 80,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#7A7A9E',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 6,
-  },
-  emptyQuote: {
-    fontSize: 15,
-    color: '#B0B0CC',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 16,
-    paddingHorizontal: 32,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 36,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#4A90D9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#4A90D9',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-  },
-  fabText: {
-    fontSize: 32,
-    color: '#fff',
-    fontWeight: '300',
-    marginTop: -2,
-  },
-});

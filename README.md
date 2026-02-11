@@ -1,16 +1,18 @@
 # Don't Forget Why
 
-A mobile alarm app that forces you to remember *why* you set each alarm — not just when it goes off. Includes a full timer system with quick-tap presets, a "Guess Why" memory mini-game, escalating snooze shame, and a sarcastic personality throughout.
+A mobile alarm app that forces you to remember *why* you set each alarm — not just when it goes off. Includes a full timer system with quick-tap presets, a "Guess Why" memory mini-game, escalating snooze shame, a full theme system with 8 presets + custom color picker, and a sarcastic personality throughout.
 
 ## Tech Stack
 
-- **Framework**: React Native + Expo (New Architecture enabled)
-- **Language**: TypeScript
-- **Navigation**: @react-navigation/native + @react-navigation/native-stack
-- **Persistence**: @react-native-async-storage/async-storage
+- **Framework**: React Native 0.81.5 + Expo SDK 54 (New Architecture enabled)
+- **Language**: TypeScript 5.9
+- **Navigation**: @react-navigation/native 7.x + @react-navigation/native-stack 7.x
+- **Persistence**: @react-native-async-storage/async-storage 2.x
 - **Notifications**: expo-notifications + expo-device
-- **IDs**: uuid v4 (via react-native-get-random-values polyfill)
-- **Target Platforms**: Android (primary, edge-to-edge enabled), iOS (supportsTablet), Web (favicon only)
+- **Theming**: React Context + reanimated-color-picker 4.x + react-native-reanimated 4.x
+- **IDs**: uuid v13 (via react-native-get-random-values polyfill)
+- **Target Platforms**: Android (primary, edge-to-edge enabled, package `com.zerennblish.DontForgetWhy`), iOS (supportsTablet), Web (favicon only)
+- **Build**: EAS Build configured (development/preview/production profiles)
 
 ## Features
 
@@ -37,9 +39,11 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 21. **Timer completion alerts** — Alert dialog fires when a timer reaches zero
 22. **Notification scheduling** — Daily repeat notifications via expo-notifications; permission requested on first alarm save
 23. **Notification deep-linking** — Tapping a notification opens GuessWhy (if enabled) or AlarmFire for the matching alarm
-24. **Dark theme** — Full dark UI across all screens with consistent color palette
-25. **Streak display** — Current streak and best streak shown in the alarm list header when the user has played at least one Guess Why round
-26. **Trophy navigation** — Trophy icon in header navigates to Memory Score; only visible after first game played
+24. **Theme system** — 8 preset themes (4 dark, 4 light) + custom color picker; all styles react to theme changes via useMemo
+25. **Custom theme generator** — Pick any accent color; the app auto-generates a full theme (background, card, text, border colors) based on luminance
+26. **Theme persistence** — Selected theme and custom accent color saved to AsyncStorage, restored on app launch
+27. **Streak display** — Current streak and best streak shown in the alarm list header when the user has played at least one Guess Why round
+28. **Trophy navigation** — Trophy icon in header navigates to Memory Score; only visible after first game played
 
 ## Data Models
 
@@ -120,6 +124,37 @@ interface AppSettings {
 }
 ```
 
+### ThemeColors (`src/theme/colors.ts`)
+```typescript
+interface ThemeColors {
+  mode: 'dark' | 'light';
+  background: string;
+  card: string;
+  accent: string;
+  textPrimary: string;
+  textSecondary: string;
+  textTertiary: string;
+  border: string;
+  red: string;
+  orange: string;
+  activeBackground: string;
+}
+
+type ThemeName = 'midnight' | 'obsidian' | 'forest' | 'royal'
+              | 'bubblegum' | 'sunshine' | 'ocean' | 'mint' | 'custom';
+```
+
+### ThemeContextValue (`src/theme/ThemeContext.tsx`)
+```typescript
+interface ThemeContextValue {
+  colors: ThemeColors;
+  themeName: ThemeName;
+  customAccent: string | null;
+  setTheme: (name: ThemeName) => void;
+  setCustomTheme: (accentHex: string) => void;
+}
+```
+
 ### GuessIcon (`src/data/guessWhyIcons.ts`)
 ```typescript
 interface GuessIcon {
@@ -156,6 +191,8 @@ interface RecentEntry {
 | `timerPresets` | `Record<string, number>` | `timerStorage.ts` | Map of preset ID to custom duration override in seconds |
 | `activeTimers` | `ActiveTimer[]` | `timerStorage.ts` | Currently running/paused timers (persisted for app reload) |
 | `recentPresets` | `RecentEntry[]` | `timerStorage.ts` | Recently used timer presets sorted by last-used (max 20) |
+| `appTheme` | `string` | `ThemeContext.tsx` | Selected theme name (e.g. `'midnight'`, `'forest'`, `'custom'`) |
+| `customTheme` | `{ accent: string }` | `ThemeContext.tsx` | User-picked custom accent hex color (JSON object) |
 
 ## Screen Flow
 
@@ -169,10 +206,10 @@ Slide-from-bottom modal. Two large number inputs for hours/minutes. Nickname fie
 Full-screen fade-in, gesture disabled. Top: category emoji + formatted time + category label. Middle: the alarm note (the "why") + divider + the assigned quote. Snooze button with 4 escalating labels ("Snooze 5 min" → "Snooze Again" → "...Snooze Again" → "Fine, Snooze") and a random shame message per tier. Dismiss button says "I'm On It".
 
 ### GuessWhy (`GuessWhyScreen.tsx`)
-Full-screen fade-in, gesture disabled. Top: alarm icon/category emoji + time + category label. Game area card with Icons/Type It mode toggle. Icons mode: scrollable 4-column grid of 24 icons with labels. Type It mode: text input with Guess button (min 3 chars). 3 attempts. Shake animation on wrong guess. Result overlay (green win / red lose / amber skip) with snarky message and continue button that navigates to AlarmFire. Skip button at bottom. Losses and skips are logged to the Forget Log.
+Full-screen fade-in, gesture disabled. Top: alarm icon/category emoji + time + category label. Game area card with Icons/Type It mode toggle (Icons mode disabled if alarm has no icon). Icons mode: scrollable 4-column grid of 24 icons with labels. Type It mode: text input with Guess button (min 3 chars). 3 attempts. Shake animation on wrong guess. Result overlay (green win / red lose / amber skip) with snarky message and continue button that navigates to AlarmFire via `navigation.replace`. Skip button at bottom. Losses and skips are logged to the Forget Log.
 
 ### Settings (`SettingsScreen.tsx`)
-Back button + title. Single card with a toggle switch for "Guess Why Mini-Game" and description text.
+Back button + title. Top card with a toggle switch for "Guess Why Mini-Game" and description text. Second card with theme picker: 8 preset theme circles in a grid (inner circle shows accent color, outer border shows active state), plus a 9th "Custom" circle. Custom circle shows a 🎨 emoji if no custom color saved, or the saved accent color. Tapping Custom opens a color picker modal (reanimated-color-picker with Panel1 + HueSlider + Preview) where the user picks a color and taps Apply.
 
 ### MemoryScore (`MemoryScoreScreen.tsx`)
 Back button + title. Large rank emoji + rank title (colored) + win percentage + subtitle ("Wall of Remembrance" if >= 50%, "Hall of Shame" if < 50%, "No games yet" if 0). Stats card with wins, losses, skips, divider, current streak, best streak, total games. "What Did I Forget?" button links to ForgetLog. Red "Reset Stats" button with confirmation alert.
@@ -181,7 +218,7 @@ Back button + title. Large rank emoji + rank title (colored) + win percentage + 
 Back button + title + subtitle. FlatList of ForgetEntry cards showing emoji, note, nickname, result badge (❌ Forgot or ⏭️ Skipped), and formatted timestamp. Empty state message if no entries. "Clear Log" button at bottom with confirmation alert.
 
 ### TimerScreen (`TimerScreen.tsx`)
-Rendered inline as a tab in AlarmListScreen (not a navigation screen). Active timers section at top with countdown display (MM:SS), pause/play toggle, and dismiss (✕). "Recent" section shows recently used presets. Main grid shows remaining presets + ➕ Custom button at end. 3-column grid layout. Tap to start timer. Long-press to set custom duration via modal (minutes input). Custom preset (seconds = 0) opens the duration modal on tap.
+Rendered inline as a tab in AlarmListScreen (not a navigation screen). Active timers section at top with countdown display (MM:SS), pause/play toggle, and dismiss (✕). "Recent" section shows recently used presets. Main grid shows remaining presets + ➕ Custom button at end. 3-column grid layout. Tap to start timer. Long-press to set custom duration via modal (minutes + seconds inputs). Custom preset (seconds = 0) opens the duration modal on tap.
 
 ## File Structure
 
@@ -206,7 +243,7 @@ src/
 │   ├── ForgetLogScreen.tsx        Chronological log of forgotten/skipped alarms
 │   ├── GuessWhyScreen.tsx         Mini-game: guess the alarm reason in 3 attempts
 │   ├── MemoryScoreScreen.tsx      Stats dashboard with rank, streak, win/loss totals
-│   ├── SettingsScreen.tsx         Toggle Guess Why on/off
+│   ├── SettingsScreen.tsx         Guess Why toggle + theme picker (8 presets + custom color)
 │   └── TimerScreen.tsx            Timer preset grid + active countdown timers
 ├── services/
 │   ├── forgetLog.ts               CRUD for ForgetEntry[] in AsyncStorage
@@ -216,6 +253,9 @@ src/
 │   ├── settings.ts                AppSettings load/save (guessWhyEnabled)
 │   ├── storage.ts                 Alarm CRUD: load, save, add, update, delete, toggle
 │   └── timerStorage.ts            Timer preset custom durations, active timers, recent tracking
+├── theme/
+│   ├── colors.ts                  ThemeColors interface, 8 preset themes, generateCustomTheme()
+│   └── ThemeContext.tsx            ThemeProvider + useTheme hook, persists to AsyncStorage
 ├── types/
 │   ├── alarm.ts                   Alarm interface + AlarmCategory type
 │   └── timer.ts                   TimerPreset + ActiveTimer interfaces
@@ -224,33 +264,172 @@ src/
 ```
 
 Root files:
-- `App.tsx` — Navigation stack setup, dark theme, notification response listener
+- `App.tsx` — ThemeProvider wrapper, navigation stack setup, notification response listener, StatusBar mode switching
 - `app.json` — Expo config (v1.0.0, portrait, new arch, edge-to-edge Android)
+- `index.ts` — Entry point
+- `eas.json` — EAS Build profiles (development/preview/production)
 
-## Theme Colors
+## Theme System
 
-| Hex | Purpose |
+All 8 preset themes plus a custom theme generator. Every screen and component uses `useTheme()` and wraps styles in `useMemo(() => StyleSheet.create({...}), [colors])` so the entire UI reacts to theme changes.
+
+### Preset Themes
+
+#### Dark Themes
+
+**Midnight** (default)
+| Property | Value |
 |---|---|
-| `#121220` | Screen background, input backgrounds, deep surfaces |
-| `#1E1E2E` | Card/surface background (alarm cards, timer tiles, modals, tabs) |
-| `#2A2A3E` | Borders, dividers, input outlines |
-| `#EAEAFF` | Primary text (titles, times, labels, alarm notes) |
-| `#B0B0CC` | Secondary text (detail lines, quotes, snooze button text) |
-| `#7A7A9E` | Tertiary text (muted labels, descriptions, category tags, disabled) |
-| `#555` | Disabled text, character counts, hints, timestamps |
-| `#4A90D9` | Accent blue (buttons, active tabs, links, positive streak, switch track) |
-| `#1A2A44` | Blue tinted background (active icon cells, pause button bg) |
-| `#FF6B6B` | Error/danger red (delete text, timer done, streak broken, loss badge) |
-| `#3A1A1A` | Red tinted background (delete/cancel/reset buttons) |
-| `#FF9F43` | Warning orange (skip badge, Forgetful Squirrel rank) |
-| `#FFD700` | Gold (Elephant rank) |
-| `#999` | Disabled switch thumb |
-| `#fff` | Button text on accent backgrounds |
-| `rgba(34,139,34,0.85)` | Guess Why win overlay (green) |
-| `rgba(180,40,40,0.85)` | Guess Why lose overlay (red) |
-| `rgba(180,150,30,0.85)` | Guess Why skip overlay (amber) |
-| `rgba(0,0,0,0.7)` | Modal backdrop |
-| `rgba(255,255,255,0.25)` | Overlay continue button |
+| background | `#121220` |
+| card | `#1E1E2E` |
+| accent | `#4A90D9` |
+| textPrimary | `#EAEAFF` |
+| textSecondary | `#B0B0CC` |
+| textTertiary | `#7A7A9E` |
+| border | `#2A2A3E` |
+| red | `#FF6B6B` |
+| orange | `#FF9F43` |
+| activeBackground | `#1A2A44` |
+
+**Obsidian**
+| Property | Value |
+|---|---|
+| background | `#1A1A1E` |
+| card | `#28282E` |
+| accent | `#A0A0B0` |
+| textPrimary | `#E5E5EA` |
+| textSecondary | `#AEAEB4` |
+| textTertiary | `#6C6C72` |
+| border | `#3A3A40` |
+| red | `#FF6B6B` |
+| orange | `#FF9F43` |
+| activeBackground | `#36363C` |
+
+**Forest**
+| Property | Value |
+|---|---|
+| background | `#0E1A12` |
+| card | `#1A2C1F` |
+| accent | `#4CAF50` |
+| textPrimary | `#E0F0E2` |
+| textSecondary | `#A5C8A8` |
+| textTertiary | `#6B8F6E` |
+| border | `#2A3E2D` |
+| red | `#FF6B6B` |
+| orange | `#FF9F43` |
+| activeBackground | `#1C3A22` |
+
+**Royal**
+| Property | Value |
+|---|---|
+| background | `#14101E` |
+| card | `#211A30` |
+| accent | `#9C6ADE` |
+| textPrimary | `#EDE0FF` |
+| textSecondary | `#B8A3D4` |
+| textTertiary | `#7A6B94` |
+| border | `#322642` |
+| red | `#FF6B6B` |
+| orange | `#FF9F43` |
+| activeBackground | `#2C1C42` |
+
+#### Light Themes
+
+**Bubblegum**
+| Property | Value |
+|---|---|
+| background | `#FFF0F5` |
+| card | `#FFE0EB` |
+| accent | `#E0389A` |
+| textPrimary | `#2A0A18` |
+| textSecondary | `#6B3050` |
+| textTertiary | `#9E708A` |
+| border | `#F0C0D5` |
+| red | `#D32F2F` |
+| orange | `#E67E22` |
+| activeBackground | `#FFD0E0` |
+
+**Sunshine**
+| Property | Value |
+|---|---|
+| background | `#FFFDE7` |
+| card | `#FFF8C4` |
+| accent | `#E6A817` |
+| textPrimary | `#1A1400` |
+| textSecondary | `#6B5A20` |
+| textTertiary | `#998755` |
+| border | `#EFE0A0` |
+| red | `#D32F2F` |
+| orange | `#E67E22` |
+| activeBackground | `#FFEEAA` |
+
+**Ocean**
+| Property | Value |
+|---|---|
+| background | `#F0F7FF` |
+| card | `#E0EEFF` |
+| accent | `#0077CC` |
+| textPrimary | `#0A1520` |
+| textSecondary | `#3A5570` |
+| textTertiary | `#6A8090` |
+| border | `#B8D4F0` |
+| red | `#D32F2F` |
+| orange | `#E67E22` |
+| activeBackground | `#CCE2FF` |
+
+**Mint**
+| Property | Value |
+|---|---|
+| background | `#F0FFF4` |
+| card | `#E0F5E8` |
+| accent | `#10B981` |
+| textPrimary | `#0A1A10` |
+| textSecondary | `#305040` |
+| textTertiary | `#608070` |
+| border | `#B8E0C8` |
+| red | `#D32F2F` |
+| orange | `#E67E22` |
+| activeBackground | `#C4ECD0` |
+
+### Custom Theme Generator
+
+`generateCustomTheme(accentHex)` in `colors.ts` generates a full `ThemeColors` from a single accent color:
+
+1. Computes luminance: `(0.299*R + 0.587*G + 0.114*B) / 255`
+2. If luminance < 0.5 → **dark theme**: mixes accent toward black for backgrounds, toward white for text
+3. If luminance >= 0.5 → **light theme**: mixes accent toward white for backgrounds, toward black for text
+
+Dark theme mix ratios:
+- background: accent → black at 85%
+- card: accent → black at 72%
+- textPrimary: accent → white at 88%
+- textSecondary: accent → white at 60%
+- textTertiary: accent → white at 35%
+- border: accent → black at 60%
+- activeBackground: accent → black at 65%
+- red: `#FF6B6B`, orange: `#FF9F43`
+
+Light theme mix ratios:
+- background: accent → white at 90%
+- card: accent → white at 78%
+- textPrimary: accent → black at 88%
+- textSecondary: accent → black at 62%
+- textTertiary: accent → black at 40%
+- border: accent → white at 60%
+- activeBackground: accent → white at 68%
+- red: `#D32F2F`, orange: `#E67E22`
+
+### Hardcoded Colors (not themed)
+
+| Color | Where | Why |
+|---|---|---|
+| `rgba(34,139,34,0.85)` | GuessWhyScreen | Win overlay (always green) |
+| `rgba(180,40,40,0.85)` | GuessWhyScreen | Lose overlay (always red) |
+| `rgba(180,150,30,0.85)` | GuessWhyScreen | Skip overlay (always amber) |
+| `rgba(0,0,0,0.7)` | TimerScreen, SettingsScreen | Modal backdrop |
+| `rgba(255,255,255,0.25)` | GuessWhyScreen | Overlay continue button |
+| `#fff` | GuessWhyScreen | Overlay text (always on colored bg) |
+| Rank colors (`#FFD700`, `#4A90D9`, `#B0B0CC`, `#FF9F43`, `#FF6B6B`, `#7A7A9E`) | MemoryScoreScreen | Rank title colors are data-driven from `memoryRanks.ts` |
 
 ## Icon Orders
 
@@ -402,8 +581,7 @@ MemoryScoreScreen shows "Wall of Remembrance" if >= 50%, "Hall of Shame" if < 50
 
 ## Remaining / Planned Features
 
-- **Development build (EAS)** — Required for full notification functionality (Expo Go has limited notification support)
-- **Forced alarm notifications** — Bypass DND / silent mode for critical alarms
+- **Forced alarm notifications** — Bypass DND / silent mode for critical alarms (requires native module)
 - **Home screen widget** — Quick-access timer widget (requires native module / development build)
 - **Actual snooze rescheduling** — Currently snooze shows shame messages but does not reschedule the notification
 - **Day-of-week recurring** — `recurring` and `days` fields exist on the Alarm model but are not yet exposed in the UI

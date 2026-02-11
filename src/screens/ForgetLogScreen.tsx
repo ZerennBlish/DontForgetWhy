@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadForgetLog, clearForgetLog, ForgetEntry } from '../services/forgetLog';
+import { useTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ForgetLog'>;
@@ -40,7 +41,116 @@ function formatTimestamp(iso: string): string {
 }
 
 export default function ForgetLogScreen({ navigation }: Props) {
+  const { colors } = useTheme();
   const [log, setLog] = useState<ForgetEntry[]>([]);
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingTop: 60,
+      paddingHorizontal: 20,
+      paddingBottom: 16,
+    },
+    backBtn: {
+      fontSize: 16,
+      color: colors.accent,
+      fontWeight: '600',
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: colors.textPrimary,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    empty: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 32,
+      paddingBottom: 80,
+    },
+    emptyText: {
+      fontSize: 15,
+      color: colors.textTertiary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    list: {
+      paddingHorizontal: 16,
+      paddingBottom: 100,
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 10,
+    },
+    cardTop: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    cardEmoji: {
+      fontSize: 24,
+      marginRight: 12,
+      marginTop: 2,
+    },
+    cardMiddle: {
+      flex: 1,
+      marginRight: 10,
+    },
+    cardNote: {
+      fontSize: 15,
+      color: colors.textPrimary,
+      lineHeight: 21,
+    },
+    cardNickname: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    cardBadge: {
+      alignItems: 'flex-end',
+      flexShrink: 0,
+    },
+    badgeLoss: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.red,
+    },
+    badgeSkip: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.orange,
+    },
+    cardTimestamp: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 8,
+    },
+    footer: {
+      paddingHorizontal: 16,
+      paddingBottom: 40,
+    },
+    clearBtn: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingVertical: 16,
+      alignItems: 'center',
+    },
+    clearBtnText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.red,
+    },
+  }), [colors]);
 
   useFocusEffect(
     useCallback(() => {
@@ -132,111 +242,3 @@ export default function ForgetLogScreen({ navigation }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121220',
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  backBtn: {
-    fontSize: 16,
-    color: '#4A90D9',
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#EAEAFF',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#7A7A9E',
-    marginTop: 4,
-  },
-  empty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingBottom: 80,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: '#7A7A9E',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
-  },
-  card: {
-    backgroundColor: '#1E1E2E',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  cardEmoji: {
-    fontSize: 24,
-    marginRight: 12,
-    marginTop: 2,
-  },
-  cardMiddle: {
-    flex: 1,
-    marginRight: 10,
-  },
-  cardNote: {
-    fontSize: 15,
-    color: '#EAEAFF',
-    lineHeight: 21,
-  },
-  cardNickname: {
-    fontSize: 13,
-    color: '#7A7A9E',
-    marginTop: 2,
-  },
-  cardBadge: {
-    alignItems: 'flex-end',
-    flexShrink: 0,
-  },
-  badgeLoss: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FF6B6B',
-  },
-  badgeSkip: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FF9F43',
-  },
-  cardTimestamp: {
-    fontSize: 11,
-    color: '#555',
-    marginTop: 8,
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-  },
-  clearBtn: {
-    backgroundColor: '#3A1A1A',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  clearBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FF6B6B',
-  },
-});

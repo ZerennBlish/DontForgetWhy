@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { scheduleAlarm, requestPermissions } from '../services/notifications';
 import { getRandomQuote } from '../services/quotes';
 import { getRandomPlaceholder } from '../data/placeholders';
 import guessWhyIcons from '../data/guessWhyIcons';
+import { useTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
@@ -40,6 +41,7 @@ function categoryFromIcon(emoji: string | null): AlarmCategory {
 }
 
 export default function CreateAlarmScreen({ route, navigation }: Props) {
+  const { colors } = useTheme();
   const existingAlarm = route.params?.alarm;
   const isEditing = !!existingAlarm;
 
@@ -58,6 +60,142 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const [selectedPrivate, setSelectedPrivate] = useState(
     existingAlarm?.private || false
   );
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 20,
+      paddingTop: Platform.OS === 'ios' ? 60 : 40,
+      paddingBottom: 60,
+    },
+    heading: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      marginBottom: 32,
+    },
+    timeContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 32,
+    },
+    timeInput: {
+      fontSize: 56,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      width: 110,
+      textAlign: 'center',
+      paddingVertical: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    timeSeparator: {
+      fontSize: 48,
+      fontWeight: '700',
+      color: colors.accent,
+      marginHorizontal: 12,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: 10,
+    },
+    nicknameInput: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: colors.textPrimary,
+      minHeight: 48,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 24,
+    },
+    noteInput: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: colors.textPrimary,
+      minHeight: 100,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    charCount: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      textAlign: 'right',
+      marginTop: 4,
+      marginBottom: 24,
+    },
+    iconGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginBottom: 24,
+    },
+    iconCell: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    iconCellActive: {
+      backgroundColor: colors.activeBackground,
+      borderColor: colors.accent,
+    },
+    iconEmoji: {
+      fontSize: 22,
+    },
+    toggleCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 24,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    toggleLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      flex: 1,
+      marginRight: 12,
+    },
+    toggleDescription: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 12,
+      lineHeight: 20,
+    },
+    saveBtn: {
+      backgroundColor: colors.accent,
+      borderRadius: 16,
+      paddingVertical: 18,
+      alignItems: 'center',
+    },
+    saveBtnText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+  }), [colors]);
 
   const handleIconPress = (emoji: string) => {
     setSelectedIcon(selectedIcon === emoji ? null : emoji);
@@ -125,7 +263,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           keyboardType="number-pad"
           maxLength={2}
           selectTextOnFocus
-          placeholderTextColor="#555"
+          placeholderTextColor={colors.textTertiary}
         />
         <Text style={styles.timeSeparator}>:</Text>
         <TextInput
@@ -135,7 +273,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           keyboardType="number-pad"
           maxLength={2}
           selectTextOnFocus
-          placeholderTextColor="#555"
+          placeholderTextColor={colors.textTertiary}
         />
       </View>
 
@@ -145,7 +283,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         value={nickname}
         onChangeText={setNickname}
         placeholder="e.g. Pill O'Clock, Dog Time, Morning Stuff"
-        placeholderTextColor="#555"
+        placeholderTextColor={colors.textTertiary}
         maxLength={40}
       />
 
@@ -155,7 +293,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         value={note}
         onChangeText={setNote}
         placeholder={placeholder}
-        placeholderTextColor="#555"
+        placeholderTextColor={colors.textTertiary}
         multiline
         maxLength={200}
         textAlignVertical="top"
@@ -185,8 +323,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           <Switch
             value={selectedPrivate}
             onValueChange={setSelectedPrivate}
-            trackColor={{ false: '#2A2A3E', true: '#4A90D9' }}
-            thumbColor={selectedPrivate ? '#EAEAFF' : '#7A7A9E'}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
           />
         </View>
         <Text style={styles.toggleDescription}>
@@ -202,139 +340,3 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121220',
-  },
-  content: {
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 60,
-  },
-  heading: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#EAEAFF',
-    marginBottom: 32,
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  timeInput: {
-    fontSize: 56,
-    fontWeight: '700',
-    color: '#EAEAFF',
-    backgroundColor: '#1E1E2E',
-    borderRadius: 16,
-    width: 110,
-    textAlign: 'center',
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  timeSeparator: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#4A90D9',
-    marginHorizontal: 12,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#B0B0CC',
-    marginBottom: 10,
-  },
-  nicknameInput: {
-    backgroundColor: '#1E1E2E',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#EAEAFF',
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-    marginBottom: 24,
-  },
-  noteInput: {
-    backgroundColor: '#1E1E2E',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#EAEAFF',
-    minHeight: 100,
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  charCount: {
-    fontSize: 12,
-    color: '#555',
-    textAlign: 'right',
-    marginTop: 4,
-    marginBottom: 24,
-  },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 24,
-  },
-  iconCell: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#1E1E2E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  iconCellActive: {
-    backgroundColor: '#1A2A44',
-    borderColor: '#4A90D9',
-  },
-  iconEmoji: {
-    fontSize: 22,
-  },
-  toggleCard: {
-    backgroundColor: '#1E1E2E',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-    marginBottom: 24,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#EAEAFF',
-    flex: 1,
-    marginRight: 12,
-  },
-  toggleDescription: {
-    fontSize: 14,
-    color: '#7A7A9E',
-    marginTop: 12,
-    lineHeight: 20,
-  },
-  saveBtn: {
-    backgroundColor: '#4A90D9',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  saveBtnText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-});

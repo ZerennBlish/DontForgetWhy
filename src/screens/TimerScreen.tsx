@@ -17,6 +17,7 @@ import {
   recordPresetUsage,
   loadRecentPresetIds,
 } from '../services/timerStorage';
+import { useTheme } from '../theme/ThemeContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PRESET_CARD_WIDTH = (SCREEN_WIDTH - 32 - 16) / 3;
@@ -51,11 +52,215 @@ export default function TimerScreen({
   onRemoveTimer,
   onTogglePause,
 }: TimerScreenProps) {
+  const { colors } = useTheme();
   const [presets, setPresets] = useState<TimerPreset[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [customModal, setCustomModal] = useState<TimerPreset | null>(null);
   const [customMinutes, setCustomMinutes] = useState('');
   const [customSeconds, setCustomSeconds] = useState('');
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: 16,
+      paddingBottom: 60,
+    },
+    section: {
+      marginBottom: 24,
+    },
+    sectionLabel: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 12,
+    },
+    subsectionLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textTertiary,
+      marginBottom: 8,
+    },
+    activeCard: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 10,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    activeLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      flex: 1,
+    },
+    activeIcon: {
+      fontSize: 24,
+    },
+    activeLabel: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    activeRight: {
+      alignItems: 'flex-end',
+      gap: 8,
+    },
+    activeCountdown: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      fontVariant: ['tabular-nums'],
+    },
+    activeDone: {
+      fontSize: 20,
+      color: colors.red,
+      fontWeight: '700',
+    },
+    activeActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    actionBtn: {
+      padding: 6,
+      backgroundColor: colors.activeBackground,
+      borderRadius: 8,
+    },
+    actionBtnText: {
+      fontSize: 16,
+    },
+    cancelBtn: {
+      padding: 6,
+      backgroundColor: colors.card,
+      borderRadius: 8,
+    },
+    cancelBtnText: {
+      fontSize: 14,
+      color: colors.red,
+      fontWeight: '700',
+    },
+    presetGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    presetCard: {
+      width: PRESET_CARD_WIDTH,
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 10,
+      alignItems: 'center',
+    },
+    presetIcon: {
+      fontSize: 20,
+      marginBottom: 2,
+    },
+    presetLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    presetDuration: {
+      fontSize: 10,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    hint: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      textAlign: 'center',
+      marginTop: 12,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 32,
+    },
+    modalCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 24,
+      width: '100%',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 4,
+    },
+    modalSubtitle: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      textAlign: 'center',
+      marginBottom: 20,
+    },
+    modalInputRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 20,
+    },
+    modalInputGroup: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    modalInput: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      width: '100%',
+    },
+    modalInputLabel: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: 6,
+    },
+    modalBtns: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    modalCancelBtn: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalCancelText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    modalSaveBtn: {
+      flex: 1,
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    modalSaveText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+  }), [colors]);
 
   useEffect(() => {
     loadPresets().then(setPresets);
@@ -239,7 +444,7 @@ export default function TimerScreen({
                   onChangeText={(t) => setCustomMinutes(t.replace(/[^0-9]/g, ''))}
                   keyboardType="number-pad"
                   placeholder="0"
-                  placeholderTextColor="#555"
+                  placeholderTextColor={colors.textTertiary}
                   autoFocus
                   maxLength={4}
                 />
@@ -252,7 +457,7 @@ export default function TimerScreen({
                   onChangeText={(t) => setCustomSeconds(t.replace(/[^0-9]/g, ''))}
                   keyboardType="number-pad"
                   placeholder="0"
-                  placeholderTextColor="#555"
+                  placeholderTextColor={colors.textTertiary}
                   maxLength={2}
                 />
                 <Text style={styles.modalInputLabel}>sec</Text>
@@ -280,206 +485,3 @@ export default function TimerScreen({
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingBottom: 60,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#EAEAFF',
-    marginBottom: 12,
-  },
-  subsectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7A7A9E',
-    marginBottom: 8,
-  },
-  activeCard: {
-    backgroundColor: '#1E1E2E',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  activeLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  activeIcon: {
-    fontSize: 24,
-  },
-  activeLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#EAEAFF',
-  },
-  activeRight: {
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  activeCountdown: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#EAEAFF',
-    fontVariant: ['tabular-nums'],
-  },
-  activeDone: {
-    fontSize: 20,
-    color: '#FF6B6B',
-    fontWeight: '700',
-  },
-  activeActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionBtn: {
-    padding: 6,
-    backgroundColor: '#1A2A44',
-    borderRadius: 8,
-  },
-  actionBtnText: {
-    fontSize: 16,
-  },
-  cancelBtn: {
-    padding: 6,
-    backgroundColor: '#3A1A1A',
-    borderRadius: 8,
-  },
-  cancelBtnText: {
-    fontSize: 14,
-    color: '#FF6B6B',
-    fontWeight: '700',
-  },
-  presetGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  presetCard: {
-    width: PRESET_CARD_WIDTH,
-    backgroundColor: '#1E1E2E',
-    borderRadius: 10,
-    padding: 10,
-    alignItems: 'center',
-  },
-  presetIcon: {
-    fontSize: 20,
-    marginBottom: 2,
-  },
-  presetLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#EAEAFF',
-    textAlign: 'center',
-  },
-  presetDuration: {
-    fontSize: 10,
-    color: '#7A7A9E',
-    marginTop: 2,
-  },
-  hint: {
-    fontSize: 11,
-    color: '#555',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  modalCard: {
-    backgroundColor: '#1E1E2E',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#EAEAFF',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#7A7A9E',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalInputRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  modalInputGroup: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  modalInput: {
-    backgroundColor: '#121220',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#EAEAFF',
-    textAlign: 'center',
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-    width: '100%',
-  },
-  modalInputLabel: {
-    fontSize: 13,
-    color: '#7A7A9E',
-    marginTop: 6,
-  },
-  modalBtns: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalCancelBtn: {
-    flex: 1,
-    backgroundColor: '#121220',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  modalCancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#7A7A9E',
-  },
-  modalSaveBtn: {
-    flex: 1,
-    backgroundColor: '#4A90D9',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  modalSaveText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-  },
-});

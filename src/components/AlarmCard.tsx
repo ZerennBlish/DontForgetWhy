@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { Alarm, AlarmCategory } from '../types/alarm';
 import { formatTime } from '../utils/time';
+import { useTheme } from '../theme/ThemeContext';
 
 const categoryLabels: Record<AlarmCategory, string> = {
   meds: '\u{1F48A} Meds',
@@ -27,8 +28,90 @@ function getDetailLine(alarm: Alarm): string {
 }
 
 export default function AlarmCard({ alarm, onToggle, onDelete, onEdit, onPress }: AlarmCardProps) {
+  const { colors } = useTheme();
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const styles = useMemo(() => StyleSheet.create({
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cardDisabled: {
+      opacity: 0.5,
+    },
+    left: {
+      flex: 1,
+      marginRight: 12,
+    },
+    time: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      letterSpacing: -1,
+    },
+    detail: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    privateText: {
+      fontSize: 15,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    category: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    textDisabled: {
+      color: colors.textTertiary,
+    },
+    right: {
+      alignItems: 'center',
+      gap: 10,
+    },
+    peekBtn: {
+      padding: 4,
+    },
+    peekIcon: {
+      fontSize: 18,
+    },
+    btnRow: {
+      flexDirection: 'row',
+      gap: 6,
+    },
+    editBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: colors.activeBackground,
+    },
+    editText: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    deleteBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: colors.card,
+    },
+    deleteText: {
+      color: colors.red,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+  }), [colors]);
 
   useEffect(() => {
     return () => {
@@ -75,8 +158,8 @@ export default function AlarmCard({ alarm, onToggle, onDelete, onEdit, onPress }
         <Switch
           value={alarm.enabled}
           onValueChange={() => onToggle(alarm.id)}
-          trackColor={{ false: '#555', true: '#4A90D9' }}
-          thumbColor={alarm.enabled ? '#fff' : '#999'}
+          trackColor={{ false: colors.border, true: colors.accent }}
+          thumbColor={alarm.enabled ? colors.textPrimary : colors.textTertiary}
         />
         <View style={styles.btnRow}>
           <TouchableOpacity onPress={() => onEdit(alarm)} style={styles.editBtn}>
@@ -90,84 +173,3 @@ export default function AlarmCard({ alarm, onToggle, onDelete, onEdit, onPress }
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#1E1E2E',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  cardDisabled: {
-    opacity: 0.5,
-  },
-  left: {
-    flex: 1,
-    marginRight: 12,
-  },
-  time: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#EAEAFF',
-    letterSpacing: -1,
-  },
-  detail: {
-    fontSize: 15,
-    color: '#B0B0CC',
-    marginTop: 4,
-  },
-  privateText: {
-    fontSize: 15,
-    color: '#7A7A9E',
-    marginTop: 4,
-  },
-  category: {
-    fontSize: 13,
-    color: '#7A7A9E',
-    marginTop: 4,
-  },
-  textDisabled: {
-    color: '#555',
-  },
-  right: {
-    alignItems: 'center',
-    gap: 10,
-  },
-  peekBtn: {
-    padding: 4,
-  },
-  peekIcon: {
-    fontSize: 18,
-  },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  editBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#1A2A44',
-  },
-  editText: {
-    color: '#4A90D9',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  deleteBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#3A1A1A',
-  },
-  deleteText: {
-    color: '#FF6B6B',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
 } from '../data/guessWhyMessages';
 import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
 import { addForgetEntry } from '../services/forgetLog';
+import { useTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GuessWhy'>;
@@ -37,6 +38,7 @@ type ResultState =
   | null;
 
 export default function GuessWhyScreen({ route, navigation }: Props) {
+  const { colors } = useTheme();
   const { alarm } = route.params;
   const hasIcon = Boolean(alarm.icon);
   const [mode, setMode] = useState<'icons' | 'type'>(hasIcon ? 'icons' : 'type');
@@ -44,6 +46,183 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const [typedGuess, setTypedGuess] = useState('');
   const [result, setResult] = useState<ResultState>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingVertical: 60,
+      paddingHorizontal: 24,
+      justifyContent: 'space-between',
+    },
+    top: {
+      alignItems: 'center',
+      marginTop: 20,
+    },
+    emoji: {
+      fontSize: 48,
+      marginBottom: 12,
+    },
+    time: {
+      fontSize: 56,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      letterSpacing: -2,
+    },
+    categoryLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.accent,
+      letterSpacing: 2,
+      marginTop: 8,
+    },
+    gameArea: {
+      flex: 1,
+      marginTop: 20,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      overflow: 'hidden',
+    },
+    modeToggle: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: 10,
+      padding: 3,
+      marginBottom: 12,
+    },
+    modeBtn: {
+      flex: 1,
+      paddingVertical: 8,
+      alignItems: 'center',
+      borderRadius: 8,
+    },
+    modeBtnActive: {
+      backgroundColor: colors.accent,
+    },
+    modeBtnDisabled: {
+      opacity: 0.35,
+    },
+    modeBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    modeBtnTextActive: {
+      color: colors.textPrimary,
+    },
+    prompt: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 12,
+    },
+    iconScroll: {
+      flex: 1,
+    },
+    iconGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      paddingBottom: 8,
+    },
+    iconCell: {
+      width: '23%',
+      aspectRatio: 1,
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    iconEmoji: {
+      fontSize: 28,
+    },
+    iconLabel: {
+      fontSize: 10,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    typeArea: {
+      flex: 1,
+      justifyContent: 'center',
+      gap: 12,
+    },
+    textInput: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: 16,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    submitBtn: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    submitBtnDisabled: {
+      opacity: 0.4,
+    },
+    submitBtnText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    overlayMessage: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: '#fff',
+      textAlign: 'center',
+      lineHeight: 26,
+      marginBottom: 24,
+    },
+    overlayBtn: {
+      backgroundColor: 'rgba(255,255,255,0.25)',
+      borderRadius: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 40,
+    },
+    overlayBtnText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#fff',
+    },
+    bottom: {
+      alignItems: 'center',
+      marginTop: 16,
+      gap: 10,
+    },
+    attemptsText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    skipBtn: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 32,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    skipBtnText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+  }), [colors]);
 
   const checkIconGuess = (iconId: string, iconEmoji: string): boolean => {
     // Direct icon match (exact equality)
@@ -217,7 +396,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
             <TextInput
               style={styles.textInput}
               placeholder="Type your guess..."
-              placeholderTextColor="#555"
+              placeholderTextColor={colors.textTertiary}
               value={typedGuess}
               onChangeText={setTypedGuess}
               autoCapitalize="none"
@@ -270,180 +449,3 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121220',
-    paddingVertical: 60,
-    paddingHorizontal: 24,
-    justifyContent: 'space-between',
-  },
-  top: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  time: {
-    fontSize: 56,
-    fontWeight: '800',
-    color: '#EAEAFF',
-    letterSpacing: -2,
-  },
-  categoryLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4A90D9',
-    letterSpacing: 2,
-    marginTop: 8,
-  },
-  gameArea: {
-    flex: 1,
-    marginTop: 20,
-    backgroundColor: '#1E1E2E',
-    borderRadius: 16,
-    padding: 16,
-    overflow: 'hidden',
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: '#121220',
-    borderRadius: 10,
-    padding: 3,
-    marginBottom: 12,
-  },
-  modeBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  modeBtnActive: {
-    backgroundColor: '#4A90D9',
-  },
-  modeBtnDisabled: {
-    opacity: 0.35,
-  },
-  modeBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7A7A9E',
-  },
-  modeBtnTextActive: {
-    color: '#fff',
-  },
-  prompt: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#EAEAFF',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  iconScroll: {
-    flex: 1,
-  },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingBottom: 8,
-  },
-  iconCell: {
-    width: '23%',
-    aspectRatio: 1,
-    backgroundColor: '#121220',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  iconEmoji: {
-    fontSize: 28,
-  },
-  iconLabel: {
-    fontSize: 10,
-    color: '#7A7A9E',
-    marginTop: 4,
-  },
-  typeArea: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 12,
-  },
-  textInput: {
-    backgroundColor: '#121220',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#EAEAFF',
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  submitBtn: {
-    backgroundColor: '#4A90D9',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitBtnDisabled: {
-    opacity: 0.4,
-  },
-  submitBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  overlayMessage: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: 24,
-  },
-  overlayBtn: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-  },
-  overlayBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  bottom: {
-    alignItems: 'center',
-    marginTop: 16,
-    gap: 10,
-  },
-  attemptsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7A7A9E',
-  },
-  skipBtn: {
-    backgroundColor: '#1E1E2E',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  skipBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#B0B0CC',
-  },
-});

@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -13,23 +13,31 @@ import MemoryScoreScreen from './src/screens/MemoryScoreScreen';
 import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import { loadAlarms } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import type { RootStackParamList } from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const DarkTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: '#121220',
-    card: '#121220',
-    text: '#EAEAFF',
-    border: '#2A2A3E',
-    primary: '#4A90D9',
-  },
-};
+function AppNavigator() {
+  const { colors } = useTheme();
 
-export default function App() {
+  const navigationTheme = useMemo(
+    () => ({
+      ...DefaultTheme,
+      colors: {
+        ...DefaultTheme.colors,
+        background: colors.background,
+        card: colors.background,
+        text: colors.textPrimary,
+        border: colors.border,
+        primary: colors.accent,
+      },
+    }),
+    [colors],
+  );
+
+  const navigationRef = React.useRef<any>(null);
+
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(
       async (response) => {
@@ -51,17 +59,15 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
-  const navigationRef = React.useRef<any>(null);
-
   return (
     <>
-      <StatusBar style="light" />
-      <NavigationContainer theme={DarkTheme} ref={navigationRef}>
+      <StatusBar style={colors.mode === 'dark' ? 'light' : 'dark'} />
+      <NavigationContainer theme={navigationTheme} ref={navigationRef}>
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
             animation: 'slide_from_right',
-            contentStyle: { backgroundColor: '#121220' },
+            contentStyle: { backgroundColor: colors.background },
           }}
         >
           <Stack.Screen name="AlarmList" component={AlarmListScreen} />
@@ -98,5 +104,13 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppNavigator />
+    </ThemeProvider>
   );
 }

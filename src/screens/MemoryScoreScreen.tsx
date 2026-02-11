@@ -1,14 +1,16 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadStats, resetStats, GuessWhyStats } from '../services/guessWhyStats';
 import { getRank } from '../data/memoryRanks';
+import { useTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MemoryScore'>;
 
 export default function MemoryScoreScreen({ navigation }: Props) {
+  const { colors } = useTheme();
   const [stats, setStats] = useState<GuessWhyStats>({
     wins: 0,
     losses: 0,
@@ -16,6 +18,113 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     streak: 0,
     bestStreak: 0,
   });
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      paddingBottom: 60,
+    },
+    header: {
+      paddingTop: 60,
+      paddingHorizontal: 20,
+      paddingBottom: 24,
+    },
+    backBtn: {
+      fontSize: 16,
+      color: colors.accent,
+      fontWeight: '600',
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: colors.textPrimary,
+    },
+    rankSection: {
+      alignItems: 'center',
+      paddingVertical: 24,
+      paddingHorizontal: 20,
+    },
+    rankEmoji: {
+      fontSize: 64,
+      marginBottom: 12,
+    },
+    rankTitle: {
+      fontSize: 24,
+      fontWeight: '700',
+      textAlign: 'center',
+      lineHeight: 32,
+    },
+    percentage: {
+      fontSize: 48,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      marginTop: 16,
+    },
+    subtitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    statsCard: {
+      marginHorizontal: 16,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    statRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 10,
+    },
+    statLabel: {
+      fontSize: 15,
+      color: colors.textSecondary,
+    },
+    statValue: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 4,
+    },
+    forgetLogBtn: {
+      marginHorizontal: 16,
+      marginTop: 24,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingVertical: 16,
+      alignItems: 'center',
+    },
+    forgetLogBtnText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.accent,
+    },
+    resetBtn: {
+      marginHorizontal: 16,
+      marginTop: 12,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      paddingVertical: 16,
+      alignItems: 'center',
+    },
+    resetBtnText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.red,
+    },
+  }), [colors]);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,110 +213,3 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121220',
-  },
-  content: {
-    paddingBottom: 60,
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  backBtn: {
-    fontSize: 16,
-    color: '#4A90D9',
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#EAEAFF',
-  },
-  rankSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-  },
-  rankEmoji: {
-    fontSize: 64,
-    marginBottom: 12,
-  },
-  rankTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 32,
-  },
-  percentage: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: '#EAEAFF',
-    marginTop: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#7A7A9E',
-    marginTop: 4,
-  },
-  statsCard: {
-    marginHorizontal: 16,
-    backgroundColor: '#1E1E2E',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  statLabel: {
-    fontSize: 15,
-    color: '#B0B0CC',
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#EAEAFF',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#2A2A3E',
-    marginVertical: 4,
-  },
-  forgetLogBtn: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    backgroundColor: '#1E1E2E',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  forgetLogBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4A90D9',
-  },
-  resetBtn: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    backgroundColor: '#3A1A1A',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  resetBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FF6B6B',
-  },
-});
