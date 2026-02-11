@@ -1,6 +1,6 @@
 # Don't Forget Why
 
-A mobile alarm app that forces you to remember *why* you set each alarm — not just when it goes off. Includes a full timer system with quick-tap presets, a "Guess Why" memory mini-game, escalating snooze shame, a full theme system with 8 presets + custom color picker, and a sarcastic personality throughout.
+A mobile alarm app that forces you to remember *why* you set each alarm — not just when it goes off. Includes a full timer system with quick-tap presets, a "Guess Why" memory mini-game, escalating snooze shame, a full theme system with 8 presets + custom color picker, safe area support, and a sarcastic personality throughout.
 
 ## Tech Stack
 
@@ -10,9 +10,10 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 - **Persistence**: @react-native-async-storage/async-storage 2.x
 - **Notifications**: expo-notifications + expo-device
 - **Theming**: React Context + reanimated-color-picker 4.x + react-native-reanimated 4.x
+- **Safe Area**: react-native-safe-area-context 5.6 (SafeAreaProvider at root, useSafeAreaInsets on every screen)
 - **IDs**: uuid v13 (via react-native-get-random-values polyfill)
 - **Target Platforms**: Android (primary, edge-to-edge enabled, package `com.zerennblish.DontForgetWhy`), iOS (supportsTablet), Web (favicon only)
-- **Build**: EAS Build configured (development/preview/production profiles)
+- **Build**: EAS Build configured (development APK / preview APK / production profiles)
 
 ## Features
 
@@ -24,26 +25,30 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 6. **Category auto-mapping** — Icon selection drives the category field (e.g. 💊 → meds, 🏋️ → self-care); unrecognized icons default to 'general'
 7. **Private alarm mode** — Hides note/icon/nickname on the alarm card, shows "🔒 Private Alarm"; tap eye icon to peek for 3 seconds
 8. **Motivational quotes** — Random quote from a pool of 12, assigned at alarm creation and shown on the fire screen
-9. **App-open quotes** — Snarky rotating quote displayed at the top of the alarm list on every visit
+9. **App-open quotes** — Snarky rotating quote displayed at the top of the alarm list; refreshes on every screen focus via useFocusEffect
 10. **Rotating placeholder text** — The note input field shows a random witty placeholder from a pool of 12
 11. **Guess Why mini-game** — When enabled, you must guess why you set the alarm before seeing the answer; 3 attempts via icon grid or free-text input
-12. **Win/loss/skip tracking** — Every Guess Why outcome is recorded with running totals and streak counter
-13. **Memory Score screen** — Shows win %, rank title + emoji, current streak, best streak, total games; links to Forget Log
-14. **Memory rank tiers** — Five ranks from "Goldfish With Amnesia" (0-29%) to "Memory of an Elephant With a Vendetta" (90-100%)
-15. **"What Did I Forget?" log** — Chronological list of every alarm you failed or skipped in Guess Why, with note, nickname, icon, timestamp, and result badge
-16. **Snooze with escalating shame** — 4 tiers of increasingly judgmental messages; snooze button text degrades each tap
-17. **Timer system** — 33 labeled presets + 1 custom entry in a 3-column grid; tap to start countdown
-18. **Timer custom duration** — Long-press any preset to override its duration (saved per-preset in AsyncStorage)
-19. **Timer recently-used sorting** — Used presets float to a "Recent" section at the top; up to 20 tracked
-20. **Active timer management** — Live countdown display with pause/resume toggle and dismiss (X) button; persisted across app reloads
-21. **Timer completion alerts** — Alert dialog fires when a timer reaches zero
-22. **Notification scheduling** — Daily repeat notifications via expo-notifications; permission requested on first alarm save
-23. **Notification deep-linking** — Tapping a notification opens GuessWhy (if enabled) or AlarmFire for the matching alarm
-24. **Theme system** — 8 preset themes (4 dark, 4 light) + custom color picker; all styles react to theme changes via useMemo
-25. **Custom theme generator** — Pick any accent color; the app auto-generates a full theme (background, card, text, border colors) based on luminance
-26. **Theme persistence** — Selected theme and custom accent color saved to AsyncStorage, restored on app launch
-27. **Streak display** — Current streak and best streak shown in the alarm list header when the user has played at least one Guess Why round
-28. **Trophy navigation** — Trophy icon in header navigates to Memory Score; only visible after first game played
+12. **Unwinnable alarm guard** — Alarms with no icon and a note shorter than 3 characters skip Guess Why entirely (navigation.replace to AlarmFire without recording stats)
+13. **Win/loss/skip tracking** — Every Guess Why outcome is recorded with running totals and streak counter
+14. **Memory Score screen** — Shows win %, rank title + emoji, current streak, best streak, total games; links to Forget Log
+15. **Memory rank tiers** — Five ranks from "Goldfish With Amnesia" (0-29%) to "Memory of an Elephant With a Vendetta" (90-100%), with Math.round to prevent float gaps
+16. **"What Did I Forget?" log** — Chronological list of every alarm you failed or skipped in Guess Why, with note, nickname, icon, timestamp, and result badge
+17. **Snooze with escalating shame** — 4 tiers of increasingly judgmental messages; snooze button text degrades each tap
+18. **Timer system** — 33 labeled presets + 1 custom entry in a 3-column grid; tap to start countdown
+19. **Timer custom duration** — Long-press any preset to override its duration (saved per-preset in AsyncStorage)
+20. **Timer recently-used sorting** — Used presets float to a "Recent" section at the top; up to 20 tracked
+21. **Active timer management** — Live countdown display with pause/resume toggle and dismiss (X) button; persisted across app reloads
+22. **Timer background drift correction** — AppState listener recalculates timer remaining seconds when app returns to foreground
+23. **Timer completion alerts** — Alert dialog fires when a timer reaches zero
+24. **Notification scheduling** — Daily repeat notifications via expo-notifications; permission requested on first alarm save (skipped when editing a disabled alarm)
+25. **Notification deep-linking** — Tapping a notification opens GuessWhy (if enabled) or AlarmFire for the matching alarm
+26. **Theme system** — 8 preset themes (4 dark, 4 light) + custom color picker; all styles react to theme changes via useMemo
+27. **Custom theme generator** — Pick any accent color; extreme colors (luminance < 0.08 or > 0.92) are clamped before generating a full theme
+28. **Theme persistence** — Selected theme and custom accent color saved to AsyncStorage, restored on app launch
+29. **Safe area support** — SafeAreaProvider wraps the app root; every screen uses useSafeAreaInsets for bottom padding to avoid Android navigation bar overlap
+30. **Streak display** — Current streak and best streak shown in the alarm list header when the user has played at least one Guess Why round
+31. **Trophy navigation** — Trophy icon in header navigates to Memory Score; only visible after first game played
+32. **AsyncStorage validation** — Runtime type guards on all loaded data: alarms require `id`, `time`, `note`, `enabled`, `category`; active timers require `id`, `totalSeconds`, `remainingSeconds`, `startedAt`, `isRunning`; forget log entries require `id`, `timestamp`
 
 ## Data Models
 
@@ -197,16 +202,16 @@ interface RecentEntry {
 ## Screen Flow
 
 ### AlarmList (`AlarmListScreen.tsx`)
-Main hub. Header shows app title, active alarm count, trophy button (if games played), gear button. Pill-shaped Alarms/Timers tab switcher. Alarms tab shows a random app-open quote card, FlatList of AlarmCards, and a FAB (+) to create. If Guess Why stats exist, a streak row displays below the tabs. Timers tab renders TimerScreen inline.
+Main hub. Header shows app title, active alarm count, trophy button (if games played), gear button. Pill-shaped Alarms/Timers tab switcher. Alarms tab shows a random app-open quote card (refreshes on each screen focus), FlatList of AlarmCards, and a FAB (+) to create. If Guess Why stats exist, a streak row displays below the tabs. Timers tab renders TimerScreen inline. Bottom padding accounts for safe area insets.
 
 ### CreateAlarm (`CreateAlarmScreen.tsx`)
-Slide-from-bottom modal. Two large number inputs for hours/minutes. Nickname field (shows on lock screen). Note field with random placeholder ("Why are you setting this alarm?") and character counter (200 max). 24-icon picker grid. Private alarm toggle card. Save button. In edit mode, pre-fills all fields from the existing alarm and button says "Update Alarm". Requires at least a note or an icon to save.
+Slide-from-bottom modal. Two large number inputs for hours/minutes. Nickname field (shows on lock screen). Note field with random placeholder ("Why are you setting this alarm?") and character counter (200 max). 24-icon picker grid. Private alarm toggle card. Save button. In edit mode, pre-fills all fields from the existing alarm and button says "Update Alarm". Requires at least a note or an icon to save. Notification permission is only requested when scheduling is needed (new alarm, or editing an enabled alarm).
 
 ### AlarmFire (`AlarmFireScreen.tsx`)
 Full-screen fade-in, gesture disabled. Top: category emoji + formatted time + category label. Middle: the alarm note (the "why") + divider + the assigned quote. Snooze button with 4 escalating labels ("Snooze 5 min" → "Snooze Again" → "...Snooze Again" → "Fine, Snooze") and a random shame message per tier. Dismiss button says "I'm On It".
 
 ### GuessWhy (`GuessWhyScreen.tsx`)
-Full-screen fade-in, gesture disabled. Top: alarm icon/category emoji + time + category label. Game area card with Icons/Type It mode toggle (Icons mode disabled if alarm has no icon). Icons mode: scrollable 4-column grid of 24 icons with labels. Type It mode: text input with Guess button (min 3 chars). 3 attempts. Shake animation on wrong guess. Result overlay (green win / red lose / amber skip) with snarky message and continue button that navigates to AlarmFire via `navigation.replace`. Skip button at bottom. Losses and skips are logged to the Forget Log.
+Full-screen fade-in, gesture disabled. If the alarm has no icon and a note shorter than 3 characters, the screen immediately replaces itself with AlarmFire (no stats recorded). Top: alarm icon/category emoji + time + category label. Game area card with Icons/Type It mode toggle (Icons mode disabled if alarm has no icon). Icons mode: scrollable 4-column grid of 24 icons with labels; match is exact emoji equality only. Type It mode: text input with Guess button (min 3 chars); match checks if typed text appears in the alarm note, or for icon-only alarms, matches the icon's ID. 3 attempts. Shake animation on wrong guess. Result overlay (green win / red lose / amber skip) with snarky message and continue button that navigates to AlarmFire via `navigation.replace`. Skip button at bottom. Losses and skips are logged to the Forget Log.
 
 ### Settings (`SettingsScreen.tsx`)
 Back button + title. Top card with a toggle switch for "Guess Why Mini-Game" and description text. Second card with theme picker: 8 preset theme circles in a grid (inner circle shows accent color, outer border shows active state), plus a 9th "Custom" circle. Custom circle shows a 🎨 emoji if no custom color saved, or the saved accent color. Tapping Custom opens a color picker modal (reanimated-color-picker with Panel1 + HueSlider + Preview) where the user picks a color and taps Apply.
@@ -218,7 +223,7 @@ Back button + title. Large rank emoji + rank title (colored) + win percentage + 
 Back button + title + subtitle. FlatList of ForgetEntry cards showing emoji, note, nickname, result badge (❌ Forgot or ⏭️ Skipped), and formatted timestamp. Empty state message if no entries. "Clear Log" button at bottom with confirmation alert.
 
 ### TimerScreen (`TimerScreen.tsx`)
-Rendered inline as a tab in AlarmListScreen (not a navigation screen). Active timers section at top with countdown display (MM:SS), pause/play toggle, and dismiss (✕). "Recent" section shows recently used presets. Main grid shows remaining presets + ➕ Custom button at end. 3-column grid layout. Tap to start timer. Long-press to set custom duration via modal (minutes + seconds inputs). Custom preset (seconds = 0) opens the duration modal on tap.
+Rendered inline as a tab in AlarmListScreen (not a navigation screen). Active timers section at top with countdown display (MM:SS), pause/play toggle, and dismiss (✕). Completed timers show "⏰ Done!" in red. "Recent" section shows recently used presets. Main grid shows remaining presets + ➕ Custom button at end. 3-column grid layout. Tap to start timer. Long-press to set custom duration via modal (minutes + seconds inputs). Custom preset (seconds = 0) opens the duration modal on tap. Active timers are recalculated from `startedAt` when the app returns from background via an AppState listener.
 
 ## File Structure
 
@@ -235,10 +240,10 @@ src/
 │   ├── snoozeMessages.ts          4 tiers of 3 escalating snooze shame messages
 │   └── timerPresets.ts            33 default timer presets + 1 custom entry
 ├── navigation/
-│   └── types.ts                   RootStackParamList with all screen route params
+│   └── types.ts                   RootStackParamList with all 7 screen route params
 ├── screens/
 │   ├── AlarmFireScreen.tsx        Alarm dismiss screen with note, quote, snooze shame
-│   ├── AlarmListScreen.tsx        Main screen with alarm list, tab switcher, FAB
+│   ├── AlarmListScreen.tsx        Main screen with alarm list, timer tab, FAB, timer management
 │   ├── CreateAlarmScreen.tsx      Create/edit alarm with time, nickname, note, icon, privacy
 │   ├── ForgetLogScreen.tsx        Chronological log of forgotten/skipped alarms
 │   ├── GuessWhyScreen.tsx         Mini-game: guess the alarm reason in 3 attempts
@@ -246,15 +251,15 @@ src/
 │   ├── SettingsScreen.tsx         Guess Why toggle + theme picker (8 presets + custom color)
 │   └── TimerScreen.tsx            Timer preset grid + active countdown timers
 ├── services/
-│   ├── forgetLog.ts               CRUD for ForgetEntry[] in AsyncStorage
-│   ├── guessWhyStats.ts           Win/loss/skip/streak tracking with validation
+│   ├── forgetLog.ts               CRUD for ForgetEntry[] with runtime validation
+│   ├── guessWhyStats.ts           Win/loss/skip/streak tracking with per-field numeric validation
 │   ├── notifications.ts           expo-notifications scheduling, permissions, cancellation
 │   ├── quotes.ts                  12 motivational quotes assigned to alarms at creation
 │   ├── settings.ts                AppSettings load/save (guessWhyEnabled)
-│   ├── storage.ts                 Alarm CRUD: load, save, add, update, delete, toggle
-│   └── timerStorage.ts            Timer preset custom durations, active timers, recent tracking
+│   ├── storage.ts                 Alarm CRUD with runtime type guards (id, time, note, enabled, category)
+│   └── timerStorage.ts            Timer presets, active timers (validated), recent tracking
 ├── theme/
-│   ├── colors.ts                  ThemeColors interface, 8 preset themes, generateCustomTheme()
+│   ├── colors.ts                  ThemeColors interface, 8 presets, clampAccent(), generateCustomTheme()
 │   └── ThemeContext.tsx            ThemeProvider + useTheme hook, persists to AsyncStorage
 ├── types/
 │   ├── alarm.ts                   Alarm interface + AlarmCategory type
@@ -264,14 +269,14 @@ src/
 ```
 
 Root files:
-- `App.tsx` — ThemeProvider wrapper, navigation stack setup, notification response listener, StatusBar mode switching
-- `app.json` — Expo config (v1.0.0, portrait, new arch, edge-to-edge Android)
-- `index.ts` — Entry point
-- `eas.json` — EAS Build profiles (development/preview/production)
+- `App.tsx` — SafeAreaProvider + ThemeProvider wrapper, navigation stack setup, notification response listener, StatusBar mode switching
+- `app.json` — Expo config (v1.0.0, portrait, new arch, edge-to-edge Android, predictiveBackGesture disabled)
+- `index.ts` — Entry point (registerRootComponent)
+- `eas.json` — EAS Build profiles (development APK / preview APK / production)
 
 ## Theme System
 
-All 8 preset themes plus a custom theme generator. Every screen and component uses `useTheme()` and wraps styles in `useMemo(() => StyleSheet.create({...}), [colors])` so the entire UI reacts to theme changes.
+All 8 preset themes plus a custom theme generator. Every screen and component uses `useTheme()` and wraps styles in `useMemo(() => StyleSheet.create({...}), [colors, insets.bottom])` so the entire UI reacts to theme changes and safe area updates.
 
 ### Preset Themes
 
@@ -395,9 +400,10 @@ All 8 preset themes plus a custom theme generator. Every screen and component us
 
 `generateCustomTheme(accentHex)` in `colors.ts` generates a full `ThemeColors` from a single accent color:
 
-1. Computes luminance: `(0.299*R + 0.587*G + 0.114*B) / 255`
-2. If luminance < 0.5 → **dark theme**: mixes accent toward black for backgrounds, toward white for text
-3. If luminance >= 0.5 → **light theme**: mixes accent toward white for backgrounds, toward black for text
+1. **Clamp extreme colors** via `clampAccent()`: if luminance < 0.08, mix 25% toward white; if luminance > 0.92, mix 25% toward black. This prevents unreadable themes from pure black/white inputs.
+2. Compute luminance: `(0.299*R + 0.587*G + 0.114*B) / 255`
+3. If luminance < 0.5 → **dark theme**: mixes accent toward black for backgrounds, toward white for text
+4. If luminance >= 0.5 → **light theme**: mixes accent toward white for backgrounds, toward black for text
 
 Dark theme mix ratios:
 - background: accent → black at 85%
@@ -428,7 +434,7 @@ Light theme mix ratios:
 | `rgba(180,150,30,0.85)` | GuessWhyScreen | Skip overlay (always amber) |
 | `rgba(0,0,0,0.7)` | TimerScreen, SettingsScreen | Modal backdrop |
 | `rgba(255,255,255,0.25)` | GuessWhyScreen | Overlay continue button |
-| `#fff` | GuessWhyScreen | Overlay text (always on colored bg) |
+| `#fff` | GuessWhyScreen, MemoryRanks checkmark | Overlay text (always on colored bg) |
 | Rank colors (`#FFD700`, `#4A90D9`, `#B0B0CC`, `#FF9F43`, `#FF6B6B`, `#7A7A9E`) | MemoryScoreScreen | Rank title colors are data-driven from `memoryRanks.ts` |
 
 ## Icon Orders
@@ -558,7 +564,7 @@ Defined in `notifications.ts`. The alarm note (the "why") is **never** included 
 
 ## Memory Rank Tiers
 
-Based on win percentage = `wins / (wins + losses + skips) * 100`:
+Based on win percentage = `Math.round(wins / (wins + losses + skips) * 100)`:
 
 | Range | Emoji | Title | Color |
 |---|---|---|---|

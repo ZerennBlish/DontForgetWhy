@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  AppState,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -25,6 +26,7 @@ import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import TimerScreen from './TimerScreen';
 import { useTheme } from '../theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmList'>;
@@ -43,10 +45,11 @@ function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
 
 export default function AlarmListScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
-  const [appQuote] = useState(getRandomAppOpenQuote);
+  const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
   const [tab, setTab] = useState<'alarms' | 'timers'>('alarms');
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const alertedRef = useRef<Set<string>>(new Set());
@@ -141,13 +144,13 @@ export default function AlarmListScreen({ navigation }: Props) {
     },
     list: {
       paddingHorizontal: 16,
-      paddingBottom: 100,
+      paddingBottom: 100 + insets.bottom,
     },
     empty: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingBottom: 80,
+      paddingBottom: 80 + insets.bottom,
     },
     emptyIcon: {
       fontSize: 48,
@@ -173,7 +176,7 @@ export default function AlarmListScreen({ navigation }: Props) {
     },
     fab: {
       position: 'absolute',
-      bottom: 36,
+      bottom: 36 + insets.bottom,
       right: 24,
       width: 60,
       height: 60,
@@ -193,10 +196,11 @@ export default function AlarmListScreen({ navigation }: Props) {
       fontWeight: '300',
       marginTop: -2,
     },
-  }), [colors]);
+  }), [colors, insets.bottom]);
 
   useFocusEffect(
     useCallback(() => {
+      setAppQuote(getRandomAppOpenQuote());
       loadAlarms().then(setAlarms);
       loadSettings().then((s) => setGuessWhyEnabled(s.guessWhyEnabled));
       loadStats().then(setStats);
@@ -247,6 +251,26 @@ export default function AlarmListScreen({ navigation }: Props) {
     return () => clearInterval(interval);
   }, []);
 
+  // Recalculate timers when app returns to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        setActiveTimers((prev) => {
+          const recalculated = recalculateTimers(prev);
+          const changed = recalculated.some(
+            (t, i) => t.remainingSeconds !== prev[i].remainingSeconds
+          );
+          if (changed) {
+            saveActiveTimers(recalculated);
+            return recalculated;
+          }
+          return prev;
+        });
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
   // Alert for completed timers
   useEffect(() => {
     for (const timer of activeTimers) {
@@ -276,7 +300,10 @@ export default function AlarmListScreen({ navigation }: Props) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await cancelAlarm(id);
+          const alarm = alarms.find(a => a.id === id);
+          if (alarm?.notificationId) {
+            await cancelAlarm(alarm.notificationId);
+          }
           const updated = await deleteAlarm(id);
           setAlarms(updated);
         },

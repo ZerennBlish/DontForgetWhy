@@ -18,7 +18,7 @@ export function getRank(wins: number, losses: number, skips: number): MemoryRank
   const total = wins + losses + skips;
   if (total === 0) return unranked;
 
-  const percentage = (wins / total) * 100;
+  const percentage = Math.round((wins / total) * 100);
   const match = ranks.find((r) => percentage >= r.min && percentage <= r.max);
   return match ? match.rank : unranked;
 }

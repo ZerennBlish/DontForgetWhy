@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatTime } from '../utils/time';
 import { getSnoozeMessage } from '../data/snoozeMessages';
 import { useTheme } from '../theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmFire'>;
@@ -25,6 +26,7 @@ const snoozeButtonLabels = [
 
 export default function AlarmFireScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { alarm } = route.params;
   const [snoozeCount, setSnoozeCount] = useState(0);
   const [snoozeMessage, setSnoozeMessage] = useState<string | null>(null);
@@ -34,7 +36,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       flex: 1,
       backgroundColor: colors.background,
       justifyContent: 'space-between',
-      paddingVertical: 60,
+      paddingTop: 60,
+      paddingBottom: 60 + insets.bottom,
       paddingHorizontal: 24,
     },
     top: {
@@ -120,7 +123,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       fontWeight: '700',
       color: colors.textPrimary,
     },
-  }), [colors]);
+  }), [colors, insets.bottom]);
 
   const handleDismiss = () => {
     navigation.goBack();

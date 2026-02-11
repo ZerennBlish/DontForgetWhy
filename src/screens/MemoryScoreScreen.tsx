@@ -5,12 +5,14 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadStats, resetStats, GuessWhyStats } from '../services/guessWhyStats';
 import { getRank } from '../data/memoryRanks';
 import { useTheme } from '../theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MemoryScore'>;
 
 export default function MemoryScoreScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<GuessWhyStats>({
     wins: 0,
     losses: 0,
@@ -25,7 +27,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
       backgroundColor: colors.background,
     },
     content: {
-      paddingBottom: 60,
+      paddingBottom: 60 + insets.bottom,
     },
     header: {
       paddingTop: 60,
@@ -124,7 +126,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
       fontWeight: '600',
       color: colors.red,
     },
-  }), [colors]);
+  }), [colors, insets.bottom]);
 
   useFocusEffect(
     useCallback(() => {

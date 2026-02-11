@@ -19,6 +19,7 @@ import { getRandomQuote } from '../services/quotes';
 import { getRandomPlaceholder } from '../data/placeholders';
 import guessWhyIcons from '../data/guessWhyIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
@@ -42,6 +43,7 @@ function categoryFromIcon(emoji: string | null): AlarmCategory {
 
 export default function CreateAlarmScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const existingAlarm = route.params?.alarm;
   const isEditing = !!existingAlarm;
 
@@ -69,7 +71,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     content: {
       padding: 20,
       paddingTop: Platform.OS === 'ios' ? 60 : 40,
-      paddingBottom: 60,
+      paddingBottom: 60 + insets.bottom,
     },
     heading: {
       fontSize: 28,
@@ -195,7 +197,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontWeight: '700',
       color: colors.textPrimary,
     },
-  }), [colors]);
+  }), [colors, insets.bottom]);
 
   const handleIconPress = (emoji: string) => {
     setSelectedIcon(selectedIcon === emoji ? null : emoji);
@@ -207,15 +209,17 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       return;
     }
 
-    const granted = await requestPermissions();
-    if (!granted) {
-      Alert.alert('Permissions Needed', 'Enable notifications to use alarms.');
-      return;
-    }
-
     const h = Math.min(23, Math.max(0, parseInt(hours, 10) || 0));
     const m = Math.min(59, Math.max(0, parseInt(minutes, 10) || 0));
     const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+
+    if (!isEditing || existingAlarm!.enabled) {
+      const granted = await requestPermissions();
+      if (!granted) {
+        Alert.alert('Permissions Needed', 'Enable notifications to use alarms.');
+        return;
+      }
+    }
 
     if (isEditing) {
       const updated = {

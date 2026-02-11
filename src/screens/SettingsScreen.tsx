@@ -13,6 +13,7 @@ import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import { loadSettings, saveSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -22,6 +23,7 @@ const presetNames = Object.keys(themes) as (ThemeName & keyof typeof themes)[];
 
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, themeName, customAccent, setTheme, setCustomTheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedColorRef = useRef(customAccent || '#4A90D9');
@@ -32,7 +34,7 @@ export default function SettingsScreen({ navigation }: Props) {
       backgroundColor: colors.background,
     },
     scrollContent: {
-      paddingBottom: 40,
+      paddingBottom: 40 + insets.bottom,
     },
     header: {
       paddingTop: 60,
@@ -187,7 +189,7 @@ export default function SettingsScreen({ navigation }: Props) {
       fontWeight: '700',
       color: colors.textPrimary,
     },
-  }), [colors]);
+  }), [colors, insets.bottom]);
 
   useEffect(() => {
     loadSettings().then((s) => setGuessWhyEnabled(s.guessWhyEnabled));

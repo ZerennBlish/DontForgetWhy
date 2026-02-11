@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadForgetLog, clearForgetLog, ForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ForgetLog'>;
@@ -42,6 +43,7 @@ function formatTimestamp(iso: string): string {
 
 export default function ForgetLogScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [log, setLog] = useState<ForgetEntry[]>([]);
 
   const styles = useMemo(() => StyleSheet.create({
@@ -75,7 +77,7 @@ export default function ForgetLogScreen({ navigation }: Props) {
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 32,
-      paddingBottom: 80,
+      paddingBottom: 80 + insets.bottom,
     },
     emptyText: {
       fontSize: 15,
@@ -85,7 +87,7 @@ export default function ForgetLogScreen({ navigation }: Props) {
     },
     list: {
       paddingHorizontal: 16,
-      paddingBottom: 100,
+      paddingBottom: 100 + insets.bottom,
     },
     card: {
       backgroundColor: colors.card,
@@ -137,7 +139,7 @@ export default function ForgetLogScreen({ navigation }: Props) {
     },
     footer: {
       paddingHorizontal: 16,
-      paddingBottom: 40,
+      paddingBottom: 40 + insets.bottom,
     },
     clearBtn: {
       backgroundColor: colors.card,
@@ -150,7 +152,7 @@ export default function ForgetLogScreen({ navigation }: Props) {
       fontWeight: '600',
       color: colors.red,
     },
-  }), [colors]);
+  }), [colors, insets.bottom]);
 
   useFocusEffect(
     useCallback(() => {

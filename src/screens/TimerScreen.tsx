@@ -18,6 +18,7 @@ import {
   loadRecentPresetIds,
 } from '../services/timerStorage';
 import { useTheme } from '../theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PRESET_CARD_WIDTH = (SCREEN_WIDTH - 32 - 16) / 3;
@@ -53,6 +54,7 @@ export default function TimerScreen({
   onTogglePause,
 }: TimerScreenProps) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [presets, setPresets] = useState<TimerPreset[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [customModal, setCustomModal] = useState<TimerPreset | null>(null);
@@ -65,7 +67,7 @@ export default function TimerScreen({
     },
     content: {
       paddingHorizontal: 16,
-      paddingBottom: 60,
+      paddingBottom: 60 + insets.bottom,
     },
     section: {
       marginBottom: 24,
@@ -260,7 +262,7 @@ export default function TimerScreen({
       fontWeight: '700',
       color: colors.textPrimary,
     },
-  }), [colors]);
+  }), [colors, insets.bottom]);
 
   useEffect(() => {
     loadPresets().then(setPresets);

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
 import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
 import { addForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GuessWhy'>;
@@ -39,6 +40,7 @@ type ResultState =
 
 export default function GuessWhyScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { alarm } = route.params;
   const hasIcon = Boolean(alarm.icon);
   const [mode, setMode] = useState<'icons' | 'type'>(hasIcon ? 'icons' : 'type');
@@ -47,11 +49,20 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const [result, setResult] = useState<ResultState>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
+  const canPlay = hasIcon || alarm.note.length >= 3;
+
+  useEffect(() => {
+    if (!canPlay) {
+      navigation.replace('AlarmFire', { alarm });
+    }
+  }, [canPlay, alarm, navigation]);
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
-      paddingVertical: 60,
+      paddingTop: 60,
+      paddingBottom: 60 + insets.bottom,
       paddingHorizontal: 24,
       justifyContent: 'space-between',
     },
@@ -222,15 +233,13 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       fontWeight: '600',
       color: colors.textSecondary,
     },
-  }), [colors]);
+  }), [colors, insets.bottom]);
 
-  const checkIconGuess = (iconId: string, iconEmoji: string): boolean => {
-    // Direct icon match (exact equality)
-    if (alarm.icon && alarm.icon === iconEmoji) return true;
-    // Category match (exact equality)
-    if (alarm.category === iconId) return true;
+  if (!canPlay) return null;
 
-    return false;
+  const checkIconGuess = (_iconId: string, iconEmoji: string): boolean => {
+    if (!alarm.icon) return false;
+    return alarm.icon === iconEmoji;
   };
 
   const checkTypeGuess = (guess: string): boolean => {

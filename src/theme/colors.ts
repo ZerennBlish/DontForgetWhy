@@ -173,37 +173,49 @@ function mix(hex: string, target: string, amount: number): string {
   );
 }
 
+function clampAccent(hex: string): string {
+  const lum = luminance(hex);
+  if (lum < 0.08) {
+    return mix(hex, '#FFFFFF', 0.25);
+  }
+  if (lum > 0.92) {
+    return mix(hex, '#000000', 0.25);
+  }
+  return hex;
+}
+
 export function generateCustomTheme(accentHex: string): ThemeColors {
-  const lum = luminance(accentHex);
+  const clamped = clampAccent(accentHex);
+  const lum = luminance(clamped);
   const isDark = lum < 0.5;
 
   if (isDark) {
     return {
       mode: 'dark',
-      background: mix(accentHex, '#000000', 0.85),
-      card: mix(accentHex, '#000000', 0.72),
-      accent: accentHex,
-      textPrimary: mix(accentHex, '#FFFFFF', 0.88),
-      textSecondary: mix(accentHex, '#FFFFFF', 0.60),
-      textTertiary: mix(accentHex, '#FFFFFF', 0.35),
-      border: mix(accentHex, '#000000', 0.60),
+      background: mix(clamped, '#000000', 0.85),
+      card: mix(clamped, '#000000', 0.72),
+      accent: clamped,
+      textPrimary: mix(clamped, '#FFFFFF', 0.88),
+      textSecondary: mix(clamped, '#FFFFFF', 0.60),
+      textTertiary: mix(clamped, '#FFFFFF', 0.35),
+      border: mix(clamped, '#000000', 0.60),
       red: '#FF6B6B',
       orange: '#FF9F43',
-      activeBackground: mix(accentHex, '#000000', 0.65),
+      activeBackground: mix(clamped, '#000000', 0.65),
     };
   }
 
   return {
     mode: 'light',
-    background: mix(accentHex, '#FFFFFF', 0.90),
-    card: mix(accentHex, '#FFFFFF', 0.78),
-    accent: accentHex,
-    textPrimary: mix(accentHex, '#000000', 0.88),
-    textSecondary: mix(accentHex, '#000000', 0.62),
-    textTertiary: mix(accentHex, '#000000', 0.40),
-    border: mix(accentHex, '#FFFFFF', 0.60),
+    background: mix(clamped, '#FFFFFF', 0.90),
+    card: mix(clamped, '#FFFFFF', 0.78),
+    accent: clamped,
+    textPrimary: mix(clamped, '#000000', 0.88),
+    textSecondary: mix(clamped, '#000000', 0.62),
+    textTertiary: mix(clamped, '#000000', 0.40),
+    border: mix(clamped, '#FFFFFF', 0.60),
     red: '#D32F2F',
     orange: '#E67E22',
-    activeBackground: mix(accentHex, '#FFFFFF', 0.68),
+    activeBackground: mix(clamped, '#FFFFFF', 0.68),
   };
 }

@@ -13,6 +13,7 @@ import MemoryScoreScreen from './src/screens/MemoryScoreScreen';
 import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import { loadAlarms } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import type { RootStackParamList } from './src/navigation/types';
 
@@ -109,8 +110,10 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppNavigator />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppNavigator />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
