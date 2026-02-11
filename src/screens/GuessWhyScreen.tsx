@@ -48,6 +48,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const [typedGuess, setTypedGuess] = useState('');
   const [result, setResult] = useState<ResultState>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const resolvedRef = useRef(false);
 
   const canPlay = hasIcon || alarm.note.length >= 3;
 
@@ -194,13 +195,13 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     overlayMessage: {
       fontSize: 18,
       fontWeight: '600',
-      color: '#fff',
+      color: colors.overlayText,
       textAlign: 'center',
       lineHeight: 26,
       marginBottom: 24,
     },
     overlayBtn: {
-      backgroundColor: 'rgba(255,255,255,0.25)',
+      backgroundColor: colors.overlayButton,
       borderRadius: 12,
       paddingVertical: 14,
       paddingHorizontal: 40,
@@ -208,7 +209,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     overlayBtnText: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#fff',
+      color: colors.overlayText,
     },
     bottom: {
       alignItems: 'center',
@@ -227,6 +228,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       paddingHorizontal: 32,
       borderWidth: 1,
       borderColor: colors.border,
+    },
+    skipBtnDisabled: {
+      opacity: 0.4,
     },
     skipBtnText: {
       fontSize: 15,
@@ -269,62 +273,69 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     ]).start();
   };
 
-  const logForget = (resultType: 'loss' | 'skip') => {
-    addForgetEntry({
-      alarmNote: alarm.note,
-      alarmNickname: alarm.nickname,
-      alarmIcon: alarm.icon,
-      alarmCategory: alarm.category,
-      result: resultType,
-    });
+  const logForget = async (resultType: 'loss' | 'skip') => {
+    try {
+      await addForgetEntry({
+        alarmNote: alarm.note,
+        alarmNickname: alarm.nickname,
+        alarmIcon: alarm.icon,
+        alarmCategory: alarm.category,
+        result: resultType,
+      });
+    } catch {}
   };
 
-  const handleIconGuess = (iconId: string, iconEmoji: string) => {
-    if (result) return;
+  const handleIconGuess = async (iconId: string, iconEmoji: string) => {
+    if (result || resolvedRef.current) return;
 
     if (checkIconGuess(iconId, iconEmoji)) {
-      recordWin();
+      resolvedRef.current = true;
       setResult({ type: 'win', message: getRandomWinMessage() });
+      try { await recordWin(); } catch {}
     } else {
       const remaining = attemptsLeft - 1;
       setAttemptsLeft(remaining);
       if (remaining <= 0) {
-        recordLoss();
-        logForget('loss');
+        resolvedRef.current = true;
         setResult({ type: 'lose', message: getRandomLoseMessage() });
+        try { await recordLoss(); } catch {}
+        logForget('loss');
       } else {
         triggerShake();
       }
     }
   };
 
-  const handleTypeGuess = () => {
-    if (result) return;
+  const handleTypeGuess = async () => {
+    if (result || resolvedRef.current) return;
     const trimmed = typedGuess.trim();
     if (trimmed.length < 3) return;
 
     if (checkTypeGuess(trimmed)) {
-      recordWin();
+      resolvedRef.current = true;
       setResult({ type: 'win', message: getRandomWinMessage() });
+      try { await recordWin(); } catch {}
     } else {
       const remaining = attemptsLeft - 1;
       setAttemptsLeft(remaining);
       setTypedGuess('');
       if (remaining <= 0) {
-        recordLoss();
-        logForget('loss');
+        resolvedRef.current = true;
         setResult({ type: 'lose', message: getRandomLoseMessage() });
+        try { await recordLoss(); } catch {}
+        logForget('loss');
       } else {
         triggerShake();
       }
     }
   };
 
-  const handleSkip = () => {
-    if (result) return;
-    recordSkip();
-    logForget('skip');
+  const handleSkip = async () => {
+    if (result || resolvedRef.current) return;
+    resolvedRef.current = true;
     setResult({ type: 'skip', message: getRandomSkipMessage() });
+    try { await recordSkip(); } catch {}
+    logForget('skip');
   };
 
   const handleContinue = () => {
@@ -333,10 +344,10 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
   const overlayColor =
     result?.type === 'win'
-      ? 'rgba(34, 139, 34, 0.85)'
+      ? colors.overlayWin
       : result?.type === 'lose'
-        ? 'rgba(180, 40, 40, 0.85)'
-        : 'rgba(180, 150, 30, 0.85)';
+        ? colors.overlayLose
+        : colors.overlaySkip;
 
   const continueLabel =
     result?.type === 'win'
@@ -394,6 +405,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
                 style={styles.iconCell}
                 onPress={() => handleIconGuess(icon.id, icon.emoji)}
                 activeOpacity={0.6}
+                disabled={resolvedRef.current}
               >
                 <Text style={styles.iconEmoji}>{icon.emoji}</Text>
                 <Text style={styles.iconLabel}>{icon.id}</Text>
@@ -412,6 +424,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
               autoCorrect={false}
               returnKeyType="go"
               onSubmitEditing={handleTypeGuess}
+              editable={!resolvedRef.current}
             />
             <TouchableOpacity
               style={[
@@ -420,7 +433,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
               ]}
               onPress={handleTypeGuess}
               activeOpacity={0.7}
-              disabled={typedGuess.trim().length < 3}
+              disabled={typedGuess.trim().length < 3 || resolvedRef.current}
             >
               <Text style={styles.submitBtnText}>Guess</Text>
             </TouchableOpacity>
@@ -448,9 +461,10 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
           {attemptsLeft} attempt{attemptsLeft !== 1 ? 's' : ''} left
         </Text>
         <TouchableOpacity
-          style={styles.skipBtn}
+          style={[styles.skipBtn, resolvedRef.current && styles.skipBtnDisabled]}
           onPress={handleSkip}
           activeOpacity={0.7}
+          disabled={resolvedRef.current}
         >
           <Text style={styles.skipBtnText}>Skip</Text>
         </TouchableOpacity>

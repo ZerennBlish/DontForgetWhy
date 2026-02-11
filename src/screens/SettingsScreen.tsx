@@ -26,7 +26,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
-  const pickedColorRef = useRef(customAccent || '#4A90D9');
+  const pickedColorRef = useRef(customAccent || colors.accent);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -112,7 +112,7 @@ export default function SettingsScreen({ navigation }: Props) {
     checkmark: {
       fontSize: 18,
       fontWeight: '700',
-      color: '#fff',
+      color: colors.overlayText,
     },
     themeName: {
       fontSize: 11,
@@ -135,7 +135,7 @@ export default function SettingsScreen({ navigation }: Props) {
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      backgroundColor: colors.modalOverlay,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 24,
@@ -275,7 +275,7 @@ export default function SettingsScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.themeItem}
             onPress={() => {
-              pickedColorRef.current = customAccent || '#4A90D9';
+              pickedColorRef.current = customAccent || colors.accent;
               setPickerVisible(true);
             }}
             activeOpacity={0.7}

@@ -179,7 +179,7 @@ export default function TimerScreen({
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      backgroundColor: colors.modalOverlay,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 32,
@@ -322,7 +322,7 @@ export default function TimerScreen({
   const handleSaveCustom = async () => {
     if (!customModal) return;
     const mins = parseInt(customMinutes, 10) || 0;
-    const secs = parseInt(customSeconds, 10) || 0;
+    const secs = Math.min(parseInt(customSeconds, 10) || 0, 59);
     const totalSeconds = mins * 60 + secs;
     if (totalSeconds <= 0) {
       setCustomModal(null);
@@ -335,6 +335,20 @@ export default function TimerScreen({
       )
     );
     setCustomModal(null);
+  };
+
+  const handleSecondsChange = (t: string) => {
+    const digits = t.replace(/[^0-9]/g, '');
+    if (digits === '') {
+      setCustomSeconds('');
+      return;
+    }
+    const num = parseInt(digits, 10);
+    if (num > 59) {
+      setCustomSeconds('59');
+    } else {
+      setCustomSeconds(digits);
+    }
   };
 
   const renderPresetCard = (preset: TimerPreset) => (
@@ -456,7 +470,7 @@ export default function TimerScreen({
                 <TextInput
                   style={styles.modalInput}
                   value={customSeconds}
-                  onChangeText={(t) => setCustomSeconds(t.replace(/[^0-9]/g, ''))}
+                  onChangeText={handleSecondsChange}
                   keyboardType="number-pad"
                   placeholder="0"
                   placeholderTextColor={colors.textTertiary}

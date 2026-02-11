@@ -10,6 +10,12 @@ export interface ThemeColors {
   red: string;
   orange: string;
   activeBackground: string;
+  overlayWin: string;
+  overlayLose: string;
+  overlaySkip: string;
+  overlayButton: string;
+  overlayText: string;
+  modalOverlay: string;
 }
 
 const midnight: ThemeColors = {
@@ -24,6 +30,12 @@ const midnight: ThemeColors = {
   red: '#FF6B6B',
   orange: '#FF9F43',
   activeBackground: '#1A2A44',
+  overlayWin: 'rgba(34, 139, 34, 0.85)',
+  overlayLose: 'rgba(180, 40, 40, 0.85)',
+  overlaySkip: 'rgba(180, 150, 30, 0.85)',
+  overlayButton: 'rgba(255, 255, 255, 0.25)',
+  overlayText: '#FFFFFF',
+  modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
 const obsidian: ThemeColors = {
@@ -38,6 +50,12 @@ const obsidian: ThemeColors = {
   red: '#FF6B6B',
   orange: '#FF9F43',
   activeBackground: '#36363C',
+  overlayWin: 'rgba(34, 139, 34, 0.85)',
+  overlayLose: 'rgba(180, 40, 40, 0.85)',
+  overlaySkip: 'rgba(180, 150, 30, 0.85)',
+  overlayButton: 'rgba(255, 255, 255, 0.25)',
+  overlayText: '#FFFFFF',
+  modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
 const forest: ThemeColors = {
@@ -52,6 +70,12 @@ const forest: ThemeColors = {
   red: '#FF6B6B',
   orange: '#FF9F43',
   activeBackground: '#1C3A22',
+  overlayWin: 'rgba(34, 139, 34, 0.85)',
+  overlayLose: 'rgba(180, 40, 40, 0.85)',
+  overlaySkip: 'rgba(180, 150, 30, 0.85)',
+  overlayButton: 'rgba(255, 255, 255, 0.25)',
+  overlayText: '#FFFFFF',
+  modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
 const royal: ThemeColors = {
@@ -66,6 +90,12 @@ const royal: ThemeColors = {
   red: '#FF6B6B',
   orange: '#FF9F43',
   activeBackground: '#2C1C42',
+  overlayWin: 'rgba(34, 139, 34, 0.85)',
+  overlayLose: 'rgba(180, 40, 40, 0.85)',
+  overlaySkip: 'rgba(180, 150, 30, 0.85)',
+  overlayButton: 'rgba(255, 255, 255, 0.25)',
+  overlayText: '#FFFFFF',
+  modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
 const bubblegum: ThemeColors = {
@@ -80,6 +110,12 @@ const bubblegum: ThemeColors = {
   red: '#D32F2F',
   orange: '#E67E22',
   activeBackground: '#FFD0E0',
+  overlayWin: 'rgba(34, 139, 34, 0.85)',
+  overlayLose: 'rgba(180, 40, 40, 0.85)',
+  overlaySkip: 'rgba(180, 150, 30, 0.85)',
+  overlayButton: 'rgba(255, 255, 255, 0.25)',
+  overlayText: '#FFFFFF',
+  modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
 const sunshine: ThemeColors = {
@@ -94,6 +130,12 @@ const sunshine: ThemeColors = {
   red: '#D32F2F',
   orange: '#E67E22',
   activeBackground: '#FFEEAA',
+  overlayWin: 'rgba(34, 139, 34, 0.85)',
+  overlayLose: 'rgba(180, 40, 40, 0.85)',
+  overlaySkip: 'rgba(180, 150, 30, 0.85)',
+  overlayButton: 'rgba(255, 255, 255, 0.25)',
+  overlayText: '#FFFFFF',
+  modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
 const ocean: ThemeColors = {
@@ -108,6 +150,12 @@ const ocean: ThemeColors = {
   red: '#D32F2F',
   orange: '#E67E22',
   activeBackground: '#CCE2FF',
+  overlayWin: 'rgba(34, 139, 34, 0.85)',
+  overlayLose: 'rgba(180, 40, 40, 0.85)',
+  overlaySkip: 'rgba(180, 150, 30, 0.85)',
+  overlayButton: 'rgba(255, 255, 255, 0.25)',
+  overlayText: '#FFFFFF',
+  modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
 const mint: ThemeColors = {
@@ -122,6 +170,12 @@ const mint: ThemeColors = {
   red: '#D32F2F',
   orange: '#E67E22',
   activeBackground: '#C4ECD0',
+  overlayWin: 'rgba(34, 139, 34, 0.85)',
+  overlayLose: 'rgba(180, 40, 40, 0.85)',
+  overlaySkip: 'rgba(180, 150, 30, 0.85)',
+  overlayButton: 'rgba(255, 255, 255, 0.25)',
+  overlayText: '#FFFFFF',
+  modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
 export const themes = {
@@ -202,6 +256,12 @@ export function generateCustomTheme(accentHex: string): ThemeColors {
       red: '#FF6B6B',
       orange: '#FF9F43',
       activeBackground: mix(clamped, '#000000', 0.65),
+      overlayWin: 'rgba(34, 139, 34, 0.85)',
+      overlayLose: 'rgba(180, 40, 40, 0.85)',
+      overlaySkip: 'rgba(180, 150, 30, 0.85)',
+      overlayButton: 'rgba(255, 255, 255, 0.25)',
+      overlayText: '#FFFFFF',
+      modalOverlay: 'rgba(0, 0, 0, 0.7)',
     };
   }
 
@@ -217,5 +277,11 @@ export function generateCustomTheme(accentHex: string): ThemeColors {
     red: '#D32F2F',
     orange: '#E67E22',
     activeBackground: mix(clamped, '#FFFFFF', 0.68),
+    overlayWin: 'rgba(34, 139, 34, 0.85)',
+    overlayLose: 'rgba(180, 40, 40, 0.85)',
+    overlaySkip: 'rgba(180, 150, 30, 0.85)',
+    overlayButton: 'rgba(255, 255, 255, 0.25)',
+    overlayText: '#FFFFFF',
+    modalOverlay: 'rgba(0, 0, 0, 0.7)',
   };
 }
