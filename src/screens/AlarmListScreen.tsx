@@ -16,6 +16,7 @@ import { loadSettings } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
+import TimerScreen from './TimerScreen';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmList'>;
@@ -25,6 +26,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
   const [appQuote] = useState(getRandomAppOpenQuote);
+  const [tab, setTab] = useState<'alarms' | 'timers'>('alarms');
 
   useFocusEffect(
     useCallback(() => {
@@ -95,7 +97,29 @@ export default function AlarmListScreen({ navigation }: Props) {
         <Text style={styles.subtitle}>
           {alarms.filter(a => a.enabled).length} active alarm{alarms.filter(a => a.enabled).length !== 1 ? 's' : ''}
         </Text>
-        {hasPlayed && (
+
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, tab === 'alarms' && styles.tabActive]}
+            onPress={() => setTab('alarms')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, tab === 'alarms' && styles.tabTextActive]}>
+              Alarms
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, tab === 'timers' && styles.tabActive]}
+            onPress={() => setTab('timers')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, tab === 'timers' && styles.tabTextActive]}>
+              Timers
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {tab === 'alarms' && hasPlayed && (
           <View style={styles.streakRow}>
             <Text
               style={[
@@ -114,45 +138,51 @@ export default function AlarmListScreen({ navigation }: Props) {
         )}
       </View>
 
-      {alarms.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>{'\u23F0'}</Text>
-          <Text style={styles.emptyText}>No alarms yet</Text>
-          <Text style={styles.emptySubtext}>
-            Tap + to create your first reminder
-          </Text>
-          <Text style={styles.emptyQuote}>{appQuote}</Text>
-        </View>
-      ) : (
+      {tab === 'alarms' ? (
         <>
-          <View style={styles.quoteCard}>
-            <Text style={styles.quoteText}>{appQuote}</Text>
-          </View>
-          <FlatList
-            data={alarms}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <AlarmCard
-                alarm={item}
-                onToggle={handleToggle}
-                onDelete={handleDelete}
-                onEdit={handleEdit}
-                onPress={handlePress}
+          {alarms.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyIcon}>{'\u23F0'}</Text>
+              <Text style={styles.emptyText}>No alarms yet</Text>
+              <Text style={styles.emptySubtext}>
+                Tap + to create your first reminder
+              </Text>
+              <Text style={styles.emptyQuote}>{appQuote}</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.quoteCard}>
+                <Text style={styles.quoteText}>{appQuote}</Text>
+              </View>
+              <FlatList
+                data={alarms}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <AlarmCard
+                    alarm={item}
+                    onToggle={handleToggle}
+                    onDelete={handleDelete}
+                    onEdit={handleEdit}
+                    onPress={handlePress}
+                  />
+                )}
+                contentContainerStyle={styles.list}
+                showsVerticalScrollIndicator={false}
               />
-            )}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
-        </>
-      )}
+            </>
+          )}
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('CreateAlarm')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => navigation.navigate('CreateAlarm')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.fabText}>+</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <TimerScreen />
+      )}
     </View>
   );
 }
@@ -193,10 +223,35 @@ const styles = StyleSheet.create({
     color: '#7A7A9E',
     marginTop: 4,
   },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#1E1E2E',
+    borderRadius: 20,
+    padding: 2,
+    marginTop: 12,
+  },
+  tab: {
+    flex: 1,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  tabActive: {
+    backgroundColor: '#4A90D9',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7A7A9E',
+  },
+  tabTextActive: {
+    color: '#fff',
+  },
   streakRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 8,
     gap: 8,
   },
   streakText: {
