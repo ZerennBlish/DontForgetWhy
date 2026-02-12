@@ -14,6 +14,7 @@ const categoryLabels: Record<AlarmCategory, string> = {
 
 interface AlarmCardProps {
   alarm: Alarm;
+  timeFormat: '12h' | '24h';
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (alarm: Alarm) => void;
@@ -27,7 +28,7 @@ function getDetailLine(alarm: Alarm): string {
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, onToggle, onDelete, onEdit, onPress }: AlarmCardProps) {
+export default function AlarmCard({ alarm, timeFormat, onToggle, onDelete, onEdit, onPress }: AlarmCardProps) {
   const { colors } = useTheme();
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,7 +138,7 @@ export default function AlarmCard({ alarm, onToggle, onDelete, onEdit, onPress }
     >
       <View style={styles.left}>
         <Text style={[styles.time, !alarm.enabled && styles.textDisabled]}>
-          {formatTime(alarm.time)}
+          {formatTime(alarm.time, timeFormat)}
         </Text>
         <Text
           style={[detailStyle, !alarm.enabled && styles.textDisabled]}

@@ -34,7 +34,9 @@ export async function setupNotificationChannel(): Promise<void> {
     importance: AndroidImportance.HIGH,
     sound: 'default',
     vibration: true,
-    vibrationPattern: [500, 500, 500, 500],
+    vibrationPattern: [1000, 500, 1000, 500],
+    lights: true,
+    lightColor: '#FF0000',
     bypassDnd: true,
   });
 }
@@ -80,6 +82,8 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
         importance: AndroidImportance.HIGH,
         sound: 'default',
         loopSound: true,
+        vibrationPattern: [1000, 500, 1000, 500],
+        lights: ['#FF0000', 300, 600],
         ongoing: true,
         autoCancel: false,
         pressAction: {
@@ -108,4 +112,48 @@ export async function cancelAlarm(identifier: string): Promise<void> {
 export async function cancelAllAlarms(): Promise<void> {
   await notifee.cancelTriggerNotifications();
   await notifee.cancelAllNotifications();
+}
+
+export async function scheduleTimerNotification(
+  label: string,
+  icon: string,
+  completionTimestamp: number,
+): Promise<string> {
+  const trigger: TimestampTrigger = {
+    type: TriggerType.TIMESTAMP,
+    timestamp: completionTimestamp,
+    alarmManager: {
+      allowWhileIdle: true,
+    },
+  };
+
+  return await notifee.createTriggerNotification(
+    {
+      title: `${icon} Timer Complete`,
+      body: `${label} is done!`,
+      data: { timerId: 'true' },
+      android: {
+        channelId: ALARM_CHANNEL_ID,
+        fullScreenAction: {
+          id: 'default',
+        },
+        importance: AndroidImportance.HIGH,
+        sound: 'default',
+        loopSound: true,
+        ongoing: true,
+        autoCancel: false,
+        vibrationPattern: [1000, 500, 1000, 500],
+        pressAction: {
+          id: 'default',
+        },
+        category: AndroidCategory.ALARM,
+      },
+    },
+    trigger,
+  );
+}
+
+export async function cancelTimerNotification(identifier: string): Promise<void> {
+  await notifee.cancelTriggerNotification(identifier);
+  await notifee.cancelNotification(identifier);
 }

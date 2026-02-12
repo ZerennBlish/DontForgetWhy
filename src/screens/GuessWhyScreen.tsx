@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatTime } from '../utils/time';
+import { loadSettings } from '../services/settings';
 import guessWhyIcons from '../data/guessWhyIcons';
 import {
   getRandomWinMessage,
@@ -42,28 +43,36 @@ type ResultState =
 export default function GuessWhyScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { alarm } = route.params;
+  const { alarm, fromNotification } = route.params;
   const hasIcon = Boolean(alarm.icon);
   const [mode, setMode] = useState<'icons' | 'type'>(hasIcon ? 'icons' : 'type');
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [typedGuess, setTypedGuess] = useState('');
   const [result, setResult] = useState<ResultState>(null);
+  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const resolvedRef = useRef(false);
 
   const canPlay = hasIcon || alarm.note.length >= 3;
 
   useEffect(() => {
-    if (canPlay) {
+    loadSettings().then((s) => setTimeFormat(s.timeFormat));
+  }, []);
+
+  useEffect(() => {
+    if (canPlay && fromNotification) {
       Vibration.vibrate([0, 800, 400, 800], true);
+      return () => {
+        Vibration.cancel();
+      };
     }
-  }, [canPlay]);
+  }, [canPlay, fromNotification]);
 
   useEffect(() => {
     if (!canPlay) {
-      navigation.replace('AlarmFire', { alarm });
+      navigation.replace('AlarmFire', { alarm, fromNotification });
     }
-  }, [canPlay, alarm, navigation]);
+  }, [canPlay, alarm, fromNotification, navigation]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -346,7 +355,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   };
 
   const handleContinue = () => {
-    navigation.replace('AlarmFire', { alarm });
+    Vibration.cancel();
+    navigation.replace('AlarmFire', { alarm, fromNotification });
   };
 
   const overlayColor =
@@ -370,7 +380,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       {/* Top section */}
       <View style={styles.top}>
         <Text style={styles.emoji}>{displayEmoji}</Text>
-        <Text style={styles.time}>{formatTime(alarm.time)}</Text>
+        <Text style={styles.time}>{formatTime(alarm.time, timeFormat)}</Text>
         <Text style={styles.categoryLabel}>{alarm.category.toUpperCase()}</Text>
       </View>
 

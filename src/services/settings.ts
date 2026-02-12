@@ -4,10 +4,12 @@ const STORAGE_KEY = 'appSettings';
 
 export interface AppSettings {
   guessWhyEnabled: boolean;
+  timeFormat: '12h' | '24h';
 }
 
 const defaultSettings: AppSettings = {
   guessWhyEnabled: false,
+  timeFormat: '12h',
 };
 
 export async function loadSettings(): Promise<AppSettings> {
@@ -20,6 +22,8 @@ export async function loadSettings(): Promise<AppSettings> {
   }
 }
 
-export async function saveSettings(settings: AppSettings): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+export async function saveSettings(partial: Partial<AppSettings>): Promise<void> {
+  const current = await loadSettings();
+  const updated = { ...current, ...partial };
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 }

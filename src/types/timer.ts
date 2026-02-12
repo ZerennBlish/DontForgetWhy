@@ -15,4 +15,5 @@ export interface ActiveTimer {
   remainingSeconds: number;
   startedAt: string;
   isRunning: boolean;
+  notificationId?: string;
 }

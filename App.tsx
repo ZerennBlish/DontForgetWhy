@@ -13,7 +13,7 @@ import MemoryScoreScreen from './src/screens/MemoryScoreScreen';
 import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import { loadAlarms } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
-import { setupNotificationChannel, requestPermissions } from './src/services/notifications';
+import { setupNotificationChannel } from './src/services/notifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import type { RootStackParamList } from './src/navigation/types';
@@ -54,25 +54,24 @@ function AppNavigator() {
 
     const settings = await loadSettings();
     if (settings.guessWhyEnabled) {
-      navigationRef.current.navigate('GuessWhy', { alarm });
+      navigationRef.current.navigate('GuessWhy', { alarm, fromNotification: true });
     } else {
-      navigationRef.current.navigate('AlarmFire', { alarm });
+      navigationRef.current.navigate('AlarmFire', { alarm, fromNotification: true });
     }
   }, []);
 
-  // Create notification channel and request permissions on startup
+  // Create notification channel on startup (DND bypass + alarm settings)
   useEffect(() => {
-    async function init() {
-      await setupNotificationChannel();
-      await requestPermissions();
-    }
-    init();
+    setupNotificationChannel();
   }, []);
 
   // Cold-start: app launched from notification tap or full-screen intent
   useEffect(() => {
-    notifee.getInitialNotification().then((initial) => {
-      if (initial?.notification?.data?.alarmId) {
+    notifee.getInitialNotification().then(async (initial) => {
+      if (!initial?.notification) return;
+      if (initial.notification.data?.timerId && initial.notification.id) {
+        await notifee.cancelNotification(initial.notification.id);
+      } else if (initial.notification.data?.alarmId) {
         navigateToAlarm(initial.notification.data.alarmId as string);
       }
     });
@@ -80,9 +79,13 @@ function AppNavigator() {
 
   // Foreground: notification pressed while app is open
   useEffect(() => {
-    const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
-      if (type === EventType.PRESS && detail.notification?.data?.alarmId) {
-        navigateToAlarm(detail.notification.data.alarmId as string);
+    const unsubscribe = notifee.onForegroundEvent(async ({ type, detail }) => {
+      if (type === EventType.PRESS) {
+        if (detail.notification?.data?.timerId && detail.notification?.id) {
+          await notifee.cancelNotification(detail.notification.id);
+        } else if (detail.notification?.data?.alarmId) {
+          navigateToAlarm(detail.notification.data.alarmId as string);
+        }
       }
     });
     return unsubscribe;

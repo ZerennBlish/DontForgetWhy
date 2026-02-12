@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatTime } from '../utils/time';
 import { getSnoozeMessage } from '../data/snoozeMessages';
 import { dismissAlarmNotification } from '../services/notifications';
+import { loadSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
@@ -31,16 +32,23 @@ const VIBRATION_PATTERN = [0, 800, 400, 800];
 export default function AlarmFireScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { alarm } = route.params;
+  const { alarm, fromNotification } = route.params;
   const [snoozeCount, setSnoozeCount] = useState(0);
   const [snoozeMessage, setSnoozeMessage] = useState<string | null>(null);
+  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
 
   useEffect(() => {
-    Vibration.vibrate(VIBRATION_PATTERN, true);
-    return () => {
-      Vibration.cancel();
-    };
+    loadSettings().then((s) => setTimeFormat(s.timeFormat));
   }, []);
+
+  useEffect(() => {
+    if (fromNotification) {
+      Vibration.vibrate(VIBRATION_PATTERN, true);
+      return () => {
+        Vibration.cancel();
+      };
+    }
+  }, [fromNotification]);
 
   const stopAlarm = () => {
     Vibration.cancel();
@@ -160,7 +168,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.top}>
         <Text style={styles.emoji}>{categoryEmoji[alarm.category] ?? '\u{1F514}'}</Text>
-        <Text style={styles.time}>{formatTime(alarm.time)}</Text>
+        <Text style={styles.time}>{formatTime(alarm.time, timeFormat)}</Text>
         <Text style={styles.categoryLabel}>{alarm.category.toUpperCase()}</Text>
       </View>
 

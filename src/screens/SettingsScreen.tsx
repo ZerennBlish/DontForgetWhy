@@ -25,6 +25,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const { colors, themeName, customAccent, setTheme, setCustomTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
+  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedColorRef = useRef(customAccent || colors.accent);
 
@@ -192,12 +193,21 @@ export default function SettingsScreen({ navigation }: Props) {
   }), [colors, insets.bottom]);
 
   useEffect(() => {
-    loadSettings().then((s) => setGuessWhyEnabled(s.guessWhyEnabled));
+    loadSettings().then((s) => {
+      setGuessWhyEnabled(s.guessWhyEnabled);
+      setTimeFormat(s.timeFormat);
+    });
   }, []);
 
   const handleToggle = async (value: boolean) => {
     setGuessWhyEnabled(value);
     await saveSettings({ guessWhyEnabled: value });
+  };
+
+  const handleTimeFormatToggle = async (value: boolean) => {
+    const newFormat = value ? '24h' : '12h';
+    setTimeFormat(newFormat);
+    await saveSettings({ timeFormat: newFormat });
   };
 
   const handleColorChange = (result: ColorFormatsObject) => {
@@ -233,6 +243,21 @@ export default function SettingsScreen({ navigation }: Props) {
         <Text style={styles.description}>
           When enabled, you'll have to guess why you set each alarm before seeing the answer. 3
           attempts. No cheating.
+        </Text>
+      </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={styles.row}>
+          <Text style={styles.label}>24-Hour Time</Text>
+          <Switch
+            value={timeFormat === '24h'}
+            onValueChange={handleTimeFormatToggle}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={timeFormat === '24h' ? colors.textPrimary : colors.textTertiary}
+          />
+        </View>
+        <Text style={styles.description}>
+          Show times as 14:30 instead of 2:30 PM.
         </Text>
       </View>
 

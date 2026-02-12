@@ -13,7 +13,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
 import type { ActiveTimer } from '../types/timer';
 import { loadAlarms, deleteAlarm, toggleAlarm } from '../services/storage';
-import { cancelAlarm } from '../services/notifications';
+import notifee from '@notifee/react-native';
+import { cancelAlarm, scheduleTimerNotification, cancelTimerNotification } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import {
@@ -48,6 +49,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
+  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
   const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
   const [tab, setTab] = useState<'alarms' | 'timers'>('alarms');
@@ -202,7 +204,10 @@ export default function AlarmListScreen({ navigation }: Props) {
     useCallback(() => {
       setAppQuote(getRandomAppOpenQuote());
       loadAlarms().then(setAlarms);
-      loadSettings().then((s) => setGuessWhyEnabled(s.guessWhyEnabled));
+      loadSettings().then((s) => {
+        setGuessWhyEnabled(s.guessWhyEnabled);
+        setTimeFormat(s.timeFormat);
+      });
       loadStats().then(setStats);
     }, [])
   );
@@ -271,7 +276,7 @@ export default function AlarmListScreen({ navigation }: Props) {
     return () => subscription.remove();
   }, []);
 
-  // Alert for completed timers
+  // Alert for completed timers (notification already scheduled via trigger)
   useEffect(() => {
     for (const timer of activeTimers) {
       if (
@@ -280,9 +285,16 @@ export default function AlarmListScreen({ navigation }: Props) {
         !alertedRef.current.has(timer.id)
       ) {
         alertedRef.current.add(timer.id);
+        const notifId = timer.notificationId;
         Alert.alert(
           '\u23F0 Timer Done!',
-          `${timer.icon} ${timer.label} is done!`
+          `${timer.icon} ${timer.label} is done!`,
+          [{
+            text: 'Dismiss',
+            onPress: () => {
+              if (notifId) cancelTimerNotification(notifId);
+            },
+          }],
         );
       }
     }
@@ -324,11 +336,21 @@ export default function AlarmListScreen({ navigation }: Props) {
   };
 
   const handleAddTimer = async (timer: ActiveTimer) => {
-    const updated = await addActiveTimer(timer);
+    const completionTimestamp = Date.now() + timer.remainingSeconds * 1000;
+    const notificationId = await scheduleTimerNotification(
+      timer.label,
+      timer.icon,
+      completionTimestamp,
+    );
+    const updated = await addActiveTimer({ ...timer, notificationId });
     setActiveTimers(updated);
   };
 
   const handleRemoveTimer = async (id: string) => {
+    const timer = activeTimers.find((t) => t.id === id);
+    if (timer?.notificationId) {
+      await cancelTimerNotification(timer.notificationId);
+    }
     const updated = await removeActiveTimer(id);
     setActiveTimers(updated);
   };
@@ -338,8 +360,13 @@ export default function AlarmListScreen({ navigation }: Props) {
       const updated = prev.map((t) => {
         if (t.id !== id) return t;
         if (t.isRunning) {
-          return { ...t, isRunning: false };
+          // Pausing — cancel the scheduled notification
+          if (t.notificationId) {
+            cancelTimerNotification(t.notificationId);
+          }
+          return { ...t, isRunning: false, notificationId: undefined };
         }
+        // Resuming
         const elapsed = t.totalSeconds - t.remainingSeconds;
         const newStartedAt = new Date(
           Date.now() - elapsed * 1000
@@ -347,6 +374,22 @@ export default function AlarmListScreen({ navigation }: Props) {
         return { ...t, isRunning: true, startedAt: newStartedAt };
       });
       saveActiveTimers(updated);
+
+      // Schedule notification for resumed timer
+      const resumed = updated.find((t) => t.id === id && t.isRunning);
+      if (resumed && resumed.remainingSeconds > 0) {
+        const ts = Date.now() + resumed.remainingSeconds * 1000;
+        scheduleTimerNotification(resumed.label, resumed.icon, ts).then((notifId) => {
+          setActiveTimers((current) => {
+            const withNotif = current.map((ct) =>
+              ct.id === id ? { ...ct, notificationId: notifId } : ct
+            );
+            saveActiveTimers(withNotif);
+            return withNotif;
+          });
+        });
+      }
+
       return updated;
     });
   };
@@ -443,6 +486,7 @@ export default function AlarmListScreen({ navigation }: Props) {
                 renderItem={({ item }) => (
                   <AlarmCard
                     alarm={item}
+                    timeFormat={timeFormat}
                     onToggle={handleToggle}
                     onDelete={handleDelete}
                     onEdit={handleEdit}

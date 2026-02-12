@@ -48,8 +48,13 @@ export async function updateAlarm(updatedAlarm: Alarm): Promise<Alarm[]> {
       await cancelNotification(a.notificationId);
     }
     if (updatedAlarm.enabled) {
-      const notificationId = await scheduleAlarm(updatedAlarm);
-      updated.push({ ...updatedAlarm, notificationId });
+      try {
+        const notificationId = await scheduleAlarm(updatedAlarm);
+        updated.push({ ...updatedAlarm, notificationId });
+      } catch (error) {
+        console.error('[updateAlarm] scheduleAlarm failed:', error);
+        updated.push({ ...updatedAlarm, notificationId: undefined });
+      }
     } else {
       updated.push({ ...updatedAlarm, notificationId: undefined });
     }
@@ -79,8 +84,13 @@ export async function toggleAlarm(id: string): Promise<Alarm[]> {
     }
     const toggled = { ...a, enabled: !a.enabled };
     if (toggled.enabled) {
-      const notificationId = await scheduleAlarm(toggled);
-      toggled.notificationId = notificationId;
+      try {
+        const notificationId = await scheduleAlarm(toggled);
+        toggled.notificationId = notificationId;
+      } catch (error) {
+        console.error('[toggleAlarm] scheduleAlarm failed:', error);
+        toggled.notificationId = undefined;
+      }
     } else if (a.notificationId) {
       await cancelNotification(a.notificationId);
       toggled.notificationId = undefined;
