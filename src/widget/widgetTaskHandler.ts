@@ -1,13 +1,15 @@
 import React from 'react';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Linking } from 'react-native';
 import { defaultPresets } from '../data/timerPresets';
 import { TimerWidget } from './TimerWidget';
 import type { WidgetPreset } from './TimerWidget';
 
 const RECENT_KEY = 'recentPresets';
+const PENDING_WIDGET_TIMER_KEY = 'pendingWidgetTimer';
 
-async function getWidgetPresets(): Promise<WidgetPreset[]> {
+export async function getWidgetPresets(): Promise<WidgetPreset[]> {
   const nonCustom = defaultPresets.filter((p) => p.id !== 'custom');
 
   try {
@@ -24,7 +26,7 @@ async function getWidgetPresets(): Promise<WidgetPreset[]> {
           if (result.length >= 6) break;
           const preset = nonCustom.find((p) => p.id === id);
           if (preset) {
-            result.push({ icon: preset.icon, label: preset.label });
+            result.push({ id: preset.id, icon: preset.icon, label: preset.label });
           }
         }
 
@@ -33,7 +35,7 @@ async function getWidgetPresets(): Promise<WidgetPreset[]> {
           for (const preset of nonCustom) {
             if (result.length >= 6) break;
             if (!recentSet.has(preset.id)) {
-              result.push({ icon: preset.icon, label: preset.label });
+              result.push({ id: preset.id, icon: preset.icon, label: preset.label });
             }
           }
         }
@@ -47,7 +49,7 @@ async function getWidgetPresets(): Promise<WidgetPreset[]> {
 
   return nonCustom
     .slice(0, 6)
-    .map((p) => ({ icon: p.icon, label: p.label }));
+    .map((p) => ({ id: p.id, icon: p.icon, label: p.label }));
 }
 
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
@@ -62,6 +64,23 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         props.renderWidget(React.createElement(TimerWidget, { presets }));
       }
       break;
+    case 'WIDGET_CLICK': {
+      const action = props.clickAction;
+      if (action?.startsWith('START_TIMER__')) {
+        const presetId = action.slice('START_TIMER__'.length);
+        await AsyncStorage.setItem(PENDING_WIDGET_TIMER_KEY, presetId);
+        try {
+          await Linking.openURL(`dontforgetwhy://start-timer/${presetId}`);
+        } catch {
+          try {
+            await Linking.openURL('dontforgetwhy://');
+          } catch {
+            // unable to open app
+          }
+        }
+      }
+      break;
+    }
     default:
       break;
   }

@@ -8,6 +8,8 @@ import {
   Alert,
   AppState,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { v4 as uuidv4 } from 'uuid';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
@@ -22,10 +24,13 @@ import {
   saveActiveTimers,
   addActiveTimer,
   removeActiveTimer,
+  loadPresets,
+  recordPresetUsage,
 } from '../services/timerStorage';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import TimerScreen from './TimerScreen';
+import { refreshTimerWidget } from '../widget/updateWidget';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
@@ -200,6 +205,49 @@ export default function AlarmListScreen({ navigation }: Props) {
     },
   }), [colors, insets.bottom]);
 
+  const processPendingWidgetTimer = useCallback(async () => {
+    const presetId = await AsyncStorage.getItem('pendingWidgetTimer');
+    if (!presetId) return;
+    await AsyncStorage.removeItem('pendingWidgetTimer');
+
+    const allPresets = await loadPresets();
+    const preset = allPresets.find((p) => p.id === presetId);
+    if (!preset) return;
+
+    const duration = preset.customSeconds || preset.seconds;
+    if (duration <= 0) return;
+
+    await recordPresetUsage(preset.id);
+    refreshTimerWidget();
+
+    const timer: ActiveTimer = {
+      id: uuidv4(),
+      presetId: preset.id,
+      label: preset.label,
+      icon: preset.icon,
+      totalSeconds: duration,
+      remainingSeconds: duration,
+      startedAt: new Date().toISOString(),
+      isRunning: true,
+    };
+
+    const completionTimestamp = Date.now() + duration * 1000;
+    let notificationId: string | undefined;
+    try {
+      notificationId = await scheduleTimerNotification(
+        timer.label,
+        timer.icon,
+        completionTimestamp,
+      );
+    } catch (error) {
+      console.error('[widget] scheduleTimerNotification failed:', error);
+    }
+
+    const updated = await addActiveTimer({ ...timer, notificationId });
+    setActiveTimers(updated);
+    setTab('timers');
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       setAppQuote(getRandomAppOpenQuote());
@@ -209,7 +257,8 @@ export default function AlarmListScreen({ navigation }: Props) {
         setTimeFormat(s.timeFormat);
       });
       loadStats().then(setStats);
-    }, [])
+      processPendingWidgetTimer();
+    }, [processPendingWidgetTimer])
   );
 
   // Load active timers on mount
@@ -256,7 +305,7 @@ export default function AlarmListScreen({ navigation }: Props) {
     return () => clearInterval(interval);
   }, []);
 
-  // Recalculate timers when app returns to foreground
+  // Recalculate timers when app returns to foreground + check widget pending timer
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') {
@@ -271,10 +320,11 @@ export default function AlarmListScreen({ navigation }: Props) {
           }
           return prev;
         });
+        processPendingWidgetTimer();
       }
     });
     return () => subscription.remove();
-  }, []);
+  }, [processPendingWidgetTimer]);
 
   // Alert for completed timers (notification already scheduled via trigger)
   useEffect(() => {

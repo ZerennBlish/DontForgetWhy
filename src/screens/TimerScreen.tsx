@@ -17,6 +17,7 @@ import {
   recordPresetUsage,
   loadRecentPresetIds,
 } from '../services/timerStorage';
+import { refreshTimerWidget } from '../widget/updateWidget';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -293,6 +294,7 @@ export default function TimerScreen({
       return;
     }
     await recordPresetUsage(preset.id);
+    refreshTimerWidget();
     setRecentIds((prev) => {
       const filtered = prev.filter((id) => id !== preset.id);
       return [preset.id, ...filtered].slice(0, 20);

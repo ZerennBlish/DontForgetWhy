@@ -2,6 +2,7 @@ import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 
 export interface WidgetPreset {
+  id: string;
   icon: string;
   label: string;
 }
@@ -56,6 +57,7 @@ export function TimerWidget({ presets }: TimerWidgetProps) {
             {row.map((preset, colIndex) => (
               <FlexWidget
                 key={`cell-${rowIndex}-${colIndex}`}
+                clickAction={`START_TIMER__${preset.id}`}
                 style={{
                   flex: 1,
                   backgroundColor: '#1E1E2E',
