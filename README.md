@@ -4,51 +4,57 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 
 ## Tech Stack
 
-- **Framework**: React Native 0.81.5 + Expo SDK 54 (New Architecture enabled)
-- **Language**: TypeScript 5.9
-- **Navigation**: @react-navigation/native 7.x + @react-navigation/native-stack 7.x
-- **Persistence**: @react-native-async-storage/async-storage 2.x
-- **Notifications**: expo-notifications + expo-device
-- **Theming**: React Context + reanimated-color-picker 4.x + react-native-reanimated 4.x
-- **Safe Area**: react-native-safe-area-context 5.6 (SafeAreaProvider at root, useSafeAreaInsets on every screen)
-- **IDs**: uuid v13 (via react-native-get-random-values polyfill)
+- **Framework**: React Native + Expo (managed workflow, New Architecture enabled)
+- **Language**: TypeScript
+- **Navigation**: @react-navigation/native + @react-navigation/native-stack (native stack, 7 screens)
+- **Persistence**: @react-native-async-storage/async-storage
+- **Notifications**: @notifee/react-native (channels, timestamp triggers, alarm manager, DND bypass, full-screen intent)
+- **Theming**: React Context + reanimated-color-picker + react-native-reanimated
+- **Safe Area**: react-native-safe-area-context (SafeAreaProvider at root, useSafeAreaInsets on every screen)
+- **IDs**: uuid (via react-native-get-random-values polyfill)
 - **Target Platforms**: Android (primary, edge-to-edge enabled, package `com.zerennblish.DontForgetWhy`), iOS (supportsTablet), Web (favicon only)
 - **Build**: EAS Build configured (development APK / preview APK / production profiles)
+- **Config Plugin**: Custom Expo plugin (`./plugins/withNotifee.js`) modifies AndroidManifest for alarm permissions and lock-screen activity flags
 
 ## Features
 
-1. **Alarm creation** — Set time (HH:MM 24h input), add a note explaining *why*, optional nickname, optional icon, optional private toggle
+1. **Alarm creation** — Set time (12h with AM/PM or 24h based on settings), add a note explaining *why*, optional nickname, optional icon, optional private toggle
 2. **Alarm editing** — Tap edit on any alarm card to modify time, nickname, note, icon, and privacy; reschedules notification on save
 3. **Alarm list** — Main screen shows all alarms with enable/disable switch, edit button, delete button (with confirmation)
 4. **Alarms / Timers tab switcher** — Pill-shaped toggle on the main screen switches between alarm list and timer grid
-5. **Icon picker** — 24-emoji grid on create/edit screen; selected icon auto-maps to a category behind the scenes
-6. **Category auto-mapping** — Icon selection drives the category field (e.g. 💊 → meds, 🏋️ → self-care); unrecognized icons default to 'general'
-7. **Private alarm mode** — Hides note/icon/nickname on the alarm card, shows "🔒 Private Alarm"; tap eye icon to peek for 3 seconds
-8. **Motivational quotes** — Random quote from a pool of 12, assigned at alarm creation and shown on the fire screen
-9. **App-open quotes** — Snarky rotating quote displayed at the top of the alarm list; refreshes on every screen focus via useFocusEffect
-10. **Rotating placeholder text** — The note input field shows a random witty placeholder from a pool of 12
-11. **Guess Why mini-game** — When enabled, you must guess why you set the alarm before seeing the answer; 3 attempts via icon grid or free-text input
-12. **Unwinnable alarm guard** — Alarms with no icon and a note shorter than 3 characters skip Guess Why entirely (navigation.replace to AlarmFire without recording stats)
-13. **Win/loss/skip tracking** — Every Guess Why outcome is recorded with running totals and streak counter
-14. **Memory Score screen** — Shows win %, rank title + emoji, current streak, best streak, total games; links to Forget Log
-15. **Memory rank tiers** — Five ranks from "Goldfish With Amnesia" (0-29%) to "Memory of an Elephant With a Vendetta" (90-100%), with Math.round to prevent float gaps
-16. **"What Did I Forget?" log** — Chronological list of every alarm you failed or skipped in Guess Why, with note, nickname, icon, timestamp, and result badge
-17. **Snooze with escalating shame** — 4 tiers of increasingly judgmental messages; snooze button text degrades each tap
-18. **Timer system** — 33 labeled presets + 1 custom entry in a 3-column grid; tap to start countdown
-19. **Timer custom duration** — Long-press any preset to override its duration (saved per-preset in AsyncStorage)
-20. **Timer recently-used sorting** — Used presets float to a "Recent" section at the top; up to 20 tracked
-21. **Active timer management** — Live countdown display with pause/resume toggle and dismiss (X) button; persisted across app reloads
-22. **Timer background drift correction** — AppState listener recalculates timer remaining seconds when app returns to foreground
-23. **Timer completion alerts** — Alert dialog fires when a timer reaches zero
-24. **Notification scheduling** — Daily repeat notifications via expo-notifications; permission requested on first alarm save (skipped when editing a disabled alarm)
-25. **Notification deep-linking** — Tapping a notification opens GuessWhy (if enabled) or AlarmFire for the matching alarm
-26. **Theme system** — 8 preset themes (4 dark, 4 light) + custom color picker; all styles react to theme changes via useMemo
-27. **Custom theme generator** — Pick any accent color; extreme colors (luminance < 0.08 or > 0.92) are clamped before generating a full theme
-28. **Theme persistence** — Selected theme and custom accent color saved to AsyncStorage, restored on app launch
-29. **Safe area support** — SafeAreaProvider wraps the app root; every screen uses useSafeAreaInsets for bottom padding to avoid Android navigation bar overlap
-30. **Streak display** — Current streak and best streak shown in the alarm list header when the user has played at least one Guess Why round
-31. **Trophy navigation** — Trophy icon in header navigates to Memory Score; only visible after first game played
-32. **AsyncStorage validation** — Runtime type guards on all loaded data: alarms require `id`, `time`, `note`, `enabled`, `category`; active timers require `id`, `totalSeconds`, `remainingSeconds`, `startedAt`, `isRunning`; forget log entries require `id`, `timestamp`
+5. **12/24 hour time format** — Setting in SettingsScreen; affects alarm card display, fire screen display, and time input format on create/edit screen
+6. **Icon picker** — 24-emoji grid on create/edit screen; selected icon auto-maps to a category behind the scenes
+7. **Category auto-mapping** — Icon selection drives the category field (e.g. 💊 → meds, 🏋️ → self-care); unrecognized icons default to 'general'
+8. **Private alarm mode** — Hides note/icon/nickname on the alarm card, shows "🔒 Private Alarm"; tap eye icon to peek for 3 seconds
+9. **Motivational quotes** — Random quote from a pool of 12, assigned at alarm creation and shown on the fire screen
+10. **App-open quotes** — Snarky rotating quote displayed at the top of the alarm list; refreshes on every screen focus via useFocusEffect
+11. **Rotating placeholder text** — The note input field shows a random witty placeholder from a pool of 12
+12. **Guess Why mini-game** — When enabled, you must guess why you set the alarm before seeing the answer; 3 attempts via icon grid or free-text input
+13. **Unwinnable alarm guard** — Alarms with no icon and a note shorter than 3 characters skip Guess Why entirely (navigation.replace to AlarmFire without recording stats)
+14. **Win/loss/skip tracking** — Every Guess Why outcome is recorded with running totals and streak counter
+15. **Memory Score screen** — Shows win %, rank title + emoji, current streak, best streak, total games; links to Forget Log
+16. **Memory rank tiers** — Five ranks from "Goldfish With Amnesia" (0-29%) to "Memory of an Elephant With a Vendetta" (90-100%), with Math.round to prevent float gaps
+17. **"What Did I Forget?" log** — Chronological list of every alarm you failed or skipped in Guess Why, with note, nickname, icon, timestamp, and result badge
+18. **Snooze with escalating shame** — 4 tiers of increasingly judgmental messages; snooze button text degrades each tap
+19. **Timer system** — 33 labeled presets + 1 custom entry in a 3-column grid; tap to start countdown
+20. **Timer custom duration** — Long-press any preset to override its duration (saved per-preset in AsyncStorage)
+21. **Timer recently-used sorting** — Used presets float to a "Recent" section at the top; up to 20 tracked
+22. **Active timer management** — Live countdown display with pause/resume toggle and dismiss (X) button; persisted across app reloads
+23. **Timer background drift correction** — AppState listener recalculates timer remaining seconds when app returns to foreground
+24. **Timer completion alerts** — Alert dialog fires when a timer reaches zero in-app
+25. **Timer scheduled notifications** — Notifee timestamp trigger scheduled at timer start (fires even when app is killed); cancels on pause, reschedules on resume
+26. **Notification scheduling** — Daily repeat alarm notifications via @notifee/react-native with Android alarm manager; permission requested on first alarm save (skipped when editing a disabled alarm)
+27. **Notification deep-linking** — Tapping a notification opens GuessWhy (if enabled) or AlarmFire for the matching alarm; timer notifications are cancelled on tap
+28. **Aggressive alarm notifications** — DND bypass, loopSound, ongoing, vibrationPattern, lights, fullScreenAction, AndroidCategory.ALARM
+29. **Conditional vibration** — AlarmFire and GuessWhy screens only vibrate when opened from a notification (`fromNotification` route param), not when tapped from the alarm list
+30. **Background notification handling** — `notifee.onBackgroundEvent` registered in index.ts before app component
+31. **Theme system** — 8 preset themes (4 dark, 4 light) + custom color picker; all styles react to theme changes via useMemo
+32. **Custom theme generator** — Pick any accent color; extreme colors (luminance < 0.08 or > 0.92) are clamped before generating a full theme
+33. **Theme persistence** — Selected theme and custom accent color saved to AsyncStorage, restored on app launch
+34. **Safe area support** — SafeAreaProvider wraps the app root; every screen uses useSafeAreaInsets for bottom padding to avoid Android navigation bar overlap
+35. **Streak display** — Current streak and best streak shown in the alarm list header when the user has played at least one Guess Why round
+36. **Trophy navigation** — Trophy icon in header navigates to Memory Score; only visible after first game played
+37. **AsyncStorage validation** — Runtime type guards on all loaded data: alarms require `id`, `time`, `note`, `enabled`, `category`; active timers require `id`, `totalSeconds`, `remainingSeconds`, `startedAt`, `isRunning`; forget log entries require `id`, `timestamp`
 
 ## Data Models
 
@@ -56,7 +62,7 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 ```typescript
 interface Alarm {
   id: string;               // uuid v4
-  time: string;             // "HH:MM" 24-hour format
+  time: string;             // "HH:MM" 24-hour format (internal storage)
   nickname?: string;        // Public name (shows on lock screen notification + alarm card)
   note: string;             // The "why" — private, only shown in-app on AlarmFireScreen
   quote: string;            // Random motivational quote assigned at creation
@@ -67,7 +73,7 @@ interface Alarm {
   icon?: string;            // Emoji from icon picker
   private: boolean;         // Hides details on alarm card
   createdAt: string;        // ISO 8601 timestamp
-  notificationId?: string;  // expo-notifications identifier
+  notificationId?: string;  // Notifee notification identifier
 }
 
 type AlarmCategory = 'meds' | 'appointment' | 'task' | 'self-care' | 'general';
@@ -95,6 +101,7 @@ interface ActiveTimer {
   remainingSeconds: number; // Countdown state
   startedAt: string;        // ISO 8601 timestamp (reset on resume to recalculate elapsed)
   isRunning: boolean;       // false when paused or completed
+  notificationId?: string;  // Notifee scheduled notification ID (for cancel on pause/dismiss)
 }
 ```
 
@@ -126,8 +133,10 @@ interface ForgetEntry {
 ```typescript
 interface AppSettings {
   guessWhyEnabled: boolean; // Default: false
+  timeFormat: '12h' | '24h'; // Default: '12h'
 }
 ```
+`saveSettings` accepts `Partial<AppSettings>` and merges with current settings before saving.
 
 ### ThemeColors (`src/theme/colors.ts`)
 ```typescript
@@ -143,6 +152,12 @@ interface ThemeColors {
   red: string;
   orange: string;
   activeBackground: string;
+  overlayWin: string;
+  overlayLose: string;
+  overlaySkip: string;
+  overlayButton: string;
+  overlayText: string;
+  modalOverlay: string;
 }
 
 type ThemeName = 'midnight' | 'obsidian' | 'forest' | 'royal'
@@ -191,7 +206,7 @@ interface RecentEntry {
 |---|---|---|---|
 | `alarms` | `Alarm[]` | `storage.ts` | All alarm objects |
 | `guessWhyStats` | `GuessWhyStats` | `guessWhyStats.ts` | Lifetime Guess Why win/loss/skip/streak counters |
-| `appSettings` | `AppSettings` | `settings.ts` | App-wide settings (currently just guessWhyEnabled) |
+| `appSettings` | `AppSettings` | `settings.ts` | App-wide settings (guessWhyEnabled + timeFormat) |
 | `forgetLog` | `ForgetEntry[]` | `forgetLog.ts` | Log of alarms the user forgot or skipped (newest first) |
 | `timerPresets` | `Record<string, number>` | `timerStorage.ts` | Map of preset ID to custom duration override in seconds |
 | `activeTimers` | `ActiveTimer[]` | `timerStorage.ts` | Currently running/paused timers (persisted for app reload) |
@@ -201,20 +216,33 @@ interface RecentEntry {
 
 ## Screen Flow
 
+### Navigation Stack (`RootStackParamList`)
+```typescript
+type RootStackParamList = {
+  AlarmList: undefined;
+  CreateAlarm: { alarm?: Alarm } | undefined;
+  AlarmFire: { alarm: Alarm; fromNotification?: boolean };
+  GuessWhy: { alarm: Alarm; fromNotification?: boolean };
+  Settings: undefined;
+  MemoryScore: undefined;
+  ForgetLog: undefined;
+};
+```
+
 ### AlarmList (`AlarmListScreen.tsx`)
 Main hub. Header shows app title, active alarm count, trophy button (if games played), gear button. Pill-shaped Alarms/Timers tab switcher. Alarms tab shows a random app-open quote card (refreshes on each screen focus), FlatList of AlarmCards, and a FAB (+) to create. If Guess Why stats exist, a streak row displays below the tabs. Timers tab renders TimerScreen inline. Bottom padding accounts for safe area insets.
 
 ### CreateAlarm (`CreateAlarmScreen.tsx`)
-Slide-from-bottom modal. Two large number inputs for hours/minutes. Nickname field (shows on lock screen). Note field with random placeholder ("Why are you setting this alarm?") and character counter (200 max). 24-icon picker grid. Private alarm toggle card. Save button. In edit mode, pre-fills all fields from the existing alarm and button says "Update Alarm". Requires at least a note or an icon to save. Notification permission is only requested when scheduling is needed (new alarm, or editing an enabled alarm).
+Slide-from-bottom modal. Two large number inputs for hours/minutes. In 12h mode: hours accept 1-12, AM/PM toggle buttons appear. In 24h mode: hours accept 0-23, no AM/PM. Nickname field (shows on lock screen). Note field with random placeholder ("Why are you setting this alarm?") and character counter (200 max). 24-icon picker grid. Private alarm toggle card. Save button. In edit mode, pre-fills all fields from the existing alarm and button says "Update Alarm". Requires at least a note or an icon to save. Notification permission is only requested when scheduling is needed (new alarm, or editing an enabled alarm). Save is wrapped in try/catch with console.error and user-facing Alert on failure.
 
 ### AlarmFire (`AlarmFireScreen.tsx`)
-Full-screen fade-in, gesture disabled. Top: category emoji + formatted time + category label. Middle: the alarm note (the "why") + divider + the assigned quote. Snooze button with 4 escalating labels ("Snooze 5 min" → "Snooze Again" → "...Snooze Again" → "Fine, Snooze") and a random shame message per tier. Dismiss button says "I'm On It".
+Full-screen fade-in, gesture disabled. Only vibrates if `fromNotification` is true (with cleanup on unmount). Top: category emoji + formatted time (respects timeFormat setting) + category label. Middle: the alarm note (the "why") + divider + the assigned quote. Snooze button with 4 escalating labels ("Snooze 5 min" → "Snooze Again" → "...Snooze Again" → "Fine, Snooze") and a random shame message per tier. Dismiss button says "I'm On It".
 
 ### GuessWhy (`GuessWhyScreen.tsx`)
-Full-screen fade-in, gesture disabled. If the alarm has no icon and a note shorter than 3 characters, the screen immediately replaces itself with AlarmFire (no stats recorded). Top: alarm icon/category emoji + time + category label. Game area card with Icons/Type It mode toggle (Icons mode disabled if alarm has no icon). Icons mode: scrollable 4-column grid of 24 icons with labels; match is exact emoji equality only. Type It mode: text input with Guess button (min 3 chars); match checks if typed text appears in the alarm note, or for icon-only alarms, matches the icon's ID. 3 attempts. Shake animation on wrong guess. Result overlay (green win / red lose / amber skip) with snarky message and continue button that navigates to AlarmFire via `navigation.replace`. Skip button at bottom. Losses and skips are logged to the Forget Log.
+Full-screen fade-in, gesture disabled. Only vibrates if `fromNotification` is true (with cleanup on unmount). If the alarm has no icon and a note shorter than 3 characters, the screen immediately replaces itself with AlarmFire (no stats recorded). Top: alarm icon/category emoji + time (respects timeFormat) + category label. Game area card with Icons/Type It mode toggle (Icons mode disabled if alarm has no icon). Icons mode: scrollable 4-column grid of 24 icons with labels; match is exact emoji equality only. Type It mode: text input with Guess button (min 3 chars); match checks if typed text appears in the alarm note, or for icon-only alarms, matches the icon's ID. 3 attempts. Shake animation on wrong guess. Result overlay (green win / red lose / amber skip) with snarky message and continue button that navigates to AlarmFire via `navigation.replace` (passes `fromNotification` through). Skip button at bottom. Losses and skips are logged to the Forget Log.
 
 ### Settings (`SettingsScreen.tsx`)
-Back button + title. Top card with a toggle switch for "Guess Why Mini-Game" and description text. Second card with theme picker: 8 preset theme circles in a grid (inner circle shows accent color, outer border shows active state), plus a 9th "Custom" circle. Custom circle shows a 🎨 emoji if no custom color saved, or the saved accent color. Tapping Custom opens a color picker modal (reanimated-color-picker with Panel1 + HueSlider + Preview) where the user picks a color and taps Apply.
+Back button + title. Toggle switch for "Guess Why Mini-Game" with description text. Toggle switch for "24-Hour Time" format. Theme picker: 8 preset theme circles in a grid (inner circle shows accent color, outer border shows active state), plus a 9th "Custom" circle. Custom circle shows a 🎨 emoji if no custom color saved, or the saved accent color. Tapping Custom opens a color picker modal (reanimated-color-picker with Panel1 + HueSlider + Preview) where the user picks a color and taps Apply.
 
 ### MemoryScore (`MemoryScoreScreen.tsx`)
 Back button + title. Large rank emoji + rank title (colored) + win percentage + subtitle ("Wall of Remembrance" if >= 50%, "Hall of Shame" if < 50%, "No games yet" if 0). Stats card with wins, losses, skips, divider, current streak, best streak, total games. "What Did I Forget?" button links to ForgetLog. Red "Reset Stats" button with confirmation alert.
@@ -248,15 +276,15 @@ src/
 │   ├── ForgetLogScreen.tsx        Chronological log of forgotten/skipped alarms
 │   ├── GuessWhyScreen.tsx         Mini-game: guess the alarm reason in 3 attempts
 │   ├── MemoryScoreScreen.tsx      Stats dashboard with rank, streak, win/loss totals
-│   ├── SettingsScreen.tsx         Guess Why toggle + theme picker (8 presets + custom color)
+│   ├── SettingsScreen.tsx         Guess Why toggle + time format toggle + theme picker
 │   └── TimerScreen.tsx            Timer preset grid + active countdown timers
 ├── services/
 │   ├── forgetLog.ts               CRUD for ForgetEntry[] with runtime validation
 │   ├── guessWhyStats.ts           Win/loss/skip/streak tracking with per-field numeric validation
-│   ├── notifications.ts           expo-notifications scheduling, permissions, cancellation
+│   ├── notifications.ts           @notifee/react-native scheduling, channels, triggers, cancellation
 │   ├── quotes.ts                  12 motivational quotes assigned to alarms at creation
-│   ├── settings.ts                AppSettings load/save (guessWhyEnabled)
-│   ├── storage.ts                 Alarm CRUD with runtime type guards (id, time, note, enabled, category)
+│   ├── settings.ts                AppSettings load/save (guessWhyEnabled + timeFormat)
+│   ├── storage.ts                 Alarm CRUD with runtime type guards and try/catch on scheduling
 │   └── timerStorage.ts            Timer presets, active timers (validated), recent tracking
 ├── theme/
 │   ├── colors.ts                  ThemeColors interface, 8 presets, clampAccent(), generateCustomTheme()
@@ -265,14 +293,56 @@ src/
 │   ├── alarm.ts                   Alarm interface + AlarmCategory type
 │   └── timer.ts                   TimerPreset + ActiveTimer interfaces
 └── utils/
-    └── time.ts                    formatTime (12h display) + getCurrentTime (24h string)
+    └── time.ts                    formatTime (12h/24h display) + getCurrentTime (24h string)
 ```
 
 Root files:
-- `App.tsx` — SafeAreaProvider + ThemeProvider wrapper, navigation stack setup, notification response listener, StatusBar mode switching
-- `app.json` — Expo config (v1.0.0, portrait, new arch, edge-to-edge Android, predictiveBackGesture disabled)
-- `index.ts` — Entry point (registerRootComponent)
+- `App.tsx` — SafeAreaProvider + ThemeProvider wrapper, navigation stack setup, notifee foreground + cold-start event handlers, notification channel setup, StatusBar mode switching
+- `index.ts` — Registers `notifee.onBackgroundEvent` handler (cancels timer notifications on press), then `registerRootComponent`
+- `app.json` — Expo config (v1.0.0, portrait, new arch, edge-to-edge Android, permissions for full-screen intent / exact alarm / vibrate / wake lock / boot completed / foreground service)
 - `eas.json` — EAS Build profiles (development APK / preview APK / production)
+- `plugins/withNotifee.js` — Custom Expo config plugin: adds USE_FULL_SCREEN_INTENT, SCHEDULE_EXACT_ALARM, VIBRATE, WAKE_LOCK permissions; sets showWhenLocked + turnScreenOn on MainActivity
+
+## Notification System
+
+### Channel
+Single notification channel `alarms` created on app startup via `setupNotificationChannel()`:
+- `importance`: HIGH
+- `sound`: default
+- `vibration`: true
+- `vibrationPattern`: [1000, 500, 1000, 500]
+- `lights`: true, `lightColor`: #FF0000
+- `bypassDnd`: true
+
+### Alarm Notifications
+Scheduled via `notifee.createTriggerNotification` with:
+- **Trigger**: `TriggerType.TIMESTAMP` at the alarm's next occurrence + `RepeatFrequency.DAILY`
+- **alarmManager**: `{ allowWhileIdle: true }` (fires even in Doze mode)
+- **Android config**: fullScreenAction (launches default activity), importance HIGH, loopSound, ongoing, autoCancel false, vibrationPattern [1000, 500, 1000, 500], lights, category ALARM
+- **Privacy**: Note is never in the notification (see Notification Privacy Rules)
+
+### Timer Notifications
+Scheduled via `scheduleTimerNotification` with:
+- **Trigger**: `TriggerType.TIMESTAMP` at exact completion time (no repeat)
+- **alarmManager**: `{ allowWhileIdle: true }`
+- **Android config**: Same alarm-style settings (fullScreenAction, loopSound, ongoing, autoCancel false, category ALARM)
+- **Data**: `{ timerId: 'true' }` to distinguish from alarm notifications
+- **Lifecycle**: Scheduled on start, cancelled on pause (notificationId cleared), rescheduled on resume (new notificationId saved async), cancelled on dismiss
+
+### Event Handling
+- **Cold start** (`notifee.getInitialNotification`): Timer notifications are cancelled; alarm notifications navigate to GuessWhy/AlarmFire
+- **Foreground** (`notifee.onForegroundEvent`): Same logic — timer taps cancel, alarm taps navigate with `fromNotification: true`
+- **Background** (`notifee.onBackgroundEvent` in `index.ts`): Timer notifications cancelled on PRESS
+
+### Permissions
+`requestPermissions()` calls `notifee.requestPermission()` — only invoked from CreateAlarmScreen when saving a new alarm or editing an enabled alarm. Never called on app startup.
+
+### Android Manifest (via withNotifee.js plugin)
+- `USE_FULL_SCREEN_INTENT`
+- `SCHEDULE_EXACT_ALARM`
+- `VIBRATE`
+- `WAKE_LOCK`
+- MainActivity: `showWhenLocked="true"`, `turnScreenOn="true"`
 
 ## Theme System
 
@@ -427,15 +497,17 @@ Light theme mix ratios:
 
 ### Hardcoded Colors (not themed)
 
-| Color | Where | Why |
+All overlay colors are part of ThemeColors and identical across all presets:
+
+| Color | Property | Where |
 |---|---|---|
-| `rgba(34,139,34,0.85)` | GuessWhyScreen | Win overlay (always green) |
-| `rgba(180,40,40,0.85)` | GuessWhyScreen | Lose overlay (always red) |
-| `rgba(180,150,30,0.85)` | GuessWhyScreen | Skip overlay (always amber) |
-| `rgba(0,0,0,0.7)` | TimerScreen, SettingsScreen | Modal backdrop |
-| `rgba(255,255,255,0.25)` | GuessWhyScreen | Overlay continue button |
-| `#fff` | GuessWhyScreen, MemoryRanks checkmark | Overlay text (always on colored bg) |
-| Rank colors (`#FFD700`, `#4A90D9`, `#B0B0CC`, `#FF9F43`, `#FF6B6B`, `#7A7A9E`) | MemoryScoreScreen | Rank title colors are data-driven from `memoryRanks.ts` |
+| `rgba(34,139,34,0.85)` | overlayWin | GuessWhyScreen win overlay |
+| `rgba(180,40,40,0.85)` | overlayLose | GuessWhyScreen lose overlay |
+| `rgba(180,150,30,0.85)` | overlaySkip | GuessWhyScreen skip overlay |
+| `rgba(0,0,0,0.7)` | modalOverlay | TimerScreen, SettingsScreen modal backdrop |
+| `rgba(255,255,255,0.25)` | overlayButton | GuessWhyScreen overlay continue button |
+| `#FFFFFF` | overlayText | Overlay text (always on colored bg) |
+| Rank colors (`#FFD700`, `#4A90D9`, `#B0B0CC`, `#FF9F43`, `#FF6B6B`, `#7A7A9E`) | — | MemoryScoreScreen rank title colors (data-driven from `memoryRanks.ts`) |
 
 ## Icon Orders
 
@@ -549,6 +621,8 @@ Defined in `CreateAlarmScreen.tsx`. When a user selects an icon, the alarm's cat
 - self-care → "🧘 Self-Care"
 - general → "🔔 General"
 
+**Time display**: Uses `formatTime(alarm.time, timeFormat)` — respects the user's 12h/24h setting.
+
 ## Notification Privacy Rules
 
 Defined in `notifications.ts`. The alarm note (the "why") is **never** included in the notification. This is the core privacy contract.
@@ -556,11 +630,16 @@ Defined in `notifications.ts`. The alarm note (the "why") is **never** included 
 **Title**: `"${icon} ${CATEGORY}"` if the alarm has an icon, otherwise `"⏰ ${CATEGORY}"`
 
 **Body** (priority order):
-1. If alarm has a **nickname** → show the nickname
-2. If no nickname but has an **icon** → show just the icon emoji
-3. If neither → `"Time to do the thing!"`
+1. If `alarm.private` is true:
+   - If alarm has a **nickname** → show the nickname
+   - If no nickname but has an **icon** → show just the icon emoji
+   - If neither → `"Alarm"`
+2. If not private:
+   - If alarm has a **nickname** → show the nickname
+   - If no nickname but has an **icon** → show just the icon emoji
+   - If neither → `"Time to do the thing!"`
 
-**Trigger**: `SchedulableTriggerInputTypes.DAILY` at the alarm's hour and minute.
+**Trigger**: `TriggerType.TIMESTAMP` at the alarm's next occurrence + `RepeatFrequency.DAILY`, with `alarmManager.allowWhileIdle`.
 
 ## Memory Rank Tiers
 
@@ -587,7 +666,7 @@ MemoryScoreScreen shows "Wall of Remembrance" if >= 50%, "Hall of Shame" if < 50
 
 ## Remaining / Planned Features
 
-- **Forced alarm notifications** — Bypass DND / silent mode for critical alarms (requires native module)
-- **Home screen widget** — Quick-access timer widget (requires native module / development build)
 - **Actual snooze rescheduling** — Currently snooze shows shame messages but does not reschedule the notification
 - **Day-of-week recurring** — `recurring` and `days` fields exist on the Alarm model but are not yet exposed in the UI
+- **Home screen widget** — Quick-access timer widget (requires native module / development build)
+- **Alarm sound customization** — Currently uses system default sound only
