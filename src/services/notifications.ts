@@ -1,90 +1,111 @@
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
+import notifee, {
+  AndroidImportance,
+  AndroidCategory,
+  TriggerType,
+  RepeatFrequency,
+  AuthorizationStatus,
+} from '@notifee/react-native';
+import type { TimestampTrigger } from '@notifee/react-native';
 import { Platform } from 'react-native';
 import { Alarm } from '../types/alarm';
 
 const ALARM_CHANNEL_ID = 'alarms';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+function getNextAlarmTimestamp(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  const now = new Date();
+  const alarmDate = new Date();
+  alarmDate.setHours(hours, minutes, 0, 0);
+
+  // If the time already passed today, schedule for tomorrow
+  if (alarmDate.getTime() <= now.getTime()) {
+    alarmDate.setDate(alarmDate.getDate() + 1);
+  }
+
+  return alarmDate.getTime();
+}
 
 export async function setupNotificationChannel(): Promise<void> {
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(ALARM_CHANNEL_ID, {
-      name: 'Alarms',
-      importance: Notifications.AndroidImportance.MAX,
-      sound: 'default',
-      enableVibrate: true,
-      vibrationPattern: [0, 500, 500, 500],
-      bypassDnd: true,
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      showBadge: true,
-    });
-  }
+  if (Platform.OS !== 'android') return;
+
+  await notifee.createChannel({
+    id: ALARM_CHANNEL_ID,
+    name: 'Alarms',
+    importance: AndroidImportance.HIGH,
+    sound: 'default',
+    vibration: true,
+    vibrationPattern: [500, 500, 500, 500],
+    bypassDnd: true,
+  });
 }
 
 export async function requestPermissions(): Promise<boolean> {
-  if (!Device.isDevice) {
-    console.log('Notifications only work on physical devices');
-    return false;
-  }
-  const { status } = await Notifications.requestPermissionsAsync();
-  return status === 'granted';
+  const settings = await notifee.requestPermission();
+  return settings.authorizationStatus >= AuthorizationStatus.AUTHORIZED;
 }
 
 export async function scheduleAlarm(alarm: Alarm): Promise<string> {
-  const [hours, minutes] = alarm.time.split(':').map(Number);
-
   const title = alarm.icon
     ? `${alarm.icon} ${alarm.category.toUpperCase()}`
     : `\u23F0 ${alarm.category.toUpperCase()}`;
 
+  // Respect privacy: never show the note in the notification
   let body: string;
-  if (alarm.nickname) {
-    body = alarm.nickname;
-  } else if (alarm.icon) {
-    body = alarm.icon;
+  if (alarm.private) {
+    body = alarm.nickname || alarm.icon || 'Alarm';
   } else {
-    body = 'Time to do the thing!';
+    body = alarm.nickname || alarm.icon || 'Time to do the thing!';
   }
 
-  const identifier = await Notifications.scheduleNotificationAsync({
-    content: {
+  const trigger: TimestampTrigger = {
+    type: TriggerType.TIMESTAMP,
+    timestamp: getNextAlarmTimestamp(alarm.time),
+    alarmManager: {
+      allowWhileIdle: true,
+    },
+    repeatFrequency: RepeatFrequency.DAILY,
+  };
+
+  const notificationId = await notifee.createTriggerNotification(
+    {
       title,
       body,
-      sound: true,
       data: { alarmId: alarm.id },
-      sticky: true,
-      autoDismiss: false,
-      priority: Notifications.AndroidNotificationPriority.MAX,
-      vibrate: [0, 500, 500, 500],
+      android: {
+        channelId: ALARM_CHANNEL_ID,
+        fullScreenAction: {
+          id: 'default',
+          launchActivity: 'default',
+        },
+        importance: AndroidImportance.HIGH,
+        sound: 'default',
+        loopSound: true,
+        ongoing: true,
+        autoCancel: false,
+        pressAction: {
+          id: 'default',
+        },
+        category: AndroidCategory.ALARM,
+      },
     },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: hours,
-      minute: minutes,
-      channelId: ALARM_CHANNEL_ID,
-    },
-  });
+    trigger,
+  );
 
-  return identifier;
+  return notificationId;
 }
 
 export async function dismissAlarmNotification(): Promise<void> {
-  await Notifications.dismissAllNotificationsAsync();
+  // Cancel all displayed notifications (does NOT cancel scheduled triggers)
+  await notifee.cancelAllNotifications();
 }
 
 export async function cancelAlarm(identifier: string): Promise<void> {
-  await Notifications.cancelScheduledNotificationAsync(identifier);
+  // Cancel both the scheduled trigger and any displayed notification
+  await notifee.cancelTriggerNotification(identifier);
+  await notifee.cancelNotification(identifier);
 }
 
 export async function cancelAllAlarms(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await notifee.cancelTriggerNotifications();
+  await notifee.cancelAllNotifications();
 }

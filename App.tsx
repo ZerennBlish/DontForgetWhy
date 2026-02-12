@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import * as Notifications from 'expo-notifications';
+import notifee, { EventType } from '@notifee/react-native';
 import AlarmListScreen from './src/screens/AlarmListScreen';
 import CreateAlarmScreen from './src/screens/CreateAlarmScreen';
 import AlarmFireScreen from './src/screens/AlarmFireScreen';
@@ -39,26 +39,26 @@ function AppNavigator() {
   );
 
   const navigationRef = useRef<any>(null);
-  const pendingResponseRef = useRef<Notifications.NotificationResponse | null>(null);
+  const isNavigationReady = useRef(false);
+  const pendingAlarmId = useRef<string | null>(null);
 
-  const handleNotificationNavigation = useCallback(
-    async (response: Notifications.NotificationResponse) => {
-      const alarmId = response.notification.request.content.data?.alarmId;
-      if (!alarmId || !navigationRef.current) return;
+  const navigateToAlarm = useCallback(async (alarmId: string) => {
+    if (!navigationRef.current || !isNavigationReady.current) {
+      pendingAlarmId.current = alarmId;
+      return;
+    }
 
-      const alarms = await loadAlarms();
-      const alarm = alarms.find((a) => a.id === alarmId);
-      if (!alarm) return;
+    const alarms = await loadAlarms();
+    const alarm = alarms.find((a) => a.id === alarmId);
+    if (!alarm) return;
 
-      const settings = await loadSettings();
-      if (settings.guessWhyEnabled) {
-        navigationRef.current.navigate('GuessWhy', { alarm });
-      } else {
-        navigationRef.current.navigate('AlarmFire', { alarm });
-      }
-    },
-    [],
-  );
+    const settings = await loadSettings();
+    if (settings.guessWhyEnabled) {
+      navigationRef.current.navigate('GuessWhy', { alarm });
+    } else {
+      navigationRef.current.navigate('AlarmFire', { alarm });
+    }
+  }, []);
 
   // Create notification channel and request permissions on startup
   useEffect(() => {
@@ -69,33 +69,32 @@ function AppNavigator() {
     init();
   }, []);
 
-  // Cold-start: app launched from a notification tap while terminated
+  // Cold-start: app launched from notification tap or full-screen intent
   useEffect(() => {
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
-        if (navigationRef.current) {
-          handleNotificationNavigation(response);
-        } else {
-          pendingResponseRef.current = response;
-        }
+    notifee.getInitialNotification().then((initial) => {
+      if (initial?.notification?.data?.alarmId) {
+        navigateToAlarm(initial.notification.data.alarmId as string);
       }
     });
-  }, [handleNotificationNavigation]);
+  }, [navigateToAlarm]);
 
-  // Warm-start: notification tapped while app is running or in background
+  // Foreground: notification pressed while app is open
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      handleNotificationNavigation,
-    );
-    return () => subscription.remove();
-  }, [handleNotificationNavigation]);
+    const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.PRESS && detail.notification?.data?.alarmId) {
+        navigateToAlarm(detail.notification.data.alarmId as string);
+      }
+    });
+    return unsubscribe;
+  }, [navigateToAlarm]);
 
   const onNavigationReady = useCallback(() => {
-    if (pendingResponseRef.current) {
-      handleNotificationNavigation(pendingResponseRef.current);
-      pendingResponseRef.current = null;
+    isNavigationReady.current = true;
+    if (pendingAlarmId.current) {
+      navigateToAlarm(pendingAlarmId.current);
+      pendingAlarmId.current = null;
     }
-  }, [handleNotificationNavigation]);
+  }, [navigateToAlarm]);
 
   return (
     <>

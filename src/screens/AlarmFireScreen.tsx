@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Vibration } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useKeepAwake } from 'expo-keep-awake';
+
 import { formatTime } from '../utils/time';
 import { getSnoozeMessage } from '../data/snoozeMessages';
 import { dismissAlarmNotification } from '../services/notifications';
@@ -29,7 +29,6 @@ const snoozeButtonLabels = [
 const VIBRATION_PATTERN = [0, 800, 400, 800];
 
 export default function AlarmFireScreen({ route, navigation }: Props) {
-  useKeepAwake();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { alarm } = route.params;

@@ -36,14 +36,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "expo-notifications",
-        {
-          "android": {
-            "useNextNotificationResponse": true
-          }
-        }
-      ]
+      "@notifee/react-native"
     ],
     "extra": {
       "eas": {
