@@ -1,13 +1,22 @@
 import React from 'react';
+import { requestWidgetUpdate } from 'react-native-android-widget';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Linking } from 'react-native';
 import { defaultPresets } from '../data/timerPresets';
+import {
+  scheduleTimerNotification,
+  showTimerCountdownNotification,
+} from '../services/notifications';
+import {
+  addActiveTimer,
+  loadPresets,
+  recordPresetUsage,
+} from '../services/timerStorage';
+import type { ActiveTimer } from '../types/timer';
 import { TimerWidget } from './TimerWidget';
 import type { WidgetPreset } from './TimerWidget';
 
 const RECENT_KEY = 'recentPresets';
-const PENDING_WIDGET_TIMER_KEY = 'pendingWidgetTimer';
 
 export async function getWidgetPresets(): Promise<WidgetPreset[]> {
   const nonCustom = defaultPresets.filter((p) => p.id !== 'custom');
@@ -67,16 +76,73 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_CLICK': {
       const action = props.clickAction;
       if (action?.startsWith('START_TIMER__')) {
-        const presetId = action.slice('START_TIMER__'.length);
-        await AsyncStorage.setItem(PENDING_WIDGET_TIMER_KEY, presetId);
+        const presetId = action.replace('START_TIMER__', '');
+
+        // Load preset data (respects custom durations)
+        const allPresets = await loadPresets();
+        const preset = allPresets.find((p) => p.id === presetId);
+        if (!preset) break;
+
+        const duration = preset.customSeconds || preset.seconds;
+        if (duration <= 0) break;
+
+        // Generate unique timer ID (uuid not available in headless JS)
+        const timerId = Date.now().toString() + Math.random().toString(36).slice(2);
+
+        const timer: ActiveTimer = {
+          id: timerId,
+          presetId: preset.id,
+          label: preset.label,
+          icon: preset.icon,
+          totalSeconds: duration,
+          remainingSeconds: duration,
+          startedAt: new Date().toISOString(),
+          isRunning: true,
+        };
+
+        const completionTimestamp = Date.now() + duration * 1000;
+
+        // Schedule completion notification (alarm sound when timer ends)
+        let notificationId: string | undefined;
         try {
-          await Linking.openURL(`dontforgetwhy://start-timer/${presetId}`);
+          notificationId = await scheduleTimerNotification(
+            timer.label,
+            timer.icon,
+            completionTimestamp,
+          );
+        } catch (error) {
+          console.error('[widgetTaskHandler] scheduleTimerNotification failed:', error);
+        }
+
+        // Show ongoing countdown notification (chronometer)
+        try {
+          await showTimerCountdownNotification(
+            timer.label,
+            timer.icon,
+            completionTimestamp,
+            timer.id,
+          );
+        } catch (error) {
+          console.error('[widgetTaskHandler] showTimerCountdownNotification failed:', error);
+        }
+
+        // Save timer to AsyncStorage (same 'activeTimers' key AlarmListScreen reads)
+        await addActiveTimer({ ...timer, notificationId });
+
+        // Record preset usage (updates recently-used order)
+        await recordPresetUsage(preset.id);
+
+        // Refresh all widget instances with updated preset order
+        try {
+          await requestWidgetUpdate({
+            widgetName: 'TimerWidget',
+            renderWidget: async () => {
+              const updatedPresets = await getWidgetPresets();
+              return React.createElement(TimerWidget, { presets: updatedPresets });
+            },
+          });
         } catch {
-          try {
-            await Linking.openURL('dontforgetwhy://');
-          } catch {
-            // unable to open app
-          }
+          // Widget update failed — silently ignore
         }
       }
       break;

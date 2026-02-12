@@ -1,11 +1,9 @@
 import 'react-native-get-random-values';
 import React, { useEffect, useMemo, useRef, useCallback } from 'react';
-import { Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import notifee, { EventType } from '@notifee/react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import AlarmListScreen from './src/screens/AlarmListScreen';
 import CreateAlarmScreen from './src/screens/CreateAlarmScreen';
 import AlarmFireScreen from './src/screens/AlarmFireScreen';
@@ -43,7 +41,6 @@ function AppNavigator() {
   const navigationRef = useRef<any>(null);
   const isNavigationReady = useRef(false);
   const pendingAlarmId = useRef<string | null>(null);
-
   const navigateToAlarm = useCallback(async (alarmId: string) => {
     if (!navigationRef.current || !isNavigationReady.current) {
       pendingAlarmId.current = alarmId;
@@ -92,26 +89,6 @@ function AppNavigator() {
     });
     return unsubscribe;
   }, [navigateToAlarm]);
-
-  // Widget deep link: write pending timer preset to AsyncStorage
-  useEffect(() => {
-    const handleUrl = async (url: string) => {
-      const match = url.match(/^dontforgetwhy:\/\/start-timer\/(.+)$/);
-      if (match) {
-        await AsyncStorage.setItem('pendingWidgetTimer', match[1]);
-      }
-    };
-
-    Linking.getInitialURL().then((url) => {
-      if (url) handleUrl(url);
-    });
-
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      handleUrl(url);
-    });
-
-    return () => subscription.remove();
-  }, []);
 
   const onNavigationReady = useCallback(() => {
     isNavigationReady.current = true;

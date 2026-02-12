@@ -8,15 +8,12 @@ import {
   Alert,
   AppState,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { v4 as uuidv4 } from 'uuid';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
 import type { ActiveTimer } from '../types/timer';
 import { loadAlarms, deleteAlarm, toggleAlarm } from '../services/storage';
-import notifee from '@notifee/react-native';
-import { cancelAlarm, scheduleTimerNotification, cancelTimerNotification } from '../services/notifications';
+import { cancelAlarm, scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import {
@@ -24,13 +21,10 @@ import {
   saveActiveTimers,
   addActiveTimer,
   removeActiveTimer,
-  loadPresets,
-  recordPresetUsage,
 } from '../services/timerStorage';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import TimerScreen from './TimerScreen';
-import { refreshTimerWidget } from '../widget/updateWidget';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
@@ -205,49 +199,6 @@ export default function AlarmListScreen({ navigation }: Props) {
     },
   }), [colors, insets.bottom]);
 
-  const processPendingWidgetTimer = useCallback(async () => {
-    const presetId = await AsyncStorage.getItem('pendingWidgetTimer');
-    if (!presetId) return;
-    await AsyncStorage.removeItem('pendingWidgetTimer');
-
-    const allPresets = await loadPresets();
-    const preset = allPresets.find((p) => p.id === presetId);
-    if (!preset) return;
-
-    const duration = preset.customSeconds || preset.seconds;
-    if (duration <= 0) return;
-
-    await recordPresetUsage(preset.id);
-    refreshTimerWidget();
-
-    const timer: ActiveTimer = {
-      id: uuidv4(),
-      presetId: preset.id,
-      label: preset.label,
-      icon: preset.icon,
-      totalSeconds: duration,
-      remainingSeconds: duration,
-      startedAt: new Date().toISOString(),
-      isRunning: true,
-    };
-
-    const completionTimestamp = Date.now() + duration * 1000;
-    let notificationId: string | undefined;
-    try {
-      notificationId = await scheduleTimerNotification(
-        timer.label,
-        timer.icon,
-        completionTimestamp,
-      );
-    } catch (error) {
-      console.error('[widget] scheduleTimerNotification failed:', error);
-    }
-
-    const updated = await addActiveTimer({ ...timer, notificationId });
-    setActiveTimers(updated);
-    setTab('timers');
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       setAppQuote(getRandomAppOpenQuote());
@@ -257,11 +208,10 @@ export default function AlarmListScreen({ navigation }: Props) {
         setTimeFormat(s.timeFormat);
       });
       loadStats().then(setStats);
-      processPendingWidgetTimer();
-    }, [processPendingWidgetTimer])
+    }, [])
   );
 
-  // Load active timers on mount
+  // Load active timers on mount (picks up widget-started timers on cold start)
   useEffect(() => {
     loadActiveTimers().then((loaded) => {
       loaded.forEach((t) => {
@@ -271,6 +221,9 @@ export default function AlarmListScreen({ navigation }: Props) {
       });
       const recalculated = recalculateTimers(loaded);
       setActiveTimers(recalculated);
+      if (recalculated.some((t) => t.isRunning)) {
+        setTab('timers');
+      }
       const needsSave = recalculated.some(
         (t, i) => t.remainingSeconds !== loaded[i].remainingSeconds
       );
@@ -305,26 +258,28 @@ export default function AlarmListScreen({ navigation }: Props) {
     return () => clearInterval(interval);
   }, []);
 
-  // Recalculate timers when app returns to foreground + check widget pending timer
+  // Reload active timers when app returns to foreground (picks up widget-started timers)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') {
-        setActiveTimers((prev) => {
-          const recalculated = recalculateTimers(prev);
-          const changed = recalculated.some(
-            (t, i) => t.remainingSeconds !== prev[i].remainingSeconds
-          );
-          if (changed) {
-            saveActiveTimers(recalculated);
+        loadActiveTimers().then((loaded) => {
+          const recalculated = recalculateTimers(loaded);
+          setActiveTimers((prev) => {
+            const prevIds = new Set(prev.map((t) => t.id));
+            if (recalculated.some((t) => !prevIds.has(t.id))) {
+              setTab('timers');
+            }
             return recalculated;
-          }
-          return prev;
+          });
+          const needsSave = recalculated.some(
+            (t, i) => t.remainingSeconds !== loaded[i].remainingSeconds
+          );
+          if (needsSave) saveActiveTimers(recalculated);
         });
-        processPendingWidgetTimer();
       }
     });
     return () => subscription.remove();
-  }, [processPendingWidgetTimer]);
+  }, []);
 
   // Alert for completed timers (notification already scheduled via trigger)
   useEffect(() => {
@@ -335,6 +290,9 @@ export default function AlarmListScreen({ navigation }: Props) {
         !alertedRef.current.has(timer.id)
       ) {
         alertedRef.current.add(timer.id);
+        cancelTimerCountdownNotification(timer.id).catch(
+          (e) => console.error('[completion] cancelTimerCountdownNotification failed:', e),
+        );
         const notifId = timer.notificationId;
         Alert.alert(
           '\u23F0 Timer Done!',
@@ -398,6 +356,9 @@ export default function AlarmListScreen({ navigation }: Props) {
       console.error('[handleAddTimer] scheduleTimerNotification failed:', error);
       Alert.alert('Timer Started', 'Timer is running but the notification could not be scheduled.');
     }
+    showTimerCountdownNotification(timer.label, timer.icon, completionTimestamp, timer.id).catch(
+      (e) => console.error('[handleAddTimer] showTimerCountdownNotification failed:', e),
+    );
     const updated = await addActiveTimer({ ...timer, notificationId });
     setActiveTimers(updated);
   };
@@ -407,6 +368,9 @@ export default function AlarmListScreen({ navigation }: Props) {
     if (timer?.notificationId) {
       await cancelTimerNotification(timer.notificationId);
     }
+    cancelTimerCountdownNotification(id).catch(
+      (e) => console.error('[handleRemoveTimer] cancelTimerCountdownNotification failed:', e),
+    );
     const updated = await removeActiveTimer(id);
     setActiveTimers(updated);
   };
@@ -416,10 +380,13 @@ export default function AlarmListScreen({ navigation }: Props) {
       const updated = prev.map((t) => {
         if (t.id !== id) return t;
         if (t.isRunning) {
-          // Pausing — cancel the scheduled notification
+          // Pausing — cancel the scheduled notification and countdown
           if (t.notificationId) {
             cancelTimerNotification(t.notificationId);
           }
+          cancelTimerCountdownNotification(t.id).catch(
+            (e) => console.error('[handleTogglePause] cancelTimerCountdownNotification failed:', e),
+          );
           return { ...t, isRunning: false, notificationId: undefined };
         }
         // Resuming
@@ -431,7 +398,7 @@ export default function AlarmListScreen({ navigation }: Props) {
       });
       saveActiveTimers(updated);
 
-      // Schedule notification for resumed timer
+      // Schedule notification and countdown for resumed timer
       const resumed = updated.find((t) => t.id === id && t.isRunning);
       if (resumed && resumed.remainingSeconds > 0) {
         const ts = Date.now() + resumed.remainingSeconds * 1000;
@@ -449,6 +416,9 @@ export default function AlarmListScreen({ navigation }: Props) {
             console.error('[handleTogglePause] scheduleTimerNotification failed:', error);
             Alert.alert('Timer Resumed', 'Timer is running but the notification could not be scheduled.');
           });
+        showTimerCountdownNotification(resumed.label, resumed.icon, ts, resumed.id).catch(
+          (e) => console.error('[handleTogglePause] showTimerCountdownNotification failed:', e),
+        );
       }
 
       return updated;

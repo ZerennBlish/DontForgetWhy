@@ -10,6 +10,7 @@ import { Platform } from 'react-native';
 import { Alarm } from '../types/alarm';
 
 const ALARM_CHANNEL_ID = 'alarms';
+const TIMER_PROGRESS_CHANNEL_ID = 'timer-progress';
 
 function getNextAlarmTimestamp(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);
@@ -38,6 +39,13 @@ export async function setupNotificationChannel(): Promise<void> {
     lights: true,
     lightColor: '#FF0000',
     bypassDnd: true,
+  });
+
+  await notifee.createChannel({
+    id: TIMER_PROGRESS_CHANNEL_ID,
+    name: 'Timer Progress',
+    importance: AndroidImportance.DEFAULT,
+    vibration: false,
   });
 }
 
@@ -155,4 +163,32 @@ export async function scheduleTimerNotification(
 export async function cancelTimerNotification(identifier: string): Promise<void> {
   await notifee.cancelTriggerNotification(identifier);
   await notifee.cancelNotification(identifier);
+}
+
+export async function showTimerCountdownNotification(
+  label: string,
+  icon: string,
+  completionTimestamp: number,
+  timerId: string,
+): Promise<void> {
+  await notifee.displayNotification({
+    id: `countdown-${timerId}`,
+    title: `${icon} ${label}`,
+    body: 'Timer running',
+    android: {
+      channelId: TIMER_PROGRESS_CHANNEL_ID,
+      ongoing: true,
+      autoCancel: false,
+      showChronometer: true,
+      chronometerDirection: 'down',
+      timestamp: completionTimestamp,
+      pressAction: {
+        id: 'default',
+      },
+    },
+  });
+}
+
+export async function cancelTimerCountdownNotification(timerId: string): Promise<void> {
+  await notifee.cancelNotification(`countdown-${timerId}`);
 }
