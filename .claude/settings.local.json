@@ -10,7 +10,8 @@
       "Bash(sudo npx expo install:*)",
       "Bash(npm search:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }
