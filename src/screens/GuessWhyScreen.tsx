@@ -268,10 +268,10 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     // Check if typed text appears in the alarm note
     if (alarm.note && alarm.note.toLowerCase().includes(guessLower)) return true;
 
-    // For icon-only alarms (no note), check if typed text matches the icon id
+    // For icon-only alarms (no note), check if typed text matches the icon id exactly
     if (!alarm.note && alarm.icon) {
       const matchedIcon = guessWhyIcons.find((i) => i.emoji === alarm.icon);
-      if (matchedIcon && matchedIcon.id.toLowerCase().includes(guessLower)) return true;
+      if (matchedIcon && matchedIcon.id.toLowerCase() === guessLower) return true;
     }
 
     return false;

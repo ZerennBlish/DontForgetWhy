@@ -42,7 +42,7 @@ function formatDuration(seconds: number): string {
 
 interface TimerScreenProps {
   activeTimers: ActiveTimer[];
-  onAddTimer: (timer: ActiveTimer) => void;
+  onAddTimer: (timer: ActiveTimer) => void | Promise<void>;
   onRemoveTimer: (id: string) => void;
   onTogglePause: (id: string) => void;
 }
@@ -307,7 +307,11 @@ export default function TimerScreen({
       startedAt: new Date().toISOString(),
       isRunning: true,
     };
-    onAddTimer(timer);
+    try {
+      await onAddTimer(timer);
+    } catch (error) {
+      console.error('[handleStartTimer] onAddTimer failed:', error);
+    }
   };
 
   const handleLongPress = (preset: TimerPreset) => {

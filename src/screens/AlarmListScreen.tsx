@@ -337,11 +337,17 @@ export default function AlarmListScreen({ navigation }: Props) {
 
   const handleAddTimer = async (timer: ActiveTimer) => {
     const completionTimestamp = Date.now() + timer.remainingSeconds * 1000;
-    const notificationId = await scheduleTimerNotification(
-      timer.label,
-      timer.icon,
-      completionTimestamp,
-    );
+    let notificationId: string | undefined;
+    try {
+      notificationId = await scheduleTimerNotification(
+        timer.label,
+        timer.icon,
+        completionTimestamp,
+      );
+    } catch (error) {
+      console.error('[handleAddTimer] scheduleTimerNotification failed:', error);
+      Alert.alert('Timer Started', 'Timer is running but the notification could not be scheduled.');
+    }
     const updated = await addActiveTimer({ ...timer, notificationId });
     setActiveTimers(updated);
   };
@@ -379,15 +385,20 @@ export default function AlarmListScreen({ navigation }: Props) {
       const resumed = updated.find((t) => t.id === id && t.isRunning);
       if (resumed && resumed.remainingSeconds > 0) {
         const ts = Date.now() + resumed.remainingSeconds * 1000;
-        scheduleTimerNotification(resumed.label, resumed.icon, ts).then((notifId) => {
-          setActiveTimers((current) => {
-            const withNotif = current.map((ct) =>
-              ct.id === id ? { ...ct, notificationId: notifId } : ct
-            );
-            saveActiveTimers(withNotif);
-            return withNotif;
+        scheduleTimerNotification(resumed.label, resumed.icon, ts)
+          .then((notifId) => {
+            setActiveTimers((current) => {
+              const withNotif = current.map((ct) =>
+                ct.id === id ? { ...ct, notificationId: notifId } : ct
+              );
+              saveActiveTimers(withNotif);
+              return withNotif;
+            });
+          })
+          .catch((error) => {
+            console.error('[handleTogglePause] scheduleTimerNotification failed:', error);
+            Alert.alert('Timer Resumed', 'Timer is running but the notification could not be scheduled.');
           });
-        });
       }
 
       return updated;

@@ -56,6 +56,7 @@ export async function loadActiveTimers(): Promise<ActiveTimer[]> {
         item !== null &&
         typeof item === 'object' &&
         typeof (item as Record<string, unknown>).id === 'string' &&
+        typeof (item as Record<string, unknown>).label === 'string' &&
         typeof (item as Record<string, unknown>).totalSeconds === 'number' &&
         typeof (item as Record<string, unknown>).remainingSeconds === 'number' &&
         typeof (item as Record<string, unknown>).startedAt === 'string' &&

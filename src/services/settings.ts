@@ -8,7 +8,7 @@ export interface AppSettings {
 }
 
 const defaultSettings: AppSettings = {
-  guessWhyEnabled: false,
+  guessWhyEnabled: true,
   timeFormat: '12h',
 };
 
@@ -16,7 +16,17 @@ export async function loadSettings(): Promise<AppSettings> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return { ...defaultSettings };
   try {
-    return { ...defaultSettings, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    return {
+      guessWhyEnabled:
+        typeof parsed.guessWhyEnabled === 'boolean'
+          ? parsed.guessWhyEnabled
+          : defaultSettings.guessWhyEnabled,
+      timeFormat:
+        parsed.timeFormat === '12h' || parsed.timeFormat === '24h'
+          ? parsed.timeFormat
+          : defaultSettings.timeFormat,
+    };
   } catch {
     return { ...defaultSettings };
   }

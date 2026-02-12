@@ -52,7 +52,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const stopAlarm = () => {
     Vibration.cancel();
-    dismissAlarmNotification();
+    if (alarm.notificationId) {
+      dismissAlarmNotification(alarm.notificationId);
+    }
   };
 
   const styles = useMemo(() => StyleSheet.create({

@@ -18,7 +18,9 @@ export async function loadAlarms(): Promise<Alarm[]> {
         typeof (item as Record<string, unknown>).time === 'string' &&
         typeof (item as Record<string, unknown>).note === 'string' &&
         typeof (item as Record<string, unknown>).enabled === 'boolean' &&
-        typeof (item as Record<string, unknown>).category === 'string'
+        typeof (item as Record<string, unknown>).category === 'string' &&
+        typeof (item as Record<string, unknown>).private === 'boolean' &&
+        typeof (item as Record<string, unknown>).createdAt === 'string'
     );
   } catch {
     return [];
