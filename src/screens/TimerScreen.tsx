@@ -25,8 +25,12 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const PRESET_CARD_WIDTH = (SCREEN_WIDTH - 32 - 16) / 3;
 
 function formatCountdown(seconds: number): string {
-  const m = Math.floor(seconds / 60);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
@@ -59,6 +63,7 @@ export default function TimerScreen({
   const [presets, setPresets] = useState<TimerPreset[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [customModal, setCustomModal] = useState<TimerPreset | null>(null);
+  const [customHours, setCustomHours] = useState('');
   const [customMinutes, setCustomMinutes] = useState('');
   const [customSeconds, setCustomSeconds] = useState('');
 
@@ -318,8 +323,10 @@ export default function TimerScreen({
 
   const handleLongPress = (preset: TimerPreset) => {
     const total = preset.customSeconds || preset.seconds;
-    const mins = Math.floor(total / 60);
+    const hours = Math.floor(total / 3600);
+    const mins = Math.floor((total % 3600) / 60);
     const secs = total % 60;
+    setCustomHours(hours > 0 ? hours.toString() : '');
     setCustomMinutes(mins > 0 ? mins.toString() : '');
     setCustomSeconds(secs > 0 ? secs.toString() : '');
     setCustomModal(preset);
@@ -327,9 +334,10 @@ export default function TimerScreen({
 
   const handleSaveCustom = async () => {
     if (!customModal) return;
-    const mins = parseInt(customMinutes, 10) || 0;
+    const hours = Math.min(parseInt(customHours, 10) || 0, 23);
+    const mins = Math.min(parseInt(customMinutes, 10) || 0, 59);
     const secs = Math.min(parseInt(customSeconds, 10) || 0, 59);
-    const totalSeconds = mins * 60 + secs;
+    const totalSeconds = hours * 3600 + mins * 60 + secs;
     if (totalSeconds <= 0) {
       setCustomModal(null);
       return;
@@ -341,6 +349,34 @@ export default function TimerScreen({
       )
     );
     setCustomModal(null);
+  };
+
+  const handleHoursChange = (t: string) => {
+    const digits = t.replace(/[^0-9]/g, '');
+    if (digits === '') {
+      setCustomHours('');
+      return;
+    }
+    const num = parseInt(digits, 10);
+    if (num > 23) {
+      setCustomHours('23');
+    } else {
+      setCustomHours(digits);
+    }
+  };
+
+  const handleMinutesChange = (t: string) => {
+    const digits = t.replace(/[^0-9]/g, '');
+    if (digits === '') {
+      setCustomMinutes('');
+      return;
+    }
+    const num = parseInt(digits, 10);
+    if (num > 59) {
+      setCustomMinutes('59');
+    } else {
+      setCustomMinutes(digits);
+    }
   };
 
   const handleSecondsChange = (t: string) => {
@@ -462,13 +498,25 @@ export default function TimerScreen({
               <View style={styles.modalInputGroup}>
                 <TextInput
                   style={styles.modalInput}
-                  value={customMinutes}
-                  onChangeText={(t) => setCustomMinutes(t.replace(/[^0-9]/g, ''))}
+                  value={customHours}
+                  onChangeText={handleHoursChange}
                   keyboardType="number-pad"
                   placeholder="0"
                   placeholderTextColor={colors.textTertiary}
                   autoFocus
-                  maxLength={4}
+                  maxLength={2}
+                />
+                <Text style={styles.modalInputLabel}>hr</Text>
+              </View>
+              <View style={styles.modalInputGroup}>
+                <TextInput
+                  style={styles.modalInput}
+                  value={customMinutes}
+                  onChangeText={handleMinutesChange}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor={colors.textTertiary}
+                  maxLength={2}
                 />
                 <Text style={styles.modalInputLabel}>min</Text>
               </View>
