@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   Animated,
+  Vibration,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatTime } from '../utils/time';
@@ -51,6 +52,12 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const resolvedRef = useRef(false);
 
   const canPlay = hasIcon || alarm.note.length >= 3;
+
+  useEffect(() => {
+    if (canPlay) {
+      Vibration.vibrate([0, 800, 400, 800], true);
+    }
+  }, [canPlay]);
 
   useEffect(() => {
     if (!canPlay) {

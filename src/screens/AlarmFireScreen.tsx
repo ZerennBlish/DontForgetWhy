@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Vibration } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useKeepAwake } from 'expo-keep-awake';
 import { formatTime } from '../utils/time';
 import { getSnoozeMessage } from '../data/snoozeMessages';
+import { dismissAlarmNotification } from '../services/notifications';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
@@ -24,12 +26,27 @@ const snoozeButtonLabels = [
   'Fine, Snooze',
 ];
 
+const VIBRATION_PATTERN = [0, 800, 400, 800];
+
 export default function AlarmFireScreen({ route, navigation }: Props) {
+  useKeepAwake();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { alarm } = route.params;
   const [snoozeCount, setSnoozeCount] = useState(0);
   const [snoozeMessage, setSnoozeMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    Vibration.vibrate(VIBRATION_PATTERN, true);
+    return () => {
+      Vibration.cancel();
+    };
+  }, []);
+
+  const stopAlarm = () => {
+    Vibration.cancel();
+    dismissAlarmNotification();
+  };
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -126,10 +143,12 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   }), [colors, insets.bottom]);
 
   const handleDismiss = () => {
+    stopAlarm();
     navigation.goBack();
   };
 
   const handleSnooze = () => {
+    stopAlarm();
     const newCount = snoozeCount + 1;
     setSnoozeCount(newCount);
     setSnoozeMessage(getSnoozeMessage(newCount));

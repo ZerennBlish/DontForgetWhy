@@ -22,11 +22,29 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.zerennblish.DontForgetWhy"
+      "package": "com.zerennblish.DontForgetWhy",
+      "permissions": [
+        "android.permission.USE_FULL_SCREEN_INTENT",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.FOREGROUND_SERVICE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "android": {
+            "useNextNotificationResponse": true
+          }
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "93348f85-09e8-4f25-8159-63d10f9b1d1b"

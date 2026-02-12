@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -13,6 +13,7 @@ import MemoryScoreScreen from './src/screens/MemoryScoreScreen';
 import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import { loadAlarms } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
+import { setupNotificationChannel, requestPermissions } from './src/services/notifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import type { RootStackParamList } from './src/navigation/types';
@@ -37,33 +38,73 @@ function AppNavigator() {
     [colors],
   );
 
-  const navigationRef = React.useRef<any>(null);
+  const navigationRef = useRef<any>(null);
+  const pendingResponseRef = useRef<Notifications.NotificationResponse | null>(null);
 
+  const handleNotificationNavigation = useCallback(
+    async (response: Notifications.NotificationResponse) => {
+      const alarmId = response.notification.request.content.data?.alarmId;
+      if (!alarmId || !navigationRef.current) return;
+
+      const alarms = await loadAlarms();
+      const alarm = alarms.find((a) => a.id === alarmId);
+      if (!alarm) return;
+
+      const settings = await loadSettings();
+      if (settings.guessWhyEnabled) {
+        navigationRef.current.navigate('GuessWhy', { alarm });
+      } else {
+        navigationRef.current.navigate('AlarmFire', { alarm });
+      }
+    },
+    [],
+  );
+
+  // Create notification channel and request permissions on startup
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      async (response) => {
-        const alarmId = response.notification.request.content.data?.alarmId;
-        if (alarmId) {
-          const alarms = await loadAlarms();
-          const alarm = alarms.find((a) => a.id === alarmId);
-          if (alarm && navigationRef.current) {
-            const settings = await loadSettings();
-            if (settings.guessWhyEnabled) {
-              navigationRef.current.navigate('GuessWhy', { alarm });
-            } else {
-              navigationRef.current.navigate('AlarmFire', { alarm });
-            }
-          }
+    async function init() {
+      await setupNotificationChannel();
+      await requestPermissions();
+    }
+    init();
+  }, []);
+
+  // Cold-start: app launched from a notification tap while terminated
+  useEffect(() => {
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        if (navigationRef.current) {
+          handleNotificationNavigation(response);
+        } else {
+          pendingResponseRef.current = response;
         }
       }
+    });
+  }, [handleNotificationNavigation]);
+
+  // Warm-start: notification tapped while app is running or in background
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      handleNotificationNavigation,
     );
     return () => subscription.remove();
-  }, []);
+  }, [handleNotificationNavigation]);
+
+  const onNavigationReady = useCallback(() => {
+    if (pendingResponseRef.current) {
+      handleNotificationNavigation(pendingResponseRef.current);
+      pendingResponseRef.current = null;
+    }
+  }, [handleNotificationNavigation]);
 
   return (
     <>
       <StatusBar style={colors.mode === 'dark' ? 'light' : 'dark'} />
-      <NavigationContainer theme={navigationTheme} ref={navigationRef}>
+      <NavigationContainer
+        theme={navigationTheme}
+        ref={navigationRef}
+        onReady={onNavigationReady}
+      >
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
