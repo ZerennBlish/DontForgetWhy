@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import { Alarm, ALL_DAYS } from '../types/alarm';
 import { scheduleAlarm, cancelAlarmNotifications } from './notifications';
 
@@ -76,7 +77,8 @@ export async function updateAlarm(updatedAlarm: Alarm): Promise<Alarm[]> {
         updated.push({ ...updatedAlarm, notificationIds });
       } catch (error) {
         console.error('[updateAlarm] scheduleAlarm failed:', error);
-        updated.push({ ...updatedAlarm, notificationIds: [] });
+        updated.push({ ...updatedAlarm, enabled: false, notificationIds: [] });
+        Alert.alert('Scheduling Failed', "Alarm saved but couldn't schedule notifications. Check notification permissions.");
       }
     } else {
       updated.push({ ...updatedAlarm, notificationIds: [] });
@@ -112,7 +114,9 @@ export async function toggleAlarm(id: string): Promise<Alarm[]> {
         toggled.notificationIds = notificationIds;
       } catch (error) {
         console.error('[toggleAlarm] scheduleAlarm failed:', error);
+        toggled.enabled = false;
         toggled.notificationIds = [];
+        Alert.alert('Scheduling Failed', "Couldn't schedule notifications. Check notification permissions.");
       }
     } else if (a.notificationIds?.length) {
       await cancelAlarmNotifications(a.notificationIds);
@@ -122,4 +126,12 @@ export async function toggleAlarm(id: string): Promise<Alarm[]> {
   }
   await saveAlarms(updated);
   return updated;
+}
+
+export async function disableAlarm(id: string): Promise<void> {
+  const alarms = await loadAlarms();
+  const updated = alarms.map((a) =>
+    a.id === id ? { ...a, enabled: false, notificationIds: [] } : a,
+  );
+  await saveAlarms(updated);
 }

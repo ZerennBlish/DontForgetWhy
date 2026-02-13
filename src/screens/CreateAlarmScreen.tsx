@@ -50,8 +50,9 @@ function getFirstDayOfMonth(year: number, month: number): number {
 }
 
 function formatDateDisplay(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
@@ -124,11 +125,17 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     existingAlarm?.date || null
   );
   const [calMonth, setCalMonth] = useState(() => {
-    if (existingAlarm?.date) return new Date(existingAlarm.date).getMonth();
+    if (existingAlarm?.date) {
+      const [, mo] = existingAlarm.date.split('-').map(Number);
+      return mo - 1;
+    }
     return new Date().getMonth();
   });
   const [calYear, setCalYear] = useState(() => {
-    if (existingAlarm?.date) return new Date(existingAlarm.date).getFullYear();
+    if (existingAlarm?.date) {
+      const [yr] = existingAlarm.date.split('-').map(Number);
+      return yr;
+    }
     return new Date().getFullYear();
   });
 
@@ -520,6 +527,15 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       const m = Math.min(59, Math.max(0, parseInt(minutes, 10) || 0));
       const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 
+      if (mode === 'one-time' && selectedDate) {
+        const [py, pm, pd] = selectedDate.split('-').map(Number);
+        const alarmDateTime = new Date(py, pm - 1, pd, h, m, 0, 0);
+        if (alarmDateTime.getTime() <= Date.now()) {
+          Alert.alert('Time Passed', 'Selected time has already passed. Choose a future time or date.');
+          return;
+        }
+      }
+
       if (!isEditing || existingAlarm!.enabled) {
         const granted = await requestPermissions();
         if (!granted) {
@@ -560,8 +576,19 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           notificationIds: [],
         };
 
-        const notificationIds = await scheduleAlarm(alarm);
-        await addAlarm({ ...alarm, notificationIds });
+        let notificationIds: string[] = [];
+        let alarmEnabled = true;
+        try {
+          notificationIds = await scheduleAlarm(alarm);
+        } catch (scheduleError) {
+          console.error('[SAVE] scheduleAlarm failed:', scheduleError);
+          alarmEnabled = false;
+          Alert.alert(
+            'Alarm Saved',
+            "Alarm saved but couldn't schedule notifications. Check notification permissions.",
+          );
+        }
+        await addAlarm({ ...alarm, enabled: alarmEnabled, notificationIds });
       }
 
       refreshTimerWidget();

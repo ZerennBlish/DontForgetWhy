@@ -52,6 +52,13 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const stopAlarm = () => {
     Vibration.cancel();
+    // Cancel all notification IDs (new array format)
+    if (alarm.notificationIds?.length) {
+      for (const id of alarm.notificationIds) {
+        dismissAlarmNotification(id);
+      }
+    }
+    // Cancel legacy single ID for backward compat
     if (alarm.notificationId) {
       dismissAlarmNotification(alarm.notificationId);
     }

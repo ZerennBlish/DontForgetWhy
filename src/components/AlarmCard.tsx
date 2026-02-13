@@ -7,7 +7,8 @@ import { useTheme } from '../theme/ThemeContext';
 function getScheduleLabel(alarm: Alarm): string {
   const mode = alarm.mode || 'recurring';
   if (mode === 'one-time' && alarm.date) {
-    const d = new Date(alarm.date);
+    const [y, mo, da] = alarm.date.split('-').map(Number);
+    const d = new Date(y, mo - 1, da);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
   const days: AlarmDay[] = alarm.days?.length ? alarm.days as AlarmDay[] : [...ALL_DAYS];

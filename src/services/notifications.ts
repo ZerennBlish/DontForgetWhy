@@ -58,7 +58,11 @@ function getOneTimeTimestamp(time: string, dateStr: string): number {
   const [hours, minutes] = time.split(':').map(Number);
   const [year, month, day] = dateStr.split('-').map(Number);
   const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
-  return d.getTime();
+  const ts = d.getTime();
+  if (ts <= Date.now()) {
+    throw new Error('One-time alarm timestamp is in the past');
+  }
+  return ts;
 }
 
 let _channelPromise: Promise<void> | null = null;

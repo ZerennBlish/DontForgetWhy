@@ -14,9 +14,10 @@ import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import MemoryMatchScreen from './src/screens/MemoryMatchScreen';
 import GamesScreen from './src/screens/GamesScreen';
 import SudokuScreen from './src/screens/SudokuScreen';
-import { loadAlarms } from './src/services/storage';
+import { loadAlarms, disableAlarm } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
+import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import type { RootStackParamList } from './src/navigation/types';
@@ -44,15 +45,35 @@ function AppNavigator() {
   const navigationRef = useRef<any>(null);
   const isNavigationReady = useRef(false);
   const pendingAlarmId = useRef<string | null>(null);
-  const navigateToAlarm = useCallback(async (alarmId: string) => {
+  const pendingNotificationId = useRef<string | null>(null);
+
+  const navigateToAlarm = useCallback(async (alarmId: string, pressedNotificationId?: string) => {
     if (!navigationRef.current || !isNavigationReady.current) {
       pendingAlarmId.current = alarmId;
+      pendingNotificationId.current = pressedNotificationId || null;
       return;
     }
 
     const alarms = await loadAlarms();
     const alarm = alarms.find((a) => a.id === alarmId);
     if (!alarm) return;
+
+    // Dismiss all displayed notifications for this alarm
+    const idsToCancel = [...(alarm.notificationIds || [])];
+    if (alarm.notificationId && !idsToCancel.includes(alarm.notificationId)) {
+      idsToCancel.push(alarm.notificationId);
+    }
+    if (pressedNotificationId && !idsToCancel.includes(pressedNotificationId)) {
+      idsToCancel.push(pressedNotificationId);
+    }
+    for (const id of idsToCancel) {
+      await notifee.cancelNotification(id).catch(() => {});
+    }
+
+    // Auto-disable one-time alarms after firing
+    if (alarm.mode === 'one-time') {
+      disableAlarm(alarmId).catch(() => {});
+    }
 
     const settings = await loadSettings();
     if (settings.guessWhyEnabled) {
@@ -67,6 +88,31 @@ function AppNavigator() {
     setupNotificationChannel();
   }, []);
 
+  // Clean up orphaned timer countdown notifications on launch
+  useEffect(() => {
+    (async () => {
+      try {
+        const timers = await loadActiveTimers();
+        const now = Date.now();
+        let changed = false;
+        const remaining = timers.filter((timer) => {
+          if (!timer.isRunning) return true;
+          const completionTime = new Date(timer.startedAt).getTime() + timer.remainingSeconds * 1000;
+          if (completionTime < now) {
+            // Timer completed while app was killed — cancel orphaned countdown
+            cancelTimerCountdownNotification(timer.id).catch(() => {});
+            changed = true;
+            return false;
+          }
+          return true;
+        });
+        if (changed) {
+          await saveActiveTimers(remaining);
+        }
+      } catch {}
+    })();
+  }, []);
+
   // Cold-start: app launched from notification tap or full-screen intent
   useEffect(() => {
     notifee.getInitialNotification().then(async (initial) => {
@@ -76,7 +122,10 @@ function AppNavigator() {
         const timerId = initial.notification.data.timerId as string;
         await cancelTimerCountdownNotification(timerId).catch(() => {});
       } else if (initial.notification.data?.alarmId) {
-        navigateToAlarm(initial.notification.data.alarmId as string);
+        navigateToAlarm(
+          initial.notification.data.alarmId as string,
+          initial.notification.id || undefined,
+        );
       }
     });
   }, [navigateToAlarm]);
@@ -90,7 +139,10 @@ function AppNavigator() {
           const timerId = detail.notification.data.timerId as string;
           await cancelTimerCountdownNotification(timerId).catch(() => {});
         } else if (detail.notification?.data?.alarmId) {
-          navigateToAlarm(detail.notification.data.alarmId as string);
+          navigateToAlarm(
+            detail.notification.data.alarmId as string,
+            detail.notification?.id || undefined,
+          );
         }
       }
     });
@@ -100,8 +152,9 @@ function AppNavigator() {
   const onNavigationReady = useCallback(() => {
     isNavigationReady.current = true;
     if (pendingAlarmId.current) {
-      navigateToAlarm(pendingAlarmId.current);
+      navigateToAlarm(pendingAlarmId.current, pendingNotificationId.current || undefined);
       pendingAlarmId.current = null;
+      pendingNotificationId.current = null;
     }
   }, [navigateToAlarm]);
 
