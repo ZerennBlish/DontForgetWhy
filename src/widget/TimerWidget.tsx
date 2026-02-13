@@ -8,90 +8,265 @@ export interface WidgetPreset {
   isPinned?: boolean;
 }
 
+export interface WidgetAlarm {
+  id: string;
+  icon: string;
+  time: string;
+  label: string;
+}
+
 interface TimerWidgetProps {
+  alarms: WidgetAlarm[];
   presets: WidgetPreset[];
 }
 
-export function TimerWidget({ presets }: TimerWidgetProps) {
-  const rows: WidgetPreset[][] = [];
-  for (let i = 0; i < presets.length; i += 2) {
-    rows.push(presets.slice(i, i + 2));
-  }
+const BG = '#121220';
+const CELL_BG = '#1E1E2E';
+const TEXT = '#EAEAFF';
+const TEXT_SEC = '#B0B0CC';
+const BORDER = '#2A2A3E';
+const PIN_BORDER = '#4A90D9';
+
+function AlarmCell({ alarm }: { alarm: WidgetAlarm }) {
+  return (
+    <FlexWidget
+      clickAction="OPEN_APP"
+      style={{
+        width: 'match_parent',
+        backgroundColor: CELL_BG,
+        borderRadius: 12,
+        borderColor: BORDER,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        flex: 1,
+      }}
+    >
+      <TextWidget
+        text={alarm.icon}
+        style={{
+          fontSize: 16,
+          marginRight: 6,
+        }}
+      />
+      <FlexWidget
+        style={{
+          flex: 1,
+          flexDirection: 'column',
+        }}
+      >
+        <TextWidget
+          text={alarm.time}
+          style={{
+            fontSize: 13,
+            fontWeight: 'bold',
+            color: TEXT,
+          }}
+        />
+        <TextWidget
+          text={alarm.label}
+          style={{
+            fontSize: 10,
+            color: TEXT_SEC,
+          }}
+        />
+      </FlexWidget>
+    </FlexWidget>
+  );
+}
+
+function EmptyAlarmCell() {
+  return (
+    <FlexWidget
+      style={{
+        width: 'match_parent',
+        backgroundColor: CELL_BG,
+        borderRadius: 12,
+        borderColor: BORDER,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 8,
+        flex: 1,
+      }}
+    >
+      <TextWidget
+        text="\u2014"
+        style={{
+          fontSize: 14,
+          color: BORDER,
+        }}
+      />
+    </FlexWidget>
+  );
+}
+
+function TimerCell({ preset }: { preset: WidgetPreset }) {
+  return (
+    <FlexWidget
+      clickAction={`START_TIMER__${preset.id}`}
+      style={{
+        width: 'match_parent',
+        backgroundColor: CELL_BG,
+        borderRadius: 12,
+        borderColor: preset.isPinned ? PIN_BORDER : BORDER,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 8,
+        flex: 1,
+      }}
+    >
+      <TextWidget
+        text={preset.icon}
+        style={{
+          fontSize: 16,
+          marginRight: 6,
+        }}
+      />
+      <TextWidget
+        text={preset.label}
+        style={{
+          fontSize: 13,
+          color: TEXT,
+          fontWeight: '600',
+        }}
+      />
+    </FlexWidget>
+  );
+}
+
+function EmptyTimerCell() {
+  return (
+    <FlexWidget
+      style={{
+        width: 'match_parent',
+        backgroundColor: CELL_BG,
+        borderRadius: 12,
+        borderColor: BORDER,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 8,
+        flex: 1,
+      }}
+    >
+      <TextWidget
+        text="\u2014"
+        style={{
+          fontSize: 14,
+          color: BORDER,
+        }}
+      />
+    </FlexWidget>
+  );
+}
+
+export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
+  const alarmSlots = [0, 1, 2];
+  const timerSlots = [0, 1, 2];
 
   return (
     <FlexWidget
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: '#121220',
+        backgroundColor: BG,
         borderRadius: 16,
         padding: 12,
         flexDirection: 'column',
       }}
     >
+      {/* Title */}
       <TextWidget
         text="Don't Forget Why"
         style={{
           fontSize: 16,
           fontWeight: 'bold',
-          color: '#EAEAFF',
+          color: TEXT,
           marginBottom: 8,
         }}
       />
+
+      {/* Two columns */}
       <FlexWidget
         style={{
           width: 'match_parent',
           flex: 1,
-          flexDirection: 'column',
+          flexDirection: 'row',
         }}
       >
-        {rows.map((row, rowIndex) => (
-          <FlexWidget
-            key={`row-${rowIndex}`}
+        {/* Left column: Alarms */}
+        <FlexWidget
+          style={{
+            flex: 1,
+            flexDirection: 'column',
+            marginRight: 4,
+          }}
+        >
+          <TextWidget
+            text="Alarms"
             style={{
-              width: 'match_parent',
-              flexDirection: 'row',
-              flex: 1,
-              marginBottom: rowIndex < rows.length - 1 ? 6 : 0,
+              fontSize: 11,
+              fontWeight: '600',
+              color: TEXT_SEC,
+              marginBottom: 4,
             }}
-          >
-            {row.map((preset, colIndex) => (
-              <FlexWidget
-                key={`cell-${rowIndex}-${colIndex}`}
-                clickAction={`START_TIMER__${preset.id}`}
-                style={{
-                  flex: 1,
-                  backgroundColor: '#1E1E2E',
-                  borderRadius: 12,
-                  borderColor: preset.isPinned ? '#4A90D9' : '#2A2A3E',
-                  borderWidth: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 6,
-                  marginRight: colIndex === 0 ? 3 : 0,
-                  marginLeft: colIndex === 1 ? 3 : 0,
-                }}
-              >
-                <TextWidget
-                  text={preset.icon}
-                  style={{
-                    fontSize: 18,
-                    marginRight: 6,
-                  }}
-                />
-                <TextWidget
-                  text={preset.label}
-                  style={{
-                    fontSize: 13,
-                    color: '#EAEAFF',
-                    fontWeight: '600',
-                  }}
-                />
-              </FlexWidget>
-            ))}
-          </FlexWidget>
-        ))}
+          />
+          {alarmSlots.map((i) => (
+            <FlexWidget
+              key={`alarm-${i}`}
+              style={{
+                width: 'match_parent',
+                flex: 1,
+                marginBottom: i < 2 ? 4 : 0,
+              }}
+            >
+              {alarms[i] ? (
+                <AlarmCell alarm={alarms[i]} />
+              ) : (
+                <EmptyAlarmCell />
+              )}
+            </FlexWidget>
+          ))}
+        </FlexWidget>
+
+        {/* Right column: Timers */}
+        <FlexWidget
+          style={{
+            flex: 1,
+            flexDirection: 'column',
+            marginLeft: 4,
+          }}
+        >
+          <TextWidget
+            text="Timers"
+            style={{
+              fontSize: 11,
+              fontWeight: '600',
+              color: TEXT_SEC,
+              marginBottom: 4,
+            }}
+          />
+          {timerSlots.map((i) => (
+            <FlexWidget
+              key={`timer-${i}`}
+              style={{
+                width: 'match_parent',
+                flex: 1,
+                marginBottom: i < 2 ? 4 : 0,
+              }}
+            >
+              {presets[i] ? (
+                <TimerCell preset={presets[i]} />
+              ) : (
+                <EmptyTimerCell />
+              )}
+            </FlexWidget>
+          ))}
+        </FlexWidget>
       </FlexWidget>
     </FlexWidget>
   );

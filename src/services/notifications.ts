@@ -7,11 +7,15 @@ import notifee, {
 } from '@notifee/react-native';
 import type { TimestampTrigger } from '@notifee/react-native';
 import { Platform } from 'react-native';
-import { Alarm } from '../types/alarm';
+import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
 import { loadSettings } from './settings';
 
 const ALARM_CHANNEL_ID = 'alarms';
 const TIMER_PROGRESS_CHANNEL_ID = 'timer-progress';
+
+const DAY_INDEX: Record<AlarmDay, number> = {
+  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+};
 
 function getNextAlarmTimestamp(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);
@@ -25,6 +29,36 @@ function getNextAlarmTimestamp(time: string): number {
   }
 
   return alarmDate.getTime();
+}
+
+function getNextDayTimestamp(time: string, day: AlarmDay): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  const now = new Date();
+  const target = DAY_INDEX[day];
+  const today = now.getDay();
+
+  let daysUntil = (target - today + 7) % 7;
+
+  // If it's the same day, check if the time already passed
+  if (daysUntil === 0) {
+    const todayAtTime = new Date();
+    todayAtTime.setHours(hours, minutes, 0, 0);
+    if (todayAtTime.getTime() <= now.getTime()) {
+      daysUntil = 7;
+    }
+  }
+
+  const alarmDate = new Date();
+  alarmDate.setDate(alarmDate.getDate() + daysUntil);
+  alarmDate.setHours(hours, minutes, 0, 0);
+  return alarmDate.getTime();
+}
+
+function getOneTimeTimestamp(time: string, dateStr: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  return d.getTime();
 }
 
 let _channelPromise: Promise<void> | null = null;
@@ -63,7 +97,7 @@ export async function requestPermissions(): Promise<boolean> {
   return settings.authorizationStatus >= AuthorizationStatus.AUTHORIZED;
 }
 
-export async function scheduleAlarm(alarm: Alarm): Promise<string> {
+export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
   await setupNotificationChannel();
   const settings = await loadSettings();
 
@@ -71,7 +105,6 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
   let body: string;
 
   if (settings.guessWhyEnabled) {
-    // Hide all alarm details when Guess Why is active
     title = '\u23F0 Alarm!';
     body = '\u{1F9E0} Can you remember why?';
   } else {
@@ -79,7 +112,6 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
       ? `${alarm.icon} ${alarm.category.toUpperCase()}`
       : `\u23F0 ${alarm.category.toUpperCase()}`;
 
-    // Respect privacy: never show the note in the notification
     if (alarm.private) {
       body = alarm.nickname || alarm.icon || 'Alarm';
     } else {
@@ -87,43 +119,69 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
     }
   }
 
-  const trigger: TimestampTrigger = {
-    type: TriggerType.TIMESTAMP,
-    timestamp: getNextAlarmTimestamp(alarm.time),
-    alarmManager: {
-      allowWhileIdle: true,
+  const notificationPayload = {
+    title,
+    body,
+    data: { alarmId: alarm.id },
+    android: {
+      channelId: ALARM_CHANNEL_ID,
+      fullScreenAction: {
+        id: 'default',
+        launchActivity: 'default',
+      },
+      importance: AndroidImportance.HIGH,
+      sound: 'default',
+      loopSound: true,
+      vibrationPattern: [1000, 500, 1000, 500],
+      lights: ['#FF0000', 300, 600] as [string, number, number],
+      ongoing: true,
+      autoCancel: false,
+      pressAction: {
+        id: 'default',
+      },
+      category: AndroidCategory.ALARM,
     },
-    repeatFrequency: RepeatFrequency.DAILY,
   };
 
-  const notificationId = await notifee.createTriggerNotification(
-    {
-      title,
-      body,
-      data: { alarmId: alarm.id },
-      android: {
-        channelId: ALARM_CHANNEL_ID,
-        fullScreenAction: {
-          id: 'default',
-          launchActivity: 'default',
-        },
-        importance: AndroidImportance.HIGH,
-        sound: 'default',
-        loopSound: true,
-        vibrationPattern: [1000, 500, 1000, 500],
-        lights: ['#FF0000', 300, 600],
-        ongoing: true,
-        autoCancel: false,
-        pressAction: {
-          id: 'default',
-        },
-        category: AndroidCategory.ALARM,
-      },
-    },
-    trigger,
-  );
+  const mode = alarm.mode || 'recurring';
+  const days = alarm.days || ALL_DAYS;
 
-  return notificationId;
+  if (mode === 'one-time' && alarm.date) {
+    // One-time: single trigger, no repeat
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp: getOneTimeTimestamp(alarm.time, alarm.date),
+      alarmManager: { allowWhileIdle: true },
+    };
+    const id = await notifee.createTriggerNotification(notificationPayload, trigger);
+    return [id];
+  }
+
+  if (days.length === 7) {
+    // Recurring every day: single daily trigger
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp: getNextAlarmTimestamp(alarm.time),
+      alarmManager: { allowWhileIdle: true },
+      repeatFrequency: RepeatFrequency.DAILY,
+    };
+    const id = await notifee.createTriggerNotification(notificationPayload, trigger);
+    return [id];
+  }
+
+  // Recurring specific days: one weekly trigger per day
+  const ids: string[] = [];
+  for (const day of days) {
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp: getNextDayTimestamp(alarm.time, day),
+      alarmManager: { allowWhileIdle: true },
+      repeatFrequency: RepeatFrequency.WEEKLY,
+    };
+    const id = await notifee.createTriggerNotification(notificationPayload, trigger);
+    ids.push(id);
+  }
+  return ids;
 }
 
 export async function dismissAlarmNotification(notificationId: string): Promise<void> {
@@ -134,6 +192,13 @@ export async function cancelAlarm(identifier: string): Promise<void> {
   // Cancel both the scheduled trigger and any displayed notification
   await notifee.cancelTriggerNotification(identifier);
   await notifee.cancelNotification(identifier);
+}
+
+export async function cancelAlarmNotifications(ids: string[]): Promise<void> {
+  for (const id of ids) {
+    await notifee.cancelTriggerNotification(id);
+    await notifee.cancelNotification(id);
+  }
 }
 
 export async function cancelAllAlarms(): Promise<void> {

@@ -362,7 +362,7 @@ export default function TimerScreen({
 
   const handlePinToggle = async (preset: TimerPreset) => {
     const currentlyPinned = isPinned(preset.id, pinnedIds);
-    if (!currentlyPinned && pinnedIds.length >= 6) {
+    if (!currentlyPinned && pinnedIds.length >= 3) {
       ToastAndroid.show('Widget full \u2014 unpin one first', ToastAndroid.SHORT);
       return;
     }

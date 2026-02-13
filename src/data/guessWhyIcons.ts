@@ -9,6 +9,7 @@ const guessWhyIcons: GuessIcon[] = [
   { id: 'medical', emoji: '\u2695\uFE0F' },
   { id: 'appointment', emoji: '\u{1F4C5}' },
   { id: 'meeting', emoji: '\u{1F465}' },
+  { id: 'work', emoji: '\u{1F4BC}' },
   { id: 'kids', emoji: '\u{1F476}' },
   { id: 'phone', emoji: '\u{1F4F1}' },
   { id: 'meal', emoji: '\u{1F37D}\uFE0F' },

@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   Alert,
   AppState,
+  ToastAndroid,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
 import type { ActiveTimer } from '../types/timer';
 import { loadAlarms, deleteAlarm, toggleAlarm } from '../services/storage';
-import { cancelAlarm, scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
+import { cancelAlarmNotifications, scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import {
@@ -22,6 +23,8 @@ import {
   addActiveTimer,
   removeActiveTimer,
 } from '../services/timerStorage';
+import { getPinnedAlarms, togglePinAlarm, isAlarmPinned } from '../services/widgetPins';
+import { refreshTimerWidget } from '../widget/updateWidget';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import TimerScreen from './TimerScreen';
@@ -53,6 +56,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
   const [tab, setTab] = useState<'alarms' | 'timers'>('alarms');
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
+  const [pinnedAlarmIds, setPinnedAlarmIds] = useState<string[]>([]);
   const alertedRef = useRef<Set<string>>(new Set());
 
   const styles = useMemo(() => StyleSheet.create({
@@ -208,6 +212,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         setTimeFormat(s.timeFormat);
       });
       loadStats().then(setStats);
+      getPinnedAlarms().then(setPinnedAlarmIds);
     }, [])
   );
 
@@ -311,6 +316,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const handleToggle = async (id: string) => {
     const updated = await toggleAlarm(id);
     setAlarms(updated);
+    refreshTimerWidget();
   };
 
   const handleDelete = (id: string) => {
@@ -321,11 +327,12 @@ export default function AlarmListScreen({ navigation }: Props) {
         style: 'destructive',
         onPress: async () => {
           const alarm = alarms.find(a => a.id === id);
-          if (alarm?.notificationId) {
-            await cancelAlarm(alarm.notificationId);
+          if (alarm?.notificationIds?.length) {
+            await cancelAlarmNotifications(alarm.notificationIds);
           }
           const updated = await deleteAlarm(id);
           setAlarms(updated);
+          refreshTimerWidget();
         },
       },
     ]);
@@ -341,6 +348,21 @@ export default function AlarmListScreen({ navigation }: Props) {
     } else {
       navigation.navigate('AlarmFire', { alarm });
     }
+  };
+
+  const handleTogglePin = async (id: string) => {
+    const currentlyPinned = isAlarmPinned(id, pinnedAlarmIds);
+    if (!currentlyPinned && pinnedAlarmIds.length >= 3) {
+      ToastAndroid.show('Widget full \u2014 unpin one first', ToastAndroid.SHORT);
+      return;
+    }
+    const updated = await togglePinAlarm(id);
+    setPinnedAlarmIds(updated);
+    refreshTimerWidget();
+    ToastAndroid.show(
+      isAlarmPinned(id, updated) ? 'Pinned to widget' : 'Unpinned from widget',
+      ToastAndroid.SHORT,
+    );
   };
 
   const handleAddTimer = async (timer: ActiveTimer) => {
@@ -525,10 +547,12 @@ export default function AlarmListScreen({ navigation }: Props) {
                     alarm={item}
                     timeFormat={timeFormat}
                     guessWhyEnabled={guessWhyEnabled}
+                    isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
                     onToggle={handleToggle}
                     onDelete={handleDelete}
                     onEdit={handleEdit}
                     onPress={handlePress}
+                    onTogglePin={handleTogglePin}
                   />
                 )}
                 contentContainerStyle={styles.list}

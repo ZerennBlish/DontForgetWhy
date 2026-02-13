@@ -1,8 +1,21 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
-import { Alarm, AlarmCategory } from '../types/alarm';
+import { Alarm, AlarmCategory, ALL_DAYS, WEEKDAYS, WEEKENDS, AlarmDay } from '../types/alarm';
 import { formatTime } from '../utils/time';
 import { useTheme } from '../theme/ThemeContext';
+
+function getScheduleLabel(alarm: Alarm): string {
+  const mode = alarm.mode || 'recurring';
+  if (mode === 'one-time' && alarm.date) {
+    const d = new Date(alarm.date);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  const days: AlarmDay[] = alarm.days?.length ? alarm.days as AlarmDay[] : [...ALL_DAYS];
+  if (days.length === 7) return 'Daily';
+  if (days.length === 5 && WEEKDAYS.every((d) => days.includes(d))) return 'Weekdays';
+  if (days.length === 2 && WEEKENDS.every((d) => days.includes(d))) return 'Weekends';
+  return days.join(', ');
+}
 
 const categoryLabels: Record<AlarmCategory, string> = {
   meds: '\u{1F48A} Meds',
@@ -33,10 +46,12 @@ interface AlarmCardProps {
   alarm: Alarm;
   timeFormat: '12h' | '24h';
   guessWhyEnabled: boolean;
+  isPinned: boolean;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (alarm: Alarm) => void;
   onPress: (alarm: Alarm) => void;
+  onTogglePin: (id: string) => void;
 }
 
 function getDetailLine(alarm: Alarm): string {
@@ -46,7 +61,7 @@ function getDetailLine(alarm: Alarm): string {
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, onToggle, onDelete, onEdit, onPress }: AlarmCardProps) {
+export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned, onToggle, onDelete, onEdit, onPress, onTogglePin }: AlarmCardProps) {
   const { colors } = useTheme();
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,11 +85,20 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, onToggle
       flex: 1,
       marginRight: 12,
     },
+    timeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
     time: {
       fontSize: 32,
       fontWeight: '700',
       color: colors.textPrimary,
       letterSpacing: -1,
+    },
+    pinIcon: {
+      fontSize: 12,
+      marginLeft: 6,
+      color: colors.accent,
     },
     detail: {
       fontSize: 15,
@@ -91,6 +115,11 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, onToggle
       color: colors.accent,
       marginTop: 4,
       fontStyle: 'italic',
+    },
+    schedule: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginTop: 2,
     },
     category: {
       fontSize: 13,
@@ -113,6 +142,18 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, onToggle
     btnRow: {
       flexDirection: 'row',
       gap: 6,
+    },
+    pinBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: colors.card,
+    },
+    pinBtnActive: {
+      backgroundColor: colors.activeBackground,
+    },
+    pinBtnText: {
+      fontSize: 13,
     },
     editBtn: {
       paddingHorizontal: 12,
@@ -172,9 +213,12 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, onToggle
       activeOpacity={0.7}
     >
       <View style={styles.left}>
-        <Text style={[styles.time, !alarm.enabled && styles.textDisabled]}>
-          {formatTime(alarm.time, timeFormat)}
-        </Text>
+        <View style={styles.timeRow}>
+          <Text style={[styles.time, !alarm.enabled && styles.textDisabled]}>
+            {formatTime(alarm.time, timeFormat)}
+          </Text>
+          {isPinned && <Text style={styles.pinIcon}>{'\u{1F4CC}'}</Text>}
+        </View>
         <Text
           style={[detailStyle, !alarm.enabled && styles.textDisabled]}
           numberOfLines={1}
@@ -184,6 +228,11 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, onToggle
         <Text style={[styles.category, !alarm.enabled && styles.textDisabled]}>
           {guessWhyEnabled ? '\u2753 ???' : categoryLabels[alarm.category]}
         </Text>
+        {!guessWhyEnabled && (
+          <Text style={[styles.schedule, !alarm.enabled && styles.textDisabled]}>
+            {getScheduleLabel(alarm)}
+          </Text>
+        )}
       </View>
       <View style={styles.right}>
         {!guessWhyEnabled && alarm.private && (
@@ -198,6 +247,13 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, onToggle
           thumbColor={alarm.enabled ? colors.textPrimary : colors.textTertiary}
         />
         <View style={styles.btnRow}>
+          <TouchableOpacity
+            onPress={() => onTogglePin(alarm.id)}
+            style={[styles.pinBtn, isPinned && styles.pinBtnActive]}
+            activeOpacity={0.6}
+          >
+            <Text style={[styles.pinBtnText, { opacity: isPinned ? 1 : 0.3 }]}>{'\u{1F4CC}'}</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => onEdit(alarm)} style={styles.editBtn}>
             <Text style={styles.editText}>{'\u270F\uFE0F'}</Text>
           </TouchableOpacity>

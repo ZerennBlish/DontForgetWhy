@@ -1,8 +1,26 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alarm } from '../types/alarm';
-import { scheduleAlarm, cancelAlarm as cancelNotification } from './notifications';
+import { Alarm, ALL_DAYS } from '../types/alarm';
+import { scheduleAlarm, cancelAlarmNotifications } from './notifications';
 
 const STORAGE_KEY = 'alarms';
+
+function migrateAlarm(item: Record<string, unknown>): Alarm {
+  const raw = item as unknown as Alarm & { recurring?: boolean; notificationId?: string };
+  // Migrate old notificationId (string) to notificationIds (string[])
+  let notificationIds: string[] = raw.notificationIds || [];
+  if (notificationIds.length === 0 && raw.notificationId) {
+    notificationIds = [raw.notificationId];
+  }
+  // Migrate old recurring boolean + number[] days to new format
+  const mode: 'recurring' | 'one-time' = raw.mode || 'recurring';
+  let days = raw.days;
+  if (!Array.isArray(days) || days.length === 0 || typeof days[0] === 'number') {
+    days = [...ALL_DAYS];
+  }
+  const date = raw.date ?? null;
+
+  return { ...raw, mode, days, date, notificationIds } as Alarm;
+}
 
 export async function loadAlarms(): Promise<Alarm[]> {
   const data = await AsyncStorage.getItem(STORAGE_KEY);
@@ -10,18 +28,20 @@ export async function loadAlarms(): Promise<Alarm[]> {
   try {
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item: unknown): item is Alarm =>
-        item !== null &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).time === 'string' &&
-        typeof (item as Record<string, unknown>).note === 'string' &&
-        typeof (item as Record<string, unknown>).enabled === 'boolean' &&
-        typeof (item as Record<string, unknown>).category === 'string' &&
-        typeof (item as Record<string, unknown>).private === 'boolean' &&
-        typeof (item as Record<string, unknown>).createdAt === 'string'
-    );
+    return parsed
+      .filter(
+        (item: unknown): item is Record<string, unknown> =>
+          item !== null &&
+          typeof item === 'object' &&
+          typeof (item as Record<string, unknown>).id === 'string' &&
+          typeof (item as Record<string, unknown>).time === 'string' &&
+          typeof (item as Record<string, unknown>).note === 'string' &&
+          typeof (item as Record<string, unknown>).enabled === 'boolean' &&
+          typeof (item as Record<string, unknown>).category === 'string' &&
+          typeof (item as Record<string, unknown>).private === 'boolean' &&
+          typeof (item as Record<string, unknown>).createdAt === 'string'
+      )
+      .map(migrateAlarm);
   } catch {
     return [];
   }
@@ -46,19 +66,20 @@ export async function updateAlarm(updatedAlarm: Alarm): Promise<Alarm[]> {
       updated.push(a);
       continue;
     }
-    if (a.notificationId) {
-      await cancelNotification(a.notificationId);
+    // Cancel all existing notifications
+    if (a.notificationIds?.length) {
+      await cancelAlarmNotifications(a.notificationIds);
     }
     if (updatedAlarm.enabled) {
       try {
-        const notificationId = await scheduleAlarm(updatedAlarm);
-        updated.push({ ...updatedAlarm, notificationId });
+        const notificationIds = await scheduleAlarm(updatedAlarm);
+        updated.push({ ...updatedAlarm, notificationIds });
       } catch (error) {
         console.error('[updateAlarm] scheduleAlarm failed:', error);
-        updated.push({ ...updatedAlarm, notificationId: undefined });
+        updated.push({ ...updatedAlarm, notificationIds: [] });
       }
     } else {
-      updated.push({ ...updatedAlarm, notificationId: undefined });
+      updated.push({ ...updatedAlarm, notificationIds: [] });
     }
   }
   await saveAlarms(updated);
@@ -68,8 +89,8 @@ export async function updateAlarm(updatedAlarm: Alarm): Promise<Alarm[]> {
 export async function deleteAlarm(id: string): Promise<Alarm[]> {
   const alarms = await loadAlarms();
   const alarm = alarms.find(a => a.id === id);
-  if (alarm?.notificationId) {
-    await cancelNotification(alarm.notificationId);
+  if (alarm?.notificationIds?.length) {
+    await cancelAlarmNotifications(alarm.notificationIds);
   }
   const filtered = alarms.filter(a => a.id !== id);
   await saveAlarms(filtered);
@@ -87,15 +108,15 @@ export async function toggleAlarm(id: string): Promise<Alarm[]> {
     const toggled = { ...a, enabled: !a.enabled };
     if (toggled.enabled) {
       try {
-        const notificationId = await scheduleAlarm(toggled);
-        toggled.notificationId = notificationId;
+        const notificationIds = await scheduleAlarm(toggled);
+        toggled.notificationIds = notificationIds;
       } catch (error) {
         console.error('[toggleAlarm] scheduleAlarm failed:', error);
-        toggled.notificationId = undefined;
+        toggled.notificationIds = [];
       }
-    } else if (a.notificationId) {
-      await cancelNotification(a.notificationId);
-      toggled.notificationId = undefined;
+    } else if (a.notificationIds?.length) {
+      await cancelAlarmNotifications(a.notificationIds);
+      toggled.notificationIds = [];
     }
     updated.push(toggled);
   }

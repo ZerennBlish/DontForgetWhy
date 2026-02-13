@@ -24,6 +24,7 @@ const defaultPresets: TimerPreset[] = [
   { id: 'charge', icon: '\u{1F50B}', label: 'Charge', seconds: 2700 },
   { id: 'game', icon: '\u{1F3AE}', label: 'Game', seconds: 3600 },
   { id: 'meeting', icon: '\u{1F465}', label: 'Meeting', seconds: 1800 },
+  { id: 'work', icon: '\u{1F4BC}', label: 'Work', seconds: 3600 },
   { id: 'dishwasher', icon: '\u{1FAE7}', label: 'Dishes', seconds: 3600 },
   { id: 'heater', icon: '\u{1F321}', label: 'Heater', seconds: 1800 },
   { id: 'water', icon: '\u{1F6B0}', label: 'Water', seconds: 600 },
