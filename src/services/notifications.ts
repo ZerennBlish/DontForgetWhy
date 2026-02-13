@@ -8,6 +8,7 @@ import notifee, {
 import type { TimestampTrigger } from '@notifee/react-native';
 import { Platform } from 'react-native';
 import { Alarm } from '../types/alarm';
+import { loadSettings } from './settings';
 
 const ALARM_CHANNEL_ID = 'alarms';
 const TIMER_PROGRESS_CHANNEL_ID = 'timer-progress';
@@ -55,16 +56,26 @@ export async function requestPermissions(): Promise<boolean> {
 }
 
 export async function scheduleAlarm(alarm: Alarm): Promise<string> {
-  const title = alarm.icon
-    ? `${alarm.icon} ${alarm.category.toUpperCase()}`
-    : `\u23F0 ${alarm.category.toUpperCase()}`;
+  const settings = await loadSettings();
 
-  // Respect privacy: never show the note in the notification
+  let title: string;
   let body: string;
-  if (alarm.private) {
-    body = alarm.nickname || alarm.icon || 'Alarm';
+
+  if (settings.guessWhyEnabled) {
+    // Hide all alarm details when Guess Why is active
+    title = '\u23F0 Alarm!';
+    body = '\u{1F9E0} Can you remember why?';
   } else {
-    body = alarm.nickname || alarm.icon || 'Time to do the thing!';
+    title = alarm.icon
+      ? `${alarm.icon} ${alarm.category.toUpperCase()}`
+      : `\u23F0 ${alarm.category.toUpperCase()}`;
+
+    // Respect privacy: never show the note in the notification
+    if (alarm.private) {
+      body = alarm.nickname || alarm.icon || 'Alarm';
+    } else {
+      body = alarm.nickname || alarm.icon || 'Time to do the thing!';
+    }
   }
 
   const trigger: TimestampTrigger = {

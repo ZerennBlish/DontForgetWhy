@@ -12,9 +12,27 @@ const categoryLabels: Record<AlarmCategory, string> = {
   general: '\u{1F514} General',
 };
 
+const mysteryTexts = [
+  '\u2753 Can you remember?',
+  '\u2753 Mystery Alarm',
+  '\u2753 Think hard...',
+  '\u2753 What was this for?',
+  '\u{1F914} ???',
+  '\u{1F9E0} Brain check incoming',
+];
+
+function getMysteryText(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  }
+  return mysteryTexts[Math.abs(hash) % mysteryTexts.length];
+}
+
 interface AlarmCardProps {
   alarm: Alarm;
   timeFormat: '12h' | '24h';
+  guessWhyEnabled: boolean;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (alarm: Alarm) => void;
@@ -28,7 +46,7 @@ function getDetailLine(alarm: Alarm): string {
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, timeFormat, onToggle, onDelete, onEdit, onPress }: AlarmCardProps) {
+export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, onToggle, onDelete, onEdit, onPress }: AlarmCardProps) {
   const { colors } = useTheme();
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,6 +85,12 @@ export default function AlarmCard({ alarm, timeFormat, onToggle, onDelete, onEdi
       fontSize: 15,
       color: colors.textTertiary,
       marginTop: 4,
+    },
+    mysteryText: {
+      fontSize: 15,
+      color: colors.accent,
+      marginTop: 4,
+      fontStyle: 'italic',
     },
     category: {
       fontSize: 13,
@@ -126,9 +150,20 @@ export default function AlarmCard({ alarm, timeFormat, onToggle, onDelete, onEdi
     timerRef.current = setTimeout(() => setRevealed(false), 3000);
   };
 
-  const isHidden = alarm.private && !revealed;
-  const detailText = isHidden ? '\u{1F512} Private Alarm' : getDetailLine(alarm);
-  const detailStyle = isHidden ? styles.privateText : styles.detail;
+  const isPrivateHidden = !guessWhyEnabled && alarm.private && !revealed;
+
+  let detailText: string;
+  let detailStyle;
+  if (guessWhyEnabled) {
+    detailText = getMysteryText(alarm.id);
+    detailStyle = styles.mysteryText;
+  } else if (isPrivateHidden) {
+    detailText = '\u{1F512} Private Alarm';
+    detailStyle = styles.privateText;
+  } else {
+    detailText = getDetailLine(alarm);
+    detailStyle = styles.detail;
+  }
 
   return (
     <TouchableOpacity
@@ -147,11 +182,11 @@ export default function AlarmCard({ alarm, timeFormat, onToggle, onDelete, onEdi
           {detailText}
         </Text>
         <Text style={[styles.category, !alarm.enabled && styles.textDisabled]}>
-          {categoryLabels[alarm.category]}
+          {guessWhyEnabled ? '\u2753 ???' : categoryLabels[alarm.category]}
         </Text>
       </View>
       <View style={styles.right}>
-        {alarm.private && (
+        {!guessWhyEnabled && alarm.private && (
           <TouchableOpacity onPress={handlePeek} style={styles.peekBtn} activeOpacity={0.6}>
             <Text style={styles.peekIcon}>{'\u{1F441}'}</Text>
           </TouchableOpacity>

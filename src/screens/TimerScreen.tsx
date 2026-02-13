@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   Dimensions,
+  ToastAndroid,
 } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import type { TimerPreset, ActiveTimer } from '../types/timer';
@@ -17,6 +18,7 @@ import {
   recordPresetUsage,
   loadRecentPresetIds,
 } from '../services/timerStorage';
+import { getPinnedPresets, togglePinPreset, isPinned } from '../services/widgetPins';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -62,6 +64,7 @@ export default function TimerScreen({
   const insets = useSafeAreaInsets();
   const [presets, setPresets] = useState<TimerPreset[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [customModal, setCustomModal] = useState<TimerPreset | null>(null);
   const [customHours, setCustomHours] = useState('');
   const [customMinutes, setCustomMinutes] = useState('');
@@ -177,6 +180,13 @@ export default function TimerScreen({
       color: colors.textTertiary,
       marginTop: 2,
     },
+    pinIndicator: {
+      position: 'absolute',
+      top: 3,
+      right: 5,
+      fontSize: 10,
+      color: colors.accent,
+    },
     hint: {
       fontSize: 11,
       color: colors.textTertiary,
@@ -198,12 +208,29 @@ export default function TimerScreen({
       borderWidth: 1,
       borderColor: colors.border,
     },
+    modalTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
     modalTitle: {
       fontSize: 20,
       fontWeight: '700',
       color: colors.textPrimary,
       textAlign: 'center',
-      marginBottom: 4,
+    },
+    modalPinBtn: {
+      width: 34,
+      height: 34,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 17,
+      backgroundColor: colors.background,
+      marginLeft: 10,
+    },
+    modalPinText: {
+      fontSize: 16,
     },
     modalSubtitle: {
       fontSize: 14,
@@ -273,6 +300,7 @@ export default function TimerScreen({
   useEffect(() => {
     loadPresets().then(setPresets);
     loadRecentPresetIds().then(setRecentIds);
+    getPinnedPresets().then(setPinnedIds);
   }, []);
 
   // Split presets into recent, rest, and custom
@@ -330,6 +358,21 @@ export default function TimerScreen({
     setCustomMinutes(mins > 0 ? mins.toString() : '');
     setCustomSeconds(secs > 0 ? secs.toString() : '');
     setCustomModal(preset);
+  };
+
+  const handlePinToggle = async (preset: TimerPreset) => {
+    const currentlyPinned = isPinned(preset.id, pinnedIds);
+    if (!currentlyPinned && pinnedIds.length >= 6) {
+      ToastAndroid.show('Widget full \u2014 unpin one first', ToastAndroid.SHORT);
+      return;
+    }
+    const updated = await togglePinPreset(preset.id);
+    setPinnedIds(updated);
+    refreshTimerWidget();
+    ToastAndroid.show(
+      isPinned(preset.id, updated) ? 'Pinned to widget' : 'Unpinned from widget',
+      ToastAndroid.SHORT,
+    );
   };
 
   const handleSaveCustom = async () => {
@@ -401,6 +444,9 @@ export default function TimerScreen({
       onLongPress={() => handleLongPress(preset)}
       activeOpacity={0.7}
     >
+      {isPinned(preset.id, pinnedIds) && (
+        <Text style={styles.pinIndicator}>{'\u{1F4CC}'}</Text>
+      )}
       <Text style={styles.presetIcon}>{preset.icon}</Text>
       <Text style={styles.presetLabel}>{preset.label}</Text>
       <Text style={styles.presetDuration}>
@@ -408,6 +454,8 @@ export default function TimerScreen({
       </Text>
     </TouchableOpacity>
   );
+
+  const modalPresetPinned = customModal ? isPinned(customModal.id, pinnedIds) : false;
 
   return (
     <ScrollView
@@ -488,9 +536,28 @@ export default function TimerScreen({
       <Modal transparent visible={!!customModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {customModal?.icon} {customModal?.label}
-            </Text>
+            <View style={styles.modalTitleRow}>
+              <Text style={styles.modalTitle}>
+                {customModal?.icon} {customModal?.label}
+              </Text>
+              {customModal && customModal.id !== 'custom' && (
+                <TouchableOpacity
+                  onPress={() => handlePinToggle(customModal)}
+                  style={[
+                    styles.modalPinBtn,
+                    modalPresetPinned && { backgroundColor: colors.accent },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.modalPinText,
+                    { opacity: modalPresetPinned ? 1 : 0.3 },
+                  ]}>
+                    {'\u{1F4CC}'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <Text style={styles.modalSubtitle}>
               Set custom duration
             </Text>

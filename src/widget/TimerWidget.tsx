@@ -5,6 +5,7 @@ export interface WidgetPreset {
   id: string;
   icon: string;
   label: string;
+  isPinned?: boolean;
 }
 
 interface TimerWidgetProps {
@@ -62,7 +63,7 @@ export function TimerWidget({ presets }: TimerWidgetProps) {
                   flex: 1,
                   backgroundColor: '#1E1E2E',
                   borderRadius: 12,
-                  borderColor: '#2A2A3E',
+                  borderColor: preset.isPinned ? '#4A90D9' : '#2A2A3E',
                   borderWidth: 1,
                   flexDirection: 'row',
                   alignItems: 'center',

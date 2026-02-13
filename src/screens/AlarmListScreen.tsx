@@ -518,6 +518,7 @@ export default function AlarmListScreen({ navigation }: Props) {
                   <AlarmCard
                     alarm={item}
                     timeFormat={timeFormat}
+                    guessWhyEnabled={guessWhyEnabled}
                     onToggle={handleToggle}
                     onDelete={handleDelete}
                     onEdit={handleEdit}

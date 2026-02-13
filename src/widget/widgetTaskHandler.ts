@@ -12,6 +12,7 @@ import {
   loadPresets,
   recordPresetUsage,
 } from '../services/timerStorage';
+import { getPinnedPresets } from '../services/widgetPins';
 import type { ActiveTimer } from '../types/timer';
 import { TimerWidget } from './TimerWidget';
 import type { WidgetPreset } from './TimerWidget';
@@ -20,45 +21,62 @@ const RECENT_KEY = 'recentPresets';
 
 export async function getWidgetPresets(): Promise<WidgetPreset[]> {
   const nonCustom = defaultPresets.filter((p) => p.id !== 'custom');
+  const result: WidgetPreset[] = [];
+  const addedIds = new Set<string>();
 
+  // 1. Pinned presets first (in pinned order)
   try {
-    const raw = await AsyncStorage.getItem(RECENT_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        const recentIds: string[] = parsed.map(
-          (e: { presetId: string }) => e.presetId,
-        );
-        const result: WidgetPreset[] = [];
-
-        for (const id of recentIds) {
-          if (result.length >= 6) break;
-          const preset = nonCustom.find((p) => p.id === id);
-          if (preset) {
-            result.push({ id: preset.id, icon: preset.icon, label: preset.label });
-          }
-        }
-
-        if (result.length < 6) {
-          const recentSet = new Set(recentIds);
-          for (const preset of nonCustom) {
-            if (result.length >= 6) break;
-            if (!recentSet.has(preset.id)) {
-              result.push({ id: preset.id, icon: preset.icon, label: preset.label });
-            }
-          }
-        }
-
-        return result;
+    const pinnedIds = await getPinnedPresets();
+    for (const id of pinnedIds) {
+      if (result.length >= 6) break;
+      const preset = nonCustom.find((p) => p.id === id);
+      if (preset) {
+        result.push({ id: preset.id, icon: preset.icon, label: preset.label, isPinned: true });
+        addedIds.add(preset.id);
       }
     }
   } catch {
-    // fall through to defaults
+    // fall through
   }
 
-  return nonCustom
-    .slice(0, 6)
-    .map((p) => ({ id: p.id, icon: p.icon, label: p.label }));
+  // 2. Fill remaining with recently-used presets
+  if (result.length < 6) {
+    try {
+      const raw = await AsyncStorage.getItem(RECENT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const recentIds: string[] = parsed.map(
+            (e: { presetId: string }) => e.presetId,
+          );
+          for (const id of recentIds) {
+            if (result.length >= 6) break;
+            if (addedIds.has(id)) continue;
+            const preset = nonCustom.find((p) => p.id === id);
+            if (preset) {
+              result.push({ id: preset.id, icon: preset.icon, label: preset.label });
+              addedIds.add(preset.id);
+            }
+          }
+        }
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  // 3. Fill remaining with defaults
+  if (result.length < 6) {
+    for (const preset of nonCustom) {
+      if (result.length >= 6) break;
+      if (!addedIds.has(preset.id)) {
+        result.push({ id: preset.id, icon: preset.icon, label: preset.label });
+        addedIds.add(preset.id);
+      }
+    }
+  }
+
+  return result;
 }
 
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
