@@ -44,7 +44,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { alarm, fromNotification } = route.params;
-  const hasIcon = Boolean(alarm.icon);
+  const hasIcon = Boolean(alarm.icon) && guessWhyIcons.some((i) => i.emoji === alarm.icon);
   const [mode, setMode] = useState<'icons' | 'type'>(hasIcon ? 'icons' : 'type');
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [typedGuess, setTypedGuess] = useState('');

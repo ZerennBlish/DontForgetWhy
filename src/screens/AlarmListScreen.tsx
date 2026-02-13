@@ -351,6 +351,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         timer.label,
         timer.icon,
         completionTimestamp,
+        timer.id,
       );
     } catch (error) {
       console.error('[handleAddTimer] scheduleTimerNotification failed:', error);
@@ -375,34 +376,41 @@ export default function AlarmListScreen({ navigation }: Props) {
     setActiveTimers(updated);
   };
 
-  const handleTogglePause = (id: string) => {
-    setActiveTimers((prev) => {
-      const updated = prev.map((t) => {
-        if (t.id !== id) return t;
-        if (t.isRunning) {
-          // Pausing — cancel the scheduled notification and countdown
-          if (t.notificationId) {
-            cancelTimerNotification(t.notificationId);
-          }
-          cancelTimerCountdownNotification(t.id).catch(
-            (e) => console.error('[handleTogglePause] cancelTimerCountdownNotification failed:', e),
-          );
-          return { ...t, isRunning: false, notificationId: undefined };
-        }
-        // Resuming
-        const elapsed = t.totalSeconds - t.remainingSeconds;
-        const newStartedAt = new Date(
-          Date.now() - elapsed * 1000
-        ).toISOString();
-        return { ...t, isRunning: true, startedAt: newStartedAt };
+  const handleTogglePause = async (id: string) => {
+    const timer = activeTimers.find((t) => t.id === id);
+    if (!timer) return;
+
+    if (timer.isRunning) {
+      // Pausing — await cancellation before clearing notificationId
+      if (timer.notificationId) {
+        await cancelTimerNotification(timer.notificationId);
+      }
+      await cancelTimerCountdownNotification(timer.id).catch(
+        (e) => console.error('[handleTogglePause] cancelTimerCountdownNotification failed:', e),
+      );
+      setActiveTimers((prev) => {
+        const updated = prev.map((t) =>
+          t.id === id ? { ...t, isRunning: false, notificationId: undefined } : t
+        );
+        saveActiveTimers(updated);
+        return updated;
       });
-      saveActiveTimers(updated);
+    } else {
+      // Resuming
+      const elapsed = timer.totalSeconds - timer.remainingSeconds;
+      const newStartedAt = new Date(Date.now() - elapsed * 1000).toISOString();
+      setActiveTimers((prev) => {
+        const updated = prev.map((t) =>
+          t.id === id ? { ...t, isRunning: true, startedAt: newStartedAt } : t
+        );
+        saveActiveTimers(updated);
+        return updated;
+      });
 
       // Schedule notification and countdown for resumed timer
-      const resumed = updated.find((t) => t.id === id && t.isRunning);
-      if (resumed && resumed.remainingSeconds > 0) {
-        const ts = Date.now() + resumed.remainingSeconds * 1000;
-        scheduleTimerNotification(resumed.label, resumed.icon, ts)
+      if (timer.remainingSeconds > 0) {
+        const ts = Date.now() + timer.remainingSeconds * 1000;
+        scheduleTimerNotification(timer.label, timer.icon, ts, timer.id)
           .then((notifId) => {
             setActiveTimers((current) => {
               const withNotif = current.map((ct) =>
@@ -416,13 +424,11 @@ export default function AlarmListScreen({ navigation }: Props) {
             console.error('[handleTogglePause] scheduleTimerNotification failed:', error);
             Alert.alert('Timer Resumed', 'Timer is running but the notification could not be scheduled.');
           });
-        showTimerCountdownNotification(resumed.label, resumed.icon, ts, resumed.id).catch(
+        showTimerCountdownNotification(timer.label, timer.icon, ts, timer.id).catch(
           (e) => console.error('[handleTogglePause] showTimerCountdownNotification failed:', e),
         );
       }
-
-      return updated;
-    });
+    }
   };
 
   const hasPlayed = stats && (stats.wins > 0 || stats.losses > 0 || stats.skips > 0);

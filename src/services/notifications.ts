@@ -27,7 +27,15 @@ function getNextAlarmTimestamp(time: string): number {
   return alarmDate.getTime();
 }
 
-export async function setupNotificationChannel(): Promise<void> {
+let _channelPromise: Promise<void> | null = null;
+
+export function setupNotificationChannel(): Promise<void> {
+  if (_channelPromise) return _channelPromise;
+  _channelPromise = _createChannels();
+  return _channelPromise;
+}
+
+async function _createChannels(): Promise<void> {
   if (Platform.OS !== 'android') return;
 
   await notifee.createChannel({
@@ -56,6 +64,7 @@ export async function requestPermissions(): Promise<boolean> {
 }
 
 export async function scheduleAlarm(alarm: Alarm): Promise<string> {
+  await setupNotificationChannel();
   const settings = await loadSettings();
 
   let title: string;
@@ -136,7 +145,9 @@ export async function scheduleTimerNotification(
   label: string,
   icon: string,
   completionTimestamp: number,
+  timerId: string,
 ): Promise<string> {
+  await setupNotificationChannel();
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
     timestamp: completionTimestamp,
@@ -149,7 +160,7 @@ export async function scheduleTimerNotification(
     {
       title: `${icon} Timer Complete`,
       body: `${label} is done!`,
-      data: { timerId: 'true' },
+      data: { timerId },
       android: {
         channelId: ALARM_CHANNEL_ID,
         fullScreenAction: {
@@ -182,6 +193,7 @@ export async function showTimerCountdownNotification(
   completionTimestamp: number,
   timerId: string,
 ): Promise<void> {
+  await setupNotificationChannel();
   await notifee.displayNotification({
     id: `countdown-${timerId}`,
     title: `${icon} ${label}`,

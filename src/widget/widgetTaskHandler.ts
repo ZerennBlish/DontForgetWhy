@@ -4,6 +4,7 @@ import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { defaultPresets } from '../data/timerPresets';
 import {
+  setupNotificationChannel,
   scheduleTimerNotification,
   showTimerCountdownNotification,
 } from '../services/notifications';
@@ -120,6 +121,9 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
         const completionTimestamp = Date.now() + duration * 1000;
 
+        // Ensure notification channels exist (headless JS has no App.tsx init)
+        await setupNotificationChannel();
+
         // Schedule completion notification (alarm sound when timer ends)
         let notificationId: string | undefined;
         try {
@@ -127,6 +131,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
             timer.label,
             timer.icon,
             completionTimestamp,
+            timer.id,
           );
         } catch (error) {
           console.error('[widgetTaskHandler] scheduleTimerNotification failed:', error);

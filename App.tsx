@@ -13,7 +13,7 @@ import MemoryScoreScreen from './src/screens/MemoryScoreScreen';
 import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import { loadAlarms } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
-import { setupNotificationChannel } from './src/services/notifications';
+import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import type { RootStackParamList } from './src/navigation/types';
@@ -70,6 +70,8 @@ function AppNavigator() {
       if (!initial?.notification) return;
       if (initial.notification.data?.timerId && initial.notification.id) {
         await notifee.cancelNotification(initial.notification.id);
+        const timerId = initial.notification.data.timerId as string;
+        await cancelTimerCountdownNotification(timerId).catch(() => {});
       } else if (initial.notification.data?.alarmId) {
         navigateToAlarm(initial.notification.data.alarmId as string);
       }
@@ -82,6 +84,8 @@ function AppNavigator() {
       if (type === EventType.PRESS) {
         if (detail.notification?.data?.timerId && detail.notification?.id) {
           await notifee.cancelNotification(detail.notification.id);
+          const timerId = detail.notification.data.timerId as string;
+          await cancelTimerCountdownNotification(timerId).catch(() => {});
         } else if (detail.notification?.data?.alarmId) {
           navigateToAlarm(detail.notification.data.alarmId as string);
         }
