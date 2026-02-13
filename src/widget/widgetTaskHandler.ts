@@ -18,9 +18,12 @@ import {
 import { getPinnedPresets, getPinnedAlarms } from '../services/widgetPins';
 import type { ActiveTimer } from '../types/timer';
 import type { Alarm, AlarmDay } from '../types/alarm';
+import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
 import { formatTime } from '../utils/time';
 import { TimerWidget } from './TimerWidget';
 import type { WidgetPreset, WidgetAlarm } from './TimerWidget';
+import { DetailedWidget } from './DetailedWidget';
+import type { DetailedAlarm, DetailedPreset } from './DetailedWidget';
 
 const RECENT_KEY = 'recentPresets';
 const ALARMS_KEY = 'alarms';
@@ -28,6 +31,8 @@ const ALARMS_KEY = 'alarms';
 const DAY_INDEX: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
 };
+
+// ── Helpers ──
 
 function getNextAlarmTimestamp(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);
@@ -43,21 +48,18 @@ function getNextAlarmTimestamp(time: string): number {
 function getNextFireTime(alarm: Alarm): number {
   const mode = alarm.mode || 'recurring';
 
-  // One-time alarm with a specific date
   if (mode === 'one-time' && alarm.date) {
     const [hours, minutes] = alarm.time.split(':').map(Number);
-    const d = new Date(alarm.date);
-    d.setHours(hours, minutes, 0, 0);
+    const [year, month, day] = alarm.date.split('-').map(Number);
+    const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
     return d.getTime();
   }
 
-  // Recurring with specific days
   const days: string[] = alarm.days?.length ? alarm.days : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   if (days.length === 7) {
     return getNextAlarmTimestamp(alarm.time);
   }
 
-  // Find the nearest day
   const [hours, minutes] = alarm.time.split(':').map(Number);
   const now = new Date();
   let earliest = Infinity;
@@ -79,44 +81,71 @@ function getNextFireTime(alarm: Alarm): number {
   return earliest;
 }
 
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds} sec`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.round((seconds % 3600) / 60);
+  if (mins === 0) return hrs === 1 ? '1 hr' : `${hrs} hrs`;
+  return `${hrs}h ${mins}m`;
+}
+
+function formatSchedule(alarm: Alarm): string {
+  const mode = alarm.mode || 'recurring';
+  if (mode === 'one-time' && alarm.date) {
+    const [year, month, day] = alarm.date.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    const now = new Date();
+    if (d.getFullYear() !== now.getFullYear()) {
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  const days: AlarmDay[] = (alarm.days?.length ? alarm.days : [...ALL_DAYS]) as AlarmDay[];
+  if (days.length === 7) return 'Daily';
+  if (days.length === 5 && WEEKDAYS.every((d) => days.includes(d))) return 'Weekdays';
+  if (days.length === 2 && WEEKENDS.every((d) => days.includes(d))) return 'Weekends';
+  return days.join(', ');
+}
+
+// ── Load alarms from AsyncStorage ──
+
+async function loadWidgetAlarms(): Promise<Alarm[]> {
+  try {
+    const raw = await AsyncStorage.getItem(ALARMS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item: unknown): item is Alarm =>
+        item !== null &&
+        typeof item === 'object' &&
+        typeof (item as Record<string, unknown>).id === 'string' &&
+        typeof (item as Record<string, unknown>).time === 'string' &&
+        typeof (item as Record<string, unknown>).enabled === 'boolean',
+    );
+  } catch {
+    return [];
+  }
+}
+
+// ── Compact widget data ──
+
 export async function getWidgetAlarms(): Promise<WidgetAlarm[]> {
   const result: WidgetAlarm[] = [];
   const addedIds = new Set<string>();
 
-  // Load alarms from AsyncStorage
-  let allAlarms: Alarm[] = [];
-  try {
-    const raw = await AsyncStorage.getItem(ALARMS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        allAlarms = parsed.filter(
-          (item: unknown): item is Alarm =>
-            item !== null &&
-            typeof item === 'object' &&
-            typeof (item as Record<string, unknown>).id === 'string' &&
-            typeof (item as Record<string, unknown>).time === 'string' &&
-            typeof (item as Record<string, unknown>).enabled === 'boolean',
-        );
-      }
-    }
-  } catch {
-    return [];
-  }
-
+  const allAlarms = await loadWidgetAlarms();
   const enabledAlarms = allAlarms.filter((a) => a.enabled);
-
-  // Load settings for Guess Why + time format
   const settings = await loadSettings();
 
-  // 1. Pinned alarms first (enabled only, in pinned order)
   try {
     const pinnedIds = await getPinnedAlarms();
     for (const id of pinnedIds) {
       if (result.length >= 3) break;
       const alarm = enabledAlarms.find((a) => a.id === id);
       if (alarm) {
-        result.push(alarmToWidget(alarm, settings.guessWhyEnabled, settings.timeFormat));
+        result.push(alarmToCompact(alarm, settings.guessWhyEnabled, settings.timeFormat));
         addedIds.add(alarm.id);
       }
     }
@@ -124,7 +153,6 @@ export async function getWidgetAlarms(): Promise<WidgetAlarm[]> {
     // fall through
   }
 
-  // 2. Fill remaining with next upcoming enabled alarms by time
   if (result.length < 3) {
     const remaining = enabledAlarms
       .filter((a) => !addedIds.has(a.id))
@@ -132,7 +160,7 @@ export async function getWidgetAlarms(): Promise<WidgetAlarm[]> {
 
     for (const alarm of remaining) {
       if (result.length >= 3) break;
-      result.push(alarmToWidget(alarm, settings.guessWhyEnabled, settings.timeFormat));
+      result.push(alarmToCompact(alarm, settings.guessWhyEnabled, settings.timeFormat));
       addedIds.add(alarm.id);
     }
   }
@@ -140,7 +168,7 @@ export async function getWidgetAlarms(): Promise<WidgetAlarm[]> {
   return result;
 }
 
-function alarmToWidget(
+function alarmToCompact(
   alarm: Alarm,
   guessWhyEnabled: boolean,
   timeFormat: '12h' | '24h',
@@ -155,7 +183,8 @@ function alarmToWidget(
   }
   let label = alarm.nickname || alarm.icon || 'Alarm';
   if (alarm.mode === 'one-time' && alarm.date) {
-    const d = new Date(alarm.date);
+    const [year, month, day] = alarm.date.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
     label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
   return {
@@ -171,7 +200,6 @@ export async function getWidgetPresets(): Promise<WidgetPreset[]> {
   const result: WidgetPreset[] = [];
   const addedIds = new Set<string>();
 
-  // 1. Pinned presets first (in pinned order)
   try {
     const pinnedIds = await getPinnedPresets();
     for (const id of pinnedIds) {
@@ -186,7 +214,6 @@ export async function getWidgetPresets(): Promise<WidgetPreset[]> {
     // fall through
   }
 
-  // 2. Fill remaining with recently-used presets
   if (result.length < 3) {
     try {
       const raw = await AsyncStorage.getItem(RECENT_KEY);
@@ -212,7 +239,6 @@ export async function getWidgetPresets(): Promise<WidgetPreset[]> {
     }
   }
 
-  // 3. Fill remaining with defaults
   if (result.length < 3) {
     for (const preset of nonCustom) {
       if (result.length >= 3) break;
@@ -226,11 +252,176 @@ export async function getWidgetPresets(): Promise<WidgetPreset[]> {
   return result;
 }
 
-async function renderWidget(props: WidgetTaskHandlerProps) {
+// ── Detailed widget data ──
+
+export async function getDetailedAlarms(): Promise<DetailedAlarm[]> {
+  const result: DetailedAlarm[] = [];
+  const addedIds = new Set<string>();
+
+  const allAlarms = await loadWidgetAlarms();
+  const enabledAlarms = allAlarms.filter((a) => a.enabled);
+  const settings = await loadSettings();
+
+  try {
+    const pinnedIds = await getPinnedAlarms();
+    for (const id of pinnedIds) {
+      if (result.length >= 3) break;
+      const alarm = enabledAlarms.find((a) => a.id === id);
+      if (alarm) {
+        result.push(alarmToDetailed(alarm, settings.guessWhyEnabled, settings.timeFormat));
+        addedIds.add(alarm.id);
+      }
+    }
+  } catch {
+    // fall through
+  }
+
+  if (result.length < 3) {
+    const remaining = enabledAlarms
+      .filter((a) => !addedIds.has(a.id))
+      .sort((a, b) => getNextFireTime(a) - getNextFireTime(b));
+
+    for (const alarm of remaining) {
+      if (result.length >= 3) break;
+      result.push(alarmToDetailed(alarm, settings.guessWhyEnabled, settings.timeFormat));
+      addedIds.add(alarm.id);
+    }
+  }
+
+  return result;
+}
+
+function alarmToDetailed(
+  alarm: Alarm,
+  guessWhyEnabled: boolean,
+  timeFormat: '12h' | '24h',
+): DetailedAlarm {
+  if (guessWhyEnabled) {
+    return {
+      id: alarm.id,
+      icon: '\u2753',
+      time: formatTime(alarm.time, timeFormat),
+      schedule: 'Mystery',
+    };
+  }
+  return {
+    id: alarm.id,
+    icon: alarm.icon || '\u23F0',
+    time: formatTime(alarm.time, timeFormat),
+    schedule: formatSchedule(alarm),
+  };
+}
+
+export async function getDetailedPresets(): Promise<DetailedPreset[]> {
+  const nonCustom = defaultPresets.filter((p) => p.id !== 'custom');
+  const allPresets = await loadPresets();
+  const result: DetailedPreset[] = [];
+  const addedIds = new Set<string>();
+
+  function resolvePreset(id: string, isPinned?: boolean): DetailedPreset | null {
+    const base = nonCustom.find((p) => p.id === id);
+    if (!base) return null;
+    const custom = allPresets.find((p) => p.id === id);
+    const seconds = custom?.customSeconds || base.seconds;
+    return {
+      id: base.id,
+      icon: base.icon,
+      label: base.label,
+      duration: formatDuration(seconds),
+      isPinned,
+    };
+  }
+
+  try {
+    const pinnedIds = await getPinnedPresets();
+    for (const id of pinnedIds) {
+      if (result.length >= 3) break;
+      const p = resolvePreset(id, true);
+      if (p) { result.push(p); addedIds.add(id); }
+    }
+  } catch {
+    // fall through
+  }
+
+  if (result.length < 3) {
+    try {
+      const raw = await AsyncStorage.getItem(RECENT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const recentIds: string[] = parsed.map(
+            (e: { presetId: string }) => e.presetId,
+          );
+          for (const id of recentIds) {
+            if (result.length >= 3) break;
+            if (addedIds.has(id)) continue;
+            const p = resolvePreset(id);
+            if (p) { result.push(p); addedIds.add(id); }
+          }
+        }
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  if (result.length < 3) {
+    for (const preset of nonCustom) {
+      if (result.length >= 3) break;
+      if (!addedIds.has(preset.id)) {
+        const p = resolvePreset(preset.id);
+        if (p) { result.push(p); addedIds.add(preset.id); }
+      }
+    }
+  }
+
+  return result;
+}
+
+// ── Rendering ──
+
+async function renderCompactWidget(props: WidgetTaskHandlerProps) {
   const alarms = await getWidgetAlarms();
   const presets = await getWidgetPresets();
   props.renderWidget(React.createElement(TimerWidget, { alarms, presets }));
 }
+
+async function renderDetailedWidget(props: WidgetTaskHandlerProps) {
+  const alarms = await getDetailedAlarms();
+  const presets = await getDetailedPresets();
+  props.renderWidget(React.createElement(DetailedWidget, { alarms, presets }));
+}
+
+// ── Refresh both widgets (called after timer start from widget) ──
+
+async function refreshAllWidgets(): Promise<void> {
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'TimerWidget',
+      renderWidget: async () => {
+        const alarms = await getWidgetAlarms();
+        const presets = await getWidgetPresets();
+        return React.createElement(TimerWidget, { alarms, presets });
+      },
+    });
+  } catch {
+    // compact widget may not be placed
+  }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'DetailedWidget',
+      renderWidget: async () => {
+        const alarms = await getDetailedAlarms();
+        const presets = await getDetailedPresets();
+        return React.createElement(DetailedWidget, { alarms, presets });
+      },
+    });
+  } catch {
+    // detailed widget may not be placed
+  }
+}
+
+// ── Task handler ──
 
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   const widgetInfo = props.widgetInfo;
@@ -240,14 +431,15 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_UPDATE':
     case 'WIDGET_RESIZED':
       if (widgetInfo.widgetName === 'TimerWidget') {
-        await renderWidget(props);
+        await renderCompactWidget(props);
+      } else if (widgetInfo.widgetName === 'DetailedWidget') {
+        await renderDetailedWidget(props);
       }
       break;
     case 'WIDGET_CLICK': {
       const action = props.clickAction;
 
       if (action === 'OPEN_APP') {
-        // Open the app's main activity
         try {
           await Linking.openURL('dontforgetwhy://');
         } catch {
@@ -259,7 +451,6 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
       if (action?.startsWith('START_TIMER__')) {
         const presetId = action.replace('START_TIMER__', '');
 
-        // Load preset data (respects custom durations)
         const allPresets = await loadPresets();
         const preset = allPresets.find((p) => p.id === presetId);
         if (!preset) break;
@@ -267,7 +458,6 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         const duration = preset.customSeconds || preset.seconds;
         if (duration <= 0) break;
 
-        // Generate unique timer ID (uuid not available in headless JS)
         const timerId = Date.now().toString() + Math.random().toString(36).slice(2);
 
         const timer: ActiveTimer = {
@@ -283,10 +473,8 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
         const completionTimestamp = Date.now() + duration * 1000;
 
-        // Ensure notification channels exist (headless JS has no App.tsx init)
         await setupNotificationChannel();
 
-        // Schedule completion notification (alarm sound when timer ends)
         let notificationId: string | undefined;
         try {
           notificationId = await scheduleTimerNotification(
@@ -299,7 +487,6 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
           console.error('[widgetTaskHandler] scheduleTimerNotification failed:', error);
         }
 
-        // Show ongoing countdown notification (chronometer)
         try {
           await showTimerCountdownNotification(
             timer.label,
@@ -311,25 +498,9 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
           console.error('[widgetTaskHandler] showTimerCountdownNotification failed:', error);
         }
 
-        // Save timer to AsyncStorage (same 'activeTimers' key AlarmListScreen reads)
         await addActiveTimer({ ...timer, notificationId });
-
-        // Record preset usage (updates recently-used order)
         await recordPresetUsage(preset.id);
-
-        // Refresh all widget instances with updated preset order
-        try {
-          await requestWidgetUpdate({
-            widgetName: 'TimerWidget',
-            renderWidget: async () => {
-              const updatedAlarms = await getWidgetAlarms();
-              const updatedPresets = await getWidgetPresets();
-              return React.createElement(TimerWidget, { alarms: updatedAlarms, presets: updatedPresets });
-            },
-          });
-        } catch {
-          // Widget update failed — silently ignore
-        }
+        await refreshAllWidgets();
       }
       break;
     }

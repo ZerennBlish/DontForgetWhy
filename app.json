@@ -37,7 +37,29 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "./plugins/withNotifee"
+      "./plugins/withNotifee",
+      ["react-native-android-widget", {
+        "widgets": [
+          {
+            "name": "TimerWidget",
+            "label": "DFW Compact",
+            "minWidth": "180dp",
+            "minHeight": "110dp",
+            "resizeMode": "horizontal|vertical",
+            "description": "Pinned alarms and quick-start timer presets",
+            "updatePeriodMillis": 1800000
+          },
+          {
+            "name": "DetailedWidget",
+            "label": "DFW Detailed",
+            "minWidth": "180dp",
+            "minHeight": "170dp",
+            "resizeMode": "horizontal|vertical",
+            "description": "Timer presets with durations and alarm schedules",
+            "updatePeriodMillis": 1800000
+          }
+        ]
+      }]
     ],
     "extra": {
       "eas": {

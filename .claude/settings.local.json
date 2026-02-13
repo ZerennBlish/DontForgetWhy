@@ -11,7 +11,8 @@
       "Bash(npm search:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(git status:*)"
     ]
   }
 }

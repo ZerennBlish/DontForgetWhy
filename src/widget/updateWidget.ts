@@ -1,7 +1,8 @@
 import React from 'react';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import { TimerWidget } from './TimerWidget';
-import { getWidgetAlarms, getWidgetPresets } from './widgetTaskHandler';
+import { DetailedWidget } from './DetailedWidget';
+import { getWidgetAlarms, getWidgetPresets, getDetailedAlarms, getDetailedPresets } from './widgetTaskHandler';
 
 export async function refreshTimerWidget(): Promise<void> {
   try {
@@ -16,5 +17,18 @@ export async function refreshTimerWidget(): Promise<void> {
   } catch (error) {
     // Widget may not be placed on home screen — silently ignore
     console.warn('[refreshTimerWidget]', error);
+  }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'DetailedWidget',
+      renderWidget: async () => {
+        const alarms = await getDetailedAlarms();
+        const presets = await getDetailedPresets();
+        return React.createElement(DetailedWidget, { alarms, presets });
+      },
+    });
+  } catch (error) {
+    // Widget may not be placed on home screen — silently ignore
+    console.warn('[refreshDetailedWidget]', error);
   }
 }

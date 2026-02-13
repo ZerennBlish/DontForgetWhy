@@ -1,23 +1,24 @@
 import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 
-export interface WidgetPreset {
-  id: string;
-  icon: string;
-  label: string;
-  isPinned?: boolean;
-}
-
-export interface WidgetAlarm {
+export interface DetailedAlarm {
   id: string;
   icon: string;
   time: string;
-  label: string;
+  schedule: string;
 }
 
-interface TimerWidgetProps {
-  alarms: WidgetAlarm[];
-  presets: WidgetPreset[];
+export interface DetailedPreset {
+  id: string;
+  icon: string;
+  label: string;
+  duration: string;
+  isPinned?: boolean;
+}
+
+interface DetailedWidgetProps {
+  alarms: DetailedAlarm[];
+  presets: DetailedPreset[];
 }
 
 const BG = '#121220';
@@ -27,7 +28,7 @@ const TEXT_SEC = '#B0B0CC';
 const BORDER = '#2A2A3E';
 const PIN_BORDER = '#4A90D9';
 
-function AlarmCell({ alarm }: { alarm: WidgetAlarm }) {
+function AlarmCell({ alarm }: { alarm: DetailedAlarm }) {
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -65,7 +66,7 @@ function AlarmCell({ alarm }: { alarm: WidgetAlarm }) {
           }}
         />
         <TextWidget
-          text={alarm.label}
+          text={alarm.schedule}
           style={{
             fontSize: 10,
             color: TEXT_SEC,
@@ -102,7 +103,7 @@ function EmptyAlarmCell() {
   );
 }
 
-function TimerCell({ preset }: { preset: WidgetPreset }) {
+function TimerCell({ preset }: { preset: DetailedPreset }) {
   return (
     <FlexWidget
       clickAction={`START_TIMER__${preset.id}`}
@@ -114,7 +115,6 @@ function TimerCell({ preset }: { preset: WidgetPreset }) {
         borderWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
         padding: 8,
         flex: 1,
       }}
@@ -126,14 +126,28 @@ function TimerCell({ preset }: { preset: WidgetPreset }) {
           marginRight: 6,
         }}
       />
-      <TextWidget
-        text={preset.label}
+      <FlexWidget
         style={{
-          fontSize: 13,
-          color: TEXT,
-          fontWeight: '600',
+          flex: 1,
+          flexDirection: 'column',
         }}
-      />
+      >
+        <TextWidget
+          text={preset.label}
+          style={{
+            fontSize: 13,
+            fontWeight: '600',
+            color: TEXT,
+          }}
+        />
+        <TextWidget
+          text={preset.duration}
+          style={{
+            fontSize: 10,
+            color: TEXT_SEC,
+          }}
+        />
+      </FlexWidget>
     </FlexWidget>
   );
 }
@@ -164,7 +178,7 @@ function EmptyTimerCell() {
   );
 }
 
-export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
+export function DetailedWidget({ alarms, presets }: DetailedWidgetProps) {
   const slots = [0, 1, 2];
 
   return (
@@ -178,7 +192,6 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
         flexDirection: 'column',
       }}
     >
-      {/* Title */}
       <TextWidget
         text="Don't Forget Why"
         style={{
@@ -189,7 +202,6 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
         }}
       />
 
-      {/* Two columns */}
       <FlexWidget
         style={{
           width: 'match_parent',

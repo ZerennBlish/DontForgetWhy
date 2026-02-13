@@ -63,6 +63,7 @@ const iconCategoryMap: Record<string, AlarmCategory> = {
   '\u{1F4C5}': 'appointment',
   '\u{1F465}': 'task',
   '\u{1F4BC}': 'task',
+  '\u{1F389}': 'task',
   '\u{1F3CB}\uFE0F': 'self-care',
   '\u{1F634}': 'self-care',
   '\u{1F6BF}': 'self-care',

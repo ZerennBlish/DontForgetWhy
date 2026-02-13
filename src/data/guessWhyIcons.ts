@@ -27,6 +27,7 @@ const guessWhyIcons: GuessIcon[] = [
   { id: 'book', emoji: '\u{1F4D6}' },
   { id: 'mail', emoji: '\u{1F4EC}' },
   { id: 'plant', emoji: '\u{1F331}' },
+  { id: 'celebration', emoji: '\u{1F389}' },
   { id: 'school', emoji: '\u{1F3EB}' },
 ];
 
