@@ -9,5 +9,6 @@ export type RootStackParamList = {
   MemoryScore: undefined;
   MemoryMatch: undefined;
   Games: undefined;
+  Sudoku: undefined;
   ForgetLog: undefined;
 };

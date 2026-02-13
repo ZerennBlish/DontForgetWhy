@@ -13,6 +13,7 @@ import MemoryScoreScreen from './src/screens/MemoryScoreScreen';
 import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import MemoryMatchScreen from './src/screens/MemoryMatchScreen';
 import GamesScreen from './src/screens/GamesScreen';
+import SudokuScreen from './src/screens/SudokuScreen';
 import { loadAlarms } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
@@ -153,6 +154,11 @@ function AppNavigator() {
           <Stack.Screen
             name="Games"
             component={GamesScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="Sudoku"
+            component={SudokuScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen

@@ -136,6 +136,20 @@ export default function GamesScreen({ navigation }: Props) {
         <Text style={styles.chevron}>{'\u203A'}</Text>
       </TouchableOpacity>
 
+      {/* Sudoku */}
+      <TouchableOpacity
+        style={styles.gameCard}
+        onPress={() => navigation.navigate('Sudoku')}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.gameEmoji}>{'\u{1F522}'}</Text>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>Sudoku</Text>
+          <Text style={styles.gameDesc}>Classic number puzzle. No forgetting allowed.</Text>
+        </View>
+        <Text style={styles.chevron}>{'\u203A'}</Text>
+      </TouchableOpacity>
+
       {/* Guess Why — toggle only, not navigable */}
       <View style={styles.guessWhyCard}>
         <Text style={styles.gameEmoji}>{'\u{1F9E0}'}</Text>
