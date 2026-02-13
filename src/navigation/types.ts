@@ -7,5 +7,7 @@ export type RootStackParamList = {
   GuessWhy: { alarm: Alarm; fromNotification?: boolean };
   Settings: undefined;
   MemoryScore: undefined;
+  MemoryMatch: undefined;
+  Games: undefined;
   ForgetLog: undefined;
 };

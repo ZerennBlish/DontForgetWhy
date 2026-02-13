@@ -11,6 +11,8 @@ import GuessWhyScreen from './src/screens/GuessWhyScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import MemoryScoreScreen from './src/screens/MemoryScoreScreen';
 import ForgetLogScreen from './src/screens/ForgetLogScreen';
+import MemoryMatchScreen from './src/screens/MemoryMatchScreen';
+import GamesScreen from './src/screens/GamesScreen';
 import { loadAlarms } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
@@ -141,6 +143,16 @@ function AppNavigator() {
           <Stack.Screen
             name="MemoryScore"
             component={MemoryScoreScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="MemoryMatch"
+            component={MemoryMatchScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="Games"
+            component={GamesScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen

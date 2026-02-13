@@ -84,6 +84,16 @@ export default function AlarmListScreen({ navigation }: Props) {
       alignItems: 'center',
       gap: 4,
     },
+    gamesPill: {
+      backgroundColor: colors.activeBackground,
+      borderRadius: 14,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      marginRight: 2,
+    },
+    gamesPillIcon: {
+      fontSize: 22,
+    },
     headerBtn: {
       padding: 4,
     },
@@ -461,6 +471,13 @@ export default function AlarmListScreen({ navigation }: Props) {
         <View style={styles.headerRow}>
           <Text style={styles.title}>Don't Forget Why</Text>
           <View style={styles.headerIcons}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Games')}
+              activeOpacity={0.7}
+              style={styles.gamesPill}
+            >
+              <Text style={styles.gamesPillIcon}>{'\u{1F3AE}'}</Text>
+            </TouchableOpacity>
             {hasPlayed && (
               <TouchableOpacity
                 onPress={() => navigation.navigate('MemoryScore')}

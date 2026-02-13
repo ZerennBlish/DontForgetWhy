@@ -24,7 +24,6 @@ const presetNames = Object.keys(themes) as (ThemeName & keyof typeof themes)[];
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, themeName, customAccent, setTheme, setCustomTheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedColorRef = useRef(customAccent || colors.accent);
@@ -194,15 +193,9 @@ export default function SettingsScreen({ navigation }: Props) {
 
   useEffect(() => {
     loadSettings().then((s) => {
-      setGuessWhyEnabled(s.guessWhyEnabled);
       setTimeFormat(s.timeFormat);
     });
   }, []);
-
-  const handleToggle = async (value: boolean) => {
-    setGuessWhyEnabled(value);
-    await saveSettings({ guessWhyEnabled: value });
-  };
 
   const handleTimeFormatToggle = async (value: boolean) => {
     const newFormat = value ? '24h' : '12h';
@@ -231,22 +224,6 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.card}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Guess Why Mini-Game</Text>
-          <Switch
-            value={guessWhyEnabled}
-            onValueChange={handleToggle}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={guessWhyEnabled ? colors.textPrimary : colors.textTertiary}
-          />
-        </View>
-        <Text style={styles.description}>
-          When enabled, you'll have to guess why you set each alarm before seeing the answer. 3
-          attempts. No cheating.
-        </Text>
-      </View>
-
-      <View style={[styles.card, { marginTop: 16 }]}>
         <View style={styles.row}>
           <Text style={styles.label}>24-Hour Time</Text>
           <Switch
