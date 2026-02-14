@@ -145,7 +145,36 @@ export function generatePuzzle(difficulty: Difficulty): Puzzle {
     }
   }
 
-  // Timeout fallback: generate a simple puzzle with less removal
+  // Timeout fallback: generate a simple puzzle with uniqueness validation
+  const [fallbackMin] = REMOVAL_COUNT[difficulty];
+  const fallbackTarget = fallbackMin;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const solution = createEmptyGrid();
+    solveFull(solution);
+    const puzzle = copyGrid(solution);
+    const cells = shuffleArray(
+      Array.from({ length: 81 }, (_, i) => [Math.floor(i / 9), i % 9] as [number, number]),
+    );
+    let removed = 0;
+    for (const [r, c] of cells) {
+      if (removed >= fallbackTarget) break;
+      const backup = puzzle[r][c];
+      puzzle[r][c] = 0;
+      const check = copyGrid(puzzle);
+      if (countSolutions(check, 2) === 1) {
+        removed++;
+      } else {
+        puzzle[r][c] = backup;
+      }
+    }
+    if (removed >= fallbackMin) {
+      return { puzzle, solution: copyGrid(solution), difficulty };
+    }
+  }
+
+  // Last resort: simple removal without uniqueness check
+  console.warn('[sudoku] fallback puzzle generated without uniqueness guarantee');
   const solution = createEmptyGrid();
   solveFull(solution);
   const puzzle = copyGrid(solution);
@@ -154,7 +183,7 @@ export function generatePuzzle(difficulty: Difficulty): Puzzle {
   );
   let removed = 0;
   for (const [r, c] of cells) {
-    if (removed >= 30) break;
+    if (removed >= fallbackTarget) break;
     puzzle[r][c] = 0;
     removed++;
   }

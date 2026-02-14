@@ -5,6 +5,7 @@ import notifee, { EventType } from '@notifee/react-native';
 import App from './App';
 import { widgetTaskHandler } from './src/widget/widgetTaskHandler';
 import { loadAlarms, disableAlarm } from './src/services/storage';
+import { refreshTimerWidget } from './src/widget/updateWidget';
 
 // notifee requires a background event handler registered before the app component.
 // When the user presses a notification while the app is killed, the app launches
@@ -20,6 +21,7 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
       const alarm = alarms.find((a) => a.id === alarmId);
       if (alarm?.mode === 'one-time') {
         await disableAlarm(alarmId);
+        await refreshTimerWidget();
       }
     }
   }

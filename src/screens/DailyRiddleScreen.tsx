@@ -7,13 +7,17 @@ import {
   ScrollView,
   TextInput,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticMedium } from '../utils/haptics';
+import { hapticMedium, hapticLight } from '../utils/haptics';
+import { playCorrect, playWrong } from '../utils/gameSounds';
+import { loadSettings } from '../services/settings';
+import { checkConnectivity } from '../utils/connectivity';
 import type { RootStackParamList } from '../navigation/types';
 import {
   RIDDLES,
@@ -22,10 +26,15 @@ import {
   type RiddleCategory,
   type Riddle,
 } from '../data/riddles';
+import {
+  fetchMultipleOnlineRiddles,
+  type OnlineRiddle,
+} from '../services/riddleOnline';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DailyRiddle'>;
 
 type ScreenMode = 'daily' | 'browse';
+type BrowseSource = 'offline' | 'online';
 
 interface DailyRiddleStats {
   lastPlayedDate: string;
@@ -131,6 +140,16 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRiddleId, setExpandedRiddleId] = useState<number | null>(null);
 
+  // Online browse state
+  const [browseSource, setBrowseSource] = useState<BrowseSource>('offline');
+  const [onlineRiddles, setOnlineRiddles] = useState<OnlineRiddle[]>([]);
+  const [onlineLoading, setOnlineLoading] = useState(false);
+  const [onlineError, setOnlineError] = useState(false);
+  const [expandedOnlineId, setExpandedOnlineId] = useState<string | null>(null);
+  const [isOnlineAvailable, setIsOnlineAvailable] = useState(true);
+
+  const gameSoundsRef = useRef(false);
+
   // Reveal animation
   const revealAnim = useRef(new Animated.Value(0)).current;
 
@@ -138,6 +157,14 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   const todayStr = getTodayString();
   const dailyIndex = getDailyRiddleIndex(todayStr);
   const dailyRiddle = RIDDLES[dailyIndex];
+
+  // Check internet connectivity and load settings on mount
+  useEffect(() => {
+    checkConnectivity().then(setIsOnlineAvailable);
+    loadSettings().then((s) => {
+      gameSoundsRef.current = s.gameSoundsEnabled;
+    });
+  }, []);
 
   // Load stats on focus
   useFocusEffect(
@@ -148,7 +175,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           setAlreadyPlayedToday(true);
           setRevealed(true);
           setAnswered(true);
-          // Check if they got it right today — we store the riddle id
           setGotIt(s.seenRiddleIds.includes(dailyRiddle.id) && s.totalCorrect > 0);
         } else {
           setAlreadyPlayedToday(false);
@@ -174,6 +200,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   const handleAnswer = useCallback(
     async (correct: boolean) => {
       hapticMedium();
+      if (gameSoundsRef.current) {
+        if (correct) playCorrect();
+        else playWrong();
+      }
       setAnswered(true);
       setGotIt(correct);
 
@@ -208,6 +238,26 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   const handleShowHint = useCallback(() => {
     setHintShown(true);
   }, []);
+
+  const handleFetchOnlineRiddles = useCallback(async () => {
+    setOnlineLoading(true);
+    setOnlineError(false);
+    const riddles = await fetchMultipleOnlineRiddles(5);
+    if (riddles.length === 0) {
+      setOnlineError(true);
+    } else {
+      setOnlineRiddles((prev) => [...prev, ...riddles]);
+    }
+    setOnlineLoading(false);
+  }, []);
+
+  const handleSwitchBrowseSource = useCallback((source: BrowseSource) => {
+    hapticLight();
+    setBrowseSource(source);
+    if (source === 'online' && onlineRiddles.length === 0) {
+      handleFetchOnlineRiddles();
+    }
+  }, [onlineRiddles.length, handleFetchOnlineRiddles]);
 
   const filteredRiddles = useMemo(() => {
     let list = RIDDLES;
@@ -564,6 +614,128 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           color: colors.textTertiary,
           fontStyle: 'italic',
         },
+
+        // Browse source toggle
+        sourceToggle: {
+          flexDirection: 'row',
+          marginHorizontal: 16,
+          marginTop: 12,
+          backgroundColor: colors.card,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: colors.border,
+          overflow: 'hidden',
+        },
+        sourceBtn: {
+          flex: 1,
+          paddingVertical: 10,
+          alignItems: 'center',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: 6,
+        },
+        sourceBtnActive: {
+          backgroundColor: colors.accent,
+        },
+        sourceBtnDisabled: {
+          opacity: 0.4,
+        },
+        sourceBtnText: {
+          fontSize: 13,
+          fontWeight: '600',
+          color: colors.textSecondary,
+        },
+        sourceBtnTextActive: {
+          color: colors.textPrimary,
+        },
+        sourceBtnIcon: {
+          fontSize: 14,
+        },
+
+        // Online riddle cards
+        onlineCard: {
+          marginHorizontal: 16,
+          marginTop: 10,
+          backgroundColor: colors.card,
+          borderRadius: 14,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: colors.border,
+        },
+        onlineBadge: {
+          alignSelf: 'flex-start',
+          paddingHorizontal: 10,
+          paddingVertical: 3,
+          borderRadius: 10,
+          backgroundColor: colors.activeBackground,
+          marginBottom: 8,
+        },
+        onlineBadgeText: {
+          fontSize: 11,
+          fontWeight: '600',
+          color: colors.textTertiary,
+        },
+        onlineQuestion: {
+          fontSize: 16,
+          color: colors.textPrimary,
+          fontStyle: 'italic',
+          lineHeight: 24,
+        },
+        onlineAnswer: {
+          fontSize: 15,
+          fontWeight: '700',
+          color: colors.accent,
+          marginTop: 12,
+        },
+        onlineTapHint: {
+          fontSize: 13,
+          color: colors.textTertiary,
+          marginTop: 8,
+          fontStyle: 'italic',
+        },
+
+        // Load more button
+        loadMoreBtn: {
+          marginHorizontal: 16,
+          marginTop: 16,
+          backgroundColor: colors.card,
+          borderRadius: 14,
+          paddingVertical: 14,
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: colors.accent,
+        },
+        loadMoreText: {
+          fontSize: 15,
+          fontWeight: '600',
+          color: colors.accent,
+        },
+
+        // Loading & error
+        loadingContainer: {
+          alignItems: 'center',
+          paddingVertical: 40,
+        },
+        loadingText: {
+          fontSize: 14,
+          color: colors.textTertiary,
+          marginTop: 12,
+        },
+        errorText: {
+          fontSize: 14,
+          color: colors.textTertiary,
+          marginHorizontal: 16,
+          marginTop: 16,
+          textAlign: 'center',
+          lineHeight: 20,
+        },
+        noInternetText: {
+          fontSize: 12,
+          color: colors.textTertiary,
+          fontStyle: 'italic',
+          marginHorizontal: 16,
+          marginTop: 4,
+        },
       }),
     [colors, insets.bottom],
   );
@@ -716,113 +888,239 @@ export default function DailyRiddleScreen({ navigation }: Props) {
     const seenSet = new Set(stats.seenRiddleIds);
     return (
       <>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search riddles..."
-          placeholderTextColor={colors.textTertiary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCorrect={false}
-        />
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
+        {/* Source toggle: Offline Bank / Fresh Riddles */}
+        <View style={styles.sourceToggle}>
           <TouchableOpacity
-            style={[
-              styles.filterBtn,
-              selectedCategory === 'all' && styles.filterBtnActive,
-            ]}
-            onPress={() => setSelectedCategory('all')}
+            style={[styles.sourceBtn, browseSource === 'offline' && styles.sourceBtnActive]}
+            onPress={() => handleSwitchBrowseSource('offline')}
             activeOpacity={0.7}
           >
+            <Text style={styles.sourceBtnIcon}>{'\u{1F4F1}'}</Text>
             <Text
               style={[
-                styles.filterBtnText,
-                selectedCategory === 'all' && styles.filterBtnTextActive,
+                styles.sourceBtnText,
+                browseSource === 'offline' && styles.sourceBtnTextActive,
               ]}
             >
-              All
+              Offline Bank
             </Text>
           </TouchableOpacity>
-          {ALL_CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat}
+          <TouchableOpacity
+            style={[
+              styles.sourceBtn,
+              browseSource === 'online' && styles.sourceBtnActive,
+              !isOnlineAvailable && styles.sourceBtnDisabled,
+            ]}
+            onPress={() => {
+              if (isOnlineAvailable) handleSwitchBrowseSource('online');
+            }}
+            activeOpacity={isOnlineAvailable ? 0.7 : 1}
+          >
+            <Text style={styles.sourceBtnIcon}>{'\u{1F310}'}</Text>
+            <Text
               style={[
-                styles.filterBtn,
-                selectedCategory === cat && styles.filterBtnActive,
+                styles.sourceBtnText,
+                browseSource === 'online' && styles.sourceBtnTextActive,
               ]}
-              onPress={() => setSelectedCategory(cat)}
-              activeOpacity={0.7}
             >
-              <Text
+              Fresh Riddles
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {!isOnlineAvailable && browseSource === 'offline' && (
+          <Text style={styles.noInternetText}>
+            Fresh Riddles requires internet
+          </Text>
+        )}
+
+        {browseSource === 'offline' ? (
+          <>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search riddles..."
+              placeholderTextColor={colors.textTertiary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCorrect={false}
+            />
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterRow}
+            >
+              <TouchableOpacity
                 style={[
-                  styles.filterBtnText,
-                  selectedCategory === cat && styles.filterBtnTextActive,
+                  styles.filterBtn,
+                  selectedCategory === 'all' && styles.filterBtnActive,
                 ]}
+                onPress={() => setSelectedCategory('all')}
+                activeOpacity={0.7}
               >
-                {CATEGORY_EMOJI[cat]} {CATEGORY_LABELS[cat]}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <Text style={styles.browseCount}>
-          {filteredRiddles.length} riddle{filteredRiddles.length !== 1 ? 's' : ''}
-        </Text>
-
-        {filteredRiddles.map((riddle) => {
-          const isExpanded = expandedRiddleId === riddle.id;
-          const isSeen = seenSet.has(riddle.id);
-          return (
-            <TouchableOpacity
-              key={riddle.id}
-              style={styles.browseCard}
-              onPress={() =>
-                setExpandedRiddleId(isExpanded ? null : riddle.id)
-              }
-              activeOpacity={0.7}
-            >
-              <View style={styles.browseCardRow}>
-                {isSeen && (
-                  <Text style={styles.browseSeenIcon}>{'\u2705'}</Text>
-                )}
                 <Text
-                  style={styles.browseQuestion}
-                  numberOfLines={isExpanded ? undefined : 2}
-                >
-                  {riddle.question}
-                </Text>
-                <Text style={styles.browseChevron}>
-                  {isExpanded ? '\u2304' : '\u203A'}
-                </Text>
-              </View>
-              <View style={styles.browseBadgeRow}>
-                <View
                   style={[
-                    styles.difficultyBadge,
-                    { backgroundColor: difficultyColor(riddle.difficulty) },
+                    styles.filterBtnText,
+                    selectedCategory === 'all' && styles.filterBtnTextActive,
                   ]}
                 >
-                  <Text style={styles.difficultyBadgeText}>
-                    {riddle.difficulty.charAt(0).toUpperCase() +
-                      riddle.difficulty.slice(1)}
+                  All
+                </Text>
+              </TouchableOpacity>
+              {ALL_CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.filterBtn,
+                    selectedCategory === cat && styles.filterBtnActive,
+                  ]}
+                  onPress={() => setSelectedCategory(cat)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.filterBtnText,
+                      selectedCategory === cat && styles.filterBtnTextActive,
+                    ]}
+                  >
+                    {CATEGORY_EMOJI[cat]} {CATEGORY_LABELS[cat]}
                   </Text>
-                </View>
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryBadgeText}>
-                    {CATEGORY_LABELS[riddle.category]}
-                  </Text>
-                </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.browseCount}>
+              {filteredRiddles.length} riddle{filteredRiddles.length !== 1 ? 's' : ''}
+            </Text>
+
+            {filteredRiddles.map((riddle) => {
+              const isExpanded = expandedRiddleId === riddle.id;
+              const isSeen = seenSet.has(riddle.id);
+              return (
+                <TouchableOpacity
+                  key={riddle.id}
+                  style={styles.browseCard}
+                  onPress={() =>
+                    setExpandedRiddleId(isExpanded ? null : riddle.id)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.browseCardRow}>
+                    {isSeen && (
+                      <Text style={styles.browseSeenIcon}>{'\u2705'}</Text>
+                    )}
+                    <Text
+                      style={styles.browseQuestion}
+                      numberOfLines={isExpanded ? undefined : 2}
+                    >
+                      {riddle.question}
+                    </Text>
+                    <Text style={styles.browseChevron}>
+                      {isExpanded ? '\u2304' : '\u203A'}
+                    </Text>
+                  </View>
+                  <View style={styles.browseBadgeRow}>
+                    <View
+                      style={[
+                        styles.difficultyBadge,
+                        { backgroundColor: difficultyColor(riddle.difficulty) },
+                      ]}
+                    >
+                      <Text style={styles.difficultyBadgeText}>
+                        {riddle.difficulty.charAt(0).toUpperCase() +
+                          riddle.difficulty.slice(1)}
+                      </Text>
+                    </View>
+                    <View style={styles.categoryBadge}>
+                      <Text style={styles.categoryBadgeText}>
+                        {CATEGORY_LABELS[riddle.category]}
+                      </Text>
+                    </View>
+                  </View>
+                  {isExpanded && (
+                    <Text style={styles.browseAnswer}>{riddle.answer}</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </>
+        ) : (
+          <>
+            {/* Online riddles */}
+            {onlineLoading && onlineRiddles.length === 0 ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.accent} />
+                <Text style={styles.loadingText}>Fetching fresh riddles...</Text>
               </View>
-              {isExpanded && (
-                <Text style={styles.browseAnswer}>{riddle.answer}</Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+            ) : onlineError && onlineRiddles.length === 0 ? (
+              <>
+                <Text style={styles.errorText}>
+                  Couldn't fetch new riddles. Check your connection or browse the offline bank.
+                </Text>
+                <TouchableOpacity
+                  style={styles.loadMoreBtn}
+                  onPress={handleFetchOnlineRiddles}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.loadMoreText}>Try Again</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.browseCount}>
+                  {onlineRiddles.length} fresh riddle{onlineRiddles.length !== 1 ? 's' : ''}
+                </Text>
+
+                {onlineRiddles.map((riddle) => {
+                  const isExpanded = expandedOnlineId === riddle.id;
+                  return (
+                    <TouchableOpacity
+                      key={riddle.id}
+                      style={styles.onlineCard}
+                      onPress={() =>
+                        setExpandedOnlineId(isExpanded ? null : riddle.id)
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.onlineBadge}>
+                        <Text style={styles.onlineBadgeText}>
+                          {'\u{1F310}'} Online
+                        </Text>
+                      </View>
+                      <Text style={styles.onlineQuestion}>
+                        {'\u201C'}{riddle.question}{'\u201D'}
+                      </Text>
+                      {isExpanded ? (
+                        <Text style={styles.onlineAnswer}>{riddle.answer}</Text>
+                      ) : (
+                        <Text style={styles.onlineTapHint}>Tap to reveal answer</Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+
+                <TouchableOpacity
+                  style={styles.loadMoreBtn}
+                  onPress={handleFetchOnlineRiddles}
+                  activeOpacity={0.7}
+                  disabled={onlineLoading}
+                >
+                  {onlineLoading ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Text style={styles.loadMoreText}>Load More</Text>
+                  )}
+                </TouchableOpacity>
+
+                {onlineError && onlineRiddles.length > 0 && (
+                  <Text style={styles.errorText}>
+                    Some riddles couldn't be loaded. Try again later.
+                  </Text>
+                )}
+              </>
+            )}
+          </>
+        )}
       </>
     );
   };

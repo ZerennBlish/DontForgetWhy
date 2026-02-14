@@ -13,8 +13,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
 import type { ActiveTimer } from '../types/timer';
-import { loadAlarms, deleteAlarm, toggleAlarm } from '../services/storage';
-import { cancelAlarmNotifications, scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
+import { loadAlarms, deleteAlarm, toggleAlarm, addAlarm } from '../services/storage';
+import { cancelAlarmNotifications, scheduleAlarm, scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import {
@@ -27,6 +27,8 @@ import { getPinnedAlarms, togglePinAlarm, isAlarmPinned, unpinAlarm, pruneAlarmP
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
+import SwipeableRow from '../components/SwipeableRow';
+import UndoToast from '../components/UndoToast';
 import TimerScreen from './TimerScreen';
 import ReminderScreen from './ReminderScreen';
 import { useTheme } from '../theme/ThemeContext';
@@ -59,6 +61,11 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [tab, setTab] = useState<'alarms' | 'timers' | 'reminders'>('alarms');
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const [pinnedAlarmIds, setPinnedAlarmIds] = useState<string[]>([]);
+  const [alarmSort, setAlarmSort] = useState<'time' | 'created' | 'name'>('time');
+  const [alarmFilter, setAlarmFilter] = useState<'all' | 'active' | 'one-time' | 'recurring'>('all');
+  const [deletedAlarm, setDeletedAlarm] = useState<Alarm | null>(null);
+  const [deletedAlarmPinned, setDeletedAlarmPinned] = useState(false);
+  const [showUndo, setShowUndo] = useState(false);
   const alertedRef = useRef<Set<string>>(new Set());
 
   const styles = useMemo(() => StyleSheet.create({
@@ -213,6 +220,41 @@ export default function AlarmListScreen({ navigation }: Props) {
       fontWeight: '300',
       marginTop: -2,
     },
+    sortFilterRow: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingVertical: 6,
+      gap: 6,
+      flexWrap: 'wrap',
+    },
+    pill: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 14,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pillActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    pillText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    pillTextActive: {
+      color: colors.textPrimary,
+    },
+    sortFilterLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textTertiary,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 2,
+    },
   }), [colors, insets.bottom]);
 
   useFocusEffect(
@@ -333,26 +375,47 @@ export default function AlarmListScreen({ navigation }: Props) {
     refreshTimerWidget();
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Delete Alarm', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          hapticHeavy();
-          const alarm = alarms.find(a => a.id === id);
-          if (alarm?.notificationIds?.length) {
-            await cancelAlarmNotifications(alarm.notificationIds);
-          }
-          await unpinAlarm(id);
-          const updated = await deleteAlarm(id);
-          setAlarms(updated);
-          setPinnedAlarmIds((prev) => prev.filter((pid) => pid !== id));
-          refreshTimerWidget();
-        },
-      },
-    ]);
+  const handleDelete = async (id: string) => {
+    hapticHeavy();
+    const alarm = alarms.find(a => a.id === id);
+    if (!alarm) return;
+    const wasPinned = isAlarmPinned(id, pinnedAlarmIds);
+    setDeletedAlarm(alarm);
+    setDeletedAlarmPinned(wasPinned);
+    if (alarm.notificationIds?.length) {
+      await cancelAlarmNotifications(alarm.notificationIds);
+    }
+    await unpinAlarm(id);
+    const updated = await deleteAlarm(id);
+    setAlarms(updated);
+    setPinnedAlarmIds((prev) => prev.filter((pid) => pid !== id));
+    refreshTimerWidget();
+    setShowUndo(true);
+  };
+
+  const handleUndoDelete = async () => {
+    setShowUndo(false);
+    if (!deletedAlarm) return;
+    const restored = { ...deletedAlarm, notificationIds: [] as string[] };
+    if (restored.enabled) {
+      try {
+        const ids = await scheduleAlarm(restored);
+        restored.notificationIds = ids;
+      } catch {}
+    }
+    const updated = await addAlarm(restored);
+    setAlarms(updated);
+    if (deletedAlarmPinned) {
+      const pins = await togglePinAlarm(restored.id);
+      setPinnedAlarmIds(pins);
+    }
+    refreshTimerWidget();
+    setDeletedAlarm(null);
+  };
+
+  const handleUndoDismiss = () => {
+    setShowUndo(false);
+    setDeletedAlarm(null);
   };
 
   const handleEdit = (alarm: Alarm) => {
@@ -470,6 +533,28 @@ export default function AlarmListScreen({ navigation }: Props) {
     }
   };
 
+  const filteredAlarms = useMemo(() => {
+    let list = alarms;
+    if (alarmFilter === 'active') list = list.filter((a) => a.enabled);
+    else if (alarmFilter === 'one-time') list = list.filter((a) => a.mode === 'one-time');
+    else if (alarmFilter === 'recurring') list = list.filter((a) => a.mode === 'recurring');
+
+    if (alarmSort === 'time') {
+      list = [...list].sort((a, b) => a.time.localeCompare(b.time));
+    } else if (alarmSort === 'name') {
+      list = [...list].sort((a, b) => {
+        const aName = (a.nickname || a.note || '').toLowerCase();
+        const bName = (b.nickname || b.note || '').toLowerCase();
+        return aName.localeCompare(bName);
+      });
+    } else {
+      list = [...list].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    return list;
+  }, [alarms, alarmSort, alarmFilter]);
+
   const hasPlayed = stats && (stats.wins > 0 || stats.losses > 0 || stats.skips > 0);
 
   return (
@@ -572,21 +657,65 @@ export default function AlarmListScreen({ navigation }: Props) {
               <View style={styles.quoteCard}>
                 <Text style={styles.quoteText}>{appQuote}</Text>
               </View>
+
+              <Text style={styles.sortFilterLabel}>Sort</Text>
+              <View style={styles.sortFilterRow}>
+                {(['time', 'created', 'name'] as const).map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.pill, alarmSort === s && styles.pillActive]}
+                    onPress={() => { hapticLight(); setAlarmSort(s); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pillText, alarmSort === s && styles.pillTextActive]}>
+                      {s === 'time' ? 'Time' : s === 'created' ? 'Created' : 'Name'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.sortFilterLabel}>Filter</Text>
+              <View style={styles.sortFilterRow}>
+                {(['all', 'active', 'one-time', 'recurring'] as const).map((f) => (
+                  <TouchableOpacity
+                    key={f}
+                    style={[styles.pill, alarmFilter === f && styles.pillActive]}
+                    onPress={() => { hapticLight(); setAlarmFilter(f); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pillText, alarmFilter === f && styles.pillTextActive]}>
+                      {f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'one-time' ? 'One-time' : 'Recurring'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               <FlatList
-                data={alarms}
+                data={filteredAlarms}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
-                  <AlarmCard
-                    alarm={item}
-                    timeFormat={timeFormat}
-                    guessWhyEnabled={guessWhyEnabled}
-                    isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
-                    onToggle={handleToggle}
-                    onDelete={handleDelete}
-                    onEdit={handleEdit}
-                    onPress={handlePress}
-                    onTogglePin={handleTogglePin}
-                  />
+                  <SwipeableRow
+                    onSwipeLeft={() => handleDelete(item.id)}
+                    onSwipeRight={() => handleDelete(item.id)}
+                    leftColor="#2E1A1A"
+                    leftIcon={'\u{1F5D1}'}
+                    leftIconColor="#B0B0CC"
+                    rightColor="#2E1A1A"
+                    rightIcon={'\u{1F5D1}'}
+                    rightIconColor="#B0B0CC"
+                  >
+                    <AlarmCard
+                      alarm={item}
+                      timeFormat={timeFormat}
+                      guessWhyEnabled={guessWhyEnabled}
+                      isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
+                      onToggle={handleToggle}
+                      onDelete={handleDelete}
+                      onEdit={handleEdit}
+                      onPress={handlePress}
+                      onTogglePin={handleTogglePin}
+                    />
+                  </SwipeableRow>
                 )}
                 contentContainerStyle={styles.list}
                 showsVerticalScrollIndicator={false}
@@ -601,6 +730,13 @@ export default function AlarmListScreen({ navigation }: Props) {
           >
             <Text style={styles.fabText}>+</Text>
           </TouchableOpacity>
+
+          <UndoToast
+            visible={showUndo}
+            message="Alarm deleted"
+            onUndo={handleUndoDelete}
+            onDismiss={handleUndoDismiss}
+          />
         </>
       ) : tab === 'timers' ? (
         <TimerScreen

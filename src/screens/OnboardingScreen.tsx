@@ -238,11 +238,7 @@ function useSlides(startSlide: number) {
       try {
         await Linking.sendIntent('android.settings.ZEN_MODE_SETTINGS');
       } catch {
-        try {
-          await Linking.openURL('package:com.android.settings');
-        } catch {
-          try { await Linking.openSettings(); } catch {}
-        }
+        try { await Linking.openSettings(); } catch {}
       }
     },
   };
@@ -258,7 +254,7 @@ function useSlides(startSlide: number) {
     permissionRequest: async () => {
       try {
         const pkg = 'package:' + (await NativeModules.AppInfo?.getPackageName?.() || 'com.dontforgetwhy');
-        await Linking.openURL('package:' + pkg);
+        await Linking.openURL(pkg);
       } catch {
         try {
           await Linking.sendIntent('android.settings.action.MANAGE_OVERLAY_PERMISSION');
@@ -290,7 +286,7 @@ function useSlides(startSlide: number) {
   const slides: SlideData[] = [
     ...introSlides,
     ...permissionSlides,
-    samsungSlide,
+    ...(isSamsung ? [samsungSlide] : []),
     overlaySlide,
     finalSlide,
   ];

@@ -15,4 +15,5 @@ export type RootStackParamList = {
   DailyRiddle: undefined;
   ForgetLog: undefined;
   About: undefined;
+  Trivia: undefined;
 };

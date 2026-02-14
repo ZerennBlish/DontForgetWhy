@@ -5,6 +5,7 @@ export interface ScoreBreakdown {
   memoryMatch: number;
   sudoku: number;
   dailyRiddle: number;
+  trivia: number;
 }
 
 export interface CompositeScore {
@@ -31,7 +32,7 @@ function cap(value: number, max: number): number {
   return Math.min(Math.max(0, value), max);
 }
 
-// --- Per-game scoring ---
+// --- Per-game scoring (5 games x 0-20 = 100 total) ---
 
 // Memory Match par values (same as MemoryMatchScreen)
 const MM_PAR: Record<string, number> = { easy: 8, medium: 12, hard: 16 };
@@ -41,10 +42,17 @@ function mmStars(moves: number, diff: string): number {
   return moves < par ? 3 : moves === par ? 2 : 1;
 }
 
-function sudokuStars(mistakes: number): number {
-  if (mistakes === 0) return 3;
-  if (mistakes <= 3) return 2;
-  return 1;
+function sudokuStars(mistakes: number, hints: number = 0): number {
+  let stars: number;
+  if (mistakes === 0) stars = 3;
+  else if (mistakes <= 3) stars = 2;
+  else stars = 1;
+
+  // Hint penalty (matches SudokuScreen logic)
+  if (hints >= 3) stars = Math.max(1, stars - 1);
+  else if (hints >= 1) stars = Math.max(1, Math.floor(stars - 0.5));
+
+  return stars;
 }
 
 function scoreGuessWhy(data: Record<string, unknown> | null): number {
@@ -56,14 +64,14 @@ function scoreGuessWhy(data: Record<string, unknown> | null): number {
   const totalGames = wins + losses + skips;
   if (totalGames === 0) return 0;
 
-  const winRate = (wins / totalGames) * 15;
-  const streakPts = Math.min(streak, 10) * 1.0;
-  return cap(winRate + streakPts, 25);
+  const winRate = (wins / totalGames) * 12;
+  const streakPts = Math.min(streak, 8) * 1.0;
+  return cap(winRate + streakPts, 20);
 }
 
 function scoreMemoryMatch(data: Record<string, unknown> | null): number {
   if (!data) return 0;
-  const multipliers: Record<string, number> = { easy: 2, medium: 3, hard: 4 };
+  const multipliers: Record<string, number> = { easy: 1.5, medium: 2.5, hard: 3 };
   let pts = 0;
   for (const diff of ['easy', 'medium', 'hard']) {
     const entry = data[diff] as Record<string, unknown> | undefined;
@@ -74,22 +82,22 @@ function scoreMemoryMatch(data: Record<string, unknown> | null): number {
       }
     }
   }
-  return cap(pts, 25);
+  return cap(pts, 20);
 }
 
 function scoreSudoku(data: Record<string, unknown> | null): number {
   if (!data) return 0;
-  const multipliers: Record<string, number> = { easy: 2, medium: 3, hard: 4 };
+  const multipliers: Record<string, number> = { easy: 1.5, medium: 2.5, hard: 3 };
   let pts = 0;
   for (const diff of ['easy', 'medium', 'hard']) {
     const entry = data[diff] as Record<string, unknown> | undefined;
     if (entry && typeof entry === 'object') {
       const bestMistakes = num(entry.bestMistakes);
-      // Only count if the entry exists (bestMistakes of 0 is valid — it means perfect)
-      pts += sudokuStars(bestMistakes) * multipliers[diff];
+      const bestHints = num(entry.bestHints);
+      pts += sudokuStars(bestMistakes, bestHints) * multipliers[diff];
     }
   }
-  return cap(pts, 25);
+  return cap(pts, 20);
 }
 
 function scoreDailyRiddle(data: Record<string, unknown> | null): number {
@@ -99,33 +107,65 @@ function scoreDailyRiddle(data: Record<string, unknown> | null): number {
   const longestStreak = num(data.longestStreak);
   if (totalPlayed === 0) return 0;
 
-  const accuracy = (totalCorrect / totalPlayed) * 12;
-  const streakPts = Math.min(longestStreak, 13) * 1.0;
-  return cap(accuracy + streakPts, 25);
+  const accuracy = (totalCorrect / totalPlayed) * 10;
+  const streakPts = Math.min(longestStreak, 10) * 1.0;
+  return cap(accuracy + streakPts, 20);
+}
+
+function scoreTrivia(data: Record<string, unknown> | null): number {
+  if (!data) return 0;
+  const totalQuestionsAnswered = num(data.totalQuestionsAnswered);
+  const totalCorrect = num(data.totalCorrect);
+  const bestRoundScore = num(data.bestRoundScore);
+  if (totalQuestionsAnswered === 0) return 0;
+
+  // Accuracy: up to 10 pts
+  const accuracy = (totalCorrect / totalQuestionsAnswered) * 10;
+
+  // Best round bonus: up to 5 pts (bestRoundScore max 10 * 0.5)
+  const bestRoundPts = bestRoundScore * 0.5;
+
+  // Category breadth: up to 5 pts (8 categories * 0.625)
+  let categoriesPlayed = 0;
+  const catStats = data.categoryStats as Record<string, unknown> | undefined;
+  if (catStats && typeof catStats === 'object') {
+    for (const key of Object.keys(catStats)) {
+      const cat = catStats[key] as Record<string, unknown> | undefined;
+      if (cat && typeof cat === 'object' && num(cat.roundsPlayed) > 0) {
+        categoriesPlayed++;
+      }
+    }
+  }
+  const breadthPts = categoriesPlayed * 0.625;
+
+  return cap(accuracy + bestRoundPts + breadthPts, 20);
 }
 
 // --- Main ---
 
 export async function calculateCompositeScore(): Promise<CompositeScore> {
-  const [gwRaw, mmRaw, sudRaw, ridRaw] = await Promise.all([
+  const [gwRaw, mmRaw, sudRaw, ridRaw, trivRaw] = await Promise.all([
     AsyncStorage.getItem('guessWhyStats').catch(() => null),
     AsyncStorage.getItem('memoryMatchScores').catch(() => null),
     AsyncStorage.getItem('sudokuBestScores').catch(() => null),
     AsyncStorage.getItem('dailyRiddleStats').catch(() => null),
+    AsyncStorage.getItem('triviaStats').catch(() => null),
   ]);
 
   const gw = scoreGuessWhy(safeParseJSON(gwRaw));
   const mm = scoreMemoryMatch(safeParseJSON(mmRaw));
   const sud = scoreSudoku(safeParseJSON(sudRaw));
   const rid = scoreDailyRiddle(safeParseJSON(ridRaw));
+  const triv = scoreTrivia(safeParseJSON(trivRaw));
 
   return {
-    total: Math.round(gw + mm + sud + rid),
+    total: Math.round(gw + mm + sud + triv + rid),
     breakdown: {
       guessWhy: Math.round(gw),
       memoryMatch: Math.round(mm),
       sudoku: Math.round(sud),
       dailyRiddle: Math.round(rid),
+      trivia: Math.round(triv),
     },
   };
 }
@@ -138,6 +178,8 @@ export const ALL_STATS_KEYS = [
   'sudokuCurrentGame',
   'dailyRiddleStats',
   'forgetLog',
+  'triviaStats',
+  'triviaSeenQuestions',
 ];
 
 export async function resetAllScores(): Promise<void> {

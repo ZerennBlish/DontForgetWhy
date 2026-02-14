@@ -6,8 +6,8 @@ export interface RankTier {
 }
 
 export const RANK_THRESHOLDS: RankTier[] = [
-  { min: 97, max: 100, title: 'The One Who Remembers', emoji: '\u{1F451}' },
-  { min: 89, max: 96, title: 'Steel Trap', emoji: '\u{1F9F2}' },
+  { min: 98, max: 100, title: 'The One Who Remembers', emoji: '\u{1F451}' },
+  { min: 89, max: 97, title: 'Steel Trap', emoji: '\u{1F9F2}' },
   { min: 76, max: 88, title: 'Annoyingly Good', emoji: '\u{1F60F}' },
   { min: 61, max: 75, title: 'Borderline Impressive', emoji: '\u{1F929}' },
   { min: 46, max: 60, title: 'Surprisingly Sharp', emoji: '\u{1F9E0}' },

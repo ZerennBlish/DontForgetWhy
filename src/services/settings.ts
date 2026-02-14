@@ -5,11 +5,13 @@ const STORAGE_KEY = 'appSettings';
 export interface AppSettings {
   guessWhyEnabled: boolean;
   timeFormat: '12h' | '24h';
+  gameSoundsEnabled: boolean;
 }
 
 const defaultSettings: AppSettings = {
   guessWhyEnabled: true,
   timeFormat: '12h',
+  gameSoundsEnabled: true,
 };
 
 export async function loadSettings(): Promise<AppSettings> {
@@ -26,6 +28,10 @@ export async function loadSettings(): Promise<AppSettings> {
         parsed.timeFormat === '12h' || parsed.timeFormat === '24h'
           ? parsed.timeFormat
           : defaultSettings.timeFormat,
+      gameSoundsEnabled:
+        typeof parsed.gameSoundsEnabled === 'boolean'
+          ? parsed.gameSoundsEnabled
+          : defaultSettings.gameSoundsEnabled,
     };
   } catch {
     return { ...defaultSettings };

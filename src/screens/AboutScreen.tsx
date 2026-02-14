@@ -12,7 +12,11 @@ export default function AboutScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [tapCount, setTapCount] = useState(0);
-  const version = Constants.expoConfig?.version ?? '1.0.0';
+  const version =
+    Constants.expoConfig?.version
+    || (Constants as any).manifest?.version
+    || (Constants as any).manifest2?.extra?.expoClient?.version
+    || '1.0.0';
 
   const styles = useMemo(() => StyleSheet.create({
     container: {

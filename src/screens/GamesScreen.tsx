@@ -189,6 +189,22 @@ export default function GamesScreen({ navigation }: Props) {
         <Text style={styles.chevron}>{'\u203A'}</Text>
       </TouchableOpacity>
 
+      {/* Trivia */}
+      <TouchableOpacity
+        style={styles.gameCard}
+        onPress={() => navigation.navigate('Trivia')}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.gameEmoji}>{'\u{1F9E0}'}</Text>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>Trivia</Text>
+          <Text style={styles.gameDesc}>
+            Test your knowledge across 8 categories. 300+ questions offline, unlimited online.
+          </Text>
+        </View>
+        <Text style={styles.chevron}>{'\u203A'}</Text>
+      </TouchableOpacity>
+
       {/* Sudoku */}
       <TouchableOpacity
         style={styles.gameCard}

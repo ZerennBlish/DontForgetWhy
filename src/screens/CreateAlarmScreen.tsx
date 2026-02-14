@@ -598,7 +598,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       }
 
       refreshTimerWidget();
-      navigation.goBack();
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('AlarmList');
+      }
     } catch (error: any) {
       console.error('[SAVE ERROR]', error);
       Alert.alert('Error', 'Failed to save alarm: ' + error.message);

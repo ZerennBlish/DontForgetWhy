@@ -18,6 +18,7 @@ import DailyRiddleScreen from './src/screens/DailyRiddleScreen';
 import CreateReminderScreen from './src/screens/CreateReminderScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import AboutScreen from './src/screens/AboutScreen';
+import TriviaScreen from './src/screens/TriviaScreen';
 import { loadAlarms, disableAlarm } from './src/services/storage';
 import { loadSettings, getOnboardingComplete } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
@@ -260,6 +261,11 @@ function AppNavigator() {
           <Stack.Screen
             name="ForgetLog"
             component={ForgetLogScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="Trivia"
+            component={TriviaScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen

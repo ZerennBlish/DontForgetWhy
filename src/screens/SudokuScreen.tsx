@@ -14,6 +14,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticMedium } from '../utils/haptics';
+import { playGameComplete } from '../utils/gameSounds';
+import { loadSettings } from '../services/settings';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import {
@@ -34,11 +36,13 @@ interface SavedGame {
   difficulty: Difficulty;
   mistakes: number;
   elapsed: number;
+  hintsUsed?: number;
 }
 
 interface DifficultyBest {
   bestTime: number;
   bestMistakes: number;
+  bestHints?: number;
 }
 
 interface BestScores {
@@ -71,11 +75,20 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function getStars(mistakes: number): number {
-  if (mistakes === 0) return 3;
-  if (mistakes <= 3) return 2;
-  return 1;
+function getStars(mistakes: number, hints: number = 0): number {
+  let stars: number;
+  if (mistakes === 0) stars = 3;
+  else if (mistakes <= 3) stars = 2;
+  else stars = 1;
+
+  // Hint penalty
+  if (hints >= 3) stars = Math.max(1, stars - 1);
+  else if (hints >= 1) stars = Math.max(1, Math.floor(stars - 0.5));
+
+  return stars;
 }
+
+const MAX_HINTS = 5;
 
 function createEmptyNotes(): number[][][] {
   return Array.from({ length: 9 }, () =>
@@ -106,18 +119,22 @@ export default function SudokuScreen({ navigation }: Props) {
   const [winMessage, setWinMessage] = useState('');
   const [finalTime, setFinalTime] = useState(0);
   const [finalMistakes, setFinalMistakes] = useState(0);
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [finalHints, setFinalHints] = useState(0);
 
   // Refs
+  const gameSoundsRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
   const mistakesRef = useRef(0);
+  const hintsUsedRef = useRef(0);
   const puzzleRef = useRef<Grid>([]);
   const solutionRef = useRef<Grid>([]);
   const playerRef = useRef<Grid>([]);
   const notesRef = useRef<number[][][]>(createEmptyNotes());
   const difficultyRef = useRef<Difficulty>('medium');
 
-  // Load best scores and check for saved game
+  // Load best scores, settings, and check for saved game
   useFocusEffect(
     useCallback(() => {
       AsyncStorage.getItem(SCORES_KEY).then((data) => {
@@ -127,6 +144,9 @@ export default function SudokuScreen({ navigation }: Props) {
       });
       AsyncStorage.getItem(GAME_KEY).then((data) => {
         setHasSavedGame(!!data);
+      });
+      loadSettings().then((s) => {
+        gameSoundsRef.current = s.gameSoundsEnabled;
       });
     }, []),
   );
@@ -162,6 +182,7 @@ export default function SudokuScreen({ navigation }: Props) {
       difficulty: difficultyRef.current,
       mistakes: mistakesRef.current,
       elapsed: elapsedRef.current,
+      hintsUsed: hintsUsedRef.current,
     };
     AsyncStorage.setItem(GAME_KEY, JSON.stringify(saved)).catch(() => {});
   }, []);
@@ -181,6 +202,7 @@ export default function SudokuScreen({ navigation }: Props) {
     notesRef.current = createEmptyNotes();
     mistakesRef.current = 0;
     elapsedRef.current = 0;
+    hintsUsedRef.current = 0;
     difficultyRef.current = diff;
 
     setPuzzleGrid(puzzle);
@@ -190,6 +212,7 @@ export default function SudokuScreen({ navigation }: Props) {
     setSelectedCell(null);
     setMistakes(0);
     setElapsed(0);
+    setHintsUsed(0);
     setDifficulty(diff);
     setNotesMode(false);
     setGamePhase('playing');
@@ -208,6 +231,7 @@ export default function SudokuScreen({ navigation }: Props) {
       notesRef.current = saved.notes;
       mistakesRef.current = saved.mistakes;
       elapsedRef.current = saved.elapsed;
+      hintsUsedRef.current = saved.hintsUsed ?? 0;
       difficultyRef.current = saved.difficulty;
 
       setPuzzleGrid(saved.puzzle);
@@ -216,6 +240,7 @@ export default function SudokuScreen({ navigation }: Props) {
       setNotes(saved.notes);
       setMistakes(saved.mistakes);
       setElapsed(saved.elapsed);
+      setHintsUsed(saved.hintsUsed ?? 0);
       setDifficulty(saved.difficulty);
       setSelectedCell(null);
       setNotesMode(false);
@@ -304,10 +329,13 @@ export default function SudokuScreen({ navigation }: Props) {
     // Check win
     if (checkComplete(newGrid, solutionRef.current)) {
       stopTimer();
+      if (gameSoundsRef.current) playGameComplete();
       const time = elapsedRef.current;
       const mist = mistakesRef.current;
+      const hints = hintsUsedRef.current;
       setFinalTime(time);
       setFinalMistakes(mist);
+      setFinalHints(hints);
       setWinMessage(WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)]);
       clearSavedGame();
 
@@ -319,7 +347,7 @@ export default function SudokuScreen({ navigation }: Props) {
           || time < current.bestTime
           || (time === current.bestTime && mist < current.bestMistakes);
         if (isBetter) {
-          scores[diff] = { bestTime: time, bestMistakes: mist };
+          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints };
           AsyncStorage.setItem(SCORES_KEY, JSON.stringify(scores));
           setBestScores({ ...scores });
         }
@@ -350,6 +378,77 @@ export default function SudokuScreen({ navigation }: Props) {
     saveGame();
   }, [selectedCell, saveGame]);
 
+  const handleHint = useCallback(() => {
+    if (hintsUsedRef.current >= MAX_HINTS) return;
+
+    // Find all empty cells the player hasn't filled
+    const emptyCells: [number, number][] = [];
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (puzzleRef.current[r][c] === 0 && playerRef.current[r][c] === 0) {
+          emptyCells.push([r, c]);
+        }
+      }
+    }
+    if (emptyCells.length === 0) return;
+
+    // Pick a random empty cell
+    const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    const correctNum = solutionRef.current[row][col];
+
+    try { hapticMedium(); } catch {}
+
+    // Place the correct number and mark cell as given
+    const newPuzzle = puzzleRef.current.map((r) => [...r]);
+    newPuzzle[row][col] = correctNum;
+    puzzleRef.current = newPuzzle;
+    setPuzzleGrid(newPuzzle);
+
+    const newGrid = playerRef.current.map((r) => [...r]);
+    newGrid[row][col] = correctNum;
+    playerRef.current = newGrid;
+    setPlayerGrid(newGrid);
+
+    clearNotesForPlacement(row, col, correctNum);
+
+    hintsUsedRef.current += 1;
+    setHintsUsed(hintsUsedRef.current);
+
+    // Check win after hint
+    if (checkComplete(newGrid, solutionRef.current)) {
+      stopTimer();
+      if (gameSoundsRef.current) playGameComplete();
+      const time = elapsedRef.current;
+      const mist = mistakesRef.current;
+      const hints = hintsUsedRef.current;
+      setFinalTime(time);
+      setFinalMistakes(mist);
+      setFinalHints(hints);
+      setWinMessage(WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)]);
+      clearSavedGame();
+
+      AsyncStorage.getItem(SCORES_KEY).then((data) => {
+        const scores: BestScores = data ? JSON.parse(data) : {};
+        const diff = difficultyRef.current;
+        const current = scores[diff];
+        const isBetter = !current
+          || time < current.bestTime
+          || (time === current.bestTime && mist < current.bestMistakes);
+        if (isBetter) {
+          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints };
+          AsyncStorage.setItem(SCORES_KEY, JSON.stringify(scores));
+          setBestScores({ ...scores });
+        }
+      }).catch(() => {});
+
+      setTimeout(() => setGamePhase('won'), 400);
+      return;
+    }
+
+    setSelectedCell([row, col]);
+    saveGame();
+  }, [stopTimer, saveGame, clearSavedGame, clearNotesForPlacement]);
+
   const handleNewGameConfirm = useCallback(() => {
     Alert.alert('New Game', 'Start a new puzzle? Current progress will be lost.', [
       { text: 'Cancel', style: 'cancel' },
@@ -378,19 +477,20 @@ export default function SudokuScreen({ navigation }: Props) {
   }, [playerGrid]);
 
   // Difficulty-aware helpers
-  const showErrors = difficulty !== 'hard';
   const showHighlighting = difficulty !== 'hard';
   const showRemainingCounts = difficulty === 'easy';
   const showMistakesDuringPlay = difficulty !== 'hard';
 
-  const isWrongNumber = useCallback((row: number, col: number): boolean => {
-    if (!showErrors) return false;
-    if (!solutionGrid[row]) return false;
-    const val = playerGrid[row]?.[col];
-    if (!val || val === 0) return false;
-    if (puzzleGrid[row]?.[col] !== 0) return false;
-    return val !== solutionGrid[row][col];
-  }, [playerGrid, puzzleGrid, solutionGrid, showErrors]);
+  const hasEmptyCells = useMemo(() => {
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (puzzleGrid[r]?.[c] === 0 && playerGrid[r]?.[c] === 0) return true;
+      }
+    }
+    return false;
+  }, [puzzleGrid, playerGrid]);
+
+  const hintDisabled = hintsUsed >= MAX_HINTS || !hasEmptyCells;
 
   const isHighlighted = useCallback((row: number, col: number): boolean => {
     if (!showHighlighting) return false;
@@ -511,7 +611,7 @@ export default function SudokuScreen({ navigation }: Props) {
   // ---------- Render: Won ----------
 
   if (gamePhase === 'won') {
-    const stars = getStars(finalMistakes);
+    const stars = getStars(finalMistakes, finalHints);
     const isHard = difficulty === 'hard';
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
@@ -534,6 +634,15 @@ export default function SudokuScreen({ navigation }: Props) {
             <Text style={styles.winStatLabel}>Mistakes</Text>
             <Text style={styles.winStatValue}>{finalMistakes}</Text>
           </View>
+          {finalHints > 0 && (
+            <>
+              <View style={styles.winDivider} />
+              <View style={styles.winStatRow}>
+                <Text style={styles.winStatLabel}>Hints Used</Text>
+                <Text style={styles.winStatValue}>{finalHints}</Text>
+              </View>
+            </>
+          )}
           <View style={styles.winDivider} />
           <View style={styles.winStatRow}>
             <Text style={styles.winStatLabel}>Difficulty</Text>
@@ -606,7 +715,6 @@ export default function SudokuScreen({ navigation }: Props) {
                 const isGiven = puzzleGrid[row]?.[col] !== 0;
                 const value = playerGrid[row]?.[col] || 0;
                 const isSelected = selectedCell?.[0] === row && selectedCell?.[1] === col;
-                const isWrong = isWrongNumber(row, col);
                 const highlighted = isHighlighted(row, col);
                 const sameNum = isSameNumber(row, col);
                 const cellNotes = notes[row]?.[col] || [];
@@ -621,10 +729,8 @@ export default function SudokuScreen({ navigation }: Props) {
                 else if (sameNum) bgColor = colors.activeBackground;
                 else if (highlighted) bgColor = colors.background;
 
-                let textColor = colors.textPrimary;
+                let textColor = isGiven ? colors.textSecondary : colors.textPrimary;
                 if (isSelected) textColor = colors.overlayText;
-                else if (isWrong) textColor = colors.red;
-                else if (!isGiven && value !== 0) textColor = colors.accent;
 
                 return (
                   <TouchableOpacity
@@ -715,6 +821,16 @@ export default function SudokuScreen({ navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolBtn} onPress={handleErase} activeOpacity={0.7}>
             <Text style={styles.toolBtnText}>{'\u232B'} Erase</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toolBtn, hintDisabled && { opacity: 0.4 }]}
+            onPress={handleHint}
+            activeOpacity={0.7}
+            disabled={hintDisabled}
+          >
+            <Text style={[styles.toolBtnText, hintDisabled && { color: colors.textTertiary }]}>
+              {hintsUsed >= MAX_HINTS ? 'No hints left' : `\u{1F4A1} Hint (${MAX_HINTS - hintsUsed})`}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1014,7 +1130,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
     },
     toolRow: {
       flexDirection: 'row',
-      gap: 12,
+      gap: 8,
     },
     toolBtn: {
       flex: 1,
@@ -1026,7 +1142,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       borderColor: colors.border,
     },
     toolBtnText: {
-      fontSize: 15,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.textPrimary,
     },

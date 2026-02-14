@@ -26,6 +26,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const { colors, themeName, customAccent, setTheme, setCustomTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [gameSoundsEnabled, setGameSoundsEnabled] = useState(true);
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedColorRef = useRef(customAccent || colors.accent);
 
@@ -221,6 +222,7 @@ export default function SettingsScreen({ navigation }: Props) {
   useEffect(() => {
     loadSettings().then((s) => {
       setTimeFormat(s.timeFormat);
+      setGameSoundsEnabled(s.gameSoundsEnabled);
     });
   }, []);
 
@@ -229,6 +231,12 @@ export default function SettingsScreen({ navigation }: Props) {
     const newFormat = value ? '24h' : '12h';
     setTimeFormat(newFormat);
     await saveSettings({ timeFormat: newFormat });
+  };
+
+  const handleGameSoundsToggle = async (value: boolean) => {
+    hapticLight();
+    setGameSoundsEnabled(value);
+    await saveSettings({ gameSoundsEnabled: value });
   };
 
   const handleColorChange = (result: ColorFormatsObject) => {
@@ -263,6 +271,21 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
         <Text style={styles.description}>
           Show times as 14:30 instead of 2:30 PM.
+        </Text>
+      </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={styles.row}>
+          <Text style={styles.label}>Game Sounds</Text>
+          <Switch
+            value={gameSoundsEnabled}
+            onValueChange={handleGameSoundsToggle}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={gameSoundsEnabled ? colors.textPrimary : colors.textTertiary}
+          />
+        </View>
+        <Text style={styles.description}>
+          Enhanced haptic patterns during games.
         </Text>
       </View>
 

@@ -451,7 +451,11 @@ function formatReminderDueInfo(reminder: Reminder, timeFormat: '12h' | '24h'): s
   }
 
   if (hasTime) {
-    return `${timePart} today`;
+    const now = new Date();
+    const [hours, minutes] = reminder.dueTime!.split(':').map(Number);
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+    const label = target.getTime() <= now.getTime() ? 'tomorrow' : 'today';
+    return `${timePart} ${label}`;
   }
 
   return datePart;

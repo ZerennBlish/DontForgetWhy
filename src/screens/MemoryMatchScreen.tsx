@@ -14,6 +14,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticMedium } from '../utils/haptics';
+import { playCardFlip, playCorrect, playGameComplete } from '../utils/gameSounds';
+import { loadSettings } from '../services/settings';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 
@@ -195,6 +197,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
   const [finalTime, setFinalTime] = useState(0);
   const [gameId, setGameId] = useState(0);
 
+  const gameSoundsRef = useRef(false);
+
   // Refs for mutable game state (avoids stale closures in handleCardPress)
   const flipAnims = useRef<Animated.Value[]>([]);
   const cardsRef = useRef<Card[]>([]);
@@ -206,7 +210,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
   const timerStartedRef = useRef(false);
   const difficultyRef = useRef<Difficulty>('medium');
 
-  // Load best scores on focus
+  // Load best scores and settings on focus
   useFocusEffect(
     useCallback(() => {
       AsyncStorage.getItem(SCORES_KEY).then((data) => {
@@ -215,6 +219,9 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             setBestScores(JSON.parse(data));
           } catch {}
         }
+      });
+      loadSettings().then((s) => {
+        gameSoundsRef.current = s.gameSoundsEnabled;
       });
     }, []),
   );
@@ -267,7 +274,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
     const card = cardsRef.current[index];
     if (!card || card.isFlipped || card.isMatched) return;
-    hapticMedium();
+    if (gameSoundsRef.current) playCardFlip();
+    else hapticMedium();
 
     // Start timer on first card flip
     if (!timerStartedRef.current) {
@@ -302,6 +310,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
       if (cardsRef.current[first].emoji === cardsRef.current[second].emoji) {
         // Match found
+        if (gameSoundsRef.current) playCorrect();
         const matchedCards = cardsRef.current.map((c, i) =>
           i === first || i === second ? { ...c, isMatched: true } : c,
         );
@@ -348,6 +357,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             })
             .catch(() => {});
 
+          if (gameSoundsRef.current) playGameComplete();
           setTimeout(() => setGamePhase('won'), 600);
         }
       } else {

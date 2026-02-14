@@ -18,7 +18,8 @@
       "Bash(convert:*)",
       "Bash(npm ls:*)",
       "Bash(npx sharp-cli:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx expo uninstall @react-native-community/netinfo)"
     ]
   }
 }

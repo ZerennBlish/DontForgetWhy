@@ -6,6 +6,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import { getRankFromScore } from '../data/memoryRanks';
 import { RIDDLES } from '../data/riddles';
+import { TRIVIA_CATEGORIES } from '../data/triviaQuestions';
+import { getTriviaStats } from '../services/triviaStorage';
 import {
   calculateCompositeScore,
   resetAllScores,
@@ -16,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticHeavy } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
+import type { TriviaStats, TriviaCategory } from '../types/trivia';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MemoryScore'>;
 
@@ -70,6 +73,25 @@ function sudokuStars(mistakes: number): number {
   return 1;
 }
 
+const defaultTriviaStats: TriviaStats = {
+  totalRoundsPlayed: 0,
+  totalQuestionsAnswered: 0,
+  totalCorrect: 0,
+  bestRoundScore: 0,
+  bestRoundCategory: null,
+  longestStreak: 0,
+  categoryStats: {
+    general: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    science: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    history: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    pop_culture: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    geography: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    sports: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    technology: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    food: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+  },
+};
+
 export default function MemoryScoreScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -83,18 +105,18 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     lastPlayedDate: '', streak: 0, longestStreak: 0,
     totalPlayed: 0, totalCorrect: 0, seenRiddleIds: [],
   });
+  const [triviaStats, setTriviaStats] = useState<TriviaStats>(defaultTriviaStats);
   const [compositeScore, setCompositeScore] = useState<CompositeScore>({
     total: 0,
-    breakdown: { guessWhy: 0, memoryMatch: 0, sudoku: 0, dailyRiddle: 0 },
+    breakdown: { guessWhy: 0, memoryMatch: 0, sudoku: 0, dailyRiddle: 0, trivia: 0 },
   });
 
   const loadAllStats = useCallback(async () => {
-    // Load composite score
     const score = await calculateCompositeScore();
     setCompositeScore(score);
 
-    // Load individual game stats for detailed display
     loadStats().then(setGuessWhyStats);
+    getTriviaStats().then(setTriviaStats);
 
     AsyncStorage.getItem('memoryMatchScores').then((data) => {
       if (data) { try { setMmScores(JSON.parse(data)); } catch {} }
@@ -142,6 +164,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     ? Math.round((riddleStats.totalCorrect / riddleStats.totalPlayed) * 100)
     : 0;
 
+  const triviaAccuracy = triviaStats.totalQuestionsAnswered > 0
+    ? Math.round((triviaStats.totalCorrect / triviaStats.totalQuestionsAnswered) * 100)
+    : 0;
+
   const handleResetAll = () => {
     Alert.alert(
       'Reset All Scores?',
@@ -164,6 +190,15 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   const styles = useMemo(() => makeStyles(colors, insets.bottom), [colors, insets.bottom]);
 
   const diffLabels = { easy: 'Easy', medium: 'Medium', hard: 'Hard' } as const;
+
+  const bestCatLabel = triviaStats.bestRoundCategory
+    ? TRIVIA_CATEGORIES.find((c) => c.id === triviaStats.bestRoundCategory)?.label || triviaStats.bestRoundCategory
+    : null;
+
+  // Categories that have been played
+  const playedCategories = (Object.keys(triviaStats.categoryStats) as TriviaCategory[]).filter(
+    (cat) => triviaStats.categoryStats[cat].roundsPlayed > 0
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -192,34 +227,42 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
         <View style={styles.breakdownRow}>
           <Text style={styles.statLabel}>{'\u{1F9E0}'} Guess Why</Text>
-          <Text style={styles.statValue}>{breakdown.guessWhy} / 25</Text>
+          <Text style={styles.statValue}>{breakdown.guessWhy} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
-          <View style={[styles.breakdownFill, { width: `${(breakdown.guessWhy / 25) * 100}%`, backgroundColor: colors.accent }]} />
+          <View style={[styles.breakdownFill, { width: `${(breakdown.guessWhy / 20) * 100}%`, backgroundColor: colors.accent }]} />
         </View>
 
         <View style={styles.breakdownRow}>
           <Text style={styles.statLabel}>{'\u{1F9E9}'} Memory Match</Text>
-          <Text style={styles.statValue}>{breakdown.memoryMatch} / 25</Text>
+          <Text style={styles.statValue}>{breakdown.memoryMatch} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
-          <View style={[styles.breakdownFill, { width: `${(breakdown.memoryMatch / 25) * 100}%`, backgroundColor: colors.accent }]} />
+          <View style={[styles.breakdownFill, { width: `${(breakdown.memoryMatch / 20) * 100}%`, backgroundColor: colors.accent }]} />
         </View>
 
         <View style={styles.breakdownRow}>
           <Text style={styles.statLabel}>{'\u{1F522}'} Sudoku</Text>
-          <Text style={styles.statValue}>{breakdown.sudoku} / 25</Text>
+          <Text style={styles.statValue}>{breakdown.sudoku} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
-          <View style={[styles.breakdownFill, { width: `${(breakdown.sudoku / 25) * 100}%`, backgroundColor: colors.accent }]} />
+          <View style={[styles.breakdownFill, { width: `${(breakdown.sudoku / 20) * 100}%`, backgroundColor: colors.accent }]} />
         </View>
 
         <View style={styles.breakdownRow}>
           <Text style={styles.statLabel}>{'\u{1F4A1}'} Daily Riddle</Text>
-          <Text style={styles.statValue}>{breakdown.dailyRiddle} / 25</Text>
+          <Text style={styles.statValue}>{breakdown.dailyRiddle} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
-          <View style={[styles.breakdownFill, { width: `${(breakdown.dailyRiddle / 25) * 100}%`, backgroundColor: colors.accent }]} />
+          <View style={[styles.breakdownFill, { width: `${(breakdown.dailyRiddle / 20) * 100}%`, backgroundColor: colors.accent }]} />
+        </View>
+
+        <View style={styles.breakdownRow}>
+          <Text style={styles.statLabel}>{'\u{1F9E0}'} Trivia</Text>
+          <Text style={styles.statValue}>{breakdown.trivia} / 20</Text>
+        </View>
+        <View style={styles.breakdownBar}>
+          <View style={[styles.breakdownFill, { width: `${(breakdown.trivia / 20) * 100}%`, backgroundColor: colors.accent }]} />
         </View>
       </View>
 
@@ -306,6 +349,73 @@ export default function MemoryScoreScreen({ navigation }: Props) {
             </View>
           );
         })}
+      </View>
+
+      {/* Section: Trivia */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>{'\u{1F9E0}'} Trivia</Text>
+
+        {triviaStats.totalRoundsPlayed > 0 ? (
+          <>
+            <View style={styles.rankRow}>
+              <Text style={styles.bigValue}>{triviaAccuracy}%</Text>
+              <Text style={styles.rankLabel}>Accuracy</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Rounds Played</Text>
+              <Text style={styles.statValue}>{triviaStats.totalRoundsPlayed}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Questions Answered</Text>
+              <Text style={styles.statValue}>{triviaStats.totalQuestionsAnswered}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Total Correct</Text>
+              <Text style={styles.statValue}>{triviaStats.totalCorrect}</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>{'\u{1F3C6}'} Best Round</Text>
+              <Text style={styles.statValue}>
+                {triviaStats.bestRoundScore}/10
+                {bestCatLabel ? ` (${bestCatLabel})` : ''}
+              </Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>{'\u{1F525}'} Longest Streak</Text>
+              <Text style={styles.statValue}>{triviaStats.longestStreak}</Text>
+            </View>
+
+            {playedCategories.length > 0 && (
+              <>
+                <View style={styles.divider} />
+                <Text style={styles.diffLabel}>Per Category</Text>
+                {playedCategories.map((cat) => {
+                  const catStats = triviaStats.categoryStats[cat];
+                  const catLabel = TRIVIA_CATEGORIES.find((c) => c.id === cat)?.label || cat;
+                  const catAcc = catStats.questionsAnswered > 0
+                    ? Math.round((catStats.correct / catStats.questionsAnswered) * 100)
+                    : 0;
+                  return (
+                    <View key={cat} style={styles.statRow}>
+                      <Text style={styles.statLabel}>{catLabel}</Text>
+                      <Text style={styles.statValue}>
+                        {catStats.roundsPlayed} round{catStats.roundsPlayed !== 1 ? 's' : ''} ({catAcc}%)
+                      </Text>
+                    </View>
+                  );
+                })}
+              </>
+            )}
+          </>
+        ) : (
+          <Text style={styles.notPlayed}>No trivia rounds played yet</Text>
+        )}
       </View>
 
       {/* Section: Sudoku */}
