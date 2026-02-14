@@ -21,6 +21,7 @@ export interface DetailedReminder {
   icon: string;
   text: string;
   completed: boolean;
+  dueInfo: string;
 }
 
 interface DetailedWidgetProps {
@@ -223,6 +224,15 @@ function ReminderCell({ reminder }: { reminder: DetailedReminder }) {
             color: reminder.completed ? BORDER : TEXT,
           }}
         />
+        {reminder.dueInfo ? (
+          <TextWidget
+            text={reminder.dueInfo}
+            style={{
+              fontSize: 9,
+              color: TEXT_SEC,
+            }}
+          />
+        ) : null}
       </FlexWidget>
     </FlexWidget>
   );
@@ -372,7 +382,7 @@ export function DetailedWidget({ alarms, presets, reminders }: DetailedWidgetPro
             }}
           >
             <TextWidget
-              text="Pin reminders to see them here"
+              text="No reminders"
               style={{
                 fontSize: 11,
                 color: BORDER,

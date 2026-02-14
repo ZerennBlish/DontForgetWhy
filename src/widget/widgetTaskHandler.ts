@@ -402,28 +402,111 @@ async function loadWidgetReminders(): Promise<Reminder[]> {
   }
 }
 
+function getReminderSortTimestamp(reminder: Reminder): number {
+  const now = new Date();
+
+  if (reminder.dueDate && reminder.dueTime) {
+    const [year, month, day] = reminder.dueDate.split('-').map(Number);
+    const [hours, minutes] = reminder.dueTime.split(':').map(Number);
+    return new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
+  }
+
+  if (reminder.dueTime) {
+    const [hours, minutes] = reminder.dueTime.split(':').map(Number);
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+    if (target.getTime() <= now.getTime()) {
+      target.setDate(target.getDate() + 1);
+    }
+    return target.getTime();
+  }
+
+  if (reminder.dueDate) {
+    const [year, month, day] = reminder.dueDate.split('-').map(Number);
+    return new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
+  }
+
+  return Infinity;
+}
+
+function formatReminderDueInfo(reminder: Reminder, timeFormat: '12h' | '24h'): string {
+  const hasDate = !!reminder.dueDate;
+  const hasTime = !!reminder.dueTime;
+
+  if (!hasDate && !hasTime) return '';
+
+  let timePart = '';
+  if (hasTime) {
+    timePart = formatTime(reminder.dueTime!, timeFormat);
+  }
+
+  let datePart = '';
+  if (hasDate) {
+    const [year, month, day] = reminder.dueDate!.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    datePart = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  if (hasTime && hasDate) {
+    return `${timePart} \u00B7 ${datePart}`;
+  }
+
+  if (hasTime) {
+    return `${timePart} today`;
+  }
+
+  return datePart;
+}
+
+function reminderToDetailed(reminder: Reminder, timeFormat: '12h' | '24h'): DetailedReminder {
+  return {
+    id: reminder.id,
+    icon: reminder.private ? '\u{1F4DD}' : reminder.icon,
+    text: reminder.private ? 'Something to do...' : reminder.text,
+    completed: reminder.completed,
+    dueInfo: formatReminderDueInfo(reminder, timeFormat),
+  };
+}
+
 export async function getDetailedReminders(): Promise<DetailedReminder[]> {
   const allReminders = await loadWidgetReminders();
+  const incomplete = allReminders.filter((r) => !r.completed);
 
+  if (incomplete.length === 0) return [];
+
+  const settings = await loadSettings();
+  const timeFormat = settings.timeFormat;
+
+  const result: DetailedReminder[] = [];
+  const addedIds = new Set<string>();
+
+  // Pinned reminders first (only incomplete ones)
   try {
     const pinnedIds = await getPinnedReminders();
-    const result: DetailedReminder[] = [];
     for (const id of pinnedIds) {
       if (result.length >= 3) break;
-      const reminder = allReminders.find((r) => r.id === id);
+      const reminder = incomplete.find((r) => r.id === id);
       if (reminder) {
-        result.push({
-          id: reminder.id,
-          icon: reminder.private ? '\u{1F4DD}' : reminder.icon,
-          text: reminder.private ? 'Something to do...' : reminder.text,
-          completed: reminder.completed,
-        });
+        result.push(reminderToDetailed(reminder, timeFormat));
+        addedIds.add(reminder.id);
       }
     }
-    return result;
   } catch {
-    return [];
+    // fall through
   }
+
+  // Fill remaining slots with soonest unpinned reminders
+  if (result.length < 3) {
+    const unpinned = incomplete
+      .filter((r) => !addedIds.has(r.id))
+      .sort((a, b) => getReminderSortTimestamp(a) - getReminderSortTimestamp(b));
+
+    for (const reminder of unpinned) {
+      if (result.length >= 3) break;
+      result.push(reminderToDetailed(reminder, timeFormat));
+    }
+  }
+
+  return result;
 }
 
 // ── Rendering ──
