@@ -12,7 +12,13 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(npm uninstall:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(awk:*)",
+      "Bash(python3:*)",
+      "Bash(convert:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx sharp-cli:*)",
+      "Bash(ls:*)"
     ]
   }
 }

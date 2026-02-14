@@ -1,38 +1,421 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { loadStats, resetStats, GuessWhyStats } from '../services/guessWhyStats';
-import { getRank } from '../data/memoryRanks';
+import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
+import { getRankFromScore } from '../data/memoryRanks';
+import { RIDDLES } from '../data/riddles';
+import {
+  calculateCompositeScore,
+  resetAllScores,
+  type CompositeScore,
+} from '../services/memoryScore';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
+import type { ThemeColors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MemoryScore'>;
+
+// --- Data shapes matching each game's AsyncStorage format ---
+
+interface MemoryMatchDiffBest {
+  bestMoves: number;
+  bestTime: number;
+}
+interface MemoryMatchScores {
+  easy?: MemoryMatchDiffBest;
+  medium?: MemoryMatchDiffBest;
+  hard?: MemoryMatchDiffBest;
+}
+
+interface SudokuDiffBest {
+  bestTime: number;
+  bestMistakes: number;
+}
+interface SudokuScores {
+  easy?: SudokuDiffBest;
+  medium?: SudokuDiffBest;
+  hard?: SudokuDiffBest;
+}
+
+interface DailyRiddleStats {
+  lastPlayedDate: string;
+  streak: number;
+  longestStreak: number;
+  totalPlayed: number;
+  totalCorrect: number;
+  seenRiddleIds: number[];
+}
+
+// Par values matching MemoryMatchScreen
+const MM_PAR: Record<string, number> = { easy: 8, medium: 12, hard: 16 };
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function mmStars(moves: number, diff: string): number {
+  const par = MM_PAR[diff] || 12;
+  return moves < par ? 3 : moves === par ? 2 : 1;
+}
+
+function sudokuStars(mistakes: number): number {
+  if (mistakes === 0) return 3;
+  if (mistakes <= 3) return 2;
+  return 1;
+}
 
 export default function MemoryScoreScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const [stats, setStats] = useState<GuessWhyStats>({
-    wins: 0,
-    losses: 0,
-    skips: 0,
-    streak: 0,
-    bestStreak: 0,
+
+  const [guessWhyStats, setGuessWhyStats] = useState<GuessWhyStats>({
+    wins: 0, losses: 0, skips: 0, streak: 0, bestStreak: 0,
+  });
+  const [mmScores, setMmScores] = useState<MemoryMatchScores>({});
+  const [sudokuScores, setSudokuScores] = useState<SudokuScores>({});
+  const [riddleStats, setRiddleStats] = useState<DailyRiddleStats>({
+    lastPlayedDate: '', streak: 0, longestStreak: 0,
+    totalPlayed: 0, totalCorrect: 0, seenRiddleIds: [],
+  });
+  const [compositeScore, setCompositeScore] = useState<CompositeScore>({
+    total: 0,
+    breakdown: { guessWhy: 0, memoryMatch: 0, sudoku: 0, dailyRiddle: 0 },
   });
 
-  const styles = useMemo(() => StyleSheet.create({
+  const loadAllStats = useCallback(async () => {
+    // Load composite score
+    const score = await calculateCompositeScore();
+    setCompositeScore(score);
+
+    // Load individual game stats for detailed display
+    loadStats().then(setGuessWhyStats);
+
+    AsyncStorage.getItem('memoryMatchScores').then((data) => {
+      if (data) { try { setMmScores(JSON.parse(data)); } catch {} }
+      else { setMmScores({}); }
+    });
+    AsyncStorage.getItem('sudokuBestScores').then((data) => {
+      if (data) { try { setSudokuScores(JSON.parse(data)); } catch {} }
+      else { setSudokuScores({}); }
+    });
+    AsyncStorage.getItem('dailyRiddleStats').then((data) => {
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          setRiddleStats({
+            lastPlayedDate: parsed.lastPlayedDate || '',
+            streak: parsed.streak || 0,
+            longestStreak: parsed.longestStreak ?? parsed.streak ?? 0,
+            totalPlayed: parsed.totalPlayed || 0,
+            totalCorrect: parsed.totalCorrect || 0,
+            seenRiddleIds: parsed.seenRiddleIds || [],
+          });
+        } catch {}
+      } else {
+        setRiddleStats({
+          lastPlayedDate: '', streak: 0, longestStreak: 0,
+          totalPlayed: 0, totalCorrect: 0, seenRiddleIds: [],
+        });
+      }
+    });
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAllStats();
+    }, [loadAllStats])
+  );
+
+  // Derived values
+  const gwTotal = guessWhyStats.wins + guessWhyStats.losses + guessWhyStats.skips;
+  const gwPercentage = gwTotal > 0 ? Math.round((guessWhyStats.wins / gwTotal) * 100) : 0;
+  const rank = getRankFromScore(compositeScore.total);
+  const { breakdown } = compositeScore;
+
+  const riddleAccuracy = riddleStats.totalPlayed > 0
+    ? Math.round((riddleStats.totalCorrect / riddleStats.totalPlayed) * 100)
+    : 0;
+
+  const handleResetAll = () => {
+    Alert.alert(
+      'Reset All Scores?',
+      'This will erase ALL game stats across every game. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset Everything',
+          style: 'destructive',
+          onPress: async () => {
+            await resetAllScores();
+            await loadAllStats();
+          },
+        },
+      ],
+    );
+  };
+
+  const styles = useMemo(() => makeStyles(colors, insets.bottom), [colors, insets.bottom]);
+
+  const diffLabels = { easy: 'Easy', medium: 'Medium', hard: 'Hard' } as const;
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <Text style={styles.backBtn}>{'<'} Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>{'\u{1F3C6}'} Brain Training Stats</Text>
+      </View>
+
+      {/* Overall Summary — composite rank */}
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryEmoji}>{rank.emoji}</Text>
+        <View style={styles.summaryInfo}>
+          <Text style={styles.summaryRank}>{rank.title}</Text>
+          <Text style={styles.summaryScore}>
+            Score: {compositeScore.total} / 100
+          </Text>
+        </View>
+      </View>
+
+      {/* Score Breakdown */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>{'\u{1F4CA}'} Score Breakdown</Text>
+
+        <View style={styles.breakdownRow}>
+          <Text style={styles.statLabel}>{'\u{1F9E0}'} Guess Why</Text>
+          <Text style={styles.statValue}>{breakdown.guessWhy} / 25</Text>
+        </View>
+        <View style={styles.breakdownBar}>
+          <View style={[styles.breakdownFill, { width: `${(breakdown.guessWhy / 25) * 100}%`, backgroundColor: colors.accent }]} />
+        </View>
+
+        <View style={styles.breakdownRow}>
+          <Text style={styles.statLabel}>{'\u{1F9E9}'} Memory Match</Text>
+          <Text style={styles.statValue}>{breakdown.memoryMatch} / 25</Text>
+        </View>
+        <View style={styles.breakdownBar}>
+          <View style={[styles.breakdownFill, { width: `${(breakdown.memoryMatch / 25) * 100}%`, backgroundColor: colors.accent }]} />
+        </View>
+
+        <View style={styles.breakdownRow}>
+          <Text style={styles.statLabel}>{'\u{1F522}'} Sudoku</Text>
+          <Text style={styles.statValue}>{breakdown.sudoku} / 25</Text>
+        </View>
+        <View style={styles.breakdownBar}>
+          <View style={[styles.breakdownFill, { width: `${(breakdown.sudoku / 25) * 100}%`, backgroundColor: colors.accent }]} />
+        </View>
+
+        <View style={styles.breakdownRow}>
+          <Text style={styles.statLabel}>{'\u{1F4A1}'} Daily Riddle</Text>
+          <Text style={styles.statValue}>{breakdown.dailyRiddle} / 25</Text>
+        </View>
+        <View style={styles.breakdownBar}>
+          <View style={[styles.breakdownFill, { width: `${(breakdown.dailyRiddle / 25) * 100}%`, backgroundColor: colors.accent }]} />
+        </View>
+      </View>
+
+      {/* Section: Guess Why */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>{'\u{1F9E0}'} Guess Why</Text>
+
+        <View style={styles.rankRow}>
+          <Text style={styles.bigValue}>{gwTotal > 0 ? `${gwPercentage}%` : '--'}</Text>
+          <Text style={styles.rankLabel}>
+            {gwTotal === 0 ? 'No games yet' : 'Win Rate'}
+          </Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.statRow}>
+          <Text style={styles.statLabel}>{'\u2705'} Wins</Text>
+          <Text style={styles.statValue}>{guessWhyStats.wins}</Text>
+        </View>
+        <View style={styles.statRow}>
+          <Text style={styles.statLabel}>{'\u274C'} Losses</Text>
+          <Text style={styles.statValue}>{guessWhyStats.losses}</Text>
+        </View>
+        <View style={styles.statRow}>
+          <Text style={styles.statLabel}>{'\u23ED\uFE0F'} Skips</Text>
+          <Text style={styles.statValue}>{guessWhyStats.skips}</Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.statRow}>
+          <Text style={styles.statLabel}>{'\u{1F525}'} Current Streak</Text>
+          <Text style={styles.statValue}>{guessWhyStats.streak}</Text>
+        </View>
+        <View style={styles.statRow}>
+          <Text style={styles.statLabel}>{'\u{1F3C6}'} Best Streak</Text>
+          <Text style={styles.statValue}>{guessWhyStats.bestStreak}</Text>
+        </View>
+        <View style={styles.statRow}>
+          <Text style={styles.statLabel}>{'\u{1F3AE}'} Total Games</Text>
+          <Text style={styles.statValue}>{gwTotal}</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.sectionBtn}
+          onPress={() => navigation.navigate('ForgetLog')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.sectionBtnText}>{'\u{1F4DC}'} What Did I Forget?</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Section: Memory Match */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>{'\u{1F9E9}'} Memory Match</Text>
+
+        {(['easy', 'medium', 'hard'] as const).map((diff) => {
+          const best = mmScores[diff];
+          return (
+            <View key={diff}>
+              <Text style={styles.diffLabel}>{diffLabels[diff]}</Text>
+              {best ? (
+                <>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Best Moves</Text>
+                    <Text style={styles.statValue}>{best.bestMoves}</Text>
+                  </View>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Best Time</Text>
+                    <Text style={styles.statValue}>{formatTime(best.bestTime)}</Text>
+                  </View>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Rating</Text>
+                    <Text style={styles.statValue}>
+                      {'\u2B50'.repeat(mmStars(best.bestMoves, diff))}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.notPlayed}>Not played yet</Text>
+              )}
+              {diff !== 'hard' && <View style={styles.divider} />}
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Section: Sudoku */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>{'\u{1F522}'} Sudoku</Text>
+
+        {(['easy', 'medium', 'hard'] as const).map((diff) => {
+          const best = sudokuScores[diff];
+          return (
+            <View key={diff}>
+              <Text style={styles.diffLabel}>{diffLabels[diff]}</Text>
+              {best ? (
+                <>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Best Time</Text>
+                    <Text style={styles.statValue}>{formatTime(best.bestTime)}</Text>
+                  </View>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Fewest Mistakes</Text>
+                    <Text style={styles.statValue}>{best.bestMistakes}</Text>
+                  </View>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Rating</Text>
+                    <Text style={styles.statValue}>
+                      {'\u2B50'.repeat(sudokuStars(best.bestMistakes))}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.notPlayed}>Not played yet</Text>
+              )}
+              {diff !== 'hard' && <View style={styles.divider} />}
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Section: Daily Riddle */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>{'\u{1F4A1}'} Daily Riddle</Text>
+
+        {riddleStats.totalPlayed > 0 ? (
+          <>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>
+                {riddleStats.streak > 0 ? '\u{1F525} ' : ''}Current Streak
+              </Text>
+              <Text style={styles.statValue}>
+                {riddleStats.streak} day{riddleStats.streak !== 1 ? 's' : ''}
+              </Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>{'\u{1F3C6}'} Longest Streak</Text>
+              <Text style={styles.statValue}>
+                {riddleStats.longestStreak} day{riddleStats.longestStreak !== 1 ? 's' : ''}
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Total Attempted</Text>
+              <Text style={styles.statValue}>{riddleStats.totalPlayed}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Total Correct</Text>
+              <Text style={styles.statValue}>{riddleStats.totalCorrect}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Accuracy</Text>
+              <Text style={styles.statValue}>{riddleAccuracy}%</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Riddles Seen</Text>
+              <Text style={styles.statValue}>
+                {riddleStats.seenRiddleIds.length} / {RIDDLES.length}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.notPlayed}>No riddles attempted yet</Text>
+        )}
+      </View>
+
+      {/* Reset All Scores */}
+      <TouchableOpacity
+        style={styles.resetAllBtn}
+        onPress={handleResetAll}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.resetAllBtnText}>Reset All Scores</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+function makeStyles(colors: ThemeColors, bottomInset: number) {
+  return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
     },
     content: {
-      paddingBottom: 60 + insets.bottom,
+      paddingBottom: 60 + bottomInset,
     },
     header: {
       paddingTop: 60,
       paddingHorizontal: 20,
-      paddingBottom: 24,
+      paddingBottom: 20,
     },
     backBtn: {
       fontSize: 16,
@@ -45,46 +428,97 @@ export default function MemoryScoreScreen({ navigation }: Props) {
       fontWeight: '800',
       color: colors.textPrimary,
     },
-    rankSection: {
+
+    // Overall summary
+    summaryCard: {
+      marginHorizontal: 16,
+      marginBottom: 8,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 24,
-      paddingHorizontal: 20,
+      gap: 16,
     },
-    rankEmoji: {
-      fontSize: 64,
-      marginBottom: 12,
-    },
-    rankTitle: {
-      fontSize: 24,
-      fontWeight: '700',
-      textAlign: 'center',
-      lineHeight: 32,
-    },
-    percentage: {
+    summaryEmoji: {
       fontSize: 48,
-      fontWeight: '800',
-      color: colors.textPrimary,
-      marginTop: 16,
     },
-    subtitle: {
-      fontSize: 16,
+    summaryInfo: {
+      flex: 1,
+    },
+    summaryRank: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      lineHeight: 24,
+    },
+    summaryScore: {
+      fontSize: 15,
       fontWeight: '600',
-      color: colors.textTertiary,
+      color: colors.accent,
       marginTop: 4,
     },
-    statsCard: {
+
+    // Section cards
+    sectionCard: {
       marginHorizontal: 16,
+      marginTop: 12,
       backgroundColor: colors.card,
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
       borderColor: colors.border,
     },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 16,
+    },
+
+    // Score breakdown bars
+    breakdownRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    breakdownBar: {
+      height: 6,
+      backgroundColor: colors.border,
+      borderRadius: 3,
+      marginBottom: 14,
+      overflow: 'hidden',
+    },
+    breakdownFill: {
+      height: 6,
+      borderRadius: 3,
+    },
+
+    // Guess Why rank row
+    rankRow: {
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    bigValue: {
+      fontSize: 40,
+      fontWeight: '800',
+      color: colors.textPrimary,
+    },
+    rankLabel: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+
+    // Stat rows
     statRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 10,
+      paddingVertical: 8,
     },
     statLabel: {
       fontSize: 15,
@@ -98,120 +532,55 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     divider: {
       height: 1,
       backgroundColor: colors.border,
-      marginVertical: 4,
+      marginVertical: 6,
     },
-    forgetLogBtn: {
-      marginHorizontal: 16,
-      marginTop: 24,
-      backgroundColor: colors.card,
+
+    // Difficulty labels
+    diffLabel: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.accent,
+      marginTop: 4,
+      marginBottom: 4,
+    },
+
+    // Not played
+    notPlayed: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      fontStyle: 'italic',
+      paddingVertical: 6,
+    },
+
+    // Buttons inside sections
+    sectionBtn: {
+      marginTop: 16,
+      backgroundColor: colors.background,
       borderRadius: 12,
-      paddingVertical: 16,
+      paddingVertical: 14,
       alignItems: 'center',
     },
-    forgetLogBtnText: {
-      fontSize: 16,
+    sectionBtnText: {
+      fontSize: 15,
       fontWeight: '600',
       color: colors.accent,
     },
-    resetBtn: {
+
+    // Reset All Scores
+    resetAllBtn: {
       marginHorizontal: 16,
-      marginTop: 12,
+      marginTop: 24,
       backgroundColor: colors.card,
       borderRadius: 16,
       paddingVertical: 16,
       alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.red,
     },
-    resetBtnText: {
+    resetAllBtnText: {
       fontSize: 16,
       fontWeight: '600',
       color: colors.red,
     },
-  }), [colors, insets.bottom]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadStats().then(setStats);
-    }, [])
-  );
-
-  const total = stats.wins + stats.losses + stats.skips;
-  const percentage = total > 0 ? Math.round((stats.wins / total) * 100) : 0;
-  const rank = getRank(stats.wins, stats.losses, stats.skips);
-  const subtitle = total === 0
-    ? 'No games yet'
-    : percentage >= 50
-      ? 'Wall of Remembrance'
-      : 'Hall of Shame';
-
-  const handleReset = () => {
-    Alert.alert('Reset Stats', 'Are you sure? This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reset',
-        style: 'destructive',
-        onPress: async () => {
-          const fresh = await resetStats();
-          setStats(fresh);
-        },
-      },
-    ]);
-  };
-
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Memory Score</Text>
-      </View>
-
-      <View style={styles.rankSection}>
-        <Text style={styles.rankEmoji}>{rank.emoji}</Text>
-        <Text style={[styles.rankTitle, { color: rank.color }]}>{rank.title}</Text>
-        <Text style={styles.percentage}>{total > 0 ? `${percentage}%` : '--'}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
-      </View>
-
-      <View style={styles.statsCard}>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u2705'} Wins</Text>
-          <Text style={styles.statValue}>{stats.wins}</Text>
-        </View>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u274C'} Losses</Text>
-          <Text style={styles.statValue}>{stats.losses}</Text>
-        </View>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u23ED\uFE0F'} Skips</Text>
-          <Text style={styles.statValue}>{stats.skips}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u{1F525}'} Current Streak</Text>
-          <Text style={styles.statValue}>{stats.streak}</Text>
-        </View>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u{1F3C6}'} Best Streak</Text>
-          <Text style={styles.statValue}>{stats.bestStreak}</Text>
-        </View>
-        <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u{1F3AE}'} Total Games</Text>
-          <Text style={styles.statValue}>{total}</Text>
-        </View>
-      </View>
-
-      <TouchableOpacity
-        style={styles.forgetLogBtn}
-        onPress={() => navigation.navigate('ForgetLog')}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.forgetLogBtnText}>{'\u{1F4DC}'} What Did I Forget?</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.resetBtn} onPress={handleReset} activeOpacity={0.7}>
-        <Text style={styles.resetBtnText}>Reset Stats</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
+  });
 }

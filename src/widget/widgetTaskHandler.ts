@@ -15,15 +15,16 @@ import {
   loadPresets,
   recordPresetUsage,
 } from '../services/timerStorage';
-import { getPinnedPresets, getPinnedAlarms } from '../services/widgetPins';
+import { getPinnedPresets, getPinnedAlarms, getPinnedReminders } from '../services/widgetPins';
 import type { ActiveTimer } from '../types/timer';
 import type { Alarm, AlarmDay } from '../types/alarm';
+import type { Reminder } from '../types/reminder';
 import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
 import { formatTime } from '../utils/time';
 import { TimerWidget } from './TimerWidget';
 import type { WidgetPreset, WidgetAlarm } from './TimerWidget';
 import { DetailedWidget } from './DetailedWidget';
-import type { DetailedAlarm, DetailedPreset } from './DetailedWidget';
+import type { DetailedAlarm, DetailedPreset, DetailedReminder } from './DetailedWidget';
 
 const RECENT_KEY = 'recentPresets';
 const ALARMS_KEY = 'alarms';
@@ -378,6 +379,53 @@ export async function getDetailedPresets(): Promise<DetailedPreset[]> {
   return result;
 }
 
+// ── Detailed widget reminders ──
+
+const REMINDERS_KEY = 'reminders';
+
+async function loadWidgetReminders(): Promise<Reminder[]> {
+  try {
+    const raw = await AsyncStorage.getItem(REMINDERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item: unknown): item is Reminder =>
+        item !== null &&
+        typeof item === 'object' &&
+        typeof (item as Record<string, unknown>).id === 'string' &&
+        typeof (item as Record<string, unknown>).text === 'string' &&
+        typeof (item as Record<string, unknown>).icon === 'string',
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function getDetailedReminders(): Promise<DetailedReminder[]> {
+  const allReminders = await loadWidgetReminders();
+
+  try {
+    const pinnedIds = await getPinnedReminders();
+    const result: DetailedReminder[] = [];
+    for (const id of pinnedIds) {
+      if (result.length >= 3) break;
+      const reminder = allReminders.find((r) => r.id === id);
+      if (reminder) {
+        result.push({
+          id: reminder.id,
+          icon: reminder.private ? '\u{1F4DD}' : reminder.icon,
+          text: reminder.private ? 'Something to do...' : reminder.text,
+          completed: reminder.completed,
+        });
+      }
+    }
+    return result;
+  } catch {
+    return [];
+  }
+}
+
 // ── Rendering ──
 
 async function renderCompactWidget(props: WidgetTaskHandlerProps) {
@@ -389,7 +437,8 @@ async function renderCompactWidget(props: WidgetTaskHandlerProps) {
 async function renderDetailedWidget(props: WidgetTaskHandlerProps) {
   const alarms = await getDetailedAlarms();
   const presets = await getDetailedPresets();
-  props.renderWidget(React.createElement(DetailedWidget, { alarms, presets }));
+  const reminders = await getDetailedReminders();
+  props.renderWidget(React.createElement(DetailedWidget, { alarms, presets, reminders }));
 }
 
 // ── Refresh both widgets (called after timer start from widget) ──
@@ -413,7 +462,8 @@ async function refreshAllWidgets(): Promise<void> {
       renderWidget: async () => {
         const alarms = await getDetailedAlarms();
         const presets = await getDetailedPresets();
-        return React.createElement(DetailedWidget, { alarms, presets });
+        const reminders = await getDetailedReminders();
+        return React.createElement(DetailedWidget, { alarms, presets, reminders });
       },
     });
   } catch {

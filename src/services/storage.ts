@@ -1,23 +1,42 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import { Alarm, ALL_DAYS } from '../types/alarm';
+import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
 import { scheduleAlarm, cancelAlarmNotifications } from './notifications';
 
 const STORAGE_KEY = 'alarms';
 
+const NUM_TO_DAY: Record<number, AlarmDay> = {
+  0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat',
+};
+
 function migrateAlarm(item: Record<string, unknown>): Alarm {
   const raw = item as unknown as Alarm & { recurring?: boolean; notificationId?: string };
+
   // Migrate old notificationId (string) to notificationIds (string[])
   let notificationIds: string[] = raw.notificationIds || [];
   if (notificationIds.length === 0 && raw.notificationId) {
     notificationIds = [raw.notificationId];
   }
-  // Migrate old recurring boolean + number[] days to new format
-  const mode: 'recurring' | 'one-time' = raw.mode || 'recurring';
-  let days = raw.days;
-  if (!Array.isArray(days) || days.length === 0 || typeof days[0] === 'number') {
-    days = [...ALL_DAYS];
+
+  // Migrate mode: check legacy `recurring` field
+  let mode: 'recurring' | 'one-time' = raw.mode || 'recurring';
+  if (!raw.mode && raw.recurring === false) {
+    mode = 'one-time';
   }
+
+  // Migrate days: convert numeric arrays to string arrays
+  let days: AlarmDay[];
+  if (!Array.isArray(raw.days) || raw.days.length === 0) {
+    days = [...ALL_DAYS];
+  } else if (typeof raw.days[0] === 'number') {
+    days = (raw.days as unknown as number[])
+      .map((n) => NUM_TO_DAY[n])
+      .filter((d): d is AlarmDay => d !== undefined);
+    if (days.length === 0) days = [...ALL_DAYS];
+  } else {
+    days = raw.days as AlarmDay[];
+  }
+
   const date = raw.date ?? null;
 
   return { ...raw, mode, days, date, notificationIds } as Alarm;
@@ -29,7 +48,7 @@ export async function loadAlarms(): Promise<Alarm[]> {
   try {
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed)) return [];
-    return parsed
+    const filtered = parsed
       .filter(
         (item: unknown): item is Record<string, unknown> =>
           item !== null &&
@@ -41,8 +60,23 @@ export async function loadAlarms(): Promise<Alarm[]> {
           typeof (item as Record<string, unknown>).category === 'string' &&
           typeof (item as Record<string, unknown>).private === 'boolean' &&
           typeof (item as Record<string, unknown>).createdAt === 'string'
-      )
-      .map(migrateAlarm);
+      );
+
+    const migrated = filtered.map(migrateAlarm);
+
+    // Save back migrated data so migration only runs once
+    const needsMigration = filtered.some(
+      (item) =>
+        item.recurring !== undefined ||
+        item.notificationId !== undefined ||
+        (Array.isArray(item.days) && item.days.length > 0 && typeof item.days[0] === 'number') ||
+        item.mode === undefined,
+    );
+    if (needsMigration) {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    }
+
+    return migrated;
   } catch {
     return [];
   }

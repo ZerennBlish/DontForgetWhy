@@ -14,9 +14,12 @@ import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import MemoryMatchScreen from './src/screens/MemoryMatchScreen';
 import GamesScreen from './src/screens/GamesScreen';
 import SudokuScreen from './src/screens/SudokuScreen';
+import DailyRiddleScreen from './src/screens/DailyRiddleScreen';
+import CreateReminderScreen from './src/screens/CreateReminderScreen';
 import { loadAlarms, disableAlarm } from './src/services/storage';
 import { loadSettings } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
+import { refreshTimerWidget } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
@@ -72,7 +75,7 @@ function AppNavigator() {
 
     // Auto-disable one-time alarms after firing
     if (alarm.mode === 'one-time') {
-      disableAlarm(alarmId).catch(() => {});
+      disableAlarm(alarmId).then(() => refreshTimerWidget()).catch(() => {});
     }
 
     const settings = await loadSettings();
@@ -145,6 +148,17 @@ function AppNavigator() {
           );
         }
       }
+      if (type === EventType.DISMISSED) {
+        const alarmId = detail.notification?.data?.alarmId as string | undefined;
+        if (alarmId) {
+          const alarms = await loadAlarms();
+          const alarm = alarms.find((a) => a.id === alarmId);
+          if (alarm?.mode === 'one-time') {
+            await disableAlarm(alarmId);
+            refreshTimerWidget();
+          }
+        }
+      }
     });
     return unsubscribe;
   }, [navigateToAlarm]);
@@ -213,6 +227,16 @@ function AppNavigator() {
             name="Sudoku"
             component={SudokuScreen}
             options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="DailyRiddle"
+            component={DailyRiddleScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="CreateReminder"
+            component={CreateReminderScreen}
+            options={{ animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="ForgetLog"

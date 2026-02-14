@@ -23,11 +23,12 @@ import {
   addActiveTimer,
   removeActiveTimer,
 } from '../services/timerStorage';
-import { getPinnedAlarms, togglePinAlarm, isAlarmPinned } from '../services/widgetPins';
+import { getPinnedAlarms, togglePinAlarm, isAlarmPinned, unpinAlarm, pruneAlarmPins } from '../services/widgetPins';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import TimerScreen from './TimerScreen';
+import ReminderScreen from './ReminderScreen';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
@@ -54,7 +55,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
   const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
-  const [tab, setTab] = useState<'alarms' | 'timers'>('alarms');
+  const [tab, setTab] = useState<'alarms' | 'timers' | 'reminders'>('alarms');
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const [pinnedAlarmIds, setPinnedAlarmIds] = useState<string[]>([]);
   const alertedRef = useRef<Set<string>>(new Set());
@@ -216,13 +217,15 @@ export default function AlarmListScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       setAppQuote(getRandomAppOpenQuote());
-      loadAlarms().then(setAlarms);
+      loadAlarms().then((loaded) => {
+        setAlarms(loaded);
+        pruneAlarmPins(loaded.map((a) => a.id)).then(setPinnedAlarmIds);
+      });
       loadSettings().then((s) => {
         setGuessWhyEnabled(s.guessWhyEnabled);
         setTimeFormat(s.timeFormat);
       });
       loadStats().then(setStats);
-      getPinnedAlarms().then(setPinnedAlarmIds);
     }, [])
   );
 
@@ -340,8 +343,10 @@ export default function AlarmListScreen({ navigation }: Props) {
           if (alarm?.notificationIds?.length) {
             await cancelAlarmNotifications(alarm.notificationIds);
           }
+          await unpinAlarm(id);
           const updated = await deleteAlarm(id);
           setAlarms(updated);
+          setPinnedAlarmIds((prev) => prev.filter((pid) => pid !== id));
           refreshTimerWidget();
         },
       },
@@ -519,6 +524,15 @@ export default function AlarmListScreen({ navigation }: Props) {
               Timers
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, tab === 'reminders' && styles.tabActive]}
+            onPress={() => setTab('reminders')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, tab === 'reminders' && styles.tabTextActive]}>
+              Reminders
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {tab === 'alarms' && hasPlayed && (
@@ -547,7 +561,7 @@ export default function AlarmListScreen({ navigation }: Props) {
               <Text style={styles.emptyIcon}>{'\u23F0'}</Text>
               <Text style={styles.emptyText}>No alarms yet</Text>
               <Text style={styles.emptySubtext}>
-                Tap + to create your first reminder
+                Tap + to create your first alarm
               </Text>
               <Text style={styles.emptyQuote}>{appQuote}</Text>
             </View>
@@ -586,12 +600,18 @@ export default function AlarmListScreen({ navigation }: Props) {
             <Text style={styles.fabText}>+</Text>
           </TouchableOpacity>
         </>
-      ) : (
+      ) : tab === 'timers' ? (
         <TimerScreen
           activeTimers={activeTimers}
           onAddTimer={handleAddTimer}
           onRemoveTimer={handleRemoveTimer}
           onTogglePause={handleTogglePause}
+        />
+      ) : (
+        <ReminderScreen
+          onNavigateCreate={(reminderId) =>
+            navigation.navigate('CreateReminder', reminderId ? { reminderId } : undefined)
+          }
         />
       )}
     </View>

@@ -16,9 +16,17 @@ export interface DetailedPreset {
   isPinned?: boolean;
 }
 
+export interface DetailedReminder {
+  id: string;
+  icon: string;
+  text: string;
+  completed: boolean;
+}
+
 interface DetailedWidgetProps {
   alarms: DetailedAlarm[];
   presets: DetailedPreset[];
+  reminders: DetailedReminder[];
 }
 
 const BG = '#121220';
@@ -178,7 +186,49 @@ function EmptyTimerCell() {
   );
 }
 
-export function DetailedWidget({ alarms, presets }: DetailedWidgetProps) {
+function ReminderCell({ reminder }: { reminder: DetailedReminder }) {
+  return (
+    <FlexWidget
+      clickAction="OPEN_APP"
+      style={{
+        flex: 1,
+        backgroundColor: CELL_BG,
+        borderRadius: 12,
+        borderColor: BORDER,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        marginRight: 4,
+      }}
+    >
+      <TextWidget
+        text={reminder.icon}
+        style={{
+          fontSize: 14,
+          marginRight: 6,
+        }}
+      />
+      <FlexWidget
+        style={{
+          flex: 1,
+          flexDirection: 'column',
+        }}
+      >
+        <TextWidget
+          text={reminder.text}
+          style={{
+            fontSize: 11,
+            fontWeight: '600',
+            color: reminder.completed ? BORDER : TEXT,
+          }}
+        />
+      </FlexWidget>
+    </FlexWidget>
+  );
+}
+
+export function DetailedWidget({ alarms, presets, reminders }: DetailedWidgetProps) {
   const slots = [0, 1, 2];
 
   return (
@@ -278,6 +328,58 @@ export function DetailedWidget({ alarms, presets }: DetailedWidgetProps) {
             </FlexWidget>
           ))}
         </FlexWidget>
+      </FlexWidget>
+
+      {/* Full-width Reminders section */}
+      <FlexWidget
+        style={{
+          width: 'match_parent',
+          marginTop: 6,
+          flexDirection: 'column',
+        }}
+      >
+        <TextWidget
+          text="Reminders"
+          style={{
+            fontSize: 11,
+            fontWeight: '600',
+            color: TEXT_SEC,
+            marginBottom: 4,
+          }}
+        />
+        {reminders.length > 0 ? (
+          <FlexWidget
+            style={{
+              width: 'match_parent',
+              flexDirection: 'row',
+            }}
+          >
+            {reminders.map((r, i) => (
+              <ReminderCell key={`rem-${i}`} reminder={r} />
+            ))}
+          </FlexWidget>
+        ) : (
+          <FlexWidget
+            clickAction="OPEN_APP"
+            style={{
+              width: 'match_parent',
+              backgroundColor: CELL_BG,
+              borderRadius: 12,
+              borderColor: BORDER,
+              borderWidth: 1,
+              padding: 8,
+              alignItems: 'center',
+            }}
+          >
+            <TextWidget
+              text="Pin reminders to see them here"
+              style={{
+                fontSize: 11,
+                color: BORDER,
+              }}
+            />
+          </FlexWidget>
+        )}
       </FlexWidget>
     </FlexWidget>
   );

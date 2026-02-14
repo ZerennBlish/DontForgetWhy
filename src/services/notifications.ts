@@ -8,10 +8,12 @@ import notifee, {
 import type { TimestampTrigger } from '@notifee/react-native';
 import { Platform } from 'react-native';
 import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
+import type { Reminder } from '../types/reminder';
 import { loadSettings } from './settings';
 
 const ALARM_CHANNEL_ID = 'alarms';
 const TIMER_PROGRESS_CHANNEL_ID = 'timer-progress';
+const REMINDER_CHANNEL_ID = 'reminders';
 
 const DAY_INDEX: Record<AlarmDay, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
@@ -93,6 +95,14 @@ async function _createChannels(): Promise<void> {
     name: 'Timer Progress',
     importance: AndroidImportance.DEFAULT,
     vibration: false,
+  });
+
+  await notifee.createChannel({
+    id: REMINDER_CHANNEL_ID,
+    name: 'Reminders',
+    importance: AndroidImportance.DEFAULT,
+    sound: 'default',
+    vibration: true,
   });
 }
 
@@ -283,4 +293,68 @@ export async function showTimerCountdownNotification(
 
 export async function cancelTimerCountdownNotification(timerId: string): Promise<void> {
   await notifee.cancelNotification(`countdown-${timerId}`);
+}
+
+// --- Reminder notifications ---
+
+export async function scheduleReminderNotification(reminder: Reminder): Promise<string | null> {
+  // No time set means no notification
+  if (!reminder.dueTime) return null;
+
+  await setupNotificationChannel();
+
+  const [hours, minutes] = reminder.dueTime.split(':').map(Number);
+  let timestamp: number;
+
+  if (reminder.dueDate) {
+    // Both date and time: schedule for exact date+time
+    const [year, month, day] = reminder.dueDate.split('-').map(Number);
+    timestamp = new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
+  } else {
+    // Time only, no date: schedule for today; if passed, schedule for tomorrow
+    const now = new Date();
+    const target = new Date(
+      now.getFullYear(), now.getMonth(), now.getDate(),
+      hours, minutes, 0, 0,
+    );
+    if (target.getTime() <= now.getTime()) {
+      target.setDate(target.getDate() + 1);
+    }
+    timestamp = target.getTime();
+  }
+
+  if (timestamp <= Date.now()) return null;
+
+  const title = reminder.private
+    ? '\u{1F4DD} Reminder'
+    : `${reminder.icon} ${reminder.text}`;
+  const body = reminder.private
+    ? 'You had something to remember...'
+    : "Don't forget!";
+
+  const trigger: TimestampTrigger = {
+    type: TriggerType.TIMESTAMP,
+    timestamp,
+    alarmManager: { allowWhileIdle: true },
+  };
+
+  return await notifee.createTriggerNotification(
+    {
+      title,
+      body,
+      data: { reminderId: reminder.id },
+      android: {
+        channelId: REMINDER_CHANNEL_ID,
+        importance: AndroidImportance.DEFAULT,
+        sound: 'default',
+        pressAction: { id: 'default' },
+      },
+    },
+    trigger,
+  );
+}
+
+export async function cancelReminderNotification(notificationId: string): Promise<void> {
+  await notifee.cancelTriggerNotification(notificationId);
+  await notifee.cancelNotification(notificationId);
 }

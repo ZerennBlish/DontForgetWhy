@@ -3,6 +3,7 @@ import { Alarm } from '../types/alarm';
 export type RootStackParamList = {
   AlarmList: undefined;
   CreateAlarm: { alarm?: Alarm } | undefined;
+  CreateReminder: { reminderId?: string } | undefined;
   AlarmFire: { alarm: Alarm; fromNotification?: boolean };
   GuessWhy: { alarm: Alarm; fromNotification?: boolean };
   Settings: undefined;
@@ -10,5 +11,6 @@ export type RootStackParamList = {
   MemoryMatch: undefined;
   Games: undefined;
   Sudoku: undefined;
+  DailyRiddle: undefined;
   ForgetLog: undefined;
 };

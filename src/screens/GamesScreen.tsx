@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
@@ -13,10 +14,23 @@ export default function GamesScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
+  const [riddleStreak, setRiddleStreak] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       loadSettings().then((s) => setGuessWhyEnabled(s.guessWhyEnabled));
+      AsyncStorage.getItem('dailyRiddleStats').then((data) => {
+        try {
+          if (data) {
+            const stats = JSON.parse(data);
+            setRiddleStreak(stats.streak || 0);
+          } else {
+            setRiddleStreak(0);
+          }
+        } catch {
+          setRiddleStreak(0);
+        }
+      });
     }, []),
   );
 
@@ -102,11 +116,29 @@ export default function GamesScreen({ navigation }: Props) {
           alignItems: 'center',
           gap: 16,
         },
+        streakText: {
+          fontSize: 13,
+          color: colors.orange,
+          fontWeight: '700',
+          marginTop: 4,
+        },
         guessWhySubtext: {
           fontSize: 13,
           color: colors.textTertiary,
           fontStyle: 'italic',
           marginTop: 4,
+        },
+        statsCard: {
+          marginHorizontal: 16,
+          marginTop: 16,
+          backgroundColor: colors.card,
+          borderRadius: 16,
+          padding: 20,
+          borderWidth: 2,
+          borderColor: colors.accent,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 16,
         },
       }),
     [colors, insets.bottom],
@@ -121,6 +153,27 @@ export default function GamesScreen({ navigation }: Props) {
         <Text style={styles.title}>{'\u{1F3AE}'} Brain Games</Text>
         <Text style={styles.subtitle}>Exercise that forgetful brain of yours</Text>
       </View>
+
+      {/* Daily Riddle */}
+      <TouchableOpacity
+        style={styles.gameCard}
+        onPress={() => navigation.navigate('DailyRiddle')}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.gameEmoji}>{'\u{1F4A1}'}</Text>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>Daily Riddle</Text>
+          <Text style={styles.gameDesc}>
+            A new brain teaser every day. Can you keep your streak?
+          </Text>
+          {riddleStreak > 0 && (
+            <Text style={styles.streakText}>
+              {'\u{1F525}'} {riddleStreak} day streak
+            </Text>
+          )}
+        </View>
+        <Text style={styles.chevron}>{'\u203A'}</Text>
+      </TouchableOpacity>
 
       {/* Memory Match */}
       <TouchableOpacity
@@ -171,6 +224,20 @@ export default function GamesScreen({ navigation }: Props) {
           thumbColor={guessWhyEnabled ? colors.textPrimary : colors.textTertiary}
         />
       </View>
+
+      {/* Stats */}
+      <TouchableOpacity
+        style={styles.statsCard}
+        onPress={() => navigation.navigate('MemoryScore')}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.gameEmoji}>{'\u{1F4CA}'}</Text>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>Your Stats</Text>
+          <Text style={styles.gameDesc}>Track your brain training progress</Text>
+        </View>
+        <Text style={styles.chevron}>{'\u203A'}</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }

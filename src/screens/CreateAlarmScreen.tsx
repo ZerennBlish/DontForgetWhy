@@ -497,7 +497,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     const d = new Date(calYear, calMonth, day);
     d.setHours(0, 0, 0, 0);
     if (d.getTime() < today.getTime()) return;
-    setSelectedDate(d.toISOString().split('T')[0]);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    setSelectedDate(`${yyyy}-${mm}-${dd}`);
   };
 
   const handleSave = async () => {
@@ -726,7 +729,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 const dateObj = new Date(calYear, calMonth, day);
                 dateObj.setHours(0, 0, 0, 0);
                 const isPast = dateObj.getTime() < today.getTime();
-                const dateStr = dateObj.toISOString().split('T')[0];
+                const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const isSelected = selectedDate === dateStr;
                 return (
                   <View key={day} style={styles.calCell}>

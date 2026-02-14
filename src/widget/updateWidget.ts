@@ -2,7 +2,7 @@ import React from 'react';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import { TimerWidget } from './TimerWidget';
 import { DetailedWidget } from './DetailedWidget';
-import { getWidgetAlarms, getWidgetPresets, getDetailedAlarms, getDetailedPresets } from './widgetTaskHandler';
+import { getWidgetAlarms, getWidgetPresets, getDetailedAlarms, getDetailedPresets, getDetailedReminders } from './widgetTaskHandler';
 
 export async function refreshTimerWidget(): Promise<void> {
   try {
@@ -24,7 +24,8 @@ export async function refreshTimerWidget(): Promise<void> {
       renderWidget: async () => {
         const alarms = await getDetailedAlarms();
         const presets = await getDetailedPresets();
-        return React.createElement(DetailedWidget, { alarms, presets });
+        const reminders = await getDetailedReminders();
+        return React.createElement(DetailedWidget, { alarms, presets, reminders });
       },
     });
   } catch (error) {
