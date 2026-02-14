@@ -401,9 +401,9 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
       {sorted.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>{'\u{1F4DD}'}</Text>
-          <Text style={styles.emptyText}>No reminders yet</Text>
+          <Text style={styles.emptyText}>Nothing to remember</Text>
           <Text style={styles.emptySubtext}>
-            Tap + to add something to remember
+            Must be nice. Tap + to ruin that.
           </Text>
         </View>
       ) : (

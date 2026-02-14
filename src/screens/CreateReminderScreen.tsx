@@ -527,7 +527,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               styles.iconCell,
               selectedIcon === icon.emoji && styles.iconCellActive,
             ]}
-            onPress={() => setSelectedIcon(icon.emoji)}
+            onPress={() => setSelectedIcon(selectedIcon === icon.emoji ? '' : icon.emoji)}
             activeOpacity={0.7}
           >
             <Text style={styles.iconEmoji}>{icon.emoji}</Text>

@@ -561,7 +561,7 @@ export default function AlarmListScreen({ navigation }: Props) {
               <Text style={styles.emptyIcon}>{'\u23F0'}</Text>
               <Text style={styles.emptyText}>No alarms yet</Text>
               <Text style={styles.emptySubtext}>
-                Tap + to create your first alarm
+                Tap + to set one and immediately forget why.
               </Text>
               <Text style={styles.emptyQuote}>{appQuote}</Text>
             </View>
