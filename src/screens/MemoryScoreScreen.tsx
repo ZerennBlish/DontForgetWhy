@@ -13,6 +13,7 @@ import {
 } from '../services/memoryScore';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticHeavy } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 
@@ -151,6 +152,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
           text: 'Reset Everything',
           style: 'destructive',
           onPress: async () => {
+            hapticHeavy();
             await resetAllScores();
             await loadAllStats();
           },

@@ -23,6 +23,7 @@ import guessWhyIcons from '../data/guessWhyIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
+import { hapticLight, hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
 const DAY_LABELS: { key: AlarmDay; short: string }[] = [
@@ -445,6 +446,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   }), [colors, insets.bottom]);
 
   const handleIconPress = (emoji: string) => {
+    hapticLight();
     setSelectedIcon(selectedIcon === emoji ? null : emoji);
   };
 
@@ -504,6 +506,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   };
 
   const handleSave = async () => {
+    hapticMedium();
     try {
       if (!note.trim() && !selectedIcon) {
         Alert.alert('Hold Up', "Hold up \u2014 give this alarm at least a note or an icon so you'll know what it's for.");
@@ -803,7 +806,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           <Text style={styles.toggleLabel}>Private Alarm</Text>
           <Switch
             value={selectedPrivate}
-            onValueChange={setSelectedPrivate}
+            onValueChange={(v) => { hapticLight(); setSelectedPrivate(v); }}
             trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
           />

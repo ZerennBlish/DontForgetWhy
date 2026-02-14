@@ -37,3 +37,18 @@ export async function saveSettings(partial: Partial<AppSettings>): Promise<void>
   const updated = { ...current, ...partial };
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 }
+
+const ONBOARDING_KEY = 'onboardingComplete';
+
+export async function getOnboardingComplete(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(ONBOARDING_KEY);
+    return raw === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export async function setOnboardingComplete(): Promise<void> {
+  await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+}

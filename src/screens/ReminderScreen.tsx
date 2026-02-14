@@ -28,6 +28,7 @@ import { loadSettings } from '../services/settings';
 import { formatTime } from '../utils/time';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticMedium, hapticHeavy } from '../utils/haptics';
 
 interface ReminderScreenProps {
   onNavigateCreate: (reminderId?: string) => void;
@@ -79,6 +80,7 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
   );
 
   const handleToggleComplete = async (id: string) => {
+    hapticMedium();
     const updated = await toggleReminderComplete(id);
     if (!updated) return;
     if (updated.completed && updated.notificationId) {
@@ -103,6 +105,7 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          hapticHeavy();
           if (reminder?.notificationId) {
             await cancelReminderNotification(reminder.notificationId).catch(() => {});
           }

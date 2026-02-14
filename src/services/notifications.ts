@@ -11,7 +11,12 @@ import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import { loadSettings } from './settings';
 
-const ALARM_CHANNEL_ID = 'alarms';
+// Android notification channels are immutable after creation. Changing sound
+// on an existing channel has no effect. We use 'alarms_v2' with the system
+// alarm sound; the old 'alarms' channel is still created for backwards
+// compatibility but no new notifications are scheduled to it.
+const LEGACY_ALARM_CHANNEL_ID = 'alarms';
+const ALARM_CHANNEL_ID = 'alarms_v2';
 const TIMER_PROGRESS_CHANNEL_ID = 'timer-progress';
 const REMINDER_CHANNEL_ID = 'reminders';
 
@@ -78,11 +83,25 @@ export function setupNotificationChannel(): Promise<void> {
 async function _createChannels(): Promise<void> {
   if (Platform.OS !== 'android') return;
 
+  // Legacy channel — kept so existing notifications are still visible
+  await notifee.createChannel({
+    id: LEGACY_ALARM_CHANNEL_ID,
+    name: 'Alarms (Legacy)',
+    importance: AndroidImportance.HIGH,
+    sound: 'default',
+    vibration: true,
+    vibrationPattern: [1000, 500, 1000, 500],
+    lights: true,
+    lightColor: '#FF0000',
+    bypassDnd: true,
+  });
+
+  // New alarm channel with system alarm sound
   await notifee.createChannel({
     id: ALARM_CHANNEL_ID,
     name: 'Alarms',
     importance: AndroidImportance.HIGH,
-    sound: 'default',
+    sound: 'alarm',
     vibration: true,
     vibrationPattern: [1000, 500, 1000, 500],
     lights: true,

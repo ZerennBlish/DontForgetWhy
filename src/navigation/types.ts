@@ -1,6 +1,7 @@
 import { Alarm } from '../types/alarm';
 
 export type RootStackParamList = {
+  Onboarding: { startSlide?: number } | undefined;
   AlarmList: undefined;
   CreateAlarm: { alarm?: Alarm } | undefined;
   CreateReminder: { reminderId?: string } | undefined;
@@ -13,4 +14,5 @@ export type RootStackParamList = {
   Sudoku: undefined;
   DailyRiddle: undefined;
   ForgetLog: undefined;
+  About: undefined;
 };

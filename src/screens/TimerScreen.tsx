@@ -22,6 +22,7 @@ import { getPinnedPresets, togglePinPreset, isPinned } from '../services/widgetP
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticLight, hapticHeavy } from '../utils/haptics';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PRESET_CARD_WIDTH = (SCREEN_WIDTH - 32 - 16) / 3;
@@ -343,6 +344,7 @@ export default function TimerScreen({
   }, [presets, recentIds]);
 
   const handleStartTimer = async (preset: TimerPreset) => {
+    hapticLight();
     const duration = preset.customSeconds || preset.seconds;
     if (duration <= 0) {
       handleLongPress(preset);
@@ -532,7 +534,7 @@ export default function TimerScreen({
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
-                    onPress={() => onRemoveTimer(timer.id)}
+                    onPress={() => { hapticHeavy(); onRemoveTimer(timer.id); }}
                     style={styles.cancelBtn}
                     activeOpacity={0.7}
                   >

@@ -22,6 +22,7 @@ import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
 import { addForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GuessWhy'>;
@@ -303,6 +304,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
   const handleIconGuess = async (iconId: string, iconEmoji: string) => {
     if (result || resolvedRef.current) return;
+    hapticMedium();
 
     if (checkIconGuess(iconId, iconEmoji)) {
       resolvedRef.current = true;
@@ -326,6 +328,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     if (result || resolvedRef.current) return;
     const trimmed = typedGuess.trim();
     if (trimmed.length < 3) return;
+    hapticMedium();
 
     if (checkTypeGuess(trimmed)) {
       resolvedRef.current = true;

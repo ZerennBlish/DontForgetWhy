@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 
@@ -266,6 +267,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
     const card = cardsRef.current[index];
     if (!card || card.isFlipped || card.isMatched) return;
+    hapticMedium();
 
     // Start timer on first card flip
     if (!timerStartedRef.current) {

@@ -30,6 +30,7 @@ import AlarmCard from '../components/AlarmCard';
 import TimerScreen from './TimerScreen';
 import ReminderScreen from './ReminderScreen';
 import { useTheme } from '../theme/ThemeContext';
+import { hapticLight, hapticHeavy } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -339,6 +340,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          hapticHeavy();
           const alarm = alarms.find(a => a.id === id);
           if (alarm?.notificationIds?.length) {
             await cancelAlarmNotifications(alarm.notificationIds);
@@ -508,7 +510,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, tab === 'alarms' && styles.tabActive]}
-            onPress={() => setTab('alarms')}
+            onPress={() => { hapticLight(); setTab('alarms'); }}
             activeOpacity={0.7}
           >
             <Text style={[styles.tabText, tab === 'alarms' && styles.tabTextActive]}>
@@ -517,7 +519,7 @@ export default function AlarmListScreen({ navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, tab === 'timers' && styles.tabActive]}
-            onPress={() => setTab('timers')}
+            onPress={() => { hapticLight(); setTab('timers'); }}
             activeOpacity={0.7}
           >
             <Text style={[styles.tabText, tab === 'timers' && styles.tabTextActive]}>
@@ -526,7 +528,7 @@ export default function AlarmListScreen({ navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, tab === 'reminders' && styles.tabActive]}
-            onPress={() => setTab('reminders')}
+            onPress={() => { hapticLight(); setTab('reminders'); }}
             activeOpacity={0.7}
           >
             <Text style={[styles.tabText, tab === 'reminders' && styles.tabTextActive]}>

@@ -13,6 +13,7 @@ import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import { loadSettings, saveSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
+import { hapticLight } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import type { RootStackParamList } from '../navigation/types';
@@ -189,6 +190,32 @@ export default function SettingsScreen({ navigation }: Props) {
       fontWeight: '700',
       color: colors.textPrimary,
     },
+    setupGuideBtn: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    setupGuideText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    setupGuideDesc: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 12,
+      lineHeight: 20,
+    },
+    aboutRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    aboutChevron: {
+      fontSize: 18,
+      color: colors.textTertiary,
+    },
   }), [colors, insets.bottom]);
 
   useEffect(() => {
@@ -198,6 +225,7 @@ export default function SettingsScreen({ navigation }: Props) {
   }, []);
 
   const handleTimeFormatToggle = async (value: boolean) => {
+    hapticLight();
     const newFormat = value ? '24h' : '12h';
     setTimeFormat(newFormat);
     await saveSettings({ timeFormat: newFormat });
@@ -328,6 +356,34 @@ export default function SettingsScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <Text style={styles.sectionLabel}>Permissions</Text>
+        <TouchableOpacity
+          style={styles.setupGuideBtn}
+          onPress={() => navigation.navigate('Onboarding', { startSlide: 2 })}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.setupGuideText}>Setup Guide</Text>
+        </TouchableOpacity>
+        <Text style={styles.setupGuideDesc}>
+          Re-run the permission setup for notifications, alarms, battery optimization, and more.
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.card, { marginTop: 16 }]}
+        onPress={() => navigation.navigate('About')}
+        activeOpacity={0.7}
+      >
+        <View style={styles.aboutRow}>
+          <Text style={styles.label}>About</Text>
+          <Text style={styles.aboutChevron}>{'\u203A'}</Text>
+        </View>
+        <Text style={styles.description}>
+          Version info, credits, and a hidden surprise.
+        </Text>
+      </TouchableOpacity>
 
       {/* Color Picker Modal */}
       <Modal transparent visible={pickerVisible} animationType="fade">

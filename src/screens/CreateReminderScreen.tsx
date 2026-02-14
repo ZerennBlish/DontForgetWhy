@@ -29,6 +29,7 @@ import guessWhyIcons from '../data/guessWhyIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
+import { hapticLight, hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
 const MONTH_NAMES = [
@@ -442,6 +443,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   };
 
   const handleSave = async () => {
+    hapticMedium();
     if (!text.trim()) {
       Alert.alert('Hold Up', 'Give this reminder some text so you know what to remember.');
       return;
@@ -527,7 +529,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               styles.iconCell,
               selectedIcon === icon.emoji && styles.iconCellActive,
             ]}
-            onPress={() => setSelectedIcon(selectedIcon === icon.emoji ? '' : icon.emoji)}
+            onPress={() => { hapticLight(); setSelectedIcon(selectedIcon === icon.emoji ? '' : icon.emoji); }}
             activeOpacity={0.7}
           >
             <Text style={styles.iconEmoji}>{icon.emoji}</Text>
@@ -540,7 +542,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           <Text style={styles.toggleLabel}>Private</Text>
           <Switch
             value={selectedPrivate}
-            onValueChange={setSelectedPrivate}
+            onValueChange={(v) => { hapticLight(); setSelectedPrivate(v); }}
             trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
           />
@@ -555,7 +557,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           <Text style={styles.toggleLabel}>Due Time</Text>
           <Switch
             value={hasDueTime}
-            onValueChange={setHasDueTime}
+            onValueChange={(v) => { hapticLight(); setHasDueTime(v); }}
             trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor={hasDueTime ? colors.textPrimary : colors.textTertiary}
           />
@@ -615,6 +617,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           <Switch
             value={hasDueDate}
             onValueChange={(v) => {
+              hapticLight();
               setHasDueDate(v);
               if (!v) setSelectedDate(null);
             }}

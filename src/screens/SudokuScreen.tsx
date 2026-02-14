@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import {
@@ -268,6 +269,7 @@ export default function SudokuScreen({ navigation }: Props) {
     if (!selectedCell) return;
     const [row, col] = selectedCell;
     if (puzzleRef.current[row][col] !== 0) return;
+    hapticMedium();
 
     if (notesMode) {
       const updated = notesRef.current.map((r) => r.map((c) => [...c]));

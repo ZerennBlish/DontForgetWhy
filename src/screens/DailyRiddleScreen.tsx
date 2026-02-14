@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 import {
   RIDDLES,
@@ -172,6 +173,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
 
   const handleAnswer = useCallback(
     async (correct: boolean) => {
+      hapticMedium();
       setAnswered(true);
       setGotIt(correct);
 

@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import React, { useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -16,8 +16,10 @@ import GamesScreen from './src/screens/GamesScreen';
 import SudokuScreen from './src/screens/SudokuScreen';
 import DailyRiddleScreen from './src/screens/DailyRiddleScreen';
 import CreateReminderScreen from './src/screens/CreateReminderScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
+import AboutScreen from './src/screens/AboutScreen';
 import { loadAlarms, disableAlarm } from './src/services/storage';
-import { loadSettings } from './src/services/settings';
+import { loadSettings, getOnboardingComplete } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
@@ -30,6 +32,11 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppNavigator() {
   const { colors } = useTheme();
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    getOnboardingComplete().then(setOnboardingDone);
+  }, []);
 
   const navigationTheme = useMemo(
     () => ({
@@ -173,6 +180,11 @@ function AppNavigator() {
     }
   }, [navigateToAlarm]);
 
+  // Wait for onboarding check before rendering
+  if (onboardingDone === null) {
+    return null;
+  }
+
   return (
     <>
       <StatusBar style={colors.mode === 'dark' ? 'light' : 'dark'} />
@@ -182,12 +194,18 @@ function AppNavigator() {
         onReady={onNavigationReady}
       >
         <Stack.Navigator
+          initialRouteName={onboardingDone ? 'AlarmList' : 'Onboarding'}
           screenOptions={{
             headerShown: false,
             animation: 'slide_from_right',
             contentStyle: { backgroundColor: colors.background },
           }}
         >
+          <Stack.Screen
+            name="Onboarding"
+            component={OnboardingScreen}
+            options={{ animation: 'fade', gestureEnabled: false }}
+          />
           <Stack.Screen name="AlarmList" component={AlarmListScreen} />
           <Stack.Screen
             name="CreateAlarm"
@@ -242,6 +260,11 @@ function AppNavigator() {
           <Stack.Screen
             name="ForgetLog"
             component={ForgetLogScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="About"
+            component={AboutScreen}
             options={{ animation: 'slide_from_right' }}
           />
         </Stack.Navigator>

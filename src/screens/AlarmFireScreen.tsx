@@ -8,6 +8,7 @@ import { dismissAlarmNotification } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticHeavy } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmFire'>;
@@ -43,6 +44,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     if (fromNotification) {
+      hapticHeavy();
       Vibration.vibrate(VIBRATION_PATTERN, true);
       return () => {
         Vibration.cancel();
