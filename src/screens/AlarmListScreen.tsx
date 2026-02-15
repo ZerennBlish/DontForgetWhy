@@ -600,7 +600,7 @@ export default function AlarmListScreen({ navigation }: Props) {
             onPress={() => { hapticLight(); setTab('alarms'); }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.tabText, tab === 'alarms' && styles.tabTextActive]}>
+            <Text numberOfLines={1} style={[styles.tabText, tab === 'alarms' && styles.tabTextActive]}>
               Alarms
             </Text>
           </TouchableOpacity>
@@ -609,7 +609,7 @@ export default function AlarmListScreen({ navigation }: Props) {
             onPress={() => { hapticLight(); setTab('timers'); }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.tabText, tab === 'timers' && styles.tabTextActive]}>
+            <Text numberOfLines={1} style={[styles.tabText, tab === 'timers' && styles.tabTextActive]}>
               Timers
             </Text>
           </TouchableOpacity>
@@ -618,7 +618,7 @@ export default function AlarmListScreen({ navigation }: Props) {
             onPress={() => { hapticLight(); setTab('reminders'); }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.tabText, tab === 'reminders' && styles.tabTextActive]}>
+            <Text numberOfLines={1} style={[styles.tabText, tab === 'reminders' && styles.tabTextActive]}>
               Reminders
             </Text>
           </TouchableOpacity>

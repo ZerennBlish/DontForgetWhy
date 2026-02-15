@@ -15,8 +15,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticMedium, hapticLight } from '../utils/haptics';
-import { playCorrect, playWrong } from '../utils/gameSounds';
-import { loadSettings } from '../services/settings';
 import { checkConnectivity } from '../utils/connectivity';
 import type { RootStackParamList } from '../navigation/types';
 import {
@@ -148,8 +146,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   const [expandedOnlineId, setExpandedOnlineId] = useState<string | null>(null);
   const [isOnlineAvailable, setIsOnlineAvailable] = useState(true);
 
-  const gameSoundsRef = useRef(false);
-
   // Reveal animation
   const revealAnim = useRef(new Animated.Value(0)).current;
 
@@ -161,9 +157,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   // Check internet connectivity and load settings on mount
   useEffect(() => {
     checkConnectivity().then(setIsOnlineAvailable);
-    loadSettings().then((s) => {
-      gameSoundsRef.current = s.gameSoundsEnabled;
-    });
   }, []);
 
   // Load stats on focus
@@ -200,10 +193,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   const handleAnswer = useCallback(
     async (correct: boolean) => {
       hapticMedium();
-      if (gameSoundsRef.current) {
-        if (correct) playCorrect();
-        else playWrong();
-      }
       setAnswered(true);
       setGotIt(correct);
 

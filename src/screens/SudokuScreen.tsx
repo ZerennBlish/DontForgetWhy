@@ -14,8 +14,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticMedium } from '../utils/haptics';
-import { playGameComplete } from '../utils/gameSounds';
-import { loadSettings } from '../services/settings';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import {
@@ -123,7 +121,6 @@ export default function SudokuScreen({ navigation }: Props) {
   const [finalHints, setFinalHints] = useState(0);
 
   // Refs
-  const gameSoundsRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
   const mistakesRef = useRef(0);
@@ -144,9 +141,6 @@ export default function SudokuScreen({ navigation }: Props) {
       });
       AsyncStorage.getItem(GAME_KEY).then((data) => {
         setHasSavedGame(!!data);
-      });
-      loadSettings().then((s) => {
-        gameSoundsRef.current = s.gameSoundsEnabled;
       });
     }, []),
   );
@@ -329,7 +323,6 @@ export default function SudokuScreen({ navigation }: Props) {
     // Check win
     if (checkComplete(newGrid, solutionRef.current)) {
       stopTimer();
-      if (gameSoundsRef.current) playGameComplete();
       const time = elapsedRef.current;
       const mist = mistakesRef.current;
       const hints = hintsUsedRef.current;
@@ -417,7 +410,6 @@ export default function SudokuScreen({ navigation }: Props) {
     // Check win after hint
     if (checkComplete(newGrid, solutionRef.current)) {
       stopTimer();
-      if (gameSoundsRef.current) playGameComplete();
       const time = elapsedRef.current;
       const mist = mistakesRef.current;
       const hints = hintsUsedRef.current;

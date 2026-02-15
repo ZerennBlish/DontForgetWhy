@@ -11,8 +11,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
-import { playCorrect, playWrong, playGameComplete } from '../utils/gameSounds';
-import { loadSettings } from '../services/settings';
 import { TRIVIA_QUESTIONS, TRIVIA_CATEGORIES } from '../data/triviaQuestions';
 import { fetchOnlineQuestions, checkOnlineAvailable } from '../services/triviaAI';
 import {
@@ -122,22 +120,15 @@ export default function TriviaScreen({ navigation }: Props) {
   const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
   const [isOnlineRound, setIsOnlineRound] = useState(false);
 
-  const [gameSoundsEnabled, setGameSoundsEnabled] = useState(false);
-
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerWidth = useRef(new Animated.Value(1)).current;
   const answerLocked = useRef(false);
-  const gameSoundsRef = useRef(false);
 
   // Check online availability and load settings on mount
   useEffect(() => {
     checkOnlineAvailable().then((available) => {
       setIsOnline(available);
       setOnlineMode(available);
-    });
-    loadSettings().then((s) => {
-      setGameSoundsEnabled(s.gameSoundsEnabled);
-      gameSoundsRef.current = s.gameSoundsEnabled;
     });
   }, []);
 
@@ -206,7 +197,6 @@ export default function TriviaScreen({ navigation }: Props) {
     if (timerRef.current) clearInterval(timerRef.current);
     setPhase('results');
     hapticMedium();
-    if (gameSoundsRef.current) playGameComplete();
 
     // Record the round if using offline questions
     if (!isOnlineRound) {
@@ -292,7 +282,6 @@ export default function TriviaScreen({ navigation }: Props) {
 
     if (correct) {
       hapticMedium();
-      if (gameSoundsRef.current) playCorrect();
       setScore((prev) => prev + 1);
       setCurrentStreak((prev) => {
         const newStreak = prev + 1;
@@ -302,7 +291,6 @@ export default function TriviaScreen({ navigation }: Props) {
       setTimeout(() => advanceQuestion(), 800);
     } else {
       hapticHeavy();
-      if (gameSoundsRef.current) playWrong();
       setCurrentStreak(0);
       setTimeout(() => advanceQuestion(), 1200);
     }

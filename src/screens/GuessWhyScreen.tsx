@@ -23,7 +23,6 @@ import { addForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticMedium } from '../utils/haptics';
-import { playCorrect, playWrong } from '../utils/gameSounds';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GuessWhy'>;
@@ -54,14 +53,12 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const resolvedRef = useRef(false);
-  const gameSoundsRef = useRef(false);
 
   const canPlay = hasIcon || alarm.note.length >= 3;
 
   useEffect(() => {
     loadSettings().then((s) => {
       setTimeFormat(s.timeFormat);
-      gameSoundsRef.current = s.gameSoundsEnabled;
     });
   }, []);
 
@@ -313,7 +310,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
     if (checkIconGuess(iconId, iconEmoji)) {
       resolvedRef.current = true;
-      if (gameSoundsRef.current) playCorrect();
       setResult({ type: 'win', message: getRandomWinMessage() });
       try { await recordWin(); } catch {}
     } else {
@@ -325,7 +321,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
         try { await recordLoss(); } catch {}
         logForget('loss');
       } else {
-        if (gameSoundsRef.current) playWrong();
         triggerShake();
       }
     }
@@ -339,7 +334,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
     if (checkTypeGuess(trimmed)) {
       resolvedRef.current = true;
-      if (gameSoundsRef.current) playCorrect();
       setResult({ type: 'win', message: getRandomWinMessage() });
       try { await recordWin(); } catch {}
     } else {
@@ -352,7 +346,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
         try { await recordLoss(); } catch {}
         logForget('loss');
       } else {
-        if (gameSoundsRef.current) playWrong();
         triggerShake();
       }
     }
