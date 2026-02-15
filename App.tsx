@@ -22,6 +22,7 @@ import TriviaScreen from './src/screens/TriviaScreen';
 import { loadAlarms, disableAlarm } from './src/services/storage';
 import { loadSettings, getOnboardingComplete } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
+import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -96,8 +97,10 @@ function AppNavigator() {
   }, []);
 
   // Create notification channel on startup (DND bypass + alarm settings)
+  // Also load haptics setting before first interaction
   useEffect(() => {
     setupNotificationChannel();
+    refreshHapticsSetting();
   }, []);
 
   // Clean up orphaned timer countdown notifications on launch

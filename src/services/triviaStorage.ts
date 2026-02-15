@@ -125,24 +125,47 @@ export async function recordTriviaRound(result: TriviaRoundResult): Promise<Triv
   return stats;
 }
 
-export async function getSeenQuestionIds(): Promise<string[]> {
+type SeenData = Record<string, string[]>;
+
+async function loadSeenData(): Promise<SeenData> {
   try {
     const raw = await AsyncStorage.getItem(SEEN_KEY);
-    if (!raw) return [];
+    if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed.filter((id) => typeof id === 'string');
-    return [];
+    // Migration: old format was a flat string array — treat as 'general'
+    if (Array.isArray(parsed)) {
+      const migrated: SeenData = { general: parsed.filter((id) => typeof id === 'string') };
+      await AsyncStorage.setItem(SEEN_KEY, JSON.stringify(migrated));
+      return migrated;
+    }
+    if (parsed && typeof parsed === 'object') return parsed as SeenData;
+    return {};
   } catch {
-    return [];
+    return {};
   }
 }
 
-export async function addSeenQuestionIds(ids: string[]): Promise<void> {
+async function saveSeenData(data: SeenData): Promise<void> {
   try {
-    const current = await getSeenQuestionIds();
+    await AsyncStorage.setItem(SEEN_KEY, JSON.stringify(data));
+  } catch {}
+}
+
+export async function getSeenQuestionIds(category: string): Promise<string[]> {
+  const data = await loadSeenData();
+  const ids = data[category];
+  if (!Array.isArray(ids)) return [];
+  return ids.filter((id) => typeof id === 'string');
+}
+
+export async function addSeenQuestionIds(category: string, ids: string[]): Promise<void> {
+  try {
+    const data = await loadSeenData();
+    const current = Array.isArray(data[category]) ? data[category] : [];
     const set = new Set(current);
     for (const id of ids) set.add(id);
-    await AsyncStorage.setItem(SEEN_KEY, JSON.stringify([...set]));
+    data[category] = [...set];
+    await saveSeenData(data);
   } catch {}
 }
 
@@ -154,15 +177,12 @@ export async function resetSeenQuestions(): Promise<void> {
 
 export async function resetSeenQuestionsForCategory(category: string): Promise<void> {
   try {
-    const current = await getSeenQuestionIds();
-    const prefix = category === 'general' ? '' : `${category}_`;
-    const filtered = prefix
-      ? current.filter((id) => !id.startsWith(prefix))
-      : [];
-    if (filtered.length === 0) {
+    const data = await loadSeenData();
+    delete data[category];
+    if (Object.keys(data).length === 0) {
       await AsyncStorage.removeItem(SEEN_KEY);
     } else {
-      await AsyncStorage.setItem(SEEN_KEY, JSON.stringify(filtered));
+      await saveSeenData(data);
     }
   } catch {}
 }

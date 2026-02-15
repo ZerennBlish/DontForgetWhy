@@ -9,17 +9,20 @@ import {
   Alert,
   Platform,
   Switch,
+  Modal,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 import type { AlarmCategory, AlarmDay } from '../types/alarm';
 import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
 import { addAlarm, updateAlarm } from '../services/storage';
-import { scheduleAlarm, requestPermissions } from '../services/notifications';
+import { scheduleAlarm, requestPermissions, previewAlarmSound } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { getRandomQuote } from '../services/quotes';
 import { getRandomPlaceholder } from '../data/placeholders';
 import guessWhyIcons from '../data/guessWhyIcons';
+import { ALARM_SOUNDS, getAlarmSoundById } from '../data/alarmSounds';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
@@ -76,6 +79,8 @@ function categoryFromIcon(emoji: string | null): AlarmCategory {
   return iconCategoryMap[emoji] || 'general';
 }
 
+const DEFAULT_SOUND_KEY = 'defaultAlarmSound';
+
 export default function CreateAlarmScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -96,6 +101,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   });
   const [nickname, setNickname] = useState(existingAlarm?.nickname || '');
 
+  const [selectedSoundId, setSelectedSoundId] = useState(
+    existingAlarm?.soundId || 'default'
+  );
+  const [soundPickerVisible, setSoundPickerVisible] = useState(false);
+
   useEffect(() => {
     loadSettings().then((s) => {
       setTimeFormat(s.timeFormat);
@@ -107,7 +117,16 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         });
       }
     });
-  }, []);
+    // Load default alarm sound for new alarms
+    if (!isEditing) {
+      (async () => {
+        try {
+          const raw = await AsyncStorage.getItem(DEFAULT_SOUND_KEY);
+          if (raw) setSelectedSoundId(raw);
+        } catch {}
+      })();
+    }
+  }, [isEditing]);
   const [note, setNote] = useState(existingAlarm?.note || '');
   const [placeholder] = useState(getRandomPlaceholder);
   const [selectedIcon, setSelectedIcon] = useState<string | null>(
@@ -139,6 +158,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     }
     return new Date().getFullYear();
   });
+
+  const currentSound = getAlarmSoundById(selectedSoundId);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -443,6 +464,123 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontWeight: '700',
       color: colors.textPrimary,
     },
+    soundRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 24,
+    },
+    soundLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    soundPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: 10,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 6,
+    },
+    soundPillText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.modalOverlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    modalCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 24,
+      width: '100%',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 20,
+    },
+    soundOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    soundOptionLast: {
+      borderBottomWidth: 0,
+    },
+    soundOptionIcon: {
+      fontSize: 24,
+      marginRight: 14,
+    },
+    soundOptionInfo: {
+      flex: 1,
+    },
+    soundOptionLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    soundOptionDesc: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    soundOptionCheck: {
+      fontSize: 18,
+      color: colors.accent,
+      fontWeight: '700',
+    },
+    soundPreviewBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    soundPreviewIcon: {
+      fontSize: 16,
+    },
+    modalCloseBtn: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      alignItems: 'center',
+      alignSelf: 'center',
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalCloseText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
   }), [colors, insets.bottom]);
 
   const handleIconPress = (emoji: string) => {
@@ -467,6 +605,17 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       if (same) return [...ALL_DAYS];
       return [...preset];
     });
+  };
+
+  const handleSelectSound = (soundId: string) => {
+    hapticLight();
+    setSelectedSoundId(soundId);
+    setSoundPickerVisible(false);
+  };
+
+  const handlePreviewSound = (channelId: string, label: string) => {
+    hapticLight();
+    previewAlarmSound(channelId, label);
   };
 
   const isWeekdaysSelected = selectedDays.length === 5 && WEEKDAYS.every((d) => selectedDays.includes(d));
@@ -562,6 +711,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           mode,
           days: mode === 'recurring' ? selectedDays : [...ALL_DAYS],
           date: mode === 'one-time' ? selectedDate : null,
+          soundId: selectedSoundId,
         };
         await updateAlarm(updated);
       } else {
@@ -580,6 +730,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           private: selectedPrivate,
           createdAt: new Date().toISOString(),
           notificationIds: [],
+          soundId: selectedSoundId,
         };
 
         let notificationIds: string[] = [];
@@ -805,6 +956,16 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         ))}
       </View>
 
+      <Text style={styles.label}>Sound</Text>
+      <TouchableOpacity
+        style={styles.soundRow}
+        onPress={() => setSoundPickerVisible(true)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.soundLabel}>{currentSound.icon} {currentSound.label}</Text>
+        <Text style={{ fontSize: 14, color: colors.textTertiary }}>{currentSound.description}</Text>
+      </TouchableOpacity>
+
       <View style={styles.toggleCard}>
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Private Alarm</Text>
@@ -825,6 +986,49 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           {isEditing ? 'Update Alarm' : 'Save Alarm'}
         </Text>
       </TouchableOpacity>
+
+      {/* Sound Picker Modal */}
+      <Modal transparent visible={soundPickerVisible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Alarm Sound</Text>
+            {ALARM_SOUNDS.map((sound, index) => (
+              <TouchableOpacity
+                key={sound.id}
+                style={[
+                  styles.soundOption,
+                  index === ALARM_SOUNDS.length - 1 && styles.soundOptionLast,
+                ]}
+                onPress={() => handleSelectSound(sound.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.soundOptionIcon}>{sound.icon}</Text>
+                <View style={styles.soundOptionInfo}>
+                  <Text style={styles.soundOptionLabel}>{sound.label}</Text>
+                  <Text style={styles.soundOptionDesc}>{sound.description}</Text>
+                </View>
+                {selectedSoundId === sound.id && (
+                  <Text style={styles.soundOptionCheck}>{'\u2713'}</Text>
+                )}
+                <TouchableOpacity
+                  style={styles.soundPreviewBtn}
+                  onPress={() => handlePreviewSound(sound.channelId, sound.label)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.soundPreviewIcon}>{'\u25B6'}</Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              onPress={() => setSoundPickerVisible(false)}
+              style={styles.modalCloseBtn}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

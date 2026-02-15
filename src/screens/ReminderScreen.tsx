@@ -68,6 +68,7 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
   const [deletedReminder, setDeletedReminder] = useState<Reminder | null>(null);
   const [deletedReminderPinned, setDeletedReminderPinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
+  const [undoKey, setUndoKey] = useState(0);
 
   const loadData = useCallback(async () => {
     const [loaded, settings] = await Promise.all([
@@ -108,8 +109,14 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
     try {
       const updated = await toggleReminderComplete(id);
       if (!updated) return;
-      if (updated.notificationId) {
+      if (updated.completed && updated.notificationId) {
         await cancelReminderNotification(updated.notificationId).catch(() => {});
+      } else if (!updated.completed && updated.dueTime) {
+        const notifId = await scheduleReminderNotification(updated).catch(() => null);
+        if (notifId) {
+          const { updateReminder } = await import('../services/reminderStorage');
+          await updateReminder({ ...updated, notificationId: notifId });
+        }
       }
       refreshTimerWidget();
       await loadData();
@@ -132,6 +139,7 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
     await deleteReminder(id);
     await loadData();
     refreshTimerWidget();
+    setUndoKey((k) => k + 1);
     setShowUndo(true);
   };
 
@@ -592,6 +600,7 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
       </TouchableOpacity>
 
       <UndoToast
+        key={undoKey}
         visible={showUndo}
         message="Reminder deleted"
         onUndo={handleUndoDelete}

@@ -10,6 +10,7 @@ import { Platform } from 'react-native';
 import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import { loadSettings } from './settings';
+import { getAlarmSoundById } from '../data/alarmSounds';
 
 // Android notification channels are immutable after creation. Changing sound
 // on an existing channel has no effect. We use 'alarms_v2' with the system
@@ -90,22 +91,86 @@ async function _createChannels(): Promise<void> {
     importance: AndroidImportance.HIGH,
     sound: 'default',
     vibration: true,
-    vibrationPattern: [1000, 500, 1000, 500],
+    vibrationPattern: [300, 300, 300, 300],
     lights: true,
     lightColor: '#FF0000',
     bypassDnd: true,
   });
 
-  // New alarm channel with system alarm sound
+  // Default alarm channel with system alarm sound
   await notifee.createChannel({
     id: ALARM_CHANNEL_ID,
     name: 'Alarms',
     importance: AndroidImportance.HIGH,
     sound: 'alarm',
     vibration: true,
-    vibrationPattern: [1000, 500, 1000, 500],
+    vibrationPattern: [300, 300],
     lights: true,
     lightColor: '#FF0000',
+    bypassDnd: true,
+  });
+
+  // Gentle — lower importance for softer delivery
+  await notifee.createChannel({
+    id: 'alarms_gentle',
+    name: 'Alarms (Gentle)',
+    importance: AndroidImportance.DEFAULT,
+    sound: 'default',
+    vibration: true,
+    vibrationPattern: [100, 200],
+    lights: true,
+    lightColor: '#FFD700',
+    bypassDnd: true,
+  });
+
+  // Urgent — aggressive vibration pattern
+  await notifee.createChannel({
+    id: 'alarms_urgent',
+    name: 'Alarms (Urgent)',
+    importance: AndroidImportance.HIGH,
+    sound: 'default',
+    vibration: true,
+    vibrationPattern: [250, 250, 250, 250, 250, 250],
+    lights: true,
+    lightColor: '#FF0000',
+    bypassDnd: true,
+  });
+
+  // Classic — standard vibration, high importance
+  await notifee.createChannel({
+    id: 'alarms_classic',
+    name: 'Alarms (Classic)',
+    importance: AndroidImportance.HIGH,
+    sound: 'default',
+    vibration: true,
+    vibrationPattern: [300, 300, 300, 300],
+    lights: true,
+    lightColor: '#FF6600',
+    bypassDnd: true,
+  });
+
+  // Digital — short staccato vibration
+  await notifee.createChannel({
+    id: 'alarms_digital',
+    name: 'Alarms (Digital)',
+    importance: AndroidImportance.HIGH,
+    sound: 'default',
+    vibration: true,
+    vibrationPattern: [100, 100, 100, 100],
+    lights: true,
+    lightColor: '#00FF00',
+    bypassDnd: true,
+  });
+
+  // Silent — vibration only, no sound
+  await notifee.createChannel({
+    id: 'alarms_silent',
+    name: 'Alarms (Silent)',
+    importance: AndroidImportance.LOW,
+    vibration: true,
+    vibrationPattern: [500, 500],
+    lights: true,
+    lightColor: '#808080',
     bypassDnd: true,
   });
 
@@ -152,20 +217,25 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
     }
   }
 
+  // Resolve which channel to use based on alarm's soundId
+  const alarmSound = getAlarmSoundById(alarm.soundId || 'default');
+  const channelId = alarmSound.channelId;
+  const isSilent = alarmSound.id === 'silent';
+
   const notificationPayload = {
     title,
     body,
     data: { alarmId: alarm.id },
     android: {
-      channelId: ALARM_CHANNEL_ID,
+      channelId,
       fullScreenAction: {
         id: 'default',
         launchActivity: 'default',
       },
       importance: AndroidImportance.HIGH,
-      sound: 'default',
-      loopSound: true,
-      vibrationPattern: [1000, 500, 1000, 500],
+      sound: isSilent ? undefined : 'default',
+      loopSound: !isSilent,
+      vibrationPattern: [300, 300, 300, 300],
       lights: ['#FF0000', 300, 600] as [string, number, number],
       ongoing: true,
       autoCancel: false,
@@ -269,7 +339,7 @@ export async function scheduleTimerNotification(
         loopSound: true,
         ongoing: true,
         autoCancel: false,
-        vibrationPattern: [1000, 500, 1000, 500],
+        vibrationPattern: [300, 300, 300, 300],
         pressAction: {
           id: 'default',
         },
@@ -376,4 +446,41 @@ export async function scheduleReminderNotification(reminder: Reminder): Promise<
 export async function cancelReminderNotification(notificationId: string): Promise<void> {
   await notifee.cancelTriggerNotification(notificationId);
   await notifee.cancelNotification(notificationId);
+}
+
+// --- Sound preview ---
+
+let _previewTimer: ReturnType<typeof setTimeout> | null = null;
+
+export async function previewAlarmSound(channelId: string, label: string): Promise<void> {
+  await setupNotificationChannel();
+
+  // Cancel any existing preview first
+  if (_previewTimer) {
+    clearTimeout(_previewTimer);
+    _previewTimer = null;
+  }
+  await notifee.cancelNotification('sound_preview');
+
+  const isSilent = channelId === 'alarms_silent';
+
+  await notifee.displayNotification({
+    id: 'sound_preview',
+    title: `${label} Preview`,
+    body: 'This is what your alarm will sound like.',
+    android: {
+      channelId,
+      importance: AndroidImportance.HIGH,
+      sound: isSilent ? undefined : 'default',
+      pressAction: { id: 'default' },
+    },
+  });
+
+  // Auto-cancel after 3 seconds
+  _previewTimer = setTimeout(async () => {
+    try {
+      await notifee.cancelNotification('sound_preview');
+    } catch {}
+    _previewTimer = null;
+  }, 3000);
 }

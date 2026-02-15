@@ -39,7 +39,10 @@ function migrateAlarm(item: Record<string, unknown>): Alarm {
 
   const date = raw.date ?? null;
 
-  return { ...raw, mode, days, date, notificationIds } as Alarm;
+  // Default soundId for alarms without one
+  const soundId = typeof raw.soundId === 'string' ? raw.soundId : 'default';
+
+  return { ...raw, mode, days, date, notificationIds, soundId } as Alarm;
 }
 
 export async function loadAlarms(): Promise<Alarm[]> {
@@ -70,7 +73,8 @@ export async function loadAlarms(): Promise<Alarm[]> {
         item.recurring !== undefined ||
         item.notificationId !== undefined ||
         (Array.isArray(item.days) && item.days.length > 0 && typeof item.days[0] === 'number') ||
-        item.mode === undefined,
+        item.mode === undefined ||
+        item.soundId === undefined,
     );
     if (needsMigration) {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));

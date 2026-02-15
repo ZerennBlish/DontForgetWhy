@@ -66,6 +66,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [deletedAlarm, setDeletedAlarm] = useState<Alarm | null>(null);
   const [deletedAlarmPinned, setDeletedAlarmPinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
+  const [undoKey, setUndoKey] = useState(0);
   const alertedRef = useRef<Set<string>>(new Set());
 
   const styles = useMemo(() => StyleSheet.create({
@@ -390,6 +391,7 @@ export default function AlarmListScreen({ navigation }: Props) {
     setAlarms(updated);
     setPinnedAlarmIds((prev) => prev.filter((pid) => pid !== id));
     refreshTimerWidget();
+    setUndoKey((k) => k + 1);
     setShowUndo(true);
   };
 
@@ -732,6 +734,7 @@ export default function AlarmListScreen({ navigation }: Props) {
           </TouchableOpacity>
 
           <UndoToast
+            key={undoKey}
             visible={showUndo}
             message="Alarm deleted"
             onUndo={handleUndoDelete}

@@ -10,6 +10,7 @@ import {
   Linking,
   NativeModules,
   Platform,
+  Alert,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import notifee from '@notifee/react-native';
@@ -69,8 +70,8 @@ function useSlides(startSlide: number) {
       }
 
       try {
-        const batteryStatus = await notifee.getPowerManagerInfo();
-        setBatteryOptDisabled(batteryStatus?.activity != null ? false : true);
+        const isOptimized = await notifee.isBatteryOptimizationEnabled();
+        setBatteryOptDisabled(!isOptimized);
       } catch {
         setBatteryOptDisabled(false);
       }
@@ -110,8 +111,8 @@ function useSlides(startSlide: number) {
     } catch {}
 
     try {
-      const batteryStatus = await notifee.getPowerManagerInfo();
-      setBatteryOptDisabled(batteryStatus?.activity != null ? false : true);
+      const isOptimized = await notifee.isBatteryOptimizationEnabled();
+      setBatteryOptDisabled(!isOptimized);
     } catch {}
 
     try {
@@ -198,7 +199,7 @@ function useSlides(startSlide: number) {
       id: 'battery',
       emoji: '\u{1F50B}',
       title: 'Don\'t Let Android Kill Us',
-      body: 'Android sometimes puts apps to sleep to save battery. If that happens, your alarms won\'t fire when the app is closed. Let\'s prevent that.',
+      body: 'This is the most important step. Android puts apps to sleep to save battery. If this app gets put to sleep, your alarms WILL NOT fire when the app is closed. This isn\'t optional if you want reliable alarms.',
       buttonLabel: batteryOptDisabled ? '\u2705 Battery optimization disabled' : 'Disable Battery Optimization',
       isPermission: true,
       note: 'Find Don\'t Forget Why and select \'Don\'t optimize\' or \'Unrestricted\'.',
@@ -211,8 +212,8 @@ function useSlides(startSlide: number) {
       },
       afterReturnCheck: async () => {
         try {
-          const info = await notifee.getPowerManagerInfo();
-          return info?.activity != null ? false : true;
+          const isOptimized = await notifee.isBatteryOptimizationEnabled();
+          return !isOptimized;
         } catch { return false; }
       },
     },
@@ -404,11 +405,37 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     goToNext();
   }, [goToNext, handlePermissionButton, navigation, startSlide]);
 
-  const handleSkip = useCallback(() => {
-    const slide = slides[currentIndex];
-    if (slide?.isPermission) {
-      setSkippedPermissions((prev) => [...prev, slide.id]);
+  const handleSkip = useCallback((slide?: SlideData) => {
+    const currentSlide = slide || slides[currentIndex];
+    if (!currentSlide?.isPermission) {
+      goToNext();
+      return;
     }
+
+    // Battery optimization skip gets a confirmation alert
+    if (currentSlide.id === 'battery') {
+      Alert.alert(
+        '\u26A0\uFE0F Are You Sure?',
+        'Without this, your alarms may not go off when the app is closed or your phone is idle. This is the #1 reason alarms fail on Android.',
+        [
+          {
+            text: 'Set It Up',
+            style: 'cancel',
+          },
+          {
+            text: 'Skip Anyway',
+            style: 'destructive',
+            onPress: () => {
+              setSkippedPermissions((prev) => [...prev, currentSlide.id]);
+              goToNext();
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    setSkippedPermissions((prev) => [...prev, currentSlide.id]);
     goToNext();
   }, [currentIndex, goToNext, slides]);
 
@@ -428,6 +455,9 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     if (slide.id === 'overlay') return overlayGranted;
     return false;
   }, [notifGranted, exactAlarmGranted, batteryOptDisabled, overlayGranted]);
+
+  const batteryNotDone = !batteryOptDisabled;
+  const otherSkippedCount = skippedPermissions.filter((p) => p !== 'battery').length;
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -545,6 +575,15 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       marginBottom: 16,
       lineHeight: 18,
     },
+    batteryWarning: {
+      fontSize: 14,
+      color: colors.red,
+      textAlign: 'center',
+      maxWidth: 300,
+      marginBottom: 16,
+      lineHeight: 20,
+      fontWeight: '600',
+    },
   }), [colors, insets.bottom]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: any[] }) => {
@@ -579,9 +618,15 @@ export default function OnboardingScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {slide.isFinal && skippedPermissions.length > 0 && (
+        {slide.isFinal && batteryNotDone && (
+          <Text style={styles.batteryWarning}>
+            {'\u26A0\uFE0F'} Battery optimization was not disabled. Your alarms may not fire reliably. You can fix this anytime in Settings {'>'} Setup Guide.
+          </Text>
+        )}
+
+        {slide.isFinal && otherSkippedCount > 0 && (
           <Text style={styles.skippedNote}>
-            Some permissions were skipped. You can set them up later in your phone's Settings.
+            {batteryNotDone ? 'Other permissions were also skipped.' : 'Some permissions were skipped.'} You can set them up later in Settings.
           </Text>
         )}
 
@@ -602,13 +647,13 @@ export default function OnboardingScreen({ navigation, route }: Props) {
         )}
 
         {slide.isPermission && !slide.isFinal && (
-          <TouchableOpacity onPress={handleSkip} style={styles.skipButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => handleSkip(slide)} style={styles.skipButton} activeOpacity={0.7}>
             <Text style={styles.skipText}>Skip for now</Text>
           </TouchableOpacity>
         )}
       </View>
     );
-  }, [styles, handleButtonPress, handleSkip, getButtonLabel, isGranted, skippedPermissions.length]);
+  }, [styles, handleButtonPress, handleSkip, getButtonLabel, isGranted, batteryNotDone, otherSkippedCount]);
 
   if (!permissionsChecked) {
     return <View style={styles.container} />;

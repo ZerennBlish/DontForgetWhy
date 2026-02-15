@@ -18,6 +18,7 @@ export interface Alarm {
   private: boolean;
   createdAt: string;
   notificationIds: string[];
+  soundId?: string;
   /** @deprecated kept for backward compatibility with old alarms */
   notificationId?: string;
   /** @deprecated kept for backward compatibility */

@@ -211,7 +211,7 @@ export default function TriviaScreen({ navigation }: Props) {
     // Record the round if using offline questions
     if (!isOnlineRound) {
       const ids = questions.map((q) => q.id);
-      await addSeenQuestionIds(ids);
+      await addSeenQuestionIds(selectedCategory, ids);
     }
 
     const avgTime = questionTimes.length > 0
@@ -247,7 +247,7 @@ export default function TriviaScreen({ navigation }: Props) {
 
     // Fall back to offline bank
     if (!roundQuestions) {
-      const seenIds = await getSeenQuestionIds();
+      const seenIds = await getSeenQuestionIds(category);
       const { questions: offlineQs, allSeen } = selectQuestions(category, seenIds);
       roundQuestions = offlineQs;
       if (allSeen) {

@@ -8,25 +8,34 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import { loadSettings, saveSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
-import { hapticLight } from '../utils/haptics';
+import { hapticLight, refreshHapticsSetting } from '../utils/haptics';
+import { previewAlarmSound } from '../services/notifications';
+import { refreshGameSoundsSetting } from '../utils/gameSounds';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
+import { ALARM_SOUNDS, getAlarmSoundById } from '../data/alarmSounds';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 const presetNames = Object.keys(themes) as (ThemeName & keyof typeof themes)[];
 
+const DEFAULT_SOUND_KEY = 'defaultAlarmSound';
+
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, themeName, customAccent, setTheme, setCustomTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [gameSoundsEnabled, setGameSoundsEnabled] = useState(true);
+  const [hapticsEnabled, setHapticsEnabled] = useState(true);
+  const [defaultSoundId, setDefaultSoundId] = useState('default');
+  const [soundPickerVisible, setSoundPickerVisible] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedColorRef = useRef(customAccent || colors.accent);
 
@@ -217,6 +226,74 @@ export default function SettingsScreen({ navigation }: Props) {
       fontSize: 18,
       color: colors.textTertiary,
     },
+    soundRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    soundPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: 10,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 6,
+    },
+    soundPillText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    soundOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    soundOptionLast: {
+      borderBottomWidth: 0,
+    },
+    soundOptionIcon: {
+      fontSize: 24,
+      marginRight: 14,
+    },
+    soundOptionInfo: {
+      flex: 1,
+    },
+    soundOptionLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    soundOptionDesc: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    soundOptionCheck: {
+      fontSize: 18,
+      color: colors.accent,
+      fontWeight: '700',
+    },
+    soundPreviewBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    soundPreviewIcon: {
+      fontSize: 16,
+    },
   }), [colors, insets.bottom]);
 
   useEffect(() => {
@@ -224,6 +301,22 @@ export default function SettingsScreen({ navigation }: Props) {
       setTimeFormat(s.timeFormat);
       setGameSoundsEnabled(s.gameSoundsEnabled);
     });
+    // Load haptics setting
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem('hapticsEnabled');
+        if (raw !== null) {
+          setHapticsEnabled(raw !== 'false');
+        }
+      } catch {}
+    })();
+    // Load default alarm sound
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(DEFAULT_SOUND_KEY);
+        if (raw) setDefaultSoundId(raw);
+      } catch {}
+    })();
   }, []);
 
   const handleTimeFormatToggle = async (value: boolean) => {
@@ -237,6 +330,30 @@ export default function SettingsScreen({ navigation }: Props) {
     hapticLight();
     setGameSoundsEnabled(value);
     await saveSettings({ gameSoundsEnabled: value });
+    refreshGameSoundsSetting(value);
+  };
+
+  const handleHapticsToggle = async (value: boolean) => {
+    setHapticsEnabled(value);
+    try {
+      await AsyncStorage.setItem('hapticsEnabled', value ? 'true' : 'false');
+    } catch {}
+    await refreshHapticsSetting();
+    if (value) hapticLight();
+  };
+
+  const handlePreviewSound = (channelId: string, label: string) => {
+    hapticLight();
+    previewAlarmSound(channelId, label);
+  };
+
+  const handleSelectDefaultSound = async (soundId: string) => {
+    hapticLight();
+    setDefaultSoundId(soundId);
+    setSoundPickerVisible(false);
+    try {
+      await AsyncStorage.setItem(DEFAULT_SOUND_KEY, soundId);
+    } catch {}
   };
 
   const handleColorChange = (result: ColorFormatsObject) => {
@@ -249,6 +366,7 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   const isCustomActive = themeName === 'custom';
+  const currentSound = getAlarmSoundById(defaultSoundId);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -286,6 +404,38 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
         <Text style={styles.description}>
           Enhanced haptic patterns during games.
+        </Text>
+      </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={styles.row}>
+          <Text style={styles.label}>Vibration</Text>
+          <Switch
+            value={hapticsEnabled}
+            onValueChange={handleHapticsToggle}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={hapticsEnabled ? colors.textPrimary : colors.textTertiary}
+          />
+        </View>
+        <Text style={styles.description}>
+          Haptic feedback for buttons, toggles, and interactions throughout the app.
+        </Text>
+      </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={styles.soundRow}>
+          <Text style={styles.label}>Default Alarm Sound</Text>
+          <TouchableOpacity
+            style={styles.soundPill}
+            onPress={() => setSoundPickerVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text>{currentSound.icon}</Text>
+            <Text style={styles.soundPillText}>{currentSound.label}</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.description}>
+          Sound used for new alarms. Each alarm can override this.
         </Text>
       </View>
 
@@ -437,6 +587,51 @@ export default function SettingsScreen({ navigation }: Props) {
                 activeOpacity={0.7}
               >
                 <Text style={styles.modalSaveText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Alarm Sound Picker Modal */}
+      <Modal transparent visible={soundPickerVisible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Default Alarm Sound</Text>
+            {ALARM_SOUNDS.map((sound, index) => (
+              <TouchableOpacity
+                key={sound.id}
+                style={[
+                  styles.soundOption,
+                  index === ALARM_SOUNDS.length - 1 && styles.soundOptionLast,
+                ]}
+                onPress={() => handleSelectDefaultSound(sound.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.soundOptionIcon}>{sound.icon}</Text>
+                <View style={styles.soundOptionInfo}>
+                  <Text style={styles.soundOptionLabel}>{sound.label}</Text>
+                  <Text style={styles.soundOptionDesc}>{sound.description}</Text>
+                </View>
+                {defaultSoundId === sound.id && (
+                  <Text style={styles.soundOptionCheck}>{'\u2713'}</Text>
+                )}
+                <TouchableOpacity
+                  style={styles.soundPreviewBtn}
+                  onPress={() => handlePreviewSound(sound.channelId, sound.label)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.soundPreviewIcon}>{'\u25B6'}</Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+            <View style={[styles.modalBtns, { marginTop: 16 }]}>
+              <TouchableOpacity
+                onPress={() => setSoundPickerVisible(false)}
+                style={[styles.modalCancelBtn, { flex: 0, paddingHorizontal: 32 }]}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalCancelText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
