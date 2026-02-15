@@ -10,7 +10,6 @@ import { Platform } from 'react-native';
 import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import { loadSettings } from './settings';
-import { getAlarmSoundById } from '../data/alarmSounds';
 
 // Android notification channels are immutable after creation. Changing sound
 // on an existing channel has no effect. We use 'alarms_v2' with the system
@@ -251,10 +250,9 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
   }
 
   // Resolve which channel to use:
-  // 1. Custom system sound (soundUri) → dynamic channel
-  // 2. Preset sound (soundId) → static channel
+  // Custom system sound (soundUri) → dynamic channel, otherwise default alarms_v2
   let channelId: string;
-  let isSilent = false;
+  let customChannel = false;
 
   if (alarm.soundUri) {
     try {
@@ -262,16 +260,18 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
         alarm.soundUri,
         alarm.soundName || 'Custom',
       );
+      customChannel = true;
     } catch {
       // Fallback to default if channel creation fails
       channelId = ALARM_CHANNEL_ID;
     }
   } else {
-    const alarmSound = getAlarmSoundById(alarm.soundId || 'default');
-    channelId = alarmSound.channelId;
-    isSilent = alarmSound.id === 'silent';
+    channelId = ALARM_CHANNEL_ID;
   }
 
+  // When using a custom sound channel, omit notification-level sound so
+  // Android uses the channel's sound.  For the default channel, keep
+  // sound: 'default' which lets the channel's own sound play normally.
   const notificationPayload = {
     title,
     body,
@@ -283,8 +283,8 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
         launchActivity: 'default',
       },
       importance: AndroidImportance.HIGH,
-      sound: isSilent ? undefined : 'default',
-      loopSound: !isSilent,
+      sound: customChannel ? undefined : 'default',
+      loopSound: true,
       vibrationPattern: [300, 300, 300, 300],
       lights: ['#FF0000', 300, 600] as [string, number, number],
       ongoing: true,
@@ -408,7 +408,7 @@ export async function scheduleTimerNotification(
           id: 'default',
         },
         importance: AndroidImportance.HIGH,
-        sound: customChannel ? soundUri : 'default',
+        sound: customChannel ? undefined : 'default',
         loopSound: true,
         ongoing: true,
         autoCancel: false,

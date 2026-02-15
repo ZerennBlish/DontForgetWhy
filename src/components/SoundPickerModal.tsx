@@ -98,13 +98,23 @@ export default function SoundPickerModal({
       });
   }, [visible]);
 
-  // Cleanup on unmount or close
+  // Cleanup when modal closes
   useEffect(() => {
     if (!visible) {
       stopPreview();
       audioModeReady.current = false;
     }
   }, [visible, stopPreview]);
+
+  // Cleanup on unmount — unload any active sound regardless of modal state
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        try { soundRef.current.unloadAsync(); } catch {}
+        soundRef.current = null;
+      }
+    };
+  }, []);
 
   const ensureAudioMode = async (): Promise<boolean> => {
     if (audioModeReady.current) return true;
@@ -156,6 +166,11 @@ export default function SoundPickerModal({
       console.log('[SoundPicker] playAsync resolved');
     } catch (err) {
       console.error('[SoundPicker] handlePlay error:', err);
+      // Clean up sound object if createAsync succeeded but playAsync failed
+      if (soundRef.current) {
+        try { await soundRef.current.unloadAsync(); } catch {}
+        soundRef.current = null;
+      }
       setPlayingId(null);
     }
   };

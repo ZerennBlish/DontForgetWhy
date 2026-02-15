@@ -31,7 +31,8 @@
       "Bash(gh api:*)",
       "Bash(gh auth status:*)",
       "WebFetch(domain:issuetracker.google.com)",
-      "WebFetch(domain:medium.com)"
+      "WebFetch(domain:medium.com)",
+      "Bash(npx expo config:*)"
     ]
   }
 }

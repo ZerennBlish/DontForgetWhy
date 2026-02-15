@@ -24,6 +24,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.zerennblish.DontForgetWhy",
       "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.USE_FULL_SCREEN_INTENT",
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.VIBRATE",

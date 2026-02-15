@@ -79,5 +79,7 @@ export async function getDefaultTimerSound(): Promise<TimerSoundSetting> {
 }
 
 export async function saveDefaultTimerSound(sound: TimerSoundSetting): Promise<void> {
-  await AsyncStorage.setItem(DEFAULT_TIMER_SOUND_KEY, JSON.stringify(sound));
+  try {
+    await AsyncStorage.setItem(DEFAULT_TIMER_SOUND_KEY, JSON.stringify(sound));
+  } catch {}
 }

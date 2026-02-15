@@ -10,7 +10,6 @@ import {
   Platform,
   Switch,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 import type { AlarmCategory, AlarmDay } from '../types/alarm';
@@ -79,8 +78,6 @@ function categoryFromIcon(emoji: string | null): AlarmCategory {
   return iconCategoryMap[emoji] || 'general';
 }
 
-const DEFAULT_SOUND_KEY = 'defaultAlarmSound';
-
 export default function CreateAlarmScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -101,9 +98,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   });
   const [nickname, setNickname] = useState(existingAlarm?.nickname || '');
 
-  const [selectedSoundId, setSelectedSoundId] = useState(
-    existingAlarm?.soundId || 'default'
-  );
   const [systemSoundPickerVisible, setSystemSoundPickerVisible] = useState(false);
   const [selectedSoundUri, setSelectedSoundUri] = useState<string | null>(
     existingAlarm?.soundUri || null
@@ -124,16 +118,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         });
       }
     });
-    // Load default alarm sound for new alarms
-    if (!isEditing) {
-      (async () => {
-        try {
-          const raw = await AsyncStorage.getItem(DEFAULT_SOUND_KEY);
-          if (raw) setSelectedSoundId(raw);
-        } catch {}
-      })();
-    }
-  }, [isEditing]);
+  }, []);
   const [note, setNote] = useState(existingAlarm?.note || '');
   const [placeholder] = useState(getRandomPlaceholder);
   const [selectedIcon, setSelectedIcon] = useState<string | null>(
@@ -660,9 +645,9 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           mode,
           days: mode === 'recurring' ? selectedDays : [...ALL_DAYS],
           date: mode === 'one-time' ? selectedDate : null,
-          soundId: selectedSoundId,
-          soundUri: selectedSoundUri,
-          soundName: selectedSoundName,
+          soundId: undefined,
+          soundUri: selectedSoundUri || undefined,
+          soundName: selectedSoundName || undefined,
         };
         await updateAlarm(updated);
       } else {
@@ -681,9 +666,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           private: selectedPrivate,
           createdAt: new Date().toISOString(),
           notificationIds: [],
-          soundId: selectedSoundId,
-          soundUri: selectedSoundUri,
-          soundName: selectedSoundName,
+          soundUri: selectedSoundUri || undefined,
+          soundName: selectedSoundName || undefined,
         };
 
         let notificationIds: string[] = [];
