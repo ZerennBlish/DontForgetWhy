@@ -524,18 +524,10 @@ export default function AlarmListScreen({ navigation }: Props) {
         return updated;
       });
     } else {
-      // Resuming
+      // Resuming — schedule notification FIRST, only mark running on success
       const elapsed = timer.totalSeconds - timer.remainingSeconds;
       const newStartedAt = new Date(Date.now() - elapsed * 1000).toISOString();
-      setActiveTimers((prev) => {
-        const updated = prev.map((t) =>
-          t.id === id ? { ...t, isRunning: true, startedAt: newStartedAt } : t
-        );
-        saveActiveTimers(updated);
-        return updated;
-      });
 
-      // Schedule notification and countdown for resumed timer
       if (timer.remainingSeconds > 0) {
         const ts = Date.now() + timer.remainingSeconds * 1000;
 
@@ -553,23 +545,36 @@ export default function AlarmListScreen({ navigation }: Props) {
           console.error('[handleTogglePause] getDefaultTimerSound failed:', err);
         }
 
-        scheduleTimerNotification(timer.label, timer.icon, ts, timer.id, rSoundUri, rSoundName)
-          .then((notifId) => {
-            setActiveTimers((current) => {
-              const withNotif = current.map((ct) =>
-                ct.id === id ? { ...ct, notificationId: notifId } : ct
-              );
-              saveActiveTimers(withNotif);
-              return withNotif;
-            });
-          })
-          .catch((error) => {
-            console.error('[handleTogglePause] scheduleTimerNotification failed:', error);
-            Alert.alert('Timer Resumed', 'Timer is running but the notification could not be scheduled.');
+        try {
+          const notifId = await scheduleTimerNotification(
+            timer.label, timer.icon, ts, timer.id, rSoundUri, rSoundName,
+          );
+          // Notification scheduled — now mark timer as running
+          setActiveTimers((prev) => {
+            const updated = prev.map((t) =>
+              t.id === id
+                ? { ...t, isRunning: true, startedAt: newStartedAt, notificationId: notifId }
+                : t
+            );
+            saveActiveTimers(updated);
+            return updated;
           });
-        showTimerCountdownNotification(timer.label, timer.icon, ts, timer.id).catch(
-          (e) => console.error('[handleTogglePause] showTimerCountdownNotification failed:', e),
-        );
+          showTimerCountdownNotification(timer.label, timer.icon, ts, timer.id).catch(
+            (e) => console.error('[handleTogglePause] showTimerCountdownNotification failed:', e),
+          );
+        } catch (error) {
+          console.error('[handleTogglePause] scheduleTimerNotification failed:', error);
+          Alert.alert('Resume Failed', 'Could not schedule the timer notification. The timer remains paused.');
+        }
+      } else {
+        // No time remaining — just mark as running (will finish immediately)
+        setActiveTimers((prev) => {
+          const updated = prev.map((t) =>
+            t.id === id ? { ...t, isRunning: true, startedAt: newStartedAt } : t
+          );
+          saveActiveTimers(updated);
+          return updated;
+        });
       }
     }
   };

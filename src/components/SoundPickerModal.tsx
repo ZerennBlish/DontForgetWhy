@@ -50,6 +50,7 @@ export default function SoundPickerModal({
   const [playingId, setPlayingId] = useState<number | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
   const audioModeReady = useRef(false);
+  const isActiveRef = useRef(false);
 
   const stopPreview = useCallback(async () => {
     if (soundRef.current) {
@@ -61,22 +62,12 @@ export default function SoundPickerModal({
     setPlayingId(null);
   }, []);
 
-  // Configure audio session once when modal opens
+  // Load system sounds when modal opens (no fire-and-forget audio mode here —
+  // ensureAudioMode() in handlePlay is the sole path for configuring audio)
   useEffect(() => {
     if (!visible) return;
 
-    Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
-    })
-      .then(() => {
-        audioModeReady.current = true;
-        console.log('[SoundPicker] Audio mode configured');
-      })
-      .catch((err) => {
-        console.error('[SoundPicker] setAudioModeAsync failed:', err);
-      });
+    isActiveRef.current = true;
 
     if (Platform.OS !== 'android' || !NotificationSounds) {
       setLoading(false);
@@ -101,6 +92,7 @@ export default function SoundPickerModal({
   // Cleanup when modal closes
   useEffect(() => {
     if (!visible) {
+      isActiveRef.current = false;
       stopPreview();
       audioModeReady.current = false;
     }
@@ -116,6 +108,7 @@ export default function SoundPickerModal({
     };
   }, []);
 
+  // Sole path for configuring audio mode — always awaited before playback
   const ensureAudioMode = async (): Promise<boolean> => {
     if (audioModeReady.current) return true;
     try {
@@ -125,6 +118,7 @@ export default function SoundPickerModal({
         shouldDuckAndroid: true,
       });
       audioModeReady.current = true;
+      console.log('[SoundPicker] Audio mode configured');
       return true;
     } catch (err) {
       console.error('[SoundPicker] ensureAudioMode failed:', err);
@@ -135,6 +129,9 @@ export default function SoundPickerModal({
   const handlePlay = async (item: SystemSound) => {
     console.log('[SoundPicker] Playing sound:', item.title, item.url);
 
+    // Step 1: Bail out immediately if modal is no longer active
+    if (!isActiveRef.current) return;
+
     if (playingId === item.soundID) {
       await stopPreview();
       return;
@@ -142,17 +139,30 @@ export default function SoundPickerModal({
 
     await stopPreview();
 
+    // Step 2: Await audio mode configuration
     const ready = await ensureAudioMode();
     if (!ready) {
       console.error('[SoundPicker] Cannot play — audio mode not acquired');
       return;
     }
 
+    // Re-check after async gap
+    if (!isActiveRef.current) return;
+
     try {
+      // Step 3: Await sound creation
       const { sound, status } = await Audio.Sound.createAsync(
         { uri: item.url },
       );
       console.log('[SoundPicker] createAsync status:', JSON.stringify(status));
+
+      // Step 4: Check isActiveRef again — modal may have closed during createAsync
+      if (!isActiveRef.current) {
+        try { await sound.unloadAsync(); } catch {}
+        return;
+      }
+
+      // Step 5: Store and play
       soundRef.current = sound;
       setPlayingId(item.soundID);
 
