@@ -1,19 +1,18 @@
 import type { TriviaQuestion, TriviaCategory } from '../types/trivia';
 
 export const TRIVIA_CATEGORIES: { id: TriviaCategory; label: string; icon: string }[] = [
-  { id: 'general', label: 'General Knowledge', icon: 'brain' },
   { id: 'science', label: 'Science & Nature', icon: 'flask' },
   { id: 'history', label: 'History', icon: 'landmark' },
-  { id: 'pop_culture', label: 'Pop Culture', icon: 'star' },
+  { id: 'music', label: 'Music', icon: 'music' },
+  { id: 'movies_tv', label: 'Movies & TV', icon: 'film' },
   { id: 'geography', label: 'Geography', icon: 'globe' },
   { id: 'sports', label: 'Sports', icon: 'trophy' },
   { id: 'technology', label: 'Technology', icon: 'cpu' },
   { id: 'food', label: 'Food & Drink', icon: 'utensils' },
+  { id: 'general', label: 'General Knowledge', icon: 'brain' },
 ];
 
-// 320 questions: 40 per category
-// ~75% multiple choice, ~25% true/false per category (30 mc + 10 tf)
-// ~40% easy (16), ~35% medium (14), ~25% hard (10) per category
+// 320 questions across 9 categories
 
 export const TRIVIA_QUESTIONS: TriviaQuestion[] = [
   // ═══════════════════════════════════════════
@@ -65,6 +64,14 @@ export const TRIVIA_QUESTIONS: TriviaQuestion[] = [
   { id: 'general_038', category: 'general', type: 'multiple', difficulty: 'hard', question: 'What is the smallest country in the world by area?', correctAnswer: 'Vatican City', incorrectAnswers: ['Monaco', 'San Marino', 'Liechtenstein'] },
   { id: 'general_039', category: 'general', type: 'multiple', difficulty: 'hard', question: 'Which element has the highest melting point?', correctAnswer: 'Tungsten', incorrectAnswers: ['Iron', 'Titanium', 'Platinum'] },
   { id: 'general_040', category: 'general', type: 'multiple', difficulty: 'hard', question: 'How many paintings did Vincent van Gogh sell during his lifetime?', correctAnswer: '1', incorrectAnswers: ['0', '5', '12'] },
+  { id: 'general_041', category: 'general', type: 'multiple', difficulty: 'easy', question: 'What color is the famous Tiffany & Co. box?', correctAnswer: 'Robin egg blue', incorrectAnswers: ['Red', 'White', 'Gold'] },
+  { id: 'general_042', category: 'general', type: 'boolean', difficulty: 'easy', question: 'Mario is a plumber.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_043', category: 'general', type: 'multiple', difficulty: 'medium', question: 'What year was the first iPhone released?', correctAnswer: '2007', incorrectAnswers: ['2005', '2009', '2010'] },
+  { id: 'general_044', category: 'general', type: 'boolean', difficulty: 'medium', question: 'Pikachu is an Electric-type Pokemon.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_045', category: 'general', type: 'multiple', difficulty: 'medium', question: 'Which video game franchise features a character named Master Chief?', correctAnswer: 'Halo', incorrectAnswers: ['Call of Duty', 'Gears of War', 'Destiny'] },
+  { id: 'general_046', category: 'general', type: 'multiple', difficulty: 'hard', question: 'Which novelist wrote "1984" and "Animal Farm"?', correctAnswer: 'George Orwell', incorrectAnswers: ['Aldous Huxley', 'Ray Bradbury', 'H.G. Wells'] },
+  { id: 'general_047', category: 'general', type: 'boolean', difficulty: 'hard', question: 'The character of Sherlock Holmes was inspired by a real person named Dr. Joseph Bell.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_048', category: 'general', type: 'multiple', difficulty: 'hard', question: 'What is the best-selling video game of all time?', correctAnswer: 'Minecraft', incorrectAnswers: ['Tetris', 'GTA V', 'Wii Sports'] },
 
   // ═══════════════════════════════════════════
   // SCIENCE & NATURE (science_001 – science_040)
@@ -167,54 +174,51 @@ export const TRIVIA_QUESTIONS: TriviaQuestion[] = [
   { id: 'history_040', category: 'history', type: 'multiple', difficulty: 'hard', question: 'What event in 1054 split Christianity into Eastern Orthodox and Roman Catholic?', correctAnswer: 'The Great Schism', incorrectAnswers: ['The Crusades', 'The Reformation', 'The Council of Nicaea'] },
 
   // ═══════════════════════════════════════════
-  // POP CULTURE (pop_culture_001 – pop_culture_040)
+  // MUSIC (music_001 – music_006)
   // ═══════════════════════════════════════════
 
-  // Easy (16)
-  { id: 'pop_culture_001', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What movie features a character named Simba?', correctAnswer: 'The Lion King', incorrectAnswers: ['Bambi', 'The Jungle Book', 'Madagascar'] },
-  { id: 'pop_culture_002', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What band was John Lennon a member of?', correctAnswer: 'The Beatles', incorrectAnswers: ['The Rolling Stones', 'The Who', 'Led Zeppelin'] },
-  { id: 'pop_culture_003', category: 'pop_culture', type: 'boolean', difficulty: 'easy', question: 'Mickey Mouse\'s original name was Mortimer Mouse.', correctAnswer: 'True', incorrectAnswers: ['False'] },
-  { id: 'pop_culture_004', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'In the Harry Potter series, what house is Harry sorted into?', correctAnswer: 'Gryffindor', incorrectAnswers: ['Slytherin', 'Ravenclaw', 'Hufflepuff'] },
-  { id: 'pop_culture_005', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What color is the famous Tiffany & Co. box?', correctAnswer: 'Robin egg blue', incorrectAnswers: ['Red', 'White', 'Gold'] },
-  { id: 'pop_culture_006', category: 'pop_culture', type: 'boolean', difficulty: 'easy', question: 'The TV show "Friends" is set in New York City.', correctAnswer: 'True', incorrectAnswers: ['False'] },
-  { id: 'pop_culture_007', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'Which superhero is known as the Man of Steel?', correctAnswer: 'Superman', incorrectAnswers: ['Iron Man', 'Captain America', 'Batman'] },
-  { id: 'pop_culture_008', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'Who played Jack in the movie Titanic?', correctAnswer: 'Leonardo DiCaprio', incorrectAnswers: ['Brad Pitt', 'Matt Damon', 'Tom Hanks'] },
-  { id: 'pop_culture_009', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What is the name of the fictional country in the movie Black Panther?', correctAnswer: 'Wakanda', incorrectAnswers: ['Genovia', 'Zamunda', 'Latveria'] },
-  { id: 'pop_culture_010', category: 'pop_culture', type: 'boolean', difficulty: 'easy', question: 'Mario is a plumber.', correctAnswer: 'True', incorrectAnswers: ['False'] },
-  { id: 'pop_culture_011', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What animated movie features a fish named Nemo?', correctAnswer: 'Finding Nemo', incorrectAnswers: ['Shark Tale', 'The Little Mermaid', 'Moana'] },
-  { id: 'pop_culture_012', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'Which pop star is known as the "Queen of Pop"?', correctAnswer: 'Madonna', incorrectAnswers: ['Beyonce', 'Lady Gaga', 'Taylor Swift'] },
-  { id: 'pop_culture_013', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What is the name of the wizard school in Harry Potter?', correctAnswer: 'Hogwarts', incorrectAnswers: ['Beauxbatons', 'Durmstrang', 'Ilvermorny'] },
-  { id: 'pop_culture_014', category: 'pop_culture', type: 'boolean', difficulty: 'easy', question: 'Darth Vader says "Luke, I am your father" in Star Wars.', correctAnswer: 'False', incorrectAnswers: ['True'] },
-  { id: 'pop_culture_015', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What is the highest-grossing film of all time (not adjusted for inflation)?', correctAnswer: 'Avatar', incorrectAnswers: ['Avengers: Endgame', 'Titanic', 'Star Wars: The Force Awakens'] },
-  { id: 'pop_culture_016', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'Which Disney princess has ice powers?', correctAnswer: 'Elsa', incorrectAnswers: ['Anna', 'Rapunzel', 'Moana'] },
+  { id: 'music_001', category: 'music', type: 'multiple', difficulty: 'easy', question: 'What band was John Lennon a member of?', correctAnswer: 'The Beatles', incorrectAnswers: ['The Rolling Stones', 'The Who', 'Led Zeppelin'] },
+  { id: 'music_002', category: 'music', type: 'multiple', difficulty: 'easy', question: 'Which pop star is known as the "Queen of Pop"?', correctAnswer: 'Madonna', incorrectAnswers: ['Beyonce', 'Lady Gaga', 'Taylor Swift'] },
+  { id: 'music_003', category: 'music', type: 'multiple', difficulty: 'medium', question: 'Which band performed "Bohemian Rhapsody"?', correctAnswer: 'Queen', incorrectAnswers: ['The Beatles', 'Led Zeppelin', 'Pink Floyd'] },
+  { id: 'music_004', category: 'music', type: 'multiple', difficulty: 'medium', question: 'What is the real name of Lady Gaga?', correctAnswer: 'Stefani Germanotta', incorrectAnswers: ['Robyn Fenty', 'Destiny Hope Cyrus', 'Alecia Moore'] },
+  { id: 'music_005', category: 'music', type: 'multiple', difficulty: 'hard', question: 'What was the first music video played on MTV?', correctAnswer: 'Video Killed the Radio Star', incorrectAnswers: ['Thriller', 'Take On Me', 'Billie Jean'] },
+  { id: 'music_006', category: 'music', type: 'multiple', difficulty: 'hard', question: 'What was the name of the band Kurt Cobain fronted before Nirvana?', correctAnswer: 'Fecal Matter', incorrectAnswers: ['Melvins', 'Mudhoney', 'Screaming Trees'] },
 
-  // Medium (14)
-  { id: 'pop_culture_017', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What TV series features dragons and the Iron Throne?', correctAnswer: 'Game of Thrones', incorrectAnswers: ['The Witcher', 'Lord of the Rings', 'Vikings'] },
-  { id: 'pop_culture_018', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'Which actor played the Joker in The Dark Knight?', correctAnswer: 'Heath Ledger', incorrectAnswers: ['Jack Nicholson', 'Jared Leto', 'Joaquin Phoenix'] },
-  { id: 'pop_culture_019', category: 'pop_culture', type: 'boolean', difficulty: 'medium', question: 'The character Gandalf appears in both The Hobbit and The Lord of the Rings.', correctAnswer: 'True', incorrectAnswers: ['False'] },
-  { id: 'pop_culture_020', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What year was the first iPhone released?', correctAnswer: '2007', incorrectAnswers: ['2005', '2009', '2010'] },
-  { id: 'pop_culture_021', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'Which band performed "Bohemian Rhapsody"?', correctAnswer: 'Queen', incorrectAnswers: ['The Beatles', 'Led Zeppelin', 'Pink Floyd'] },
-  { id: 'pop_culture_022', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'In The Matrix, what color pill does Neo take?', correctAnswer: 'Red', incorrectAnswers: ['Blue', 'Green', 'White'] },
-  { id: 'pop_culture_023', category: 'pop_culture', type: 'boolean', difficulty: 'medium', question: 'The Simpsons first aired in the 1980s.', correctAnswer: 'True', incorrectAnswers: ['False'] },
-  { id: 'pop_culture_024', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What is the name of the fictional metal in the Marvel universe that Captain America\'s shield is made from?', correctAnswer: 'Vibranium', incorrectAnswers: ['Adamantium', 'Uru', 'Carbonadium'] },
-  { id: 'pop_culture_025', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'Who directed Jurassic Park?', correctAnswer: 'Steven Spielberg', incorrectAnswers: ['James Cameron', 'George Lucas', 'Ridley Scott'] },
-  { id: 'pop_culture_026', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What is the real name of Lady Gaga?', correctAnswer: 'Stefani Germanotta', incorrectAnswers: ['Robyn Fenty', 'Destiny Hope Cyrus', 'Alecia Moore'] },
-  { id: 'pop_culture_027', category: 'pop_culture', type: 'boolean', difficulty: 'medium', question: 'Pikachu is an Electric-type Pokemon.', correctAnswer: 'True', incorrectAnswers: ['False'] },
-  { id: 'pop_culture_028', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'Which movie won the first Academy Award for Best Picture?', correctAnswer: 'Wings', incorrectAnswers: ['Sunrise', 'The Jazz Singer', 'All Quiet on the Western Front'] },
-  { id: 'pop_culture_029', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What is the name of the coffee shop in the TV show Friends?', correctAnswer: 'Central Perk', incorrectAnswers: ['The Coffee Bean', 'Moondance Diner', 'Java Lava'] },
-  { id: 'pop_culture_030', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'Which video game franchise features a character named Master Chief?', correctAnswer: 'Halo', incorrectAnswers: ['Call of Duty', 'Gears of War', 'Destiny'] },
+  // ═══════════════════════════════════════════
+  // MOVIES & TV (movies_tv_001 – movies_tv_026)
+  // ═══════════════════════════════════════════
 
-  // Hard (10)
-  { id: 'pop_culture_031', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What was the first feature-length animated movie ever released?', correctAnswer: 'El Apostol', incorrectAnswers: ['Snow White and the Seven Dwarfs', 'Fantasia', 'Steamboat Willie'] },
-  { id: 'pop_culture_032', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'In the TV show Breaking Bad, what is Walter White\'s street address?', correctAnswer: '308 Negra Arroyo Lane', incorrectAnswers: ['742 Evergreen Terrace', '221B Baker Street', '1600 Pennsylvania Ave'] },
-  { id: 'pop_culture_033', category: 'pop_culture', type: 'boolean', difficulty: 'hard', question: 'The original Star Wars trilogy was filmed entirely in the United States.', correctAnswer: 'False', incorrectAnswers: ['True'] },
-  { id: 'pop_culture_034', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'Which novelist wrote "1984" and "Animal Farm"?', correctAnswer: 'George Orwell', incorrectAnswers: ['Aldous Huxley', 'Ray Bradbury', 'H.G. Wells'] },
-  { id: 'pop_culture_035', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What was the first music video played on MTV?', correctAnswer: 'Video Killed the Radio Star', incorrectAnswers: ['Thriller', 'Take On Me', 'Billie Jean'] },
-  { id: 'pop_culture_036', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What is the name of Quentin Tarantino\'s first film?', correctAnswer: 'Reservoir Dogs', incorrectAnswers: ['Pulp Fiction', 'Kill Bill', 'True Romance'] },
-  { id: 'pop_culture_037', category: 'pop_culture', type: 'boolean', difficulty: 'hard', question: 'The character of Sherlock Holmes was inspired by a real person named Dr. Joseph Bell.', correctAnswer: 'True', incorrectAnswers: ['False'] },
-  { id: 'pop_culture_038', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What is the best-selling video game of all time?', correctAnswer: 'Minecraft', incorrectAnswers: ['Tetris', 'GTA V', 'Wii Sports'] },
-  { id: 'pop_culture_039', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'Which actress has won the most Academy Awards?', correctAnswer: 'Katharine Hepburn', incorrectAnswers: ['Meryl Streep', 'Audrey Hepburn', 'Cate Blanchett'] },
-  { id: 'pop_culture_040', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What was the name of the band Kurt Cobain fronted before Nirvana?', correctAnswer: 'Fecal Matter', incorrectAnswers: ['Melvins', 'Mudhoney', 'Screaming Trees'] },
+  // Easy (12)
+  { id: 'movies_tv_001', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What movie features a character named Simba?', correctAnswer: 'The Lion King', incorrectAnswers: ['Bambi', 'The Jungle Book', 'Madagascar'] },
+  { id: 'movies_tv_002', category: 'movies_tv', type: 'boolean', difficulty: 'easy', question: 'Mickey Mouse\'s original name was Mortimer Mouse.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'movies_tv_003', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'In the Harry Potter series, what house is Harry sorted into?', correctAnswer: 'Gryffindor', incorrectAnswers: ['Slytherin', 'Ravenclaw', 'Hufflepuff'] },
+  { id: 'movies_tv_004', category: 'movies_tv', type: 'boolean', difficulty: 'easy', question: 'The TV show "Friends" is set in New York City.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'movies_tv_005', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'Which superhero is known as the Man of Steel?', correctAnswer: 'Superman', incorrectAnswers: ['Iron Man', 'Captain America', 'Batman'] },
+  { id: 'movies_tv_006', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'Who played Jack in the movie Titanic?', correctAnswer: 'Leonardo DiCaprio', incorrectAnswers: ['Brad Pitt', 'Matt Damon', 'Tom Hanks'] },
+  { id: 'movies_tv_007', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What is the name of the fictional country in the movie Black Panther?', correctAnswer: 'Wakanda', incorrectAnswers: ['Genovia', 'Zamunda', 'Latveria'] },
+  { id: 'movies_tv_008', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What animated movie features a fish named Nemo?', correctAnswer: 'Finding Nemo', incorrectAnswers: ['Shark Tale', 'The Little Mermaid', 'Moana'] },
+  { id: 'movies_tv_009', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What is the name of the wizard school in Harry Potter?', correctAnswer: 'Hogwarts', incorrectAnswers: ['Beauxbatons', 'Durmstrang', 'Ilvermorny'] },
+  { id: 'movies_tv_010', category: 'movies_tv', type: 'boolean', difficulty: 'easy', question: 'Darth Vader says "Luke, I am your father" in Star Wars.', correctAnswer: 'False', incorrectAnswers: ['True'] },
+  { id: 'movies_tv_011', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What is the highest-grossing film of all time (not adjusted for inflation)?', correctAnswer: 'Avatar', incorrectAnswers: ['Avengers: Endgame', 'Titanic', 'Star Wars: The Force Awakens'] },
+  { id: 'movies_tv_012', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'Which Disney princess has ice powers?', correctAnswer: 'Elsa', incorrectAnswers: ['Anna', 'Rapunzel', 'Moana'] },
+
+  // Medium (9)
+  { id: 'movies_tv_013', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'What TV series features dragons and the Iron Throne?', correctAnswer: 'Game of Thrones', incorrectAnswers: ['The Witcher', 'Lord of the Rings', 'Vikings'] },
+  { id: 'movies_tv_014', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'Which actor played the Joker in The Dark Knight?', correctAnswer: 'Heath Ledger', incorrectAnswers: ['Jack Nicholson', 'Jared Leto', 'Joaquin Phoenix'] },
+  { id: 'movies_tv_015', category: 'movies_tv', type: 'boolean', difficulty: 'medium', question: 'The character Gandalf appears in both The Hobbit and The Lord of the Rings.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'movies_tv_016', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'In The Matrix, what color pill does Neo take?', correctAnswer: 'Red', incorrectAnswers: ['Blue', 'Green', 'White'] },
+  { id: 'movies_tv_017', category: 'movies_tv', type: 'boolean', difficulty: 'medium', question: 'The Simpsons first aired in the 1980s.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'movies_tv_018', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'What is the name of the fictional metal in the Marvel universe that Captain America\'s shield is made from?', correctAnswer: 'Vibranium', incorrectAnswers: ['Adamantium', 'Uru', 'Carbonadium'] },
+  { id: 'movies_tv_019', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'Who directed Jurassic Park?', correctAnswer: 'Steven Spielberg', incorrectAnswers: ['James Cameron', 'George Lucas', 'Ridley Scott'] },
+  { id: 'movies_tv_020', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'Which movie won the first Academy Award for Best Picture?', correctAnswer: 'Wings', incorrectAnswers: ['Sunrise', 'The Jazz Singer', 'All Quiet on the Western Front'] },
+  { id: 'movies_tv_021', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'What is the name of the coffee shop in the TV show Friends?', correctAnswer: 'Central Perk', incorrectAnswers: ['The Coffee Bean', 'Moondance Diner', 'Java Lava'] },
+
+  // Hard (5)
+  { id: 'movies_tv_022', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'What was the first feature-length animated movie ever released?', correctAnswer: 'El Apostol', incorrectAnswers: ['Snow White and the Seven Dwarfs', 'Fantasia', 'Steamboat Willie'] },
+  { id: 'movies_tv_023', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'In the TV show Breaking Bad, what is Walter White\'s street address?', correctAnswer: '308 Negra Arroyo Lane', incorrectAnswers: ['742 Evergreen Terrace', '221B Baker Street', '1600 Pennsylvania Ave'] },
+  { id: 'movies_tv_024', category: 'movies_tv', type: 'boolean', difficulty: 'hard', question: 'The original Star Wars trilogy was filmed entirely in the United States.', correctAnswer: 'False', incorrectAnswers: ['True'] },
+  { id: 'movies_tv_025', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'What is the name of Quentin Tarantino\'s first film?', correctAnswer: 'Reservoir Dogs', incorrectAnswers: ['Pulp Fiction', 'Kill Bill', 'True Romance'] },
+  { id: 'movies_tv_026', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'Which actress has won the most Academy Awards?', correctAnswer: 'Katharine Hepburn', incorrectAnswers: ['Meryl Streep', 'Audrey Hepburn', 'Cate Blanchett'] },
 
   // ═══════════════════════════════════════════
   // GEOGRAPHY (geography_001 – geography_040)

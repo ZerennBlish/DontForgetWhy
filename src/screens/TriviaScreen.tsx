@@ -33,7 +33,8 @@ const CATEGORY_EMOJIS: Record<TriviaCategory, string> = {
   general: '\u{1F9E0}',
   science: '\u{1F52C}',
   history: '\u{1F3DB}',
-  pop_culture: '\u{2B50}',
+  music: '\u{1F3B5}',
+  movies_tv: '\u{1F3AC}',
   geography: '\u{1F30D}',
   sports: '\u{1F3C6}',
   technology: '\u{1F4BB}',
@@ -346,7 +347,7 @@ export default function TriviaScreen({ navigation }: Props) {
         )}
 
         <View style={styles.categoryGrid}>
-          {TRIVIA_CATEGORIES.map((cat) => (
+          {TRIVIA_CATEGORIES.filter((cat) => cat.id !== 'general').map((cat) => (
             <TouchableOpacity
               key={cat.id}
               style={styles.categoryCard}
@@ -357,6 +358,18 @@ export default function TriviaScreen({ navigation }: Props) {
               <Text style={styles.categoryLabel}>{cat.label}</Text>
             </TouchableOpacity>
           ))}
+        </View>
+
+        {/* General Knowledge centered at bottom */}
+        <View style={styles.generalRow}>
+          <TouchableOpacity
+            style={styles.categoryCard}
+            onPress={() => startRound('general')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.categoryEmoji}>{CATEGORY_EMOJIS.general}</Text>
+            <Text style={styles.categoryLabel}>General Knowledge</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     );
@@ -606,6 +619,12 @@ function makeStyles(colors: any, insets: any) {
       fontWeight: '600',
       color: colors.textPrimary,
       textAlign: 'center',
+    },
+    generalRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+      marginTop: 12,
     },
 
     // Top bar

@@ -23,6 +23,7 @@ import {
 } from '../services/timerStorage';
 import { getPinnedAlarms, togglePinAlarm, isAlarmPinned, unpinAlarm, pruneAlarmPins } from '../services/widgetPins';
 import { refreshTimerWidget } from '../widget/updateWidget';
+import { getReminders } from '../services/reminderStorage';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import SwipeableRow from '../components/SwipeableRow';
@@ -66,6 +67,10 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [showUndo, setShowUndo] = useState(false);
   const [undoKey, setUndoKey] = useState(0);
   const alertedRef = useRef<Set<string>>(new Set());
+  const [reminderCount, setReminderCount] = useState(0);
+  const [showSortFilter, setShowSortFilter] = useState(false);
+
+  const hasNonDefaultSortFilter = alarmSort !== 'time' || alarmFilter !== 'all';
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -152,18 +157,38 @@ export default function AlarmListScreen({ navigation }: Props) {
       fontSize: 13,
       color: colors.textTertiary,
     },
-    quoteCard: {
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      padding: 16,
-      marginHorizontal: 16,
-      marginBottom: 12,
-    },
     quoteText: {
-      fontSize: 15,
+      fontSize: 13,
       color: colors.textSecondary,
       fontStyle: 'italic',
+      opacity: 0.7,
       textAlign: 'center',
+      paddingHorizontal: 20,
+      marginBottom: 4,
+    },
+    sortFilterToggleRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      paddingHorizontal: 16,
+      paddingTop: 2,
+      paddingBottom: 2,
+    },
+    sortFilterToggleBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingVertical: 4,
+    },
+    sortFilterToggleText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    sortFilterDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.accent,
     },
     list: {
       paddingHorizontal: 16,
@@ -268,8 +293,18 @@ export default function AlarmListScreen({ navigation }: Props) {
         setTimeFormat(s.timeFormat);
       });
       loadStats().then(setStats);
+      getReminders().then((loaded) => {
+        setReminderCount(loaded.filter((r) => !r.completed).length);
+      });
     }, [])
   );
+
+  // Refresh reminder count when switching tabs (picks up changes from Reminders tab)
+  useEffect(() => {
+    getReminders().then((loaded) => {
+      setReminderCount(loaded.filter((r) => !r.completed).length);
+    });
+  }, [tab]);
 
   // Load active timers on mount (picks up widget-started timers on cold start)
   useEffect(() => {
@@ -635,7 +670,12 @@ export default function AlarmListScreen({ navigation }: Props) {
           </View>
         </View>
         <Text style={styles.subtitle}>
-          {alarms.filter(a => a.enabled).length} active alarm{alarms.filter(a => a.enabled).length !== 1 ? 's' : ''}
+          {(() => {
+            const ac = alarms.filter(a => a.enabled).length;
+            const tc = activeTimers.filter(t => t.isRunning).length;
+            const rc = reminderCount;
+            return `${ac} alarm${ac !== 1 ? 's' : ''} \u00B7 ${tc} timer${tc !== 1 ? 's' : ''} \u00B7 ${rc} reminder${rc !== 1 ? 's' : ''}`;
+          })()}
         </Text>
 
         <View style={styles.tabContainer}>
@@ -668,17 +708,15 @@ export default function AlarmListScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        {tab === 'alarms' && hasPlayed && (
+        {tab === 'alarms' && hasPlayed && stats.streak > 0 && (
           <View style={styles.streakRow}>
             <Text
               style={[
                 styles.streakText,
-                { color: stats.streak > 0 ? colors.accent : colors.red },
+                { color: colors.accent },
               ]}
             >
-              {stats.streak > 0
-                ? `\u{1F525} ${stats.streak} in a row`
-                : '\u{1F480} Streak broken'}
+              {`\u{1F525} ${stats.streak} in a row`}
             </Text>
             {stats.bestStreak > 0 && (
               <Text style={styles.bestStreakText}>Best: {stats.bestStreak}</Text>
@@ -700,41 +738,58 @@ export default function AlarmListScreen({ navigation }: Props) {
             </View>
           ) : (
             <>
-              <View style={styles.quoteCard}>
-                <Text style={styles.quoteText}>{appQuote}</Text>
+              <Text style={styles.quoteText} numberOfLines={2}>
+                {appQuote}
+              </Text>
+
+              <View style={styles.sortFilterToggleRow}>
+                <TouchableOpacity
+                  style={styles.sortFilterToggleBtn}
+                  onPress={() => { hapticLight(); setShowSortFilter((prev) => !prev); }}
+                  activeOpacity={0.7}
+                >
+                  {hasNonDefaultSortFilter && <View style={styles.sortFilterDot} />}
+                  <Text style={styles.sortFilterToggleText}>
+                    Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
-              <Text style={styles.sortFilterLabel}>Sort</Text>
-              <View style={styles.sortFilterRow}>
-                {(['time', 'created', 'name'] as const).map((s) => (
-                  <TouchableOpacity
-                    key={s}
-                    style={[styles.pill, alarmSort === s && styles.pillActive]}
-                    onPress={() => { hapticLight(); setAlarmSort(s); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.pillText, alarmSort === s && styles.pillTextActive]}>
-                      {s === 'time' ? 'Time' : s === 'created' ? 'Created' : 'Name'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {showSortFilter && (
+                <>
+                  <Text style={styles.sortFilterLabel}>Sort</Text>
+                  <View style={styles.sortFilterRow}>
+                    {(['time', 'created', 'name'] as const).map((s) => (
+                      <TouchableOpacity
+                        key={s}
+                        style={[styles.pill, alarmSort === s && styles.pillActive]}
+                        onPress={() => { hapticLight(); setAlarmSort(s); }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.pillText, alarmSort === s && styles.pillTextActive]}>
+                          {s === 'time' ? 'Time' : s === 'created' ? 'Created' : 'Name'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
-              <Text style={styles.sortFilterLabel}>Filter</Text>
-              <View style={styles.sortFilterRow}>
-                {(['all', 'active', 'one-time', 'recurring'] as const).map((f) => (
-                  <TouchableOpacity
-                    key={f}
-                    style={[styles.pill, alarmFilter === f && styles.pillActive]}
-                    onPress={() => { hapticLight(); setAlarmFilter(f); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.pillText, alarmFilter === f && styles.pillTextActive]}>
-                      {f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'one-time' ? 'One-time' : 'Recurring'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                  <Text style={styles.sortFilterLabel}>Filter</Text>
+                  <View style={styles.sortFilterRow}>
+                    {(['all', 'active', 'one-time', 'recurring'] as const).map((f) => (
+                      <TouchableOpacity
+                        key={f}
+                        style={[styles.pill, alarmFilter === f && styles.pillActive]}
+                        onPress={() => { hapticLight(); setAlarmFilter(f); }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.pillText, alarmFilter === f && styles.pillTextActive]}>
+                          {f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'one-time' ? 'One-time' : 'Recurring'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
 
               <FlatList
                 data={filteredAlarms}

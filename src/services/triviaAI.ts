@@ -1,11 +1,12 @@
 import type { TriviaQuestion, TriviaCategory } from '../types/trivia';
 
 // OpenTDB category ID mapping
-const CATEGORY_MAP: Partial<Record<TriviaCategory, number>> = {
+const CATEGORY_MAP: Partial<Record<TriviaCategory, number | number[]>> = {
   general: 9,
   science: 17,
   history: 23,
-  pop_culture: 14,
+  music: 12,
+  movies_tv: [11, 14],
   geography: 22,
   sports: 21,
   technology: 18,
@@ -51,8 +52,11 @@ export async function fetchOnlineQuestions(
   category: TriviaCategory,
   count: number = 10,
 ): Promise<TriviaQuestion[] | null> {
-  const apiCategory = CATEGORY_MAP[category];
-  if (!apiCategory) return null; // food not available online
+  const mapping = CATEGORY_MAP[category];
+  if (!mapping) return null; // food not available online
+  const apiCategory = Array.isArray(mapping)
+    ? mapping[Math.floor(Math.random() * mapping.length)]
+    : mapping;
 
   try {
     const url = `https://opentdb.com/api.php?amount=${count}&category=${apiCategory}`;

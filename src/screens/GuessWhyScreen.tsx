@@ -22,6 +22,7 @@ import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
 import { addForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { dismissAlarmNotification } from '../services/notifications';
 import { hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -62,10 +63,30 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     });
   }, []);
 
+  // Cancel alarm notifications on mount to stop sound/vibration
+  useEffect(() => {
+    console.log('[NOTIF] GuessWhyScreen mounted — cancelling alarm notifications. notificationIds:', alarm.notificationIds, 'notificationId:', alarm.notificationId);
+    if (alarm.notificationIds?.length) {
+      for (const id of alarm.notificationIds) {
+        console.log('[NOTIF] GuessWhyScreen — cancelling notification:', id);
+        dismissAlarmNotification(id);
+      }
+    }
+    if (alarm.notificationId) {
+      console.log('[NOTIF] GuessWhyScreen — cancelling legacy notification:', alarm.notificationId);
+      dismissAlarmNotification(alarm.notificationId);
+    }
+    // Belt-and-suspenders: kill any device-level vibration
+    Vibration.cancel();
+    console.log('[NOTIF] GuessWhyScreen — Vibration.cancel() called on mount');
+  }, [alarm.notificationIds, alarm.notificationId]);
+
   useEffect(() => {
     if (canPlay && fromNotification) {
+      console.log('[NOTIF] GuessWhyScreen — starting screen vibration (fromNotification)');
       Vibration.vibrate([0, 800, 400, 800], true);
       return () => {
+        console.log('[NOTIF] GuessWhyScreen — cleanup: Vibration.cancel()');
         Vibration.cancel();
       };
     }
@@ -73,9 +94,11 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     if (!canPlay) {
-      navigation.replace('AlarmFire', { alarm, fromNotification });
+      // Defensive fallback: if GuessWhy can't play, go to AlarmFire.
+      // Pass fromNotification: false — notification was already cancelled on mount.
+      navigation.replace('AlarmFire', { alarm, fromNotification: false });
     }
-  }, [canPlay, alarm, fromNotification, navigation]);
+  }, [canPlay, alarm, navigation]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -361,7 +384,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
   const handleContinue = () => {
     Vibration.cancel();
-    navigation.replace('AlarmFire', { alarm, fromNotification });
+    // Pass fromNotification: false — notification was already handled by GuessWhy.
+    // AlarmFire should NOT restart vibration after the game completes.
+    navigation.replace('AlarmFire', { alarm, fromNotification: false });
   };
 
   const overlayColor =

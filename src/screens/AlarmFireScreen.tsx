@@ -42,11 +42,31 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     loadSettings().then((s) => setTimeFormat(s.timeFormat));
   }, []);
 
+  // Cancel alarm notifications on mount to stop sound/vibration
+  useEffect(() => {
+    console.log('[NOTIF] AlarmFireScreen mounted — cancelling alarm notifications. notificationIds:', alarm.notificationIds, 'notificationId:', alarm.notificationId);
+    if (alarm.notificationIds?.length) {
+      for (const id of alarm.notificationIds) {
+        console.log('[NOTIF] AlarmFireScreen — cancelling notification:', id);
+        dismissAlarmNotification(id);
+      }
+    }
+    if (alarm.notificationId) {
+      console.log('[NOTIF] AlarmFireScreen — cancelling legacy notification:', alarm.notificationId);
+      dismissAlarmNotification(alarm.notificationId);
+    }
+    // Belt-and-suspenders: kill any device-level vibration
+    Vibration.cancel();
+    console.log('[NOTIF] AlarmFireScreen — Vibration.cancel() called on mount');
+  }, [alarm.notificationIds, alarm.notificationId]);
+
   useEffect(() => {
     if (fromNotification) {
+      console.log('[NOTIF] AlarmFireScreen — starting screen vibration (fromNotification)');
       hapticHeavy();
       Vibration.vibrate(VIBRATION_PATTERN, true);
       return () => {
+        console.log('[NOTIF] AlarmFireScreen — cleanup: Vibration.cancel()');
         Vibration.cancel();
       };
     }

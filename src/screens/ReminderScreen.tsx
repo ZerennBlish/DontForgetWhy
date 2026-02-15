@@ -65,6 +65,7 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [reminderSort, setReminderSort] = useState<'due' | 'created' | 'name'>('due');
   const [reminderFilter, setReminderFilter] = useState<'active' | 'completed' | 'has-date'>('active');
+  const [showSortFilter, setShowSortFilter] = useState(false);
   const [deletedReminder, setDeletedReminder] = useState<Reminder | null>(null);
   const [deletedReminderPinned, setDeletedReminderPinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
@@ -428,6 +429,30 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
       paddingTop: 8,
       paddingBottom: 2,
     },
+    sortFilterToggleRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      paddingHorizontal: 16,
+      paddingTop: 2,
+      paddingBottom: 2,
+    },
+    sortFilterToggleBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingVertical: 4,
+    },
+    sortFilterToggleText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    sortFilterDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.accent,
+    },
   }), [colors, insets.bottom]);
 
   const isOverdue = (dateStr: string): boolean => {
@@ -541,37 +566,54 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
         </View>
       ) : (
         <>
-          <Text style={styles.sortFilterLabel}>Sort</Text>
-          <View style={styles.sortFilterRow}>
-            {(['due', 'created', 'name'] as const).map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={[styles.pill, reminderSort === s && styles.pillActive]}
-                onPress={() => { hapticLight(); setReminderSort(s); }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.pillText, reminderSort === s && styles.pillTextActive]}>
-                  {s === 'due' ? 'Due Date' : s === 'created' ? 'Created' : 'Name'}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.sortFilterToggleRow}>
+            <TouchableOpacity
+              style={styles.sortFilterToggleBtn}
+              onPress={() => { hapticLight(); setShowSortFilter((prev) => !prev); }}
+              activeOpacity={0.7}
+            >
+              {(reminderSort !== 'due' || reminderFilter !== 'active') && <View style={styles.sortFilterDot} />}
+              <Text style={styles.sortFilterToggleText}>
+                Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <Text style={styles.sortFilterLabel}>Filter</Text>
-          <View style={styles.sortFilterRow}>
-            {(['active', 'completed', 'has-date'] as const).map((f) => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.pill, reminderFilter === f && styles.pillActive]}
-                onPress={() => { hapticLight(); setReminderFilter(f); }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.pillText, reminderFilter === f && styles.pillTextActive]}>
-                  {f === 'active' ? 'Active' : f === 'completed' ? 'Completed' : 'Has Date'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {showSortFilter && (
+            <>
+              <Text style={styles.sortFilterLabel}>Sort</Text>
+              <View style={styles.sortFilterRow}>
+                {(['due', 'created', 'name'] as const).map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.pill, reminderSort === s && styles.pillActive]}
+                    onPress={() => { hapticLight(); setReminderSort(s); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pillText, reminderSort === s && styles.pillTextActive]}>
+                      {s === 'due' ? 'Due Date' : s === 'created' ? 'Created' : 'Name'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.sortFilterLabel}>Filter</Text>
+              <View style={styles.sortFilterRow}>
+                {(['active', 'completed', 'has-date'] as const).map((f) => (
+                  <TouchableOpacity
+                    key={f}
+                    style={[styles.pill, reminderFilter === f && styles.pillActive]}
+                    onPress={() => { hapticLight(); setReminderFilter(f); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pillText, reminderFilter === f && styles.pillTextActive]}>
+                      {f === 'active' ? 'Active' : f === 'completed' ? 'Completed' : 'Has Date'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
 
           {sorted.length === 0 ? (
             <View style={styles.empty}>
