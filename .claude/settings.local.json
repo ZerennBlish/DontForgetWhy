@@ -19,7 +19,19 @@
       "Bash(npm ls:*)",
       "Bash(npx sharp-cli:*)",
       "Bash(ls:*)",
-      "Bash(npx expo uninstall @react-native-community/netinfo)"
+      "Bash(npx expo uninstall @react-native-community/netinfo)",
+      "WebSearch",
+      "WebFetch(domain:notifee.app)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm view:*)",
+      "WebFetch(domain:monzo.com)",
+      "WebFetch(domain:itnext.io)",
+      "WebFetch(domain:blog.danlew.net)",
+      "Bash(gh api:*)",
+      "Bash(gh auth status:*)",
+      "WebFetch(domain:issuetracker.google.com)",
+      "WebFetch(domain:medium.com)"
     ]
   }
 }

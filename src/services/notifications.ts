@@ -190,6 +190,39 @@ async function _createChannels(): Promise<void> {
   });
 }
 
+// --- Dynamic channel creation for custom alarm sounds ---
+
+function extractMediaId(uri: string): string {
+  // Pull numeric ID from content://media/internal/audio/media/1234
+  const match = uri.match(/\/(\d+)$/);
+  if (match) return match[1];
+  // Fallback: simple hash of the full URI
+  let hash = 0;
+  for (let i = 0; i < uri.length; i++) {
+    hash = ((hash << 5) - hash + uri.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+export async function getOrCreateSoundChannel(
+  soundUri: string,
+  soundName: string,
+  channelPrefix = 'alarm_custom_',
+): Promise<string> {
+  const channelId = `${channelPrefix}${extractMediaId(soundUri)}`;
+  const typeLabel = channelPrefix.startsWith('timer') ? 'Timer' : 'Alarm';
+  await notifee.createChannel({
+    id: channelId,
+    name: `${typeLabel}: ${soundName}`,
+    importance: AndroidImportance.HIGH,
+    bypassDnd: true,
+    vibration: true,
+    vibrationPattern: [300, 300, 300, 300],
+    sound: soundUri,
+  });
+  return channelId;
+}
+
 export async function requestPermissions(): Promise<boolean> {
   const settings = await notifee.requestPermission();
   return settings.authorizationStatus >= AuthorizationStatus.AUTHORIZED;
@@ -217,10 +250,27 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
     }
   }
 
-  // Resolve which channel to use based on alarm's soundId
-  const alarmSound = getAlarmSoundById(alarm.soundId || 'default');
-  const channelId = alarmSound.channelId;
-  const isSilent = alarmSound.id === 'silent';
+  // Resolve which channel to use:
+  // 1. Custom system sound (soundUri) → dynamic channel
+  // 2. Preset sound (soundId) → static channel
+  let channelId: string;
+  let isSilent = false;
+
+  if (alarm.soundUri) {
+    try {
+      channelId = await getOrCreateSoundChannel(
+        alarm.soundUri,
+        alarm.soundName || 'Custom',
+      );
+    } catch {
+      // Fallback to default if channel creation fails
+      channelId = ALARM_CHANNEL_ID;
+    }
+  } else {
+    const alarmSound = getAlarmSoundById(alarm.soundId || 'default');
+    channelId = alarmSound.channelId;
+    isSilent = alarmSound.id === 'silent';
+  }
 
   const notificationPayload = {
     title,
@@ -314,8 +364,28 @@ export async function scheduleTimerNotification(
   icon: string,
   completionTimestamp: number,
   timerId: string,
+  soundUri?: string,
+  soundName?: string,
 ): Promise<string> {
   await setupNotificationChannel();
+
+  let channelId = ALARM_CHANNEL_ID;
+  let customChannel = false;
+  if (soundUri) {
+    try {
+      channelId = await getOrCreateSoundChannel(
+        soundUri,
+        soundName || 'Custom',
+        'timer_custom_',
+      );
+      customChannel = true;
+      console.log('[Timer] Using custom channel:', channelId, 'sound:', soundUri);
+    } catch (err) {
+      console.error('[Timer] getOrCreateSoundChannel failed, using default:', err);
+      // fallback to default channel
+    }
+  }
+
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
     timestamp: completionTimestamp,
@@ -324,18 +394,21 @@ export async function scheduleTimerNotification(
     },
   };
 
+  // When using a custom sound channel, omit the notification-level sound
+  // property so Android uses the channel's sound. Setting sound: 'default'
+  // on the notification can override the channel sound on some devices.
   return await notifee.createTriggerNotification(
     {
       title: `${icon} Timer Complete`,
       body: `${label} is done!`,
       data: { timerId },
       android: {
-        channelId: ALARM_CHANNEL_ID,
+        channelId,
         fullScreenAction: {
           id: 'default',
         },
         importance: AndroidImportance.HIGH,
-        sound: 'default',
+        sound: customChannel ? soundUri : 'default',
         loopSound: true,
         ongoing: true,
         autoCancel: false,

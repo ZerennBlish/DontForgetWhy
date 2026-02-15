@@ -57,6 +57,8 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 51. **Trophy navigation** — Trophy icon in header navigates to Memory Score; only visible after first game played
 52. **Orphaned timer cleanup** — On app launch, expired timers from when the app was killed are cleaned up and their countdown notifications cancelled
 53. **Migration support** — `migrateAlarm()` handles old data formats: single `notificationId` to `notificationIds[]`, boolean `recurring` to `mode` + `days`, numeric day arrays to string-based `AlarmDay[]`
+54. **Custom alarm sounds** — Per-alarm sound selection from system ringtones/alarm sounds via reusable SoundPickerModal bottom sheet; react-native-notification-sounds lists available system sounds; preview playback via expo-av with audioModeReady ref pattern; dynamic Notifee channel creation per unique sound URI (`alarm_custom_{mediaId}`); backward compatible with existing default channel
+55. **Custom timer sounds** — Default timer completion sound configurable in Settings via SoundPickerModal; saved to AsyncStorage (`defaultTimerSound` key); applied to timer completion notifications via dynamic channel (`timer_custom_{mediaId}` prefix); works for both in-app timer starts and headless widget timer starts; falls back to default alarm channel when no custom sound set
 
 ## 2. Data Models
 
@@ -79,6 +81,8 @@ interface Alarm {
   private: boolean;         // Hides details on alarm card
   createdAt: string;        // ISO 8601 timestamp
   notificationIds: string[];// Array of notifee notification identifiers (one per scheduled day)
+  soundUri?: string;       // content:// URI from system sound picker (for custom notification channel)
+  soundName?: string;      // Display name of selected system sound
   /** @deprecated */ notificationId?: string;
   /** @deprecated */ recurring?: boolean;
 }
@@ -141,6 +145,15 @@ interface ForgetEntry {
 interface AppSettings {
   guessWhyEnabled: boolean; // Default: true
   timeFormat: '12h' | '24h'; // Default: '12h'
+}
+```
+
+### TimerSoundSetting (`src/services/settings.ts`)
+```typescript
+interface TimerSoundSetting {
+  uri: string | null;      // content:// URI from system sound picker, null = default
+  name: string | null;     // Display name of selected system sound
+  soundID: number | null;  // Numeric ID from react-native-notification-sounds
 }
 ```
 
@@ -235,6 +248,8 @@ interface RecentEntry {
 | `memoryMatchScores` | `BestScores` | `MemoryMatchScreen.tsx` | Best moves + time per difficulty (easy/medium/hard) |
 | `sudokuCurrentGame` | `SavedGame` | `SudokuScreen.tsx` | Current in-progress Sudoku puzzle state (for resume) |
 | `sudokuBestScores` | `BestScores` | `SudokuScreen.tsx` | Best time + mistakes per difficulty (easy/medium/hard) |
+| `defaultTimerSound` | `TimerSoundSetting` | `settings.ts` | Default timer completion sound (uri, name, soundID); null values = system default |
+| `hapticsEnabled` | `string` | `SettingsScreen.tsx` | `'true'` or `'false'` — controls haptic feedback globally |
 
 ## 4. Screen Flow
 
@@ -260,7 +275,7 @@ type RootStackParamList = {
 Main hub. Header shows app title, active alarm count, game controller button, trophy button (if games played), gear button. Pill-shaped Alarms/Timers tab switcher. Alarms tab shows a random app-open quote card (refreshes on each screen focus), FlatList of AlarmCards (with `guessWhyEnabled` prop for info hiding + pin button), and a FAB (+) to create. If Guess Why stats exist, a streak row displays below the tabs. Timers tab renders TimerScreen inline. Timer management (start, pause/resume, dismiss, notifications) is handled here and passed to TimerScreen via props. AppState listener reloads active timers when the app returns to foreground (picks up widget-started timers and auto-switches to Timers tab if new ones found).
 
 ### CreateAlarm (`CreateAlarmScreen.tsx`)
-Slide-from-bottom modal. Two large number inputs for hours/minutes. In 12h mode: hours accept 1-12, AM/PM toggle buttons appear. In 24h mode: hours accept 0-23, no AM/PM. Schedule section with Recurring/One-time mode toggle. Recurring: day-of-week selector (7 circle buttons) + Weekdays/Weekends quick-select. One-time: inline calendar picker with month navigation, past dates disabled, past-time validation on save. Nickname field (shows on lock screen). Note field with random placeholder and character counter (200 max). 25-icon picker grid. Private alarm toggle card. Save button. In edit mode, pre-fills all fields and button says "Update Alarm". Requires at least a note or an icon. Notification permission only requested when scheduling is needed. Save wrapped in try/catch with user-facing Alert on failure. Refreshes widgets on save.
+Slide-from-bottom modal. Two large number inputs for hours/minutes. In 12h mode: hours accept 1-12, AM/PM toggle buttons appear. In 24h mode: hours accept 0-23, no AM/PM. Schedule section with Recurring/One-time mode toggle. Recurring: day-of-week selector (7 circle buttons) + Weekdays/Weekends quick-select. One-time: inline calendar picker with month navigation, past dates disabled, past-time validation on save. Nickname field (shows on lock screen). Note field with random placeholder and character counter (200 max). 25-icon picker grid. Sound picker row (between icon picker and privacy toggle) opens SoundPickerModal to select a system ringtone/alarm sound; shows current selection name or "Default". Private alarm toggle card. Save button. In edit mode, pre-fills all fields and button says "Update Alarm". Requires at least a note or an icon. Notification permission only requested when scheduling is needed. Save wrapped in try/catch with user-facing Alert on failure. Refreshes widgets on save.
 
 ### AlarmFire (`AlarmFireScreen.tsx`)
 Full-screen fade-in, gesture disabled. Only vibrates if `fromNotification` is true (with cleanup on unmount). Cancels all notification IDs (array format + legacy single ID). Top: category emoji + formatted time + category label. Middle: the alarm note (the "why") + divider + the assigned quote. Snooze button with 4 escalating labels and a random shame message per tier. Dismiss button says "I'm On It".
@@ -269,7 +284,7 @@ Full-screen fade-in, gesture disabled. Only vibrates if `fromNotification` is tr
 Full-screen fade-in, gesture disabled. Only vibrates if `fromNotification` and `canPlay` are true. If the alarm has no icon and a note shorter than 3 characters, immediately replaces itself with AlarmFire (no stats recorded). Top: alarm icon/category emoji + time + category label. Game area card with Icons/Type It mode toggle (Icons mode disabled if alarm has no icon). Icons mode: scrollable 4-column grid of 25 icons with labels; match is exact emoji equality. Type It mode: text input with Guess button (min 3 chars); match checks substring in note, or icon ID for icon-only alarms. 3 attempts. Shake animation on wrong guess. Result overlay (green win / red lose / amber skip) with snarky message. Continue navigates to AlarmFire via `navigation.replace`. Losses and skips logged to Forget Log.
 
 ### Settings (`SettingsScreen.tsx`)
-Back button + title. Toggle for "24-Hour Time". Theme picker: 8 preset theme circles in a grid + 9th "Custom" circle. Custom opens a reanimated-color-picker modal with Panel1 + HueSlider + Preview.
+Back button + title. Toggle for "24-Hour Time". Toggle for "Vibration" (haptic feedback). Timer Sound row opens SoundPickerModal to pick the default timer completion sound (shows current selection name or "Default"). Theme picker: 8 preset theme circles in a grid + 9th "Custom" circle. Custom opens a reanimated-color-picker modal with Panel1 + HueSlider + Preview. Permissions card with Setup Guide button (re-opens onboarding at permissions slide). About card links to AboutScreen.
 
 ### Games (`GamesScreen.tsx`)
 Hub screen with Memory Match card, Sudoku card, and Guess Why toggle switch. Game controller icon on main screen navigates here.
@@ -294,7 +309,8 @@ Rendered inline as a tab in AlarmListScreen. Active timers section with countdow
 ```
 src/
 ├── components/
-│   └── AlarmCard.tsx              Alarm list item card with peek, toggle, edit, delete, pin, Guess Why hiding
+│   ├── AlarmCard.tsx              Alarm list item card with peek, toggle, edit, delete, pin, Guess Why hiding
+│   └── SoundPickerModal.tsx       Reusable bottom sheet for picking system sounds; search filter, expo-av preview, selection
 ├── data/
 │   ├── appOpenQuotes.ts           38 snarky quotes shown when opening the app
 │   ├── guessWhyIcons.ts           25-icon array for icon picker + Guess Why game grid
@@ -308,21 +324,21 @@ src/
 ├── screens/
 │   ├── AlarmFireScreen.tsx        Alarm dismiss screen with note, quote, snooze shame
 │   ├── AlarmListScreen.tsx        Main screen with alarm list, timer tab, FAB, timer management
-│   ├── CreateAlarmScreen.tsx      Create/edit alarm with time, schedule, nickname, note, icon, privacy
+│   ├── CreateAlarmScreen.tsx      Create/edit alarm with time, schedule, nickname, note, icon, sound, privacy
 │   ├── ForgetLogScreen.tsx        Chronological log of forgotten/skipped alarms
 │   ├── GamesScreen.tsx            Games hub with Memory Match, Sudoku, Guess Why toggle
 │   ├── GuessWhyScreen.tsx         Mini-game: guess the alarm reason in 3 attempts
 │   ├── MemoryMatchScreen.tsx      Card-flip matching game with 3 difficulties and best scores
 │   ├── MemoryScoreScreen.tsx      Stats dashboard with rank, streak, win/loss totals
-│   ├── SettingsScreen.tsx         Time format toggle + theme picker
+│   ├── SettingsScreen.tsx         Time format, vibration, timer sound, theme picker, permissions, about
 │   ├── SudokuScreen.tsx           Full Sudoku with 3 difficulties, notes, pause, best scores
 │   └── TimerScreen.tsx            Timer preset grid + active countdown timers + pin-to-widget
 ├── services/
 │   ├── forgetLog.ts               CRUD for ForgetEntry[] with runtime validation
 │   ├── guessWhyStats.ts           Win/loss/skip/streak tracking with per-field numeric validation
-│   ├── notifications.ts           @notifee scheduling, channels, triggers, countdown, cancellation
+│   ├── notifications.ts           @notifee scheduling, channels (static + dynamic per-sound), triggers, countdown, cancellation
 │   ├── quotes.ts                  12 motivational quotes assigned to alarms at creation
-│   ├── settings.ts                AppSettings load/save (guessWhyEnabled + timeFormat)
+│   ├── settings.ts                AppSettings load/save, getDefaultTimerSound/saveDefaultTimerSound
 │   ├── storage.ts                 Alarm CRUD with migration, runtime type guards, try/catch on scheduling
 │   ├── timerStorage.ts            Timer presets, active timers (validated), recent tracking
 │   └── widgetPins.ts              Pin/unpin timer presets (max 3) and alarms (max 3) for widget priority
@@ -659,15 +675,31 @@ Defined in `notifications.ts`. The alarm note (the "why") is **never** included 
 
 ### Notification Channels
 
-**Alarms** (`alarms`): importance HIGH, sound default, vibration [1000, 500, 1000, 500], lights red, bypassDnd true.
+**Static channels** (created once at startup):
+
+**Alarms v2** (`alarms_v2`): importance HIGH, sound `'alarm'` (system alarm sound), vibration [300, 300], lights red, bypassDnd true. Default channel for all alarm and timer completion notifications.
+
+**Alarms Legacy** (`alarms`): importance HIGH, sound default. Kept for backward compatibility with older notification IDs.
+
+**Alarms Gentle/Urgent/Classic/Digital/Silent**: Preset alarm style channels with varying vibration patterns and importance levels, selectable per-alarm via sound preset ID.
 
 **Timer Progress** (`timer-progress`): importance DEFAULT, vibration false. Used for ongoing countdown chronometer.
 
+**Reminders** (`reminders`): importance DEFAULT, sound default, vibration true.
+
+**Dynamic channels** (created on demand):
+
+**Custom alarm sound** (`alarm_custom_{mediaId}`): Created by `getOrCreateSoundChannel()` when an alarm has a `soundUri`. Channel ID derived deterministically from the content:// URI's numeric media ID via `extractMediaId()`. importance HIGH, bypassDnd, vibration [300, 300, 300, 300], sound set to the content:// URI.
+
+**Custom timer sound** (`timer_custom_{mediaId}`): Same as above but with `timer_custom_` prefix. Created when the user has selected a default timer sound in Settings.
+
+Android notification channels are **immutable after creation** (Android 8+). Changing a channel's sound requires creating a new channel with a different ID. Old channels are left in place. Channel IDs are deterministic so the same sound URI always maps to the same channel.
+
 ### Alarm Notification Settings
-fullScreenAction, importance HIGH, loopSound, ongoing, autoCancel false, vibrationPattern [1000, 500, 1000, 500], lights, category ALARM.
+fullScreenAction, importance HIGH, loopSound, ongoing, autoCancel false, vibrationPattern [300, 300, 300, 300], lights, category ALARM. Channel resolved in order: (1) custom system sound via `soundUri` -> dynamic `alarm_custom_` channel, (2) preset sound ID -> static channel from `alarmSounds.ts`, (3) default -> `alarms_v2` channel.
 
 ### Timer Notifications (two per timer)
-1. **Completion notification**: Timestamp trigger at exact completion time, alarm-style settings. Data: `{ timerId }`.
+1. **Completion notification**: Timestamp trigger at exact completion time, alarm-style settings. Data: `{ timerId }`. Uses custom timer sound channel (`timer_custom_{mediaId}`) if configured in Settings, otherwise falls back to `alarms_v2` channel. Sound loaded via `getDefaultTimerSound()` at timer start and on resume.
 2. **Countdown notification**: Ongoing display with Android chronometer counting down. ID: `countdown-${timerId}`. Uses `timer-progress` channel.
 
 ### Alarm Scheduling
@@ -714,10 +746,11 @@ Same two-column layout but cells include extra detail: timer cells show duration
 2. `widgetTaskHandler` receives `WIDGET_CLICK` with `clickAction: 'START_TIMER__${presetId}'`
 3. Loads preset data (respects custom durations) via `loadPresets()`
 4. Generates unique timer ID: `Date.now().toString() + Math.random().toString(36).slice(2)`
-5. Schedules completion notification + countdown notification
-6. Saves timer to AsyncStorage via `addActiveTimer`
-7. Records preset usage via `recordPresetUsage`
-8. Refreshes both widgets with updated data
+5. Loads default timer sound via `getDefaultTimerSound()` (for custom notification channel)
+6. Schedules completion notification (with custom sound if configured) + countdown notification
+7. Saves timer to AsyncStorage via `addActiveTimer`
+8. Records preset usage via `recordPresetUsage`
+9. Refreshes both widgets with updated data
 
 ### Widget Colors (hardcoded midnight theme)
 - Background: `#121220`
@@ -844,6 +877,21 @@ Full 9x9 Sudoku with puzzle generation, pencil notes, and difficulty-scaled assi
 ## 14. Remaining / Planned Features
 
 - **Actual snooze rescheduling** — Currently snooze shows shame messages but does not reschedule the notification
-- **Alarm sound customization** — Currently uses system default sound only
 - **Widget theme matching** — Widgets currently use hardcoded midnight theme colors; could match the user's selected theme
 - **Play Store publication** — App is configured for production builds via EAS but not yet published
+
+## 15. Features Explored and Removed
+
+- **Preset alarm sound picker** — An early version had 6 preset alarm sounds (`alarmSounds.ts`: Default, Gentle, Urgent, Classic, Digital, Silent) with static Notifee channels per preset. These all used `sound: 'default'` and sounded identical on most devices. Replaced by the real system ringtone picker (Feature 54) using `react-native-notification-sounds` + dynamic channels with actual content:// URIs. The preset channel definitions remain in `notifications.ts` for backward compatibility but the picker UI was removed from Settings.
+
+## 16. Key Implementation Patterns
+
+### Android Notification Channel Immutability
+Channels cannot be modified after creation on Android 8+. Changing a sound means creating a new channel with a new ID. `getOrCreateSoundChannel()` derives channel IDs deterministically from the content:// URI's numeric media ID (`extractMediaId()`), so the same sound always maps to the same channel. Old channels accumulate but are harmless.
+
+### expo-av Audio Mode Initialization
+expo-av 16.x requires `Audio.setAudioModeAsync()` to complete before `playAsync()` can acquire audio focus. SoundPickerModal uses an `audioModeReady` ref pattern: `setAudioModeAsync` is called when the modal opens (fire-and-forget with `.then()` setting the ref), and `handlePlay` calls `ensureAudioMode()` which either returns immediately (ref is true) or awaits a fresh `setAudioModeAsync` call. This prevents the "AudioFocusNotAcquiredException" race condition.
+
+### New Dependencies
+- `react-native-notification-sounds` — Lists system ringtones/alarm/notification sounds on Android. Returns `{ title, url, soundID }[]` where `url` is a `content://media/internal/audio/media/{id}` URI.
+- `expo-av` (~16.0.8) — Audio preview playback in SoundPickerModal. Deprecated in SDK 54 (replaced by `expo-audio`/`expo-video`) but functional.

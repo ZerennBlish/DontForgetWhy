@@ -19,6 +19,8 @@ export interface Alarm {
   createdAt: string;
   notificationIds: string[];
   soundId?: string;
+  soundUri?: string | null;
+  soundName?: string | null;
   /** @deprecated kept for backward compatibility with old alarms */
   notificationId?: string;
   /** @deprecated kept for backward compatibility */

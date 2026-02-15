@@ -15,13 +15,11 @@ import { Alarm } from '../types/alarm';
 import type { ActiveTimer } from '../types/timer';
 import { loadAlarms, deleteAlarm, toggleAlarm, addAlarm } from '../services/storage';
 import { cancelAlarmNotifications, scheduleAlarm, scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
-import { loadSettings } from '../services/settings';
+import { loadSettings, getDefaultTimerSound } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import {
   loadActiveTimers,
   saveActiveTimers,
-  addActiveTimer,
-  removeActiveTimer,
 } from '../services/timerStorage';
 import { getPinnedAlarms, togglePinAlarm, isAlarmPinned, unpinAlarm, pruneAlarmPins } from '../services/widgetPins';
 import { refreshTimerWidget } from '../widget/updateWidget';
@@ -449,14 +447,33 @@ export default function AlarmListScreen({ navigation }: Props) {
 
   const handleAddTimer = async (timer: ActiveTimer) => {
     const completionTimestamp = Date.now() + timer.remainingSeconds * 1000;
+
+    // Load default timer sound
+    let soundUri: string | undefined;
+    let soundName: string | undefined;
+    try {
+      const defaultSound = await getDefaultTimerSound();
+      console.log('[handleAddTimer] defaultSound:', JSON.stringify(defaultSound));
+      if (defaultSound.uri) {
+        soundUri = defaultSound.uri;
+        soundName = defaultSound.name || 'Custom';
+      }
+    } catch (err) {
+      console.error('[handleAddTimer] getDefaultTimerSound failed:', err);
+    }
+
     let notificationId: string | undefined;
     try {
+      console.log('[handleAddTimer] scheduling notification with sound:', soundUri, soundName);
       notificationId = await scheduleTimerNotification(
         timer.label,
         timer.icon,
         completionTimestamp,
         timer.id,
+        soundUri,
+        soundName,
       );
+      console.log('[handleAddTimer] notificationId:', notificationId);
     } catch (error) {
       console.error('[handleAddTimer] scheduleTimerNotification failed:', error);
       Alert.alert('Timer Started', 'Timer is running but the notification could not be scheduled.');
@@ -464,8 +481,12 @@ export default function AlarmListScreen({ navigation }: Props) {
     showTimerCountdownNotification(timer.label, timer.icon, completionTimestamp, timer.id).catch(
       (e) => console.error('[handleAddTimer] showTimerCountdownNotification failed:', e),
     );
-    const updated = await addActiveTimer({ ...timer, notificationId });
-    setActiveTimers(updated);
+    const timerWithNotif = { ...timer, notificationId };
+    setActiveTimers((prev) => {
+      const updated = [...prev, timerWithNotif];
+      saveActiveTimers(updated);
+      return updated;
+    });
   };
 
   const handleRemoveTimer = async (id: string) => {
@@ -476,8 +497,11 @@ export default function AlarmListScreen({ navigation }: Props) {
     cancelTimerCountdownNotification(id).catch(
       (e) => console.error('[handleRemoveTimer] cancelTimerCountdownNotification failed:', e),
     );
-    const updated = await removeActiveTimer(id);
-    setActiveTimers(updated);
+    setActiveTimers((prev) => {
+      const updated = prev.filter((t) => t.id !== id);
+      saveActiveTimers(updated);
+      return updated;
+    });
   };
 
   const handleTogglePause = async (id: string) => {
@@ -514,7 +538,22 @@ export default function AlarmListScreen({ navigation }: Props) {
       // Schedule notification and countdown for resumed timer
       if (timer.remainingSeconds > 0) {
         const ts = Date.now() + timer.remainingSeconds * 1000;
-        scheduleTimerNotification(timer.label, timer.icon, ts, timer.id)
+
+        // Load default timer sound for rescheduled notification
+        let rSoundUri: string | undefined;
+        let rSoundName: string | undefined;
+        try {
+          const defaultSound = await getDefaultTimerSound();
+          console.log('[handleTogglePause] defaultSound:', JSON.stringify(defaultSound));
+          if (defaultSound.uri) {
+            rSoundUri = defaultSound.uri;
+            rSoundName = defaultSound.name || 'Custom';
+          }
+        } catch (err) {
+          console.error('[handleTogglePause] getDefaultTimerSound failed:', err);
+        }
+
+        scheduleTimerNotification(timer.label, timer.icon, ts, timer.id, rSoundUri, rSoundName)
           .then((notifId) => {
             setActiveTimers((current) => {
               const withNotif = current.map((ct) =>

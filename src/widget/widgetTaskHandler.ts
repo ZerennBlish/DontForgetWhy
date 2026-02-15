@@ -9,7 +9,7 @@ import {
   scheduleTimerNotification,
   showTimerCountdownNotification,
 } from '../services/notifications';
-import { loadSettings } from '../services/settings';
+import { loadSettings, getDefaultTimerSound } from '../services/settings';
 import {
   addActiveTimer,
   loadPresets,
@@ -612,6 +612,17 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
         await setupNotificationChannel();
 
+        // Load default timer sound
+        let soundUri: string | undefined;
+        let soundName: string | undefined;
+        try {
+          const defaultSound = await getDefaultTimerSound();
+          if (defaultSound.uri) {
+            soundUri = defaultSound.uri;
+            soundName = defaultSound.name || 'Custom';
+          }
+        } catch {}
+
         let notificationId: string | undefined;
         try {
           notificationId = await scheduleTimerNotification(
@@ -619,6 +630,8 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
             timer.icon,
             completionTimestamp,
             timer.id,
+            soundUri,
+            soundName,
           );
         } catch (error) {
           console.error('[widgetTaskHandler] scheduleTimerNotification failed:', error);

@@ -9,7 +9,6 @@ import {
   Alert,
   Platform,
   Switch,
-  Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -17,12 +16,13 @@ import { v4 as uuidv4 } from 'uuid';
 import type { AlarmCategory, AlarmDay } from '../types/alarm';
 import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
 import { addAlarm, updateAlarm } from '../services/storage';
-import { scheduleAlarm, requestPermissions, previewAlarmSound } from '../services/notifications';
+import { scheduleAlarm, requestPermissions } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { getRandomQuote } from '../services/quotes';
 import { getRandomPlaceholder } from '../data/placeholders';
 import guessWhyIcons from '../data/guessWhyIcons';
-import { ALARM_SOUNDS, getAlarmSoundById } from '../data/alarmSounds';
+import SoundPickerModal from '../components/SoundPickerModal';
+import type { SystemSound } from '../components/SoundPickerModal';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
@@ -104,7 +104,14 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const [selectedSoundId, setSelectedSoundId] = useState(
     existingAlarm?.soundId || 'default'
   );
-  const [soundPickerVisible, setSoundPickerVisible] = useState(false);
+  const [systemSoundPickerVisible, setSystemSoundPickerVisible] = useState(false);
+  const [selectedSoundUri, setSelectedSoundUri] = useState<string | null>(
+    existingAlarm?.soundUri || null
+  );
+  const [selectedSoundName, setSelectedSoundName] = useState<string | null>(
+    existingAlarm?.soundName || null
+  );
+  const [selectedSystemSoundID, setSelectedSystemSoundID] = useState<number | null>(null);
 
   useEffect(() => {
     loadSettings().then((s) => {
@@ -158,8 +165,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     }
     return new Date().getFullYear();
   });
-
-  const currentSound = getAlarmSoundById(selectedSoundId);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -496,89 +501,30 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontWeight: '600',
       color: colors.textPrimary,
     },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: colors.modalOverlay,
-      justifyContent: 'center',
+    systemSoundRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
       alignItems: 'center',
-      padding: 24,
-    },
-    modalCard: {
       backgroundColor: colors.card,
       borderRadius: 16,
-      padding: 24,
-      width: '100%',
+      padding: 20,
       borderWidth: 1,
       borderColor: colors.border,
+      marginBottom: 24,
     },
-    modalTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.textPrimary,
-      textAlign: 'center',
-      marginBottom: 20,
-    },
-    soundOption: {
+    systemSoundValue: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 14,
-      paddingHorizontal: 4,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      gap: 6,
     },
-    soundOptionLast: {
-      borderBottomWidth: 0,
-    },
-    soundOptionIcon: {
-      fontSize: 24,
-      marginRight: 14,
-    },
-    soundOptionInfo: {
-      flex: 1,
-    },
-    soundOptionLabel: {
-      fontSize: 16,
+    systemSoundValueText: {
+      fontSize: 14,
       fontWeight: '600',
-      color: colors.textPrimary,
-    },
-    soundOptionDesc: {
-      fontSize: 13,
-      color: colors.textTertiary,
-      marginTop: 2,
-    },
-    soundOptionCheck: {
-      fontSize: 18,
       color: colors.accent,
-      fontWeight: '700',
+      maxWidth: 160,
     },
-    soundPreviewBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: colors.background,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginLeft: 10,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    soundPreviewIcon: {
+    systemSoundChevron: {
       fontSize: 16,
-    },
-    modalCloseBtn: {
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      paddingVertical: 14,
-      paddingHorizontal: 32,
-      alignItems: 'center',
-      alignSelf: 'center',
-      marginTop: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    modalCloseText: {
-      fontSize: 16,
-      fontWeight: '600',
       color: colors.textTertiary,
     },
   }), [colors, insets.bottom]);
@@ -607,15 +553,18 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     });
   };
 
-  const handleSelectSound = (soundId: string) => {
+  const handleSystemSoundSelect = (sound: SystemSound | null) => {
     hapticLight();
-    setSelectedSoundId(soundId);
-    setSoundPickerVisible(false);
-  };
-
-  const handlePreviewSound = (channelId: string, label: string) => {
-    hapticLight();
-    previewAlarmSound(channelId, label);
+    if (sound) {
+      setSelectedSoundUri(sound.url);
+      setSelectedSoundName(sound.title);
+      setSelectedSystemSoundID(sound.soundID);
+    } else {
+      setSelectedSoundUri(null);
+      setSelectedSoundName(null);
+      setSelectedSystemSoundID(null);
+    }
+    setSystemSoundPickerVisible(false);
   };
 
   const isWeekdaysSelected = selectedDays.length === 5 && WEEKDAYS.every((d) => selectedDays.includes(d));
@@ -712,6 +661,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           days: mode === 'recurring' ? selectedDays : [...ALL_DAYS],
           date: mode === 'one-time' ? selectedDate : null,
           soundId: selectedSoundId,
+          soundUri: selectedSoundUri,
+          soundName: selectedSoundName,
         };
         await updateAlarm(updated);
       } else {
@@ -731,6 +682,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           createdAt: new Date().toISOString(),
           notificationIds: [],
           soundId: selectedSoundId,
+          soundUri: selectedSoundUri,
+          soundName: selectedSoundName,
         };
 
         let notificationIds: string[] = [];
@@ -956,14 +909,21 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         ))}
       </View>
 
-      <Text style={styles.label}>Sound</Text>
+      <Text style={styles.label}>Alarm Sound</Text>
       <TouchableOpacity
-        style={styles.soundRow}
-        onPress={() => setSoundPickerVisible(true)}
+        style={styles.systemSoundRow}
+        onPress={() => setSystemSoundPickerVisible(true)}
         activeOpacity={0.7}
       >
-        <Text style={styles.soundLabel}>{currentSound.icon} {currentSound.label}</Text>
-        <Text style={{ fontSize: 14, color: colors.textTertiary }}>{currentSound.description}</Text>
+        <Text style={styles.soundLabel}>
+          {selectedSoundUri ? '\u{1F3B5}' : '\u{1F514}'} {selectedSoundName || 'Default'}
+        </Text>
+        <View style={styles.systemSoundValue}>
+          <Text style={styles.systemSoundValueText} numberOfLines={1}>
+            {selectedSoundUri ? 'System sound' : 'Tap to change'}
+          </Text>
+          <Text style={styles.systemSoundChevron}>{'\u203A'}</Text>
+        </View>
       </TouchableOpacity>
 
       <View style={styles.toggleCard}>
@@ -987,48 +947,12 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         </Text>
       </TouchableOpacity>
 
-      {/* Sound Picker Modal */}
-      <Modal transparent visible={soundPickerVisible} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Alarm Sound</Text>
-            {ALARM_SOUNDS.map((sound, index) => (
-              <TouchableOpacity
-                key={sound.id}
-                style={[
-                  styles.soundOption,
-                  index === ALARM_SOUNDS.length - 1 && styles.soundOptionLast,
-                ]}
-                onPress={() => handleSelectSound(sound.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.soundOptionIcon}>{sound.icon}</Text>
-                <View style={styles.soundOptionInfo}>
-                  <Text style={styles.soundOptionLabel}>{sound.label}</Text>
-                  <Text style={styles.soundOptionDesc}>{sound.description}</Text>
-                </View>
-                {selectedSoundId === sound.id && (
-                  <Text style={styles.soundOptionCheck}>{'\u2713'}</Text>
-                )}
-                <TouchableOpacity
-                  style={styles.soundPreviewBtn}
-                  onPress={() => handlePreviewSound(sound.channelId, sound.label)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.soundPreviewIcon}>{'\u25B6'}</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              onPress={() => setSoundPickerVisible(false)}
-              style={styles.modalCloseBtn}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.modalCloseText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <SoundPickerModal
+        visible={systemSoundPickerVisible}
+        onSelect={handleSystemSoundSelect}
+        onClose={() => setSystemSoundPickerVisible(false)}
+        currentSoundID={selectedSystemSoundID}
+      />
     </ScrollView>
   );
 }

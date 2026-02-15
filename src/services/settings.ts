@@ -52,3 +52,32 @@ export async function getOnboardingComplete(): Promise<boolean> {
 export async function setOnboardingComplete(): Promise<void> {
   await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
 }
+
+// --- Default timer sound ---
+
+const DEFAULT_TIMER_SOUND_KEY = 'defaultTimerSound';
+
+export interface TimerSoundSetting {
+  uri: string | null;
+  name: string | null;
+  soundID: number | null;
+}
+
+export async function getDefaultTimerSound(): Promise<TimerSoundSetting> {
+  try {
+    const raw = await AsyncStorage.getItem(DEFAULT_TIMER_SOUND_KEY);
+    if (!raw) return { uri: null, name: null, soundID: null };
+    const parsed = JSON.parse(raw);
+    return {
+      uri: typeof parsed.uri === 'string' ? parsed.uri : null,
+      name: typeof parsed.name === 'string' ? parsed.name : null,
+      soundID: typeof parsed.soundID === 'number' ? parsed.soundID : null,
+    };
+  } catch {
+    return { uri: null, name: null, soundID: null };
+  }
+}
+
+export async function saveDefaultTimerSound(sound: TimerSoundSetting): Promise<void> {
+  await AsyncStorage.setItem(DEFAULT_TIMER_SOUND_KEY, JSON.stringify(sound));
+}
