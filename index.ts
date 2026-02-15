@@ -1,5 +1,6 @@
 import { registerRootComponent } from 'expo';
 import { registerWidgetTaskHandler } from 'react-native-android-widget';
+import { Vibration } from 'react-native';
 import notifee, { EventType } from '@notifee/react-native';
 
 import App from './App';
@@ -29,6 +30,9 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
     } else {
       console.log('[NOTIF] BACKGROUND PRESS — WARNING: no notification ID available');
     }
+    // Kill device-level vibration
+    Vibration.cancel();
+    console.log('[NOTIF] BACKGROUND PRESS — Vibration.cancel() called');
     // App will launch — getInitialNotification handles navigation
   }
   if (type === EventType.DISMISSED) {

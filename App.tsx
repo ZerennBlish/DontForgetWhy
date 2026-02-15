@@ -187,6 +187,8 @@ function AppNavigator() {
         console.log('[NOTIF] COLD START — timer notification, cancelling:', notifId);
         await notifee.cancelNotification(notifId).catch(() => {});
         await cancelTimerCountdownNotification(timerId).catch(() => {});
+        Vibration.cancel();
+        console.log('[NOTIF] COLD START — timer Vibration.cancel() called');
       } else if (alarmId) {
         // Cancel notification immediately to stop sound/vibration
         if (notifId) {
@@ -222,6 +224,8 @@ function AppNavigator() {
           console.log('[NOTIF] FOREGROUND PRESS — timer notification, cancelling:', notifId);
           await notifee.cancelNotification(notifId).catch(() => {});
           await cancelTimerCountdownNotification(timerId).catch(() => {});
+          Vibration.cancel();
+          console.log('[NOTIF] FOREGROUND PRESS — timer Vibration.cancel() called');
         } else if (alarmId) {
           // Cancel notification immediately to stop sound/vibration
           if (notifId) {

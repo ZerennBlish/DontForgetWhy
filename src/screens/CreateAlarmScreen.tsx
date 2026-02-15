@@ -105,7 +105,9 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const [selectedSoundName, setSelectedSoundName] = useState<string | null>(
     existingAlarm?.soundName || null
   );
-  const [selectedSystemSoundID, setSelectedSystemSoundID] = useState<number | null>(null);
+  const [selectedSystemSoundID, setSelectedSystemSoundID] = useState<number | null>(
+    existingAlarm?.soundID ?? null
+  );
 
   useEffect(() => {
     loadSettings().then((s) => {
@@ -648,6 +650,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           soundId: undefined,
           soundUri: selectedSoundUri || undefined,
           soundName: selectedSoundName || undefined,
+          soundID: selectedSystemSoundID ?? undefined,
         };
         await updateAlarm(updated);
       } else {
@@ -668,6 +671,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           notificationIds: [],
           soundUri: selectedSoundUri || undefined,
           soundName: selectedSoundName || undefined,
+          soundID: selectedSystemSoundID ?? undefined,
         };
 
         let notificationIds: string[] = [];

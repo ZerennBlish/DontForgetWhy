@@ -9,14 +9,14 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 3. **Recurring alarm mode** — Select specific days of the week (Mon-Sun) with quick-select buttons for Weekdays, Weekends, or All Days; one weekly trigger per selected day
 4. **One-time alarm mode** — Select a specific date from an inline calendar picker; rejects past dates and times; no repeat
 5. **Alarm list** — Main screen shows all alarms with enable/disable switch, edit button, delete button (with confirmation), and pin-to-widget button
-6. **Alarms / Timers tab switcher** — Pill-shaped toggle on the main screen switches between alarm list and timer grid
+6. **Alarms / Timers / Reminders tab switcher** — Pill-shaped 3-tab toggle on the main screen switches between alarm list, timer grid, and reminders list
 7. **One-time auto-disable** — One-time alarms are automatically disabled after firing (via `disableAlarm` in App.tsx)
 8. **12/24 hour time format** — Setting in SettingsScreen; affects alarm card display, fire screen display, widget display, and time input format on create/edit screen
 9. **Icon picker** — 25-emoji grid on create/edit screen; selected icon auto-maps to a category behind the scenes
 10. **Category auto-mapping** — Icon selection drives the category field via `iconCategoryMap` (10 mapped icons); unrecognized icons default to `'general'`
 11. **Private alarm mode** — Hides note/icon/nickname on the alarm card, shows "Private Alarm"; tap eye icon to peek for 3 seconds
 12. **Motivational quotes** — Random quote from a pool of 12, assigned at alarm creation and shown on the fire screen
-13. **App-open quotes** — 38 snarky rotating quotes displayed at the top of the alarm list; refreshes on every screen focus via useFocusEffect
+13. **App-open quotes** — 38 snarky rotating quotes displayed as a compact italic line (no card background, smaller font) under the tabs; moves to empty-state center when no items exist; refreshes on every screen focus via useFocusEffect
 14. **Rotating placeholder text** — The note input field shows a random witty placeholder from a pool of 12
 15. **Guess Why mini-game** — When enabled (default: ON), you must guess why you set the alarm before seeing the answer; 3 attempts via icon grid or free-text input
 16. **Guess Why info hiding** — When Guess Why is enabled, alarm cards show deterministic mystery text, notifications use generic text, widget alarms show "Mystery" — prevents cheating across the entire UI
@@ -44,7 +44,7 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 38. **Notification scheduling** — Recurring (daily or per-day weekly) and one-time alarm notifications via @notifee with alarm manager
 39. **Notification deep-linking** — Tapping a notification opens GuessWhy (if enabled) or AlarmFire; timer notifications are cancelled on tap
 40. **Aggressive alarm notifications** — DND bypass, loopSound, ongoing, vibrationPattern, lights, fullScreenAction, AndroidCategory.ALARM
-41. **Conditional vibration** — AlarmFire and GuessWhy only vibrate when opened from a notification (`fromNotification` route param)
+41. **Conditional vibration** — AlarmFire and GuessWhy only vibrate when opened from a notification (`fromNotification` route param); AlarmFireScreen cancels device vibration on mount and does not restart it when Guess Why is active; `Vibration.cancel()` called on all notification handling paths (background, cold start, foreground)
 42. **Notification privacy** — Alarm note (the "why") is never included in the notification body
 43. **Memory Match mini-game** — Card-flip matching game with 3 difficulties (3x4, 4x4, 5x4), par scoring, animated card flip (scaleX interpolation), best scores per difficulty
 44. **Sudoku mini-game** — Full Sudoku with 3 difficulties, backtracking puzzle generator with unique-solution validation, pencil notes, pause/save/resume, difficulty-scaled assistance, star rating, best scores per difficulty
@@ -53,12 +53,15 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 47. **Custom theme generator** — Pick any accent color; generates full dark or light theme from luminance analysis with color mixing
 48. **Theme persistence** — Selected theme and custom accent color saved to AsyncStorage, restored on app launch
 49. **Safe area support** — SafeAreaProvider wraps the app root; every screen uses useSafeAreaInsets
-50. **Streak display** — Current streak and best streak shown in the alarm list header when the user has played at least one Guess Why round
+50. **Streak display** — Current streak and best streak shown in the alarm list header only when streak > 0 (no "streak broken" message); format: "🔥 X in a row" with best streak
 51. **Trophy navigation** — Trophy icon in header navigates to Memory Score; only visible after first game played
 52. **Orphaned timer cleanup** — On app launch, expired timers from when the app was killed are cleaned up and their countdown notifications cancelled
 53. **Migration support** — `migrateAlarm()` handles old data formats: single `notificationId` to `notificationIds[]`, boolean `recurring` to `mode` + `days`, numeric day arrays to string-based `AlarmDay[]`
 54. **Custom alarm sounds** — Per-alarm sound selection from system ringtones/alarm sounds via reusable SoundPickerModal bottom sheet; react-native-notification-sounds lists available system sounds; preview playback via expo-av with audioModeReady ref pattern; dynamic Notifee channel creation per unique sound URI (`alarm_custom_{mediaId}`); backward compatible with existing default channel
 55. **Custom timer sounds** — Default timer completion sound configurable in Settings via SoundPickerModal; saved to AsyncStorage (`defaultTimerSound` key); applied to timer completion notifications via dynamic channel (`timer_custom_{mediaId}` prefix); works for both in-app timer starts and headless widget timer starts; falls back to default alarm channel when no custom sound set
+56. **Sort & Filter collapsible** — Sort and filter controls collapsed behind a right-aligned "Sort & Filter ▼" toggle button, default collapsed; active filter dot indicator appears when non-default sort/filter is applied; same collapsible pattern applied across Alarms, Timers, and Reminders tabs
+57. **Live subtitle counts** — Header subtitle dynamically shows "X alarms · Y timers · Z reminders" with live updates as items are added, removed, or toggled
+58. **Trivia game** — Category-based trivia with online (OpenTDB API) and offline (320+ built-in questions) modes; 9 categories: Science & Nature (🔬), History (🏛️), Music (🎵), Movies & TV (🎬), Geography (🌍), Sports (🏆), Technology (💻), Food & Drink (🍽️), General Knowledge (🧠); 2-column category grid with General Knowledge centered alone on bottom row; per-category stats tracking
 
 ## 2. Data Models
 
@@ -256,8 +259,10 @@ interface RecentEntry {
 ### Navigation Stack (`RootStackParamList`)
 ```typescript
 type RootStackParamList = {
+  Onboarding: { startSlide?: number } | undefined;
   AlarmList: undefined;
   CreateAlarm: { alarm?: Alarm } | undefined;
+  CreateReminder: { reminderId?: string } | undefined;
   AlarmFire: { alarm: Alarm; fromNotification?: boolean };
   GuessWhy: { alarm: Alarm; fromNotification?: boolean };
   Settings: undefined;
@@ -265,14 +270,17 @@ type RootStackParamList = {
   MemoryMatch: undefined;
   Games: undefined;
   Sudoku: undefined;
+  DailyRiddle: undefined;
   ForgetLog: undefined;
+  About: undefined;
+  Trivia: undefined;
 };
 ```
 
-10 navigation routes + 1 inline screen (TimerScreen rendered as a tab inside AlarmListScreen).
+15 navigation routes + 2 inline screens (TimerScreen and ReminderScreen rendered as tabs inside AlarmListScreen).
 
 ### AlarmList (`AlarmListScreen.tsx`)
-Main hub. Header shows app title, active alarm count, game controller button, trophy button (if games played), gear button. Pill-shaped Alarms/Timers tab switcher. Alarms tab shows a random app-open quote card (refreshes on each screen focus), FlatList of AlarmCards (with `guessWhyEnabled` prop for info hiding + pin button), and a FAB (+) to create. If Guess Why stats exist, a streak row displays below the tabs. Timers tab renders TimerScreen inline. Timer management (start, pause/resume, dismiss, notifications) is handled here and passed to TimerScreen via props. AppState listener reloads active timers when the app returns to foreground (picks up widget-started timers and auto-switches to Timers tab if new ones found).
+Main hub. Header shows app title, subtitle with live counts ("X alarms · Y timers · Z reminders"), game controller button, trophy button (if games played), gear button. Pill-shaped 3-tab switcher (Alarms / Timers / Reminders). A compact italic quote line appears under the tabs (no card background); moves to empty-state center when no items exist. Streak row ("🔥 X in a row") displays only when streak > 0. Sort & Filter controls are collapsed behind a right-aligned "Sort & Filter ▼" toggle (default collapsed) with an active-filter dot indicator; same collapsible pattern applied across all three tabs. Alarms tab shows FlatList of AlarmCards (with `guessWhyEnabled` prop for info hiding + pin button), and a FAB (+) to create. Timers tab renders TimerScreen inline. Reminders tab renders ReminderScreen inline. Timer management (start, pause/resume, dismiss, notifications) is handled here and passed to TimerScreen via props. AppState listener reloads active timers when the app returns to foreground (picks up widget-started timers and auto-switches to Timers tab if new ones found).
 
 ### CreateAlarm (`CreateAlarmScreen.tsx`)
 Slide-from-bottom modal. Two large number inputs for hours/minutes. In 12h mode: hours accept 1-12, AM/PM toggle buttons appear. In 24h mode: hours accept 0-23, no AM/PM. Schedule section with Recurring/One-time mode toggle. Recurring: day-of-week selector (7 circle buttons) + Weekdays/Weekends quick-select. One-time: inline calendar picker with month navigation, past dates disabled, past-time validation on save. Nickname field (shows on lock screen). Note field with random placeholder and character counter (200 max). 25-icon picker grid. Sound picker row (between icon picker and privacy toggle) opens SoundPickerModal to select a system ringtone/alarm sound; shows current selection name or "Default". Private alarm toggle card. Save button. In edit mode, pre-fills all fields and button says "Update Alarm". Requires at least a note or an icon. Notification permission only requested when scheduling is needed. Save wrapped in try/catch with user-facing Alert on failure. Refreshes widgets on save.
@@ -874,6 +882,33 @@ Full 9x9 Sudoku with puzzle generation, pencil notes, and difficulty-scaled assi
 
 **Best scores**: Stored per difficulty in `sudokuBestScores` key. Tracked by best time (primary) and best mistakes (tiebreaker).
 
+### Trivia (`TriviaScreen.tsx` + `triviaAI.ts` + `triviaQuestions.ts`)
+
+Category-based trivia with dual question sources.
+
+**9 Categories**:
+| Category | Emoji | OpenTDB ID |
+|---|---|---|
+| Science & Nature | 🔬 | 17 |
+| History | 🏛️ | 23 |
+| Music | 🎵 | 12 |
+| Movies & TV | 🎬 | 11 or 14 (random) |
+| Geography | 🌍 | 22 |
+| Sports | 🏆 | 21 |
+| Technology | 💻 | 18 |
+| Food & Drink | 🍽️ | — (offline only) |
+| General Knowledge | 🧠 | 9 |
+
+Music and Movies & TV were split from a former "Pop Culture" category. Old Pop Culture seen-question tracking was cleared for a fresh start on the new categories.
+
+**Category grid layout**: 8 categories in a 2-column grid, General Knowledge centered alone on a bottom row.
+
+**Question sources**:
+- **Online**: Fetches from OpenTDB API by category ID. Movies & TV randomly picks between OpenTDB categories 11 (Film) and 14 (Television).
+- **Offline**: 320+ built-in questions in `triviaQuestions.ts`, used as fallback or when offline.
+
+**Stats**: Per-category tracking of games played, correct answers, and streaks.
+
 ## 14. Remaining / Planned Features
 
 - **Actual snooze rescheduling** — Currently snooze shows shame messages but does not reschedule the notification
@@ -883,6 +918,7 @@ Full 9x9 Sudoku with puzzle generation, pencil notes, and difficulty-scaled assi
 ## 15. Features Explored and Removed
 
 - **Preset alarm sound picker** — An early version had 6 preset alarm sounds (`alarmSounds.ts`: Default, Gentle, Urgent, Classic, Digital, Silent) with static Notifee channels per preset. These all used `sound: 'default'` and sounded identical on most devices. Replaced by the real system ringtone picker (Feature 54) using `react-native-notification-sounds` + dynamic channels with actual content:// URIs. The preset channel definitions remain in `notifications.ts` for backward compatibility but the picker UI was removed from Settings.
+- **Swipe between tabs** — Attempted horizontal swipe gesture to switch between Alarms/Timers/Reminders tabs; removed due to gesture conflicts with SwipeableRow swipe-to-delete/complete actions on alarm cards and reminder items.
 
 ## 16. Key Implementation Patterns
 
@@ -890,7 +926,7 @@ Full 9x9 Sudoku with puzzle generation, pencil notes, and difficulty-scaled assi
 Channels cannot be modified after creation on Android 8+. Changing a sound means creating a new channel with a new ID. `getOrCreateSoundChannel()` derives channel IDs deterministically from the content:// URI's numeric media ID (`extractMediaId()`), so the same sound always maps to the same channel. Old channels accumulate but are harmless.
 
 ### expo-av Audio Mode Initialization
-expo-av 16.x requires `Audio.setAudioModeAsync()` to complete before `playAsync()` can acquire audio focus. SoundPickerModal uses an `audioModeReady` ref pattern: `setAudioModeAsync` is called when the modal opens (fire-and-forget with `.then()` setting the ref), and `handlePlay` calls `ensureAudioMode()` which either returns immediately (ref is true) or awaits a fresh `setAudioModeAsync` call. This prevents the "AudioFocusNotAcquiredException" race condition.
+expo-av 16.x requires `Audio.setAudioModeAsync()` to complete before `playAsync()` can acquire audio focus. SoundPickerModal uses `ensureAudioMode()` as the single awaited path for audio configuration — no fire-and-forget `setAudioModeAsync` in useEffect. The `audioModeReady` ref tracks whether setup has completed; `ensureAudioMode()` returns immediately if true, otherwise awaits a fresh `setAudioModeAsync` call. An `isActiveRef` guard prevents race conditions: if the modal closes during an async `createAsync`, the newly created sound is immediately unloaded. `handlePlay` checks `isActiveRef` at multiple async boundaries. This prevents both the "AudioFocusNotAcquiredException" and leaked audio resources.
 
 ### New Dependencies
 - `react-native-notification-sounds` — Lists system ringtones/alarm/notification sounds on Android. Returns `{ title, url, soundID }[]` where `url` is a `content://media/internal/audio/media/{id}` URI.

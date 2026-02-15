@@ -852,6 +852,7 @@ export default function AlarmListScreen({ navigation }: Props) {
           onNavigateCreate={(reminderId) =>
             navigation.navigate('CreateReminder', reminderId ? { reminderId } : undefined)
           }
+          onReminderCountChange={setReminderCount}
         />
       )}
     </View>

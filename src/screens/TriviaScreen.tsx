@@ -50,25 +50,7 @@ function shuffle<T>(arr: T[]): T[] {
   return result;
 }
 
-function selectQuestions(
-  category: TriviaCategory,
-  seenIds: string[],
-): { questions: TriviaQuestion[]; allSeen: boolean } {
-  const isGeneral = category === 'general';
-  const pool = isGeneral
-    ? TRIVIA_QUESTIONS
-    : TRIVIA_QUESTIONS.filter((q) => q.category === category);
-
-  const seenSet = new Set(seenIds);
-  const unseen = pool.filter((q) => !seenSet.has(q.id));
-  let allSeen = false;
-
-  let source = unseen;
-  if (unseen.length < QUESTIONS_PER_ROUND) {
-    allSeen = true;
-    source = pool;
-  }
-
+function selectFromPool(source: TriviaQuestion[], count: number): TriviaQuestion[] {
   // Try to get a mix of difficulties: ~4 easy, ~3 medium, ~3 hard
   const easy = shuffle(source.filter((q) => q.difficulty === 'easy'));
   const medium = shuffle(source.filter((q) => q.difficulty === 'medium'));
@@ -80,13 +62,41 @@ function selectQuestions(
   selected.push(...hard.slice(0, 3));
 
   // Fill remaining if we don't have enough of any difficulty
-  if (selected.length < QUESTIONS_PER_ROUND) {
+  if (selected.length < count) {
     const usedIds = new Set(selected.map((q) => q.id));
     const remaining = shuffle(source.filter((q) => !usedIds.has(q.id)));
-    selected.push(...remaining.slice(0, QUESTIONS_PER_ROUND - selected.length));
+    selected.push(...remaining.slice(0, count - selected.length));
   }
 
-  return { questions: shuffle(selected.slice(0, QUESTIONS_PER_ROUND)), allSeen };
+  return shuffle(selected.slice(0, count));
+}
+
+function selectQuestions(
+  category: TriviaCategory,
+  seenIds: string[],
+): { questions: TriviaQuestion[]; allSeen: boolean } {
+  // General Knowledge is the grab-bag: pulls from ALL categories
+  const pool = category === 'general'
+    ? TRIVIA_QUESTIONS
+    : TRIVIA_QUESTIONS.filter((q) => q.category === category);
+
+  const seenSet = new Set(seenIds);
+  const unseen = pool.filter((q) => !seenSet.has(q.id));
+
+  // All questions seen — signal reset
+  if (unseen.length === 0) {
+    return { questions: selectFromPool(pool, QUESTIONS_PER_ROUND), allSeen: true };
+  }
+
+  // Enough unseen — pick from unseen only
+  if (unseen.length >= QUESTIONS_PER_ROUND) {
+    return { questions: selectFromPool(unseen, QUESTIONS_PER_ROUND), allSeen: false };
+  }
+
+  // Some unseen remain but fewer than a full round — use all unseen, pad with seen
+  const seen = shuffle(pool.filter((q) => seenSet.has(q.id)));
+  const padded = [...unseen, ...seen.slice(0, QUESTIONS_PER_ROUND - unseen.length)];
+  return { questions: shuffle(padded), allSeen: false };
 }
 
 function getShuffledAnswers(question: TriviaQuestion): string[] {

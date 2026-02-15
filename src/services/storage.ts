@@ -168,6 +168,14 @@ export async function toggleAlarm(id: string): Promise<Alarm[]> {
 
 export async function disableAlarm(id: string): Promise<void> {
   const alarms = await loadAlarms();
+  const alarm = alarms.find((a) => a.id === id);
+  if (alarm?.notificationIds?.length) {
+    try {
+      await cancelAlarmNotifications(alarm.notificationIds);
+    } catch (e) {
+      console.error('[disableAlarm] cancelAlarmNotifications failed:', e);
+    }
+  }
   const updated = alarms.map((a) =>
     a.id === id ? { ...a, enabled: false, notificationIds: [] } : a,
   );

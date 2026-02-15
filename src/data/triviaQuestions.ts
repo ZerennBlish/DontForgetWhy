@@ -73,6 +73,50 @@ export const TRIVIA_QUESTIONS: TriviaQuestion[] = [
   { id: 'general_047', category: 'general', type: 'boolean', difficulty: 'hard', question: 'The character of Sherlock Holmes was inspired by a real person named Dr. Joseph Bell.', correctAnswer: 'True', incorrectAnswers: ['False'] },
   { id: 'general_048', category: 'general', type: 'multiple', difficulty: 'hard', question: 'What is the best-selling video game of all time?', correctAnswer: 'Minecraft', incorrectAnswers: ['Tetris', 'GTA V', 'Wii Sports'] },
 
+  // Additional General Knowledge (general_049 – general_084)
+
+  // Easy (14)
+  { id: 'general_049', category: 'general', type: 'multiple', difficulty: 'easy', question: 'What is the tallest animal in the world?', correctAnswer: 'Giraffe', incorrectAnswers: ['Elephant', 'Ostrich', 'Camel'] },
+  { id: 'general_050', category: 'general', type: 'boolean', difficulty: 'easy', question: 'A leap year has 366 days.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_051', category: 'general', type: 'multiple', difficulty: 'easy', question: 'How many colors are in a standard rainbow?', correctAnswer: '7', incorrectAnswers: ['5', '6', '8'] },
+  { id: 'general_052', category: 'general', type: 'multiple', difficulty: 'easy', question: 'What is the currency of the United Kingdom?', correctAnswer: 'Pound sterling', incorrectAnswers: ['Euro', 'Dollar', 'Franc'] },
+  { id: 'general_053', category: 'general', type: 'boolean', difficulty: 'easy', question: 'An adult human has 32 teeth.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_054', category: 'general', type: 'multiple', difficulty: 'easy', question: 'Which famous clock tower is located in London?', correctAnswer: 'Big Ben', incorrectAnswers: ['Eiffel Tower', 'Leaning Tower of Pisa', 'Tower of London'] },
+  { id: 'general_055', category: 'general', type: 'multiple', difficulty: 'easy', question: 'What does a thermometer measure?', correctAnswer: 'Temperature', incorrectAnswers: ['Pressure', 'Humidity', 'Wind speed'] },
+  { id: 'general_056', category: 'general', type: 'boolean', difficulty: 'easy', question: 'Penguins can fly.', correctAnswer: 'False', incorrectAnswers: ['True'] },
+  { id: 'general_057', category: 'general', type: 'multiple', difficulty: 'easy', question: 'How many days are in the month of February in a non-leap year?', correctAnswer: '28', incorrectAnswers: ['29', '30', '27'] },
+  { id: 'general_058', category: 'general', type: 'multiple', difficulty: 'easy', question: 'What do you call a baby dog?', correctAnswer: 'Puppy', incorrectAnswers: ['Kitten', 'Cub', 'Foal'] },
+  { id: 'general_059', category: 'general', type: 'multiple', difficulty: 'easy', question: 'Which toy was invented first?', correctAnswer: 'Play-Doh', incorrectAnswers: ['LEGO', 'Barbie', 'Hot Wheels'] },
+  { id: 'general_060', category: 'general', type: 'boolean', difficulty: 'easy', question: 'The hashtag symbol (#) is also called an octothorpe.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_061', category: 'general', type: 'multiple', difficulty: 'easy', question: 'What is the most common eye color in the world?', correctAnswer: 'Brown', incorrectAnswers: ['Blue', 'Green', 'Hazel'] },
+  { id: 'general_062', category: 'general', type: 'multiple', difficulty: 'easy', question: 'Which holiday is celebrated on December 25th?', correctAnswer: 'Christmas', incorrectAnswers: ['Thanksgiving', 'Easter', 'Halloween'] },
+
+  // Medium (12)
+  { id: 'general_063', category: 'general', type: 'multiple', difficulty: 'medium', question: 'What is the national animal of Scotland?', correctAnswer: 'Unicorn', incorrectAnswers: ['Lion', 'Stag', 'Eagle'] },
+  { id: 'general_064', category: 'general', type: 'multiple', difficulty: 'medium', question: 'What was the first invention to break the sound barrier?', correctAnswer: 'The whip', incorrectAnswers: ['The bullet', 'The jet engine', 'The rocket'] },
+  { id: 'general_065', category: 'general', type: 'boolean', difficulty: 'medium', question: 'The ampersand (&) was once the 27th letter of the English alphabet.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_066', category: 'general', type: 'multiple', difficulty: 'medium', question: 'What is the most widely spoken constructed language?', correctAnswer: 'Esperanto', incorrectAnswers: ['Klingon', 'Elvish', 'Dothraki'] },
+  { id: 'general_067', category: 'general', type: 'multiple', difficulty: 'medium', question: 'Which country has the most official languages?', correctAnswer: 'South Africa', incorrectAnswers: ['India', 'Switzerland', 'Canada'] },
+  { id: 'general_068', category: 'general', type: 'boolean', difficulty: 'medium', question: 'A group of crows is called a murder.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_069', category: 'general', type: 'multiple', difficulty: 'medium', question: 'What color are the stars on the flag of the European Union?', correctAnswer: 'Gold (Yellow)', incorrectAnswers: ['White', 'Silver', 'Blue'] },
+  { id: 'general_070', category: 'general', type: 'multiple', difficulty: 'medium', question: 'What was bubble wrap originally invented to be?', correctAnswer: 'Textured wallpaper', incorrectAnswers: ['Packing material', 'Insulation', 'A children\'s toy'] },
+  { id: 'general_071', category: 'general', type: 'multiple', difficulty: 'medium', question: 'How many hearts does an earthworm have?', correctAnswer: '5', incorrectAnswers: ['1', '3', '10'] },
+  { id: 'general_072', category: 'general', type: 'boolean', difficulty: 'medium', question: 'The shortest war in recorded history lasted 38 minutes.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_073', category: 'general', type: 'multiple', difficulty: 'medium', question: 'What is the only number in English that has its letters in alphabetical order?', correctAnswer: 'Forty', incorrectAnswers: ['Eight', 'Fifty', 'Sixty'] },
+  { id: 'general_074', category: 'general', type: 'multiple', difficulty: 'medium', question: 'Which famous structure was originally built as a temporary exhibit for the 1889 World\'s Fair?', correctAnswer: 'Eiffel Tower', incorrectAnswers: ['Statue of Liberty', 'London Eye', 'Arc de Triomphe'] },
+
+  // Hard (10)
+  { id: 'general_075', category: 'general', type: 'multiple', difficulty: 'hard', question: 'What is the only organ in the human body that can completely regenerate?', correctAnswer: 'Liver', incorrectAnswers: ['Kidney', 'Skin', 'Lung'] },
+  { id: 'general_076', category: 'general', type: 'multiple', difficulty: 'hard', question: 'What country has won the most Nobel Prizes?', correctAnswer: 'United States', incorrectAnswers: ['United Kingdom', 'Germany', 'France'] },
+  { id: 'general_077', category: 'general', type: 'boolean', difficulty: 'hard', question: 'Oxford University is older than the Aztec Empire.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_078', category: 'general', type: 'multiple', difficulty: 'hard', question: 'What is the only letter that doesn\'t appear on the periodic table?', correctAnswer: 'J', incorrectAnswers: ['Q', 'X', 'Z'] },
+  { id: 'general_079', category: 'general', type: 'multiple', difficulty: 'hard', question: 'How many world records does Guinness World Records hold itself?', correctAnswer: '0', incorrectAnswers: ['1', '3', '5'] },
+  { id: 'general_080', category: 'general', type: 'boolean', difficulty: 'hard', question: 'There are more possible iterations of a game of chess than there are atoms in the observable universe.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'general_081', category: 'general', type: 'multiple', difficulty: 'hard', question: 'What everyday object was patented by a funeral home owner in 1903?', correctAnswer: 'Windshield wipers', incorrectAnswers: ['Tissue box', 'Safety pin', 'Rubber gloves'] },
+  { id: 'general_082', category: 'general', type: 'multiple', difficulty: 'hard', question: 'Which language has the most words?', correctAnswer: 'English', incorrectAnswers: ['Mandarin Chinese', 'Spanish', 'Arabic'] },
+  { id: 'general_083', category: 'general', type: 'multiple', difficulty: 'hard', question: 'What color does octopus blood appear?', correctAnswer: 'Blue', incorrectAnswers: ['Red', 'Green', 'Clear'] },
+  { id: 'general_084', category: 'general', type: 'boolean', difficulty: 'hard', question: 'The word "strengths" is the longest word in English with only one vowel.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+
   // ═══════════════════════════════════════════
   // SCIENCE & NATURE (science_001 – science_040)
   // ═══════════════════════════════════════════

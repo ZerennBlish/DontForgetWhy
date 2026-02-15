@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,7 @@ import UndoToast from '../components/UndoToast';
 
 interface ReminderScreenProps {
   onNavigateCreate: (reminderId?: string) => void;
+  onReminderCountChange?: (count: number) => void;
 }
 
 function formatDueDate(dateStr: string): string {
@@ -57,7 +58,7 @@ function formatDueDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps) {
+export default function ReminderScreen({ onNavigateCreate, onReminderCountChange }: ReminderScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -87,6 +88,13 @@ export default function ReminderScreen({ onNavigateCreate }: ReminderScreenProps
       loadData();
     }, [loadData]),
   );
+
+  // Propagate active reminder count to parent on every change
+  useEffect(() => {
+    if (onReminderCountChange) {
+      onReminderCountChange(reminders.filter((r) => !r.completed).length);
+    }
+  }, [reminders, onReminderCountChange]);
 
   const handleToggleComplete = async (id: string) => {
     hapticMedium();
