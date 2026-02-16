@@ -45,7 +45,8 @@ function migrateAlarm(item: Record<string, unknown>): Alarm {
   return { ...raw, mode, days, date, notificationIds, soundId } as Alarm;
 }
 
-export async function loadAlarms(): Promise<Alarm[]> {
+// Internal: loads ALL alarms from storage including soft-deleted
+async function _loadAllAlarms(): Promise<Alarm[]> {
   const data = await AsyncStorage.getItem(STORAGE_KEY);
   if (!data) return [];
   try {
@@ -86,19 +87,25 @@ export async function loadAlarms(): Promise<Alarm[]> {
   }
 }
 
+export async function loadAlarms(includeDeleted = false): Promise<Alarm[]> {
+  const all = await _loadAllAlarms();
+  if (includeDeleted) return all;
+  return all.filter((a) => !a.deletedAt);
+}
+
 export async function saveAlarms(alarms: Alarm[]): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(alarms));
 }
 
 export async function addAlarm(alarm: Alarm): Promise<Alarm[]> {
-  const alarms = await loadAlarms();
+  const alarms = await _loadAllAlarms();
   alarms.push(alarm);
   await saveAlarms(alarms);
   return alarms;
 }
 
 export async function updateAlarm(updatedAlarm: Alarm): Promise<Alarm[]> {
-  const alarms = await loadAlarms();
+  const alarms = await _loadAllAlarms();
   const updated: Alarm[] = [];
   for (const a of alarms) {
     if (a.id !== updatedAlarm.id) {
@@ -127,7 +134,44 @@ export async function updateAlarm(updatedAlarm: Alarm): Promise<Alarm[]> {
 }
 
 export async function deleteAlarm(id: string): Promise<Alarm[]> {
-  const alarms = await loadAlarms();
+  const alarms = await _loadAllAlarms();
+  const alarm = alarms.find(a => a.id === id);
+  if (alarm?.notificationIds?.length) {
+    await cancelAlarmNotifications(alarm.notificationIds);
+  }
+  const updated = alarms.map(a =>
+    a.id === id ? { ...a, deletedAt: new Date().toISOString(), notificationIds: [] } : a
+  );
+  await saveAlarms(updated);
+  return updated;
+}
+
+export async function restoreAlarm(id: string): Promise<Alarm[]> {
+  const alarms = await _loadAllAlarms();
+  const updated: Alarm[] = [];
+  for (const a of alarms) {
+    if (a.id !== id) {
+      updated.push(a);
+      continue;
+    }
+    const restored: Alarm = { ...a, deletedAt: null };
+    if (restored.enabled) {
+      try {
+        const notificationIds = await scheduleAlarm(restored);
+        updated.push({ ...restored, notificationIds });
+      } catch {
+        updated.push({ ...restored, enabled: false, notificationIds: [] });
+      }
+    } else {
+      updated.push(restored);
+    }
+  }
+  await saveAlarms(updated);
+  return updated;
+}
+
+export async function permanentlyDeleteAlarm(id: string): Promise<Alarm[]> {
+  const alarms = await _loadAllAlarms();
   const alarm = alarms.find(a => a.id === id);
   if (alarm?.notificationIds?.length) {
     await cancelAlarmNotifications(alarm.notificationIds);
@@ -137,8 +181,20 @@ export async function deleteAlarm(id: string): Promise<Alarm[]> {
   return filtered;
 }
 
+export async function purgeDeletedAlarms(): Promise<void> {
+  const alarms = await _loadAllAlarms();
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const kept = alarms.filter((a) => {
+    if (!a.deletedAt) return true;
+    return new Date(a.deletedAt).getTime() > cutoff;
+  });
+  if (kept.length < alarms.length) {
+    await saveAlarms(kept);
+  }
+}
+
 export async function toggleAlarm(id: string): Promise<Alarm[]> {
-  const alarms = await loadAlarms();
+  const alarms = await _loadAllAlarms();
   const updated: Alarm[] = [];
   for (const a of alarms) {
     if (a.id !== id) {
@@ -167,7 +223,7 @@ export async function toggleAlarm(id: string): Promise<Alarm[]> {
 }
 
 export async function disableAlarm(id: string): Promise<void> {
-  const alarms = await loadAlarms();
+  const alarms = await _loadAllAlarms();
   const alarm = alarms.find((a) => a.id === id);
   if (alarm?.notificationIds?.length) {
     try {

@@ -518,8 +518,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
   const handleSave = async () => {
     hapticMedium();
-    if (!text.trim()) {
-      Alert.alert('Hold Up', 'Give this reminder some text so you know what to remember.');
+    if (!text.trim() && !selectedIcon) {
+      Alert.alert('Hold Up', 'Add some text or pick an icon so you know what to remember.');
       return;
     }
 

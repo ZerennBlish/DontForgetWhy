@@ -124,7 +124,7 @@ async function loadWidgetAlarms(): Promise<Alarm[]> {
         typeof (item as Record<string, unknown>).id === 'string' &&
         typeof (item as Record<string, unknown>).time === 'string' &&
         typeof (item as Record<string, unknown>).enabled === 'boolean',
-    );
+    ).filter((a) => !a.deletedAt);
   } catch {
     return [];
   }
@@ -396,7 +396,7 @@ async function loadWidgetReminders(): Promise<Reminder[]> {
         typeof (item as Record<string, unknown>).id === 'string' &&
         typeof (item as Record<string, unknown>).text === 'string' &&
         typeof (item as Record<string, unknown>).icon === 'string',
-    );
+    ).filter((r) => !r.deletedAt);
   } catch {
     return [];
   }

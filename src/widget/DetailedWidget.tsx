@@ -210,30 +210,34 @@ function ReminderCell({ reminder }: { reminder: DetailedReminder }) {
           marginRight: 6,
         }}
       />
-      <FlexWidget
-        style={{
-          flex: 1,
-          flexDirection: 'column',
-        }}
-      >
-        <TextWidget
-          text={reminder.text}
+      {(reminder.text || reminder.dueInfo) ? (
+        <FlexWidget
           style={{
-            fontSize: 11,
-            fontWeight: '600',
-            color: reminder.completed ? BORDER : TEXT,
+            flex: 1,
+            flexDirection: 'column',
           }}
-        />
-        {reminder.dueInfo ? (
-          <TextWidget
-            text={reminder.dueInfo}
-            style={{
-              fontSize: 9,
-              color: TEXT_SEC,
-            }}
-          />
-        ) : null}
-      </FlexWidget>
+        >
+          {reminder.text ? (
+            <TextWidget
+              text={reminder.text}
+              style={{
+                fontSize: 11,
+                fontWeight: '600',
+                color: reminder.completed ? BORDER : TEXT,
+              }}
+            />
+          ) : null}
+          {reminder.dueInfo ? (
+            <TextWidget
+              text={reminder.dueInfo}
+              style={{
+                fontSize: 9,
+                color: TEXT_SEC,
+              }}
+            />
+          ) : null}
+        </FlexWidget>
+      ) : null}
     </FlexWidget>
   );
 }

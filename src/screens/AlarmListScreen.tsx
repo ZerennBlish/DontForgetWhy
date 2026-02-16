@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   View,
   Text,
+  Image,
   FlatList,
   StyleSheet,
   TouchableOpacity,
@@ -13,8 +14,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
 import type { ActiveTimer } from '../types/timer';
-import { loadAlarms, deleteAlarm, toggleAlarm, addAlarm } from '../services/storage';
-import { cancelAlarmNotifications, scheduleAlarm, scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
+import { loadAlarms, deleteAlarm, toggleAlarm, restoreAlarm, permanentlyDeleteAlarm } from '../services/storage';
+import { scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
 import { loadSettings, getDefaultTimerSound } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import {
@@ -32,8 +33,19 @@ import TimerScreen from './TimerScreen';
 import ReminderScreen from './ReminderScreen';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
+import { formatTime } from '../utils/time';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
+
+function formatDeletedAgo(deletedAt: string): string {
+  const ms = Date.now() - new Date(deletedAt).getTime();
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  if (hours < 24) return 'Deleted today';
+  const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+  if (days === 1) return 'Deleted yesterday';
+  if (days < 30) return `Deleted ${days} days ago`;
+  return `Deleted ${Math.floor(days / 30)}mo ago`;
+}
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmList'>;
 
@@ -61,7 +73,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const [pinnedAlarmIds, setPinnedAlarmIds] = useState<string[]>([]);
   const [alarmSort, setAlarmSort] = useState<'time' | 'created' | 'name'>('time');
-  const [alarmFilter, setAlarmFilter] = useState<'all' | 'active' | 'one-time' | 'recurring'>('all');
+  const [alarmFilter, setAlarmFilter] = useState<'all' | 'active' | 'one-time' | 'recurring' | 'deleted'>('all');
   const [deletedAlarm, setDeletedAlarm] = useState<Alarm | null>(null);
   const [deletedAlarmPinned, setDeletedAlarmPinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
@@ -201,7 +213,9 @@ export default function AlarmListScreen({ navigation }: Props) {
       paddingBottom: 80 + insets.bottom,
     },
     emptyIcon: {
-      fontSize: 48,
+      width: 90,
+      height: 90,
+      opacity: 0.35,
       marginBottom: 12,
     },
     emptyText: {
@@ -279,14 +293,71 @@ export default function AlarmListScreen({ navigation }: Props) {
       paddingTop: 8,
       paddingBottom: 2,
     },
+    deletedCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      opacity: 0.7,
+    },
+    deletedLeft: {
+      flex: 1,
+      marginRight: 12,
+    },
+    deletedTime: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.textTertiary,
+      letterSpacing: -1,
+    },
+    deletedDetail: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    deletedAgo: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginTop: 4,
+      fontStyle: 'italic',
+    },
+    deletedRight: {
+      gap: 8,
+    },
+    restoreBtn: {
+      backgroundColor: colors.activeBackground,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    restoreText: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    foreverBtn: {
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    foreverText: {
+      color: colors.red,
+      fontSize: 13,
+      fontWeight: '600',
+    },
   }), [colors, insets.bottom]);
 
   useFocusEffect(
     useCallback(() => {
       setAppQuote(getRandomAppOpenQuote());
-      loadAlarms().then((loaded) => {
+      loadAlarms(true).then((loaded) => {
         setAlarms(loaded);
-        pruneAlarmPins(loaded.map((a) => a.id)).then(setPinnedAlarmIds);
+        pruneAlarmPins(loaded.filter((a) => !a.deletedAt).map((a) => a.id)).then(setPinnedAlarmIds);
       });
       loadSettings().then((s) => {
         setGuessWhyEnabled(s.guessWhyEnabled);
@@ -416,9 +487,6 @@ export default function AlarmListScreen({ navigation }: Props) {
     const wasPinned = isAlarmPinned(id, pinnedAlarmIds);
     setDeletedAlarm(alarm);
     setDeletedAlarmPinned(wasPinned);
-    if (alarm.notificationIds?.length) {
-      await cancelAlarmNotifications(alarm.notificationIds);
-    }
     await unpinAlarm(id);
     const updated = await deleteAlarm(id);
     setAlarms(updated);
@@ -431,17 +499,10 @@ export default function AlarmListScreen({ navigation }: Props) {
   const handleUndoDelete = async () => {
     setShowUndo(false);
     if (!deletedAlarm) return;
-    const restored = { ...deletedAlarm, notificationIds: [] as string[] };
-    if (restored.enabled) {
-      try {
-        const ids = await scheduleAlarm(restored);
-        restored.notificationIds = ids;
-      } catch {}
-    }
-    const updated = await addAlarm(restored);
+    const updated = await restoreAlarm(deletedAlarm.id);
     setAlarms(updated);
     if (deletedAlarmPinned) {
-      const pins = await togglePinAlarm(restored.id);
+      const pins = await togglePinAlarm(deletedAlarm.id);
       setPinnedAlarmIds(pins);
     }
     refreshTimerWidget();
@@ -451,6 +512,17 @@ export default function AlarmListScreen({ navigation }: Props) {
   const handleUndoDismiss = () => {
     setShowUndo(false);
     setDeletedAlarm(null);
+  };
+
+  const handleRestore = async (id: string) => {
+    const updated = await restoreAlarm(id);
+    setAlarms(updated);
+    refreshTimerWidget();
+  };
+
+  const handlePermanentDelete = async (id: string) => {
+    const updated = await permanentlyDeleteAlarm(id);
+    setAlarms(updated);
   };
 
   const handleEdit = (alarm: Alarm) => {
@@ -616,6 +688,17 @@ export default function AlarmListScreen({ navigation }: Props) {
 
   const filteredAlarms = useMemo(() => {
     let list = alarms;
+
+    if (alarmFilter === 'deleted') {
+      list = list.filter((a) => !!a.deletedAt);
+      list = [...list].sort((a, b) =>
+        new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime()
+      );
+      return list;
+    }
+
+    // Exclude deleted for all non-deleted filters
+    list = list.filter((a) => !a.deletedAt);
     if (alarmFilter === 'active') list = list.filter((a) => a.enabled);
     else if (alarmFilter === 'one-time') list = list.filter((a) => a.mode === 'one-time');
     else if (alarmFilter === 'recurring') list = list.filter((a) => a.mode === 'recurring');
@@ -671,7 +754,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         </View>
         <Text style={styles.subtitle}>
           {(() => {
-            const ac = alarms.filter(a => a.enabled).length;
+            const ac = alarms.filter(a => a.enabled && !a.deletedAt).length;
             const tc = activeTimers.filter(t => t.isRunning).length;
             const rc = reminderCount;
             return `${ac} alarm${ac !== 1 ? 's' : ''} \u00B7 ${tc} timer${tc !== 1 ? 's' : ''} \u00B7 ${rc} reminder${rc !== 1 ? 's' : ''}`;
@@ -729,7 +812,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         <>
           {alarms.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>{'\u23F0'}</Text>
+              <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
               <Text style={styles.emptyText}>No alarms yet</Text>
               <Text style={styles.emptySubtext}>
                 Tap + to set one and immediately forget why.
@@ -775,7 +858,7 @@ export default function AlarmListScreen({ navigation }: Props) {
 
                   <Text style={styles.sortFilterLabel}>Filter</Text>
                   <View style={styles.sortFilterRow}>
-                    {(['all', 'active', 'one-time', 'recurring'] as const).map((f) => (
+                    {(['all', 'active', 'one-time', 'recurring', 'deleted'] as const).map((f) => (
                       <TouchableOpacity
                         key={f}
                         style={[styles.pill, alarmFilter === f && styles.pillActive]}
@@ -783,7 +866,7 @@ export default function AlarmListScreen({ navigation }: Props) {
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.pillText, alarmFilter === f && styles.pillTextActive]}>
-                          {f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'one-time' ? 'One-time' : 'Recurring'}
+                          {f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'one-time' ? 'One-time' : f === 'recurring' ? 'Recurring' : 'Deleted'}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -794,30 +877,57 @@ export default function AlarmListScreen({ navigation }: Props) {
               <FlatList
                 data={filteredAlarms}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <SwipeableRow
-                    onSwipeLeft={() => handleDelete(item.id)}
-                    onSwipeRight={() => handleDelete(item.id)}
-                    leftColor="#2E1A1A"
-                    leftIcon={'\u{1F5D1}'}
-                    leftIconColor="#B0B0CC"
-                    rightColor="#2E1A1A"
-                    rightIcon={'\u{1F5D1}'}
-                    rightIconColor="#B0B0CC"
-                  >
-                    <AlarmCard
-                      alarm={item}
-                      timeFormat={timeFormat}
-                      guessWhyEnabled={guessWhyEnabled}
-                      isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
-                      onToggle={handleToggle}
-                      onDelete={handleDelete}
-                      onEdit={handleEdit}
-                      onPress={handlePress}
-                      onTogglePin={handleTogglePin}
-                    />
-                  </SwipeableRow>
-                )}
+                renderItem={({ item }) => {
+                  if (item.deletedAt) {
+                    return (
+                      <View style={styles.deletedCard}>
+                        <View style={styles.deletedLeft}>
+                          <Text style={styles.deletedTime}>
+                            {formatTime(item.time, timeFormat)}
+                          </Text>
+                          <Text style={styles.deletedDetail} numberOfLines={1}>
+                            {item.icon || '\u23F0'} {item.nickname || item.note || 'Alarm'}
+                          </Text>
+                          <Text style={styles.deletedAgo}>
+                            {formatDeletedAgo(item.deletedAt)}
+                          </Text>
+                        </View>
+                        <View style={styles.deletedRight}>
+                          <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
+                            <Text style={styles.restoreText}>Restore</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
+                            <Text style={styles.foreverText}>Forever</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    );
+                  }
+                  return (
+                    <SwipeableRow
+                      onSwipeLeft={() => handleDelete(item.id)}
+                      onSwipeRight={() => handleDelete(item.id)}
+                      leftColor="#2E1A1A"
+                      leftIcon={'\u{1F5D1}'}
+                      leftIconColor="#B0B0CC"
+                      rightColor="#2E1A1A"
+                      rightIcon={'\u{1F5D1}'}
+                      rightIconColor="#B0B0CC"
+                    >
+                      <AlarmCard
+                        alarm={item}
+                        timeFormat={timeFormat}
+                        guessWhyEnabled={guessWhyEnabled}
+                        isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
+                        onToggle={handleToggle}
+                        onDelete={handleDelete}
+                        onEdit={handleEdit}
+                        onPress={handlePress}
+                        onTogglePin={handleTogglePin}
+                      />
+                    </SwipeableRow>
+                  );
+                }}
                 contentContainerStyle={styles.list}
                 showsVerticalScrollIndicator={false}
               />

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
+  Image,
   FlatList,
   StyleSheet,
   TouchableOpacity,
@@ -11,9 +12,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { Reminder } from '../types/reminder';
 import {
   getReminders,
-  addReminder,
   deleteReminder,
   toggleReminderComplete,
+  restoreReminder,
+  permanentlyDeleteReminder,
 } from '../services/reminderStorage';
 import { cancelReminderNotification, scheduleReminderNotification } from '../services/notifications';
 import {
@@ -35,6 +37,16 @@ import UndoToast from '../components/UndoToast';
 interface ReminderScreenProps {
   onNavigateCreate: (reminderId?: string) => void;
   onReminderCountChange?: (count: number) => void;
+}
+
+function formatDeletedAgo(deletedAt: string): string {
+  const ms = Date.now() - new Date(deletedAt).getTime();
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  if (hours < 24) return 'Deleted today';
+  const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+  if (days === 1) return 'Deleted yesterday';
+  if (days < 30) return `Deleted ${days} days ago`;
+  return `Deleted ${Math.floor(days / 30)}mo ago`;
 }
 
 function formatDueDate(dateStr: string): string {
@@ -65,7 +77,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [reminderSort, setReminderSort] = useState<'due' | 'created' | 'name'>('due');
-  const [reminderFilter, setReminderFilter] = useState<'active' | 'completed' | 'has-date'>('active');
+  const [reminderFilter, setReminderFilter] = useState<'active' | 'completed' | 'has-date' | 'deleted'>('active');
   const [showSortFilter, setShowSortFilter] = useState(false);
   const [deletedReminder, setDeletedReminder] = useState<Reminder | null>(null);
   const [deletedReminderPinned, setDeletedReminderPinned] = useState(false);
@@ -74,7 +86,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   const loadData = useCallback(async () => {
     const [loaded, settings] = await Promise.all([
-      getReminders(),
+      getReminders(true),
       loadSettings(),
     ]);
     setReminders(loaded);
@@ -92,7 +104,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   // Propagate active reminder count to parent on every change
   useEffect(() => {
     if (onReminderCountChange) {
-      onReminderCountChange(reminders.filter((r) => !r.completed).length);
+      onReminderCountChange(reminders.filter((r) => !r.completed && !r.deletedAt).length);
     }
   }, [reminders, onReminderCountChange]);
 
@@ -141,9 +153,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     const wasPinned = isReminderPinned(id, pinnedIds);
     setDeletedReminder(reminder);
     setDeletedReminderPinned(wasPinned);
-    if (reminder.notificationId) {
-      await cancelReminderNotification(reminder.notificationId).catch(() => {});
-    }
     await unpinReminder(id);
     await deleteReminder(id);
     await loadData();
@@ -155,16 +164,9 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   const handleUndoDelete = async () => {
     setShowUndo(false);
     if (!deletedReminder) return;
-    const restored = { ...deletedReminder, notificationId: null as string | null };
-    if (!restored.completed && restored.dueTime) {
-      try {
-        const notifId = await scheduleReminderNotification(restored);
-        if (notifId) restored.notificationId = notifId;
-      } catch {}
-    }
-    await addReminder(restored);
+    await restoreReminder(deletedReminder.id);
     if (deletedReminderPinned) {
-      await togglePinReminder(restored.id);
+      await togglePinReminder(deletedReminder.id);
     }
     await loadData();
     refreshTimerWidget();
@@ -174,6 +176,17 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   const handleUndoDismiss = () => {
     setShowUndo(false);
     setDeletedReminder(null);
+  };
+
+  const handleRestore = async (id: string) => {
+    await restoreReminder(id);
+    await loadData();
+    refreshTimerWidget();
+  };
+
+  const handlePermanentDelete = async (id: string) => {
+    await permanentlyDeleteReminder(id);
+    await loadData();
   };
 
   const handleTogglePin = async (id: string) => {
@@ -194,6 +207,17 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   const sorted = useMemo(() => {
     let list = reminders;
+
+    if (reminderFilter === 'deleted') {
+      list = list.filter((r) => !!r.deletedAt);
+      list = [...list].sort((a, b) =>
+        new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime()
+      );
+      return list;
+    }
+
+    // Exclude deleted for all non-deleted filters
+    list = list.filter((r) => !r.deletedAt);
 
     // Filter
     if (reminderFilter === 'active') list = list.filter((r) => !r.completed);
@@ -258,7 +282,9 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       paddingBottom: 80 + insets.bottom,
     },
     emptyIcon: {
-      fontSize: 48,
+      width: 90,
+      height: 90,
+      opacity: 0.35,
       marginBottom: 12,
     },
     emptyText: {
@@ -461,6 +487,34 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       borderRadius: 3,
       backgroundColor: colors.accent,
     },
+    deletedAgo: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginTop: 4,
+      fontStyle: 'italic',
+    },
+    restoreBtn: {
+      backgroundColor: colors.activeBackground,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    restoreText: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    foreverBtn: {
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    foreverText: {
+      color: colors.red,
+      fontSize: 13,
+      fontWeight: '600',
+    },
   }), [colors, insets.bottom]);
 
   const isOverdue = (dateStr: string): boolean => {
@@ -471,10 +525,38 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   };
 
   const renderItem = ({ item }: { item: Reminder }) => {
+    if (item.deletedAt) {
+      const deletedDisplayText = item.private
+        ? (item.nickname || '\u{1F512} Private')
+        : item.text ? `${item.icon} ${item.text}` : item.icon;
+      return (
+        <View style={[styles.card, { opacity: 0.7 }]}>
+          <View style={styles.middle}>
+            <Text style={[styles.reminderText, { color: colors.textTertiary }]} numberOfLines={2}>
+              {deletedDisplayText}
+            </Text>
+            <Text style={styles.deletedAgo}>
+              {formatDeletedAgo(item.deletedAt)}
+            </Text>
+          </View>
+          <View style={styles.right}>
+            <View style={styles.btnRow}>
+              <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
+                <Text style={styles.restoreText}>Restore</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
+                <Text style={styles.foreverText}>Forever</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
     const pinned = isReminderPinned(item.id, pinnedIds);
     const displayText = item.private
       ? (item.nickname || '\u{1F512} Private')
-      : `${item.icon} ${item.text}`;
+      : item.text ? `${item.icon} ${item.text}` : item.icon;
 
     return (
       <SwipeableRow
@@ -566,7 +648,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     <View style={styles.container}>
       {reminders.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>{'\u{1F4DD}'}</Text>
+          <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
           <Text style={styles.emptyText}>Nothing to remember</Text>
           <Text style={styles.emptySubtext}>
             Must be nice. Tap + to ruin that.
@@ -607,7 +689,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
               <Text style={styles.sortFilterLabel}>Filter</Text>
               <View style={styles.sortFilterRow}>
-                {(['active', 'completed', 'has-date'] as const).map((f) => (
+                {(['active', 'completed', 'has-date', 'deleted'] as const).map((f) => (
                   <TouchableOpacity
                     key={f}
                     style={[styles.pill, reminderFilter === f && styles.pillActive]}
@@ -615,7 +697,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.pillText, reminderFilter === f && styles.pillTextActive]}>
-                      {f === 'active' ? 'Active' : f === 'completed' ? 'Completed' : 'Has Date'}
+                      {f === 'active' ? 'Active' : f === 'completed' ? 'Completed' : f === 'has-date' ? 'Has Date' : 'Deleted'}
                     </Text>
                   </TouchableOpacity>
                 ))}

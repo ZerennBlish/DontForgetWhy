@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -201,7 +202,9 @@ export default function TimerScreen({
       paddingBottom: 80 + insets.bottom,
     },
     emptyIcon: {
-      fontSize: 48,
+      width: 90,
+      height: 90,
+      opacity: 0.35,
       marginBottom: 12,
     },
     emptyText: {
@@ -485,7 +488,7 @@ export default function TimerScreen({
   if (!hasPresets && activeTimers.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyIcon}>{'\u23F1\uFE0F'}</Text>
+        <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
         <Text style={styles.emptyText}>No timers here</Text>
         <Text style={styles.emptySubtext}>
           Tap a preset to start one. Try not to forget about it.

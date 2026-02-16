@@ -11,4 +11,5 @@ export interface Reminder {
   dueTime: string | null;
   notificationId: string | null;
   pinned: boolean;
+  deletedAt?: string | null;
 }

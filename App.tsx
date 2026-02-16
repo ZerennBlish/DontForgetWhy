@@ -20,7 +20,8 @@ import CreateReminderScreen from './src/screens/CreateReminderScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
-import { loadAlarms, disableAlarm } from './src/services/storage';
+import { loadAlarms, disableAlarm, purgeDeletedAlarms } from './src/services/storage';
+import { purgeDeletedReminders } from './src/services/reminderStorage';
 import { loadSettings, getOnboardingComplete } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
 import { refreshHapticsSetting } from './src/utils/haptics';
@@ -222,6 +223,13 @@ function AppNavigator() {
   useEffect(() => {
     setupNotificationChannel();
     refreshHapticsSetting();
+    // Auto-cleanup: remove items soft-deleted over 30 days ago
+    (async () => {
+      try {
+        await purgeDeletedAlarms();
+        await purgeDeletedReminders();
+      } catch {}
+    })();
   }, []);
 
   // Clean up orphaned timer countdown notifications on launch
