@@ -74,12 +74,14 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const [calYear, setCalYear] = useState(new Date().getFullYear());
 
   // Format raw digits into display string with colon
-  // 1 digit:  "6"    → "6"
-  // 2 digits: "63"   → "6:30"  (H:M0 — second digit is tens of minutes)
-  // 3 digits: "630"  → "6:30"  (H:MM)
-  // 4 digits: "0630" → "06:30" (HH:MM)
+  // 0 digits: ""      → ""     (show placeholder)
+  // 1 digit:  "6"     → "6:00" (H:00)
+  // 2 digits: "63"    → "6:30" (H:M0 — second digit is tens of minutes)
+  // 3 digits: "630"   → "6:30" (H:MM)
+  // 4 digits: "0630"  → "06:30" (HH:MM)
   const formatTimeDisplay = (digits: string): string => {
-    if (digits.length <= 1) return digits;
+    if (digits.length === 0) return '';
+    if (digits.length === 1) return `${digits}:00`;
     if (digits.length === 2) return `${digits[0]}:${digits[1]}0`;
     if (digits.length === 3) return `${digits[0]}:${digits.slice(1)}`;
     return `${digits.slice(0, 2)}:${digits.slice(2)}`;
@@ -109,8 +111,34 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   };
 
   const handleTimeInput = (inputText: string) => {
-    const digits = inputText.replace(/[^0-9]/g, '').slice(0, 4);
-    setRawDigits(digits);
+    const currentDisplay = formatTimeDisplay(rawDigits);
+    const currentDisplayDigits = currentDisplay.replace(/[^0-9]/g, '');
+    const newDigits = inputText.replace(/[^0-9]/g, '');
+
+    if (newDigits.length < currentDisplayDigits.length) {
+      // Fewer digits than display had — backspace or select-all replacement
+      if (currentDisplay.length - inputText.length > 1 && newDigits.length > 0) {
+        // Big jump with content → select-all replacement (e.g. selectTextOnFocus)
+        setRawDigits(newDigits.slice(0, 4));
+      } else {
+        // Normal backspace — remove last raw digit
+        setRawDigits((prev) => prev.slice(0, -1));
+      }
+    } else if (newDigits.length > currentDisplayDigits.length) {
+      // More digits → user typed new digit(s)
+      // Identify which digits are genuinely new (not formatting artifacts)
+      let newRaw = rawDigits;
+      let di = 0;
+      for (let i = 0; i < newDigits.length && newRaw.length < 4; i++) {
+        if (di < currentDisplayDigits.length && newDigits[i] === currentDisplayDigits[di]) {
+          di++;
+        } else {
+          newRaw += newDigits[i];
+        }
+      }
+      setRawDigits(newRaw);
+    }
+    // Same digit count → no real change (cursor move, colon deleted/re-added)
   };
 
   useEffect(() => {
@@ -622,8 +650,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             value={formatTimeDisplay(rawDigits)}
             onChangeText={handleTimeInput}
             keyboardType="number-pad"
-            maxLength={5}
+            maxLength={6}
             selectTextOnFocus
+            placeholder="0:00"
             placeholderTextColor={colors.textTertiary}
           />
           {timeFormat === '12h' && (
