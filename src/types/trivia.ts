@@ -7,7 +7,8 @@ export type TriviaCategory =
   | 'geography'
   | 'sports'
   | 'technology'
-  | 'food';
+  | 'food'
+  | 'kids';
 
 export interface TriviaQuestion {
   id: string;

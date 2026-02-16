@@ -10,6 +10,7 @@ export const TRIVIA_CATEGORIES: { id: TriviaCategory; label: string; icon: strin
   { id: 'technology', label: 'Technology', icon: 'cpu' },
   { id: 'food', label: 'Food & Drink', icon: 'utensils' },
   { id: 'general', label: 'General Knowledge', icon: 'brain' },
+  { id: 'kids', label: 'Kids', icon: 'child' },
 ];
 
 // 320 questions across 9 categories
@@ -463,4 +464,57 @@ export const TRIVIA_QUESTIONS: TriviaQuestion[] = [
   { id: 'food_038', category: 'food', type: 'multiple', difficulty: 'hard', question: 'What is the most stolen food in the world?', correctAnswer: 'Cheese', incorrectAnswers: ['Chocolate', 'Meat', 'Bread'] },
   { id: 'food_039', category: 'food', type: 'multiple', difficulty: 'hard', question: 'From which flower does vanilla flavoring come?', correctAnswer: 'Orchid', incorrectAnswers: ['Lily', 'Rose', 'Jasmine'] },
   { id: 'food_040', category: 'food', type: 'multiple', difficulty: 'hard', question: 'What is the traditional base spirit of a caipirinha?', correctAnswer: 'Cachaca', incorrectAnswers: ['Rum', 'Vodka', 'Tequila'] },
+
+  // ═══════════════════════════════════════════
+  // KIDS (kids_001 – kids_045) — ages 10-15
+  // ═══════════════════════════════════════════
+
+  // Easy (30)
+  { id: 'kids_001', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What is the largest animal on Earth?', correctAnswer: 'Blue whale', incorrectAnswers: ['Elephant', 'Giraffe', 'Great white shark'] },
+  { id: 'kids_002', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'How many legs does a spider have?', correctAnswer: '8', incorrectAnswers: ['6', '10', '12'] },
+  { id: 'kids_003', category: 'kids', type: 'boolean', difficulty: 'easy', question: 'The Earth is the third planet from the Sun.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'kids_004', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What do caterpillars turn into?', correctAnswer: 'Butterflies', incorrectAnswers: ['Beetles', 'Dragonflies', 'Bees'] },
+  { id: 'kids_005', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'Which planet is known for its beautiful rings?', correctAnswer: 'Saturn', incorrectAnswers: ['Jupiter', 'Mars', 'Neptune'] },
+  { id: 'kids_006', category: 'kids', type: 'boolean', difficulty: 'easy', question: 'Sharks are mammals.', correctAnswer: 'False', incorrectAnswers: ['True'] },
+  { id: 'kids_007', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What gas do plants absorb from the air?', correctAnswer: 'Carbon dioxide', incorrectAnswers: ['Oxygen', 'Nitrogen', 'Helium'] },
+  { id: 'kids_008', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What is the fastest land animal?', correctAnswer: 'Cheetah', incorrectAnswers: ['Lion', 'Horse', 'Gazelle'] },
+  { id: 'kids_009', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'How many colors are in a rainbow?', correctAnswer: '7', incorrectAnswers: ['5', '6', '8'] },
+  { id: 'kids_010', category: 'kids', type: 'boolean', difficulty: 'easy', question: 'Penguins can fly.', correctAnswer: 'False', incorrectAnswers: ['True'] },
+  { id: 'kids_011', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What is the largest continent?', correctAnswer: 'Asia', incorrectAnswers: ['Africa', 'North America', 'Europe'] },
+  { id: 'kids_012', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'Which fruit is known for keeping doctors away?', correctAnswer: 'Apple', incorrectAnswers: ['Banana', 'Orange', 'Grape'] },
+  { id: 'kids_013', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What is 7 x 8?', correctAnswer: '56', incorrectAnswers: ['48', '54', '63'] },
+  { id: 'kids_014', category: 'kids', type: 'boolean', difficulty: 'easy', question: 'The Pacific Ocean is the largest ocean on Earth.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'kids_015', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What is a baby dog called?', correctAnswer: 'Puppy', incorrectAnswers: ['Kitten', 'Cub', 'Foal'] },
+  { id: 'kids_016', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'Which animal is the tallest in the world?', correctAnswer: 'Giraffe', incorrectAnswers: ['Elephant', 'Horse', 'Camel'] },
+  { id: 'kids_017', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What are the three states of matter?', correctAnswer: 'Solid, liquid, gas', incorrectAnswers: ['Hot, cold, warm', 'Hard, soft, squishy', 'Big, medium, small'] },
+  { id: 'kids_018', category: 'kids', type: 'boolean', difficulty: 'easy', question: 'Bats are blind.', correctAnswer: 'False', incorrectAnswers: ['True'] },
+  { id: 'kids_019', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'Which country is home to kangaroos?', correctAnswer: 'Australia', incorrectAnswers: ['Brazil', 'India', 'South Africa'] },
+  { id: 'kids_020', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What is the square root of 144?', correctAnswer: '12', incorrectAnswers: ['10', '14', '16'] },
+  { id: 'kids_021', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What do you call a scientist who studies dinosaurs?', correctAnswer: 'Paleontologist', incorrectAnswers: ['Archaeologist', 'Biologist', 'Geologist'] },
+  { id: 'kids_022', category: 'kids', type: 'boolean', difficulty: 'easy', question: 'Dolphins are fish.', correctAnswer: 'False', incorrectAnswers: ['True'] },
+  { id: 'kids_023', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What is the boiling point of water in Celsius?', correctAnswer: '100', incorrectAnswers: ['90', '110', '120'] },
+  { id: 'kids_024', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What is the largest desert in the world?', correctAnswer: 'Sahara', incorrectAnswers: ['Gobi', 'Kalahari', 'Mojave'] },
+  { id: 'kids_025', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'Which organ pumps blood through your body?', correctAnswer: 'Heart', incorrectAnswers: ['Brain', 'Lungs', 'Liver'] },
+  { id: 'kids_026', category: 'kids', type: 'boolean', difficulty: 'easy', question: 'Humans have 5 senses.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'kids_027', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What kind of animal is a Komodo dragon?', correctAnswer: 'Lizard', incorrectAnswers: ['Snake', 'Dinosaur', 'Crocodile'] },
+  { id: 'kids_028', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'How many days are in a leap year?', correctAnswer: '366', incorrectAnswers: ['365', '364', '367'] },
+  { id: 'kids_029', category: 'kids', type: 'multiple', difficulty: 'easy', question: 'What is the hardest natural substance?', correctAnswer: 'Diamond', incorrectAnswers: ['Gold', 'Iron', 'Marble'] },
+  { id: 'kids_030', category: 'kids', type: 'boolean', difficulty: 'easy', question: 'An octopus has 8 arms.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+
+  // Medium (15)
+  { id: 'kids_031', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'What is the closest star to Earth?', correctAnswer: 'The Sun', incorrectAnswers: ['Proxima Centauri', 'Sirius', 'Alpha Centauri'] },
+  { id: 'kids_032', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'Which ancient civilization built the pyramids at Giza?', correctAnswer: 'Egyptians', incorrectAnswers: ['Romans', 'Greeks', 'Aztecs'] },
+  { id: 'kids_033', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'What is the chemical formula for water?', correctAnswer: 'H2O', incorrectAnswers: ['CO2', 'O2', 'NaCl'] },
+  { id: 'kids_034', category: 'kids', type: 'boolean', difficulty: 'medium', question: 'Sound travels faster than light.', correctAnswer: 'False', incorrectAnswers: ['True'] },
+  { id: 'kids_035', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'What is the longest bone in the human body?', correctAnswer: 'Femur', incorrectAnswers: ['Tibia', 'Humerus', 'Spine'] },
+  { id: 'kids_036', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'Which planet is the smallest in our solar system?', correctAnswer: 'Mercury', incorrectAnswers: ['Mars', 'Venus', 'Pluto'] },
+  { id: 'kids_037', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'What does DNA stand for?', correctAnswer: 'Deoxyribonucleic acid', incorrectAnswers: ['Do Not Ask', 'Digital Neuron Array', 'Dynamic Natural Atom'] },
+  { id: 'kids_038', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'Who was the first person to walk on the Moon?', correctAnswer: 'Neil Armstrong', incorrectAnswers: ['Buzz Aldrin', 'John Glenn', 'Yuri Gagarin'] },
+  { id: 'kids_039', category: 'kids', type: 'boolean', difficulty: 'medium', question: 'The Great Wall of China can be seen from space with the naked eye.', correctAnswer: 'False', incorrectAnswers: ['True'] },
+  { id: 'kids_040', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'What is the speed of light approximately?', correctAnswer: '300,000 km/s', incorrectAnswers: ['150,000 km/s', '500,000 km/s', '1,000,000 km/s'] },
+  { id: 'kids_041', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'What type of animal is a seahorse?', correctAnswer: 'Fish', incorrectAnswers: ['Reptile', 'Mammal', 'Amphibian'] },
+  { id: 'kids_042', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'Which country has the most people?', correctAnswer: 'India', incorrectAnswers: ['China', 'United States', 'Indonesia'] },
+  { id: 'kids_043', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'What is the value of Pi rounded to two decimal places?', correctAnswer: '3.14', incorrectAnswers: ['3.16', '3.12', '3.41'] },
+  { id: 'kids_044', category: 'kids', type: 'boolean', difficulty: 'medium', question: 'Humans and chimpanzees share over 95% of their DNA.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'kids_045', category: 'kids', type: 'multiple', difficulty: 'medium', question: 'What natural disaster is measured on the Richter scale?', correctAnswer: 'Earthquake', incorrectAnswers: ['Tornado', 'Hurricane', 'Tsunami'] },
 ];

@@ -19,6 +19,7 @@ const ALL_CATEGORIES: TriviaCategory[] = [
   'sports',
   'technology',
   'food',
+  'kids',
 ];
 
 function defaultCategoryStats(): TriviaCategoryStats {

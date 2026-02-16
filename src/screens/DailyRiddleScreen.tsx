@@ -877,51 +877,30 @@ export default function DailyRiddleScreen({ navigation }: Props) {
     const seenSet = new Set(stats.seenRiddleIds);
     return (
       <>
-        {/* Source toggle: Offline Bank / Fresh Riddles */}
+        {/* Source toggle: Offline Bank / Fresh Riddles (online disabled — coming soon) */}
         <View style={styles.sourceToggle}>
           <TouchableOpacity
-            style={[styles.sourceBtn, browseSource === 'offline' && styles.sourceBtnActive]}
-            onPress={() => handleSwitchBrowseSource('offline')}
-            activeOpacity={0.7}
+            style={[styles.sourceBtn, styles.sourceBtnActive]}
+            activeOpacity={1}
           >
             <Text style={styles.sourceBtnIcon}>{'\u{1F4F1}'}</Text>
-            <Text
-              style={[
-                styles.sourceBtnText,
-                browseSource === 'offline' && styles.sourceBtnTextActive,
-              ]}
-            >
+            <Text style={[styles.sourceBtnText, styles.sourceBtnTextActive]}>
               Offline Bank
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.sourceBtn,
-              browseSource === 'online' && styles.sourceBtnActive,
-              !isOnlineAvailable && styles.sourceBtnDisabled,
-            ]}
-            onPress={() => {
-              if (isOnlineAvailable) handleSwitchBrowseSource('online');
-            }}
-            activeOpacity={isOnlineAvailable ? 0.7 : 1}
+          <View
+            style={[styles.sourceBtn, { opacity: 0.4 }]}
+            pointerEvents="none"
           >
             <Text style={styles.sourceBtnIcon}>{'\u{1F310}'}</Text>
-            <Text
-              style={[
-                styles.sourceBtnText,
-                browseSource === 'online' && styles.sourceBtnTextActive,
-              ]}
-            >
+            <Text style={[styles.sourceBtnText, { color: colors.textTertiary }]}>
               Fresh Riddles
             </Text>
-          </TouchableOpacity>
+          </View>
         </View>
-
-        {!isOnlineAvailable && browseSource === 'offline' && (
-          <Text style={styles.noInternetText}>
-            Fresh Riddles requires internet
-          </Text>
-        )}
+        <Text style={{ fontSize: 12, color: colors.textTertiary, fontStyle: 'italic', marginHorizontal: 16, marginTop: 4 }}>
+          Online riddles coming soon
+        </Text>
 
         {browseSource === 'offline' ? (
           <>

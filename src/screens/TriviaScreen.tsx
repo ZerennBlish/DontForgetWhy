@@ -27,7 +27,10 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Trivia'>;
 type Phase = 'category' | 'playing' | 'results';
 
 const QUESTIONS_PER_ROUND = 10;
-const TIME_PER_QUESTION = 15;
+
+type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
+type SpeedOption = 'relaxed' | 'normal' | 'blitz';
+const SPEED_SECONDS: Record<SpeedOption, number> = { relaxed: 25, normal: 15, blitz: 8 };
 
 const CATEGORY_EMOJIS: Record<TriviaCategory, string> = {
   general: '\u{1F9E0}',
@@ -39,6 +42,7 @@ const CATEGORY_EMOJIS: Record<TriviaCategory, string> = {
   sports: '\u{1F3C6}',
   technology: '\u{1F4BB}',
   food: '\u{1F37D}',
+  kids: '\u{1F9D2}',
 };
 
 function shuffle<T>(arr: T[]): T[] {
@@ -50,8 +54,13 @@ function shuffle<T>(arr: T[]): T[] {
   return result;
 }
 
-function selectFromPool(source: TriviaQuestion[], count: number): TriviaQuestion[] {
-  // Try to get a mix of difficulties: ~4 easy, ~3 medium, ~3 hard
+function selectFromPool(source: TriviaQuestion[], count: number, difficulty: DifficultyFilter): TriviaQuestion[] {
+  if (difficulty !== 'all') {
+    // Single difficulty — just shuffle and pick
+    return shuffle(source.filter((q) => q.difficulty === difficulty)).slice(0, count);
+  }
+
+  // Mix of difficulties: ~4 easy, ~3 medium, ~3 hard
   const easy = shuffle(source.filter((q) => q.difficulty === 'easy'));
   const medium = shuffle(source.filter((q) => q.difficulty === 'medium'));
   const hard = shuffle(source.filter((q) => q.difficulty === 'hard'));
@@ -74,23 +83,29 @@ function selectFromPool(source: TriviaQuestion[], count: number): TriviaQuestion
 function selectQuestions(
   category: TriviaCategory,
   seenIds: string[],
+  difficulty: DifficultyFilter,
 ): { questions: TriviaQuestion[]; allSeen: boolean } {
   // General Knowledge is the grab-bag: pulls from ALL categories
-  const pool = category === 'general'
+  let pool = category === 'general'
     ? TRIVIA_QUESTIONS
     : TRIVIA_QUESTIONS.filter((q) => q.category === category);
+
+  // Apply difficulty filter to pool
+  if (difficulty !== 'all') {
+    pool = pool.filter((q) => q.difficulty === difficulty);
+  }
 
   const seenSet = new Set(seenIds);
   const unseen = pool.filter((q) => !seenSet.has(q.id));
 
   // All questions seen — signal reset
   if (unseen.length === 0) {
-    return { questions: selectFromPool(pool, QUESTIONS_PER_ROUND), allSeen: true };
+    return { questions: selectFromPool(pool, QUESTIONS_PER_ROUND, difficulty), allSeen: true };
   }
 
   // Enough unseen — pick from unseen only
   if (unseen.length >= QUESTIONS_PER_ROUND) {
-    return { questions: selectFromPool(unseen, QUESTIONS_PER_ROUND), allSeen: false };
+    return { questions: selectFromPool(unseen, QUESTIONS_PER_ROUND, difficulty), allSeen: false };
   }
 
   // Some unseen remain but fewer than a full round — use all unseen, pad with seen
@@ -115,6 +130,8 @@ export default function TriviaScreen({ navigation }: Props) {
   const [isOnline, setIsOnline] = useState(false);
   const [onlineMode, setOnlineMode] = useState(false);
   const [allSeenMessage, setAllSeenMessage] = useState<string | null>(null);
+  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('all');
+  const [speedOption, setSpeedOption] = useState<SpeedOption>('normal');
 
   // Game state
   const [selectedCategory, setSelectedCategory] = useState<TriviaCategory>('general');
@@ -128,18 +145,18 @@ export default function TriviaScreen({ navigation }: Props) {
   const [longestStreak, setLongestStreak] = useState(0);
   const [questionTimes, setQuestionTimes] = useState<number[]>([]);
   const [questionStartTime, setQuestionStartTime] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
+  const [timeLeft, setTimeLeft] = useState(SPEED_SECONDS.normal);
   const [isOnlineRound, setIsOnlineRound] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerWidth = useRef(new Animated.Value(1)).current;
   const answerLocked = useRef(false);
+  const roundTimePerQuestion = useRef(SPEED_SECONDS.normal);
 
-  // Check online availability and load settings on mount
+  // Check online availability on mount (online mode is disabled for now)
   useEffect(() => {
     checkOnlineAvailable().then((available) => {
       setIsOnline(available);
-      setOnlineMode(available);
     });
   }, []);
 
@@ -195,7 +212,7 @@ export default function TriviaScreen({ navigation }: Props) {
       setCurrentIndex(nextIndex);
       setSelectedAnswer(null);
       setIsCorrect(null);
-      setTimeLeft(TIME_PER_QUESTION);
+      setTimeLeft(roundTimePerQuestion.current);
       timerWidth.setValue(1);
       answerLocked.current = false;
       setQuestionStartTime(Date.now());
@@ -234,12 +251,15 @@ export default function TriviaScreen({ navigation }: Props) {
     setSelectedCategory(category);
     setAllSeenMessage(null);
 
+    const timePerQ = SPEED_SECONDS[speedOption];
+    roundTimePerQuestion.current = timePerQ;
+
     let roundQuestions: TriviaQuestion[] | null = null;
     let usingOnline = false;
 
     // Try online first if enabled and category is available
-    if (onlineMode && category !== 'food') {
-      const onlineQs = await fetchOnlineQuestions(category, QUESTIONS_PER_ROUND);
+    if (onlineMode && category !== 'food' && category !== 'kids') {
+      const onlineQs = await fetchOnlineQuestions(category, QUESTIONS_PER_ROUND, difficultyFilter);
       if (onlineQs && onlineQs.length >= QUESTIONS_PER_ROUND) {
         roundQuestions = onlineQs;
         usingOnline = true;
@@ -249,7 +269,7 @@ export default function TriviaScreen({ navigation }: Props) {
     // Fall back to offline bank
     if (!roundQuestions) {
       const seenIds = await getSeenQuestionIds(category);
-      const { questions: offlineQs, allSeen } = selectQuestions(category, seenIds);
+      const { questions: offlineQs, allSeen } = selectQuestions(category, seenIds, difficultyFilter);
       roundQuestions = offlineQs;
       if (allSeen) {
         const catLabel = TRIVIA_CATEGORIES.find((c) => c.id === category)?.label || category;
@@ -267,14 +287,14 @@ export default function TriviaScreen({ navigation }: Props) {
     setQuestionTimes([]);
     setSelectedAnswer(null);
     setIsCorrect(null);
-    setTimeLeft(TIME_PER_QUESTION);
+    setTimeLeft(timePerQ);
     timerWidth.setValue(1);
     answerLocked.current = false;
     setQuestionStartTime(Date.now());
     setShuffledAnswers(getShuffledAnswers(roundQuestions[0]));
     setPhase('playing');
     hapticLight();
-  }, [onlineMode, timerWidth]);
+  }, [onlineMode, timerWidth, difficultyFilter, speedOption]);
 
   const handleAnswer = useCallback((answer: string) => {
     if (answerLocked.current || selectedAnswer !== null) return;
@@ -336,21 +356,17 @@ export default function TriviaScreen({ navigation }: Props) {
           <Text style={styles.title}>Trivia Time</Text>
         </View>
 
-        {/* Online/Offline toggle */}
-        <TouchableOpacity
-          style={styles.modeToggle}
-          onPress={() => {
-            hapticLight();
-            setOnlineMode((prev) => !prev);
-          }}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.modeIcon}>{onlineMode ? '\u{1F310}' : '\u{1F4F1}'}</Text>
-          <Text style={styles.modeText}>
-            {onlineMode ? 'Online' : 'Offline'}{' '}
-            {!isOnline && onlineMode ? '(no connection)' : ''}
-          </Text>
-        </TouchableOpacity>
+        {/* Online/Offline toggle (disabled — coming soon) */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 12 }}>
+          <View
+            style={[styles.modeToggle, { opacity: 0.4, marginHorizontal: 0, marginBottom: 0 }]}
+            pointerEvents="none"
+          >
+            <Text style={styles.modeIcon}>{'\u{1F310}'}</Text>
+            <Text style={[styles.modeText, { color: colors.textTertiary }]}>Online</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: colors.textTertiary, fontStyle: 'italic' }}>Coming soon</Text>
+        </View>
 
         {allSeenMessage && (
           <Text style={styles.seenNote}>{allSeenMessage}</Text>
@@ -360,12 +376,12 @@ export default function TriviaScreen({ navigation }: Props) {
           {TRIVIA_CATEGORIES.filter((cat) => cat.id !== 'general').map((cat) => (
             <TouchableOpacity
               key={cat.id}
-              style={styles.categoryCard}
-              onPress={() => startRound(cat.id)}
+              style={[styles.categoryCard, selectedCategory === cat.id && styles.categoryCardActive]}
+              onPress={() => { hapticLight(); setSelectedCategory(cat.id); }}
               activeOpacity={0.7}
             >
               <Text style={styles.categoryEmoji}>{CATEGORY_EMOJIS[cat.id]}</Text>
-              <Text style={styles.categoryLabel}>{cat.label}</Text>
+              <Text style={[styles.categoryLabel, selectedCategory === cat.id && styles.categoryLabelActive]}>{cat.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -373,14 +389,59 @@ export default function TriviaScreen({ navigation }: Props) {
         {/* General Knowledge centered at bottom */}
         <View style={styles.generalRow}>
           <TouchableOpacity
-            style={styles.categoryCard}
-            onPress={() => startRound('general')}
+            style={[styles.categoryCard, selectedCategory === 'general' && styles.categoryCardActive]}
+            onPress={() => { hapticLight(); setSelectedCategory('general'); }}
             activeOpacity={0.7}
           >
             <Text style={styles.categoryEmoji}>{CATEGORY_EMOJIS.general}</Text>
-            <Text style={styles.categoryLabel}>General Knowledge</Text>
+            <Text style={[styles.categoryLabel, selectedCategory === 'general' && styles.categoryLabelActive]}>General Knowledge</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Difficulty pills */}
+        <Text style={styles.pillSectionLabel}>Difficulty</Text>
+        <View style={styles.pillRow}>
+          {(['all', 'easy', 'medium', 'hard'] as const).map((d) => (
+            <TouchableOpacity
+              key={d}
+              style={[styles.pill, difficultyFilter === d && styles.pillActive]}
+              onPress={() => { hapticLight(); setDifficultyFilter(d); }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.pillText, difficultyFilter === d && styles.pillTextActive]}>
+                {d === 'all' ? 'All' : d.charAt(0).toUpperCase() + d.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Speed pills */}
+        <Text style={styles.pillSectionLabel}>Speed</Text>
+        <View style={styles.pillRow}>
+          {(['relaxed', 'normal', 'blitz'] as const).map((s) => (
+            <TouchableOpacity
+              key={s}
+              style={[styles.pill, speedOption === s && styles.pillActive]}
+              onPress={() => { hapticLight(); setSpeedOption(s); }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.pillText, speedOption === s && styles.pillTextActive]}>
+                {s === 'relaxed' ? 'Relaxed (25s)' : s === 'normal' ? 'Normal (15s)' : 'Blitz (8s)'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Start button */}
+        <TouchableOpacity
+          style={styles.startBtn}
+          onPress={() => startRound(selectedCategory)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.startBtnText}>
+            {CATEGORY_EMOJIS[selectedCategory]} Start Round
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     );
   }
@@ -630,11 +691,67 @@ function makeStyles(colors: any, insets: any) {
       color: colors.textPrimary,
       textAlign: 'center',
     },
+    categoryCardActive: {
+      borderColor: colors.accent,
+      borderWidth: 2,
+    },
+    categoryLabelActive: {
+      color: colors.accent,
+    },
     generalRow: {
       flexDirection: 'row',
       justifyContent: 'center',
       paddingHorizontal: 12,
       marginTop: 12,
+    },
+
+    // Pill selectors
+    pillSectionLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.textTertiary,
+      marginHorizontal: 20,
+      marginTop: 20,
+      marginBottom: 8,
+    },
+    pillRow: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    pill: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pillActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    pillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    pillTextActive: {
+      color: colors.textPrimary,
+    },
+    startBtn: {
+      marginHorizontal: 16,
+      marginTop: 24,
+      backgroundColor: colors.accent,
+      borderRadius: 16,
+      paddingVertical: 18,
+      alignItems: 'center',
+    },
+    startBtnText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
     },
 
     // Top bar

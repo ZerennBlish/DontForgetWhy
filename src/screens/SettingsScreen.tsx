@@ -7,7 +7,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  Linking,
+  Platform,
 } from 'react-native';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
@@ -459,6 +462,30 @@ export default function SettingsScreen({ navigation }: Props) {
           Re-run the permission setup for notifications, alarms, battery optimization, full screen alarms, and more.
         </Text>
       </View>
+
+      <TouchableOpacity
+        style={[styles.card, { marginTop: 16 }]}
+        onPress={() => {
+          const version =
+            Constants.expoConfig?.version
+            || (Constants as any).manifest?.version
+            || (Constants as any).manifest2?.extra?.expoClient?.version
+            || 'unknown';
+          const device = `${Platform.OS} ${Platform.Version}`;
+          const body = encodeURIComponent(`\n\n---\nApp Version: ${version}\nDevice: ${device}`);
+          const subject = encodeURIComponent("Don't Forget Why \u2014 Feedback");
+          Linking.openURL(`mailto:baldguyandcompanygames@gmail.com?subject=${subject}&body=${body}`);
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.aboutRow}>
+          <Text style={styles.label}>{'\u2709\uFE0F'} Send Feedback</Text>
+          <Text style={styles.aboutChevron}>{'\u203A'}</Text>
+        </View>
+        <Text style={styles.description}>
+          Bug reports, suggestions, or let us know how we're doing
+        </Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.card, { marginTop: 16 }]}

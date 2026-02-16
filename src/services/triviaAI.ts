@@ -51,15 +51,19 @@ function decodeHTML(text: string): string {
 export async function fetchOnlineQuestions(
   category: TriviaCategory,
   count: number = 10,
+  difficulty: 'all' | 'easy' | 'medium' | 'hard' = 'all',
 ): Promise<TriviaQuestion[] | null> {
   const mapping = CATEGORY_MAP[category];
-  if (!mapping) return null; // food not available online
+  if (!mapping) return null; // food/kids not available online
   const apiCategory = Array.isArray(mapping)
     ? mapping[Math.floor(Math.random() * mapping.length)]
     : mapping;
 
   try {
-    const url = `https://opentdb.com/api.php?amount=${count}&category=${apiCategory}`;
+    let url = `https://opentdb.com/api.php?amount=${count}&category=${apiCategory}`;
+    if (difficulty !== 'all') {
+      url += `&difficulty=${difficulty}`;
+    }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
