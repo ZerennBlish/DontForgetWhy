@@ -66,16 +66,64 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const [hasDueDate, setHasDueDate] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [hasDueTime, setHasDueTime] = useState(false);
-  const [dueHours, setDueHours] = useState('09');
-  const [dueMinutes, setDueMinutes] = useState('00');
+  const [rawDigits, setRawDigits] = useState('0900');
   const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM');
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [placeholder] = useState(getRandomPlaceholder);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
 
+  // Format raw digits into display string with colon
+  // 1 digit:  "6"    → "6"
+  // 2 digits: "63"   → "6:30"  (H:M0 — second digit is tens of minutes)
+  // 3 digits: "630"  → "6:30"  (H:MM)
+  // 4 digits: "0630" → "06:30" (HH:MM)
+  const formatTimeDisplay = (digits: string): string => {
+    if (digits.length <= 1) return digits;
+    if (digits.length === 2) return `${digits[0]}:${digits[1]}0`;
+    if (digits.length === 3) return `${digits[0]}:${digits.slice(1)}`;
+    return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  };
+
+  // Parse rawDigits into { hours, minutes } — must match formatTimeDisplay
+  const parseRawDigits = (digits: string): { hours: number; minutes: number } => {
+    if (digits.length <= 1) {
+      return { hours: parseInt(digits, 10) || 0, minutes: 0 };
+    }
+    if (digits.length === 2) {
+      return {
+        hours: parseInt(digits[0], 10) || 0,
+        minutes: (parseInt(digits[1], 10) || 0) * 10,
+      };
+    }
+    if (digits.length === 3) {
+      return {
+        hours: parseInt(digits[0], 10) || 0,
+        minutes: parseInt(digits.slice(1), 10) || 0,
+      };
+    }
+    return {
+      hours: parseInt(digits.slice(0, 2), 10) || 0,
+      minutes: parseInt(digits.slice(2), 10) || 0,
+    };
+  };
+
+  const handleTimeInput = (inputText: string) => {
+    const digits = inputText.replace(/[^0-9]/g, '').slice(0, 4);
+    setRawDigits(digits);
+  };
+
   useEffect(() => {
-    loadSettings().then((s) => setTimeFormat(s.timeFormat));
+    loadSettings().then((s) => {
+      setTimeFormat(s.timeFormat);
+      if (s.timeFormat === '12h') {
+        setRawDigits((prev) => {
+          const { hours: h24, minutes: m } = parseRawDigits(prev);
+          const h12 = h24 % 12 || 12;
+          return `${h12}${m.toString().padStart(2, '0')}`;
+        });
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -101,11 +149,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         const [h, m] = found.dueTime.split(':').map(Number);
         if (timeFormat === '12h') {
           setAmpm(h >= 12 ? 'PM' : 'AM');
-          setDueHours((h % 12 || 12).toString());
+          const h12 = h % 12 || 12;
+          setRawDigits(`${h12}${m.toString().padStart(2, '0')}`);
         } else {
-          setDueHours(h.toString().padStart(2, '0'));
+          setRawDigits(`${h}${m.toString().padStart(2, '0')}`);
         }
-        setDueMinutes(m.toString().padStart(2, '0'));
       }
     });
   }, [editId, timeFormat]);
@@ -296,17 +344,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       color: colors.textPrimary,
       backgroundColor: colors.card,
       borderRadius: 12,
-      width: 80,
+      width: 160,
       textAlign: 'center',
       paddingVertical: 10,
       borderWidth: 1,
       borderColor: colors.border,
-    },
-    timeSeparator: {
-      fontSize: 36,
-      fontWeight: '700',
-      color: colors.accent,
-      marginHorizontal: 8,
     },
     ampmContainer: {
       flexDirection: 'column',
@@ -456,19 +498,19 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     // Build 24h time string (independent of date)
     let dueTime: string | null = null;
     if (hasDueTime) {
+      const { hours: rawH, minutes: rawM } = parseRawDigits(rawDigits);
       let h: number;
       if (timeFormat === '12h') {
-        let h12 = parseInt(dueHours, 10) || 12;
-        h12 = Math.min(12, Math.max(1, h12));
+        let h12 = Math.min(12, Math.max(1, rawH || 12));
         if (ampm === 'AM') {
           h = h12 === 12 ? 0 : h12;
         } else {
           h = h12 === 12 ? 12 : h12 + 12;
         }
       } else {
-        h = Math.min(23, Math.max(0, parseInt(dueHours, 10) || 0));
+        h = Math.min(23, Math.max(0, rawH));
       }
-      const m = Math.min(59, Math.max(0, parseInt(dueMinutes, 10) || 0));
+      const m = Math.min(59, Math.max(0, rawM));
       dueTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     }
 
@@ -577,20 +619,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         <View style={styles.timeContainer}>
           <TextInput
             style={styles.timeInput}
-            value={dueHours}
-            onChangeText={(t) => setDueHours(t.replace(/[^0-9]/g, '').slice(0, 2))}
+            value={formatTimeDisplay(rawDigits)}
+            onChangeText={handleTimeInput}
             keyboardType="number-pad"
-            maxLength={2}
-            selectTextOnFocus
-            placeholderTextColor={colors.textTertiary}
-          />
-          <Text style={styles.timeSeparator}>:</Text>
-          <TextInput
-            style={styles.timeInput}
-            value={dueMinutes}
-            onChangeText={(t) => setDueMinutes(t.replace(/[^0-9]/g, '').slice(0, 2))}
-            keyboardType="number-pad"
-            maxLength={2}
+            maxLength={5}
             selectTextOnFocus
             placeholderTextColor={colors.textTertiary}
           />

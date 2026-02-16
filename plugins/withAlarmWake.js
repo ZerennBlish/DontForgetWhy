@@ -184,12 +184,13 @@ function withAlarmWakeMainActivity(config) {
       : contents.includes("void onCreate");
 
     if (hasOnCreate) {
-      // Inject after super.onCreate line
-      const superCall = isKotlin
-        ? "super.onCreate(savedInstanceState)"
-        : "super.onCreate(savedInstanceState);";
-      const superIdx = contents.indexOf(superCall);
-      if (superIdx !== -1) {
+      // Inject after super.onCreate line — match either savedInstanceState or null
+      const superPattern = isKotlin
+        ? /super\.onCreate\((savedInstanceState|null)\)/
+        : /super\.onCreate\((savedInstanceState|null)\);/;
+      const superMatch = superPattern.exec(contents);
+      if (superMatch) {
+        const superIdx = superMatch.index;
         const lineEnd = contents.indexOf("\n", superIdx);
         const inject = isKotlin
           ? KOTLIN_ON_CREATE_INJECT
@@ -199,6 +200,10 @@ function withAlarmWakeMainActivity(config) {
           inject +
           "\n" +
           contents.slice(lineEnd + 1);
+      } else {
+        console.warn(
+          "[withAlarmWake] Could not find super.onCreate() injection point in MainActivity"
+        );
       }
     } else {
       // Insert full onCreate before the last closing brace of the class

@@ -85,12 +85,14 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const isEditing = !!existingAlarm;
 
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
-  const [hours, setHours] = useState(
-    existingAlarm ? existingAlarm.time.split(':')[0] : '08'
-  );
-  const [minutes, setMinutes] = useState(
-    existingAlarm ? existingAlarm.time.split(':')[1] : '00'
-  );
+  const [rawDigits, setRawDigits] = useState<string>(() => {
+    if (existingAlarm) {
+      const [h, m] = existingAlarm.time.split(':');
+      const h24 = parseInt(h, 10);
+      return `${h24}${m}`;
+    }
+    return '0800';
+  });
   const [ampm, setAmpm] = useState<'AM' | 'PM'>(() => {
     if (!existingAlarm) return 'AM';
     const h = parseInt(existingAlarm.time.split(':')[0], 10);
@@ -109,14 +111,54 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     existingAlarm?.soundID ?? null
   );
 
+  // Format raw digits into display string with colon
+  // 1 digit:  "6"    → "6"
+  // 2 digits: "63"   → "6:30"  (H:M0 — second digit is tens of minutes)
+  // 3 digits: "630"  → "6:30"  (H:MM)
+  // 4 digits: "0630" → "06:30" (HH:MM)
+  const formatTimeDisplay = (digits: string): string => {
+    if (digits.length <= 1) return digits;
+    if (digits.length === 2) return `${digits[0]}:${digits[1]}0`;
+    if (digits.length === 3) return `${digits[0]}:${digits.slice(1)}`;
+    return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  };
+
+  // Parse rawDigits into { hours, minutes } — must match formatTimeDisplay
+  const parseRawDigits = (digits: string): { hours: number; minutes: number } => {
+    if (digits.length <= 1) {
+      return { hours: parseInt(digits, 10) || 0, minutes: 0 };
+    }
+    if (digits.length === 2) {
+      return {
+        hours: parseInt(digits[0], 10) || 0,
+        minutes: (parseInt(digits[1], 10) || 0) * 10,
+      };
+    }
+    if (digits.length === 3) {
+      return {
+        hours: parseInt(digits[0], 10) || 0,
+        minutes: parseInt(digits.slice(1), 10) || 0,
+      };
+    }
+    return {
+      hours: parseInt(digits.slice(0, 2), 10) || 0,
+      minutes: parseInt(digits.slice(2), 10) || 0,
+    };
+  };
+
+  const handleTimeInput = (text: string) => {
+    const digits = text.replace(/[^0-9]/g, '').slice(0, 4);
+    setRawDigits(digits);
+  };
+
   useEffect(() => {
     loadSettings().then((s) => {
       setTimeFormat(s.timeFormat);
       if (s.timeFormat === '12h') {
-        setHours((prev) => {
-          const h24 = parseInt(prev, 10) || 0;
+        setRawDigits((prev) => {
+          const { hours: h24, minutes: m } = parseRawDigits(prev);
           const h12 = h24 % 12 || 12;
-          return h12.toString();
+          return `${h12}${m.toString().padStart(2, '0')}`;
         });
       }
     });
@@ -181,17 +223,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       color: colors.textPrimary,
       backgroundColor: colors.card,
       borderRadius: 16,
-      width: 110,
+      width: 200,
       textAlign: 'center',
       paddingVertical: 16,
       borderWidth: 1,
       borderColor: colors.border,
-    },
-    timeSeparator: {
-      fontSize: 48,
-      fontWeight: '700',
-      color: colors.accent,
-      marginHorizontal: 12,
     },
     label: {
       fontSize: 16,
@@ -603,19 +639,19 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         return;
       }
 
+      const { hours: rawH, minutes: rawM } = parseRawDigits(rawDigits);
       let h: number;
       if (timeFormat === '12h') {
-        let h12 = parseInt(hours, 10) || 12;
-        h12 = Math.min(12, Math.max(1, h12));
+        let h12 = Math.min(12, Math.max(1, rawH || 12));
         if (ampm === 'AM') {
           h = h12 === 12 ? 0 : h12;
         } else {
           h = h12 === 12 ? 12 : h12 + 12;
         }
       } else {
-        h = Math.min(23, Math.max(0, parseInt(hours, 10) || 0));
+        h = Math.min(23, Math.max(0, rawH));
       }
-      const m = Math.min(59, Math.max(0, parseInt(minutes, 10) || 0));
+      const m = Math.min(59, Math.max(0, rawM));
       const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 
       if (mode === 'one-time' && selectedDate) {
@@ -708,20 +744,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       <View style={styles.timeContainer}>
         <TextInput
           style={styles.timeInput}
-          value={hours}
-          onChangeText={(t) => setHours(t.replace(/[^0-9]/g, '').slice(0, 2))}
+          value={formatTimeDisplay(rawDigits)}
+          onChangeText={handleTimeInput}
           keyboardType="number-pad"
-          maxLength={2}
-          selectTextOnFocus
-          placeholderTextColor={colors.textTertiary}
-        />
-        <Text style={styles.timeSeparator}>:</Text>
-        <TextInput
-          style={styles.timeInput}
-          value={minutes}
-          onChangeText={(t) => setMinutes(t.replace(/[^0-9]/g, '').slice(0, 2))}
-          keyboardType="number-pad"
-          maxLength={2}
+          maxLength={5}
           selectTextOnFocus
           placeholderTextColor={colors.textTertiary}
         />

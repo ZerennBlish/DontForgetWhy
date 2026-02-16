@@ -35,6 +35,10 @@ import type { RootStackParamList } from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Deduplicate navigation: prevent DELIVERED + PRESS from stacking duplicate AlarmFireScreens
+let _lastNavigatedNotifId: string | null = null;
+let _lastNavigatedAt = 0;
+
 function AppNavigator() {
   const { colors } = useTheme();
 
@@ -56,6 +60,14 @@ function AppNavigator() {
     pending: PendingAlarmData,
   ) => {
     if (!navigationRef.current || !isNavigationReady.current) return;
+
+    // Skip duplicate navigation for the same notification within 5 seconds
+    if (pending.notificationId && pending.notificationId === _lastNavigatedNotifId && Date.now() - _lastNavigatedAt < 5000) {
+      console.log('[NOTIF] navigateToAlarmFire — skipping duplicate for:', pending.notificationId);
+      return;
+    }
+    _lastNavigatedNotifId = pending.notificationId || null;
+    _lastNavigatedAt = Date.now();
 
     if (pending.timerId && pending.notificationId) {
       console.log('[NOTIF] navigateToAlarmFire — timer:', pending.timerId);
@@ -295,6 +307,14 @@ function AppNavigator() {
 
         // Clear any pending data from background handler to prevent double navigation
         clearPendingAlarm();
+
+        // Skip duplicate navigation for the same notification within 5 seconds
+        if (notifId && notifId === _lastNavigatedNotifId && Date.now() - _lastNavigatedAt < 5000) {
+          console.log('[NOTIF] FOREGROUND — skipping duplicate navigation for:', notifId);
+          return;
+        }
+        _lastNavigatedNotifId = notifId || null;
+        _lastNavigatedAt = Date.now();
 
         // DO NOT cancel notifications here — the alarm sound plays FROM the
         // notification. Cancelling it kills the sound. AlarmFireScreen's

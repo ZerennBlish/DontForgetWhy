@@ -361,13 +361,20 @@ export async function cancelAllAlarms(): Promise<void> {
 
 export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string> {
   await setupNotificationChannel();
+  const settings = await loadSettings();
 
   const title = alarm.icon
     ? `${alarm.icon} Snoozed Alarm`
     : '\u23F0 Snoozed Alarm';
-  const body = alarm.private
-    ? (alarm.nickname || 'Alarm')
-    : (alarm.nickname || alarm.note || 'Time to wake up!');
+
+  let body: string;
+  if (settings.guessWhyEnabled) {
+    body = 'Snoozed \u2014 can you remember why?';
+  } else if (alarm.private) {
+    body = alarm.nickname || 'Alarm';
+  } else {
+    body = alarm.nickname || alarm.note || 'Time to wake up!';
+  }
 
   let channelId = ALARM_CHANNEL_ID;
   let customChannel = false;

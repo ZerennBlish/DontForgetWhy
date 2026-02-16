@@ -19,7 +19,7 @@ import {
   cancelTimerCountdownNotification,
   scheduleSnooze,
 } from '../services/notifications';
-import { disableAlarm } from '../services/storage';
+import { disableAlarm, loadAlarms, saveAlarms } from '../services/storage';
 import { loadSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -170,6 +170,15 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     exitToLockScreen();
   }, [cancelAllNotifications, exitToLockScreen, alarm, isTimer]);
 
+  // Intercept hardware back button — treat as Dismiss to stop sound/vibration
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleDismiss();
+      return true;
+    });
+    return () => sub.remove();
+  }, [handleDismiss]);
+
   const handleSnooze = useCallback(async () => {
     cancelAllNotifications();
     if (!alarm) {
@@ -179,7 +188,20 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
     let newCount = 1;
     try {
-      await scheduleSnooze(alarm);
+      const snoozeNotifId = await scheduleSnooze(alarm);
+      // Persist the snooze notification ID so it can be cancelled if the
+      // alarm is deleted or disabled while snoozed
+      try {
+        const alarms = await loadAlarms();
+        const idx = alarms.findIndex((a) => a.id === alarm.id);
+        if (idx !== -1) {
+          alarms[idx] = {
+            ...alarms[idx],
+            notificationIds: [...(alarms[idx].notificationIds || []), snoozeNotifId],
+          };
+          await saveAlarms(alarms);
+        }
+      } catch {}
       newCount = await incrementSnoozeCount(alarm.id);
     } catch (e) {
       console.error('[AlarmFire] snooze failed:', e);
