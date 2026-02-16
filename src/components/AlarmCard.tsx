@@ -21,6 +21,7 @@ function getScheduleLabel(alarm: Alarm): string {
 const categoryLabels: Record<AlarmCategory, string> = {
   meds: '\u{1F48A} Meds',
   appointment: '\u{1F4C5} Appt',
+  event: '\u{1F389} Event',
   task: '\u2705 Task',
   'self-care': '\u{1F9D8} Self-Care',
   general: '\u{1F514} General',

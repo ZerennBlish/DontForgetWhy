@@ -29,4 +29,4 @@ export interface Alarm {
   recurring?: boolean;
 }
 
-export type AlarmCategory = 'meds' | 'appointment' | 'task' | 'self-care' | 'general';
+export type AlarmCategory = 'meds' | 'appointment' | 'event' | 'task' | 'self-care' | 'general';

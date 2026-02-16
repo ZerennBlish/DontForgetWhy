@@ -19,6 +19,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ForgetLog'>;
 const categoryEmoji: Record<string, string> = {
   meds: '\u{1F48A}',
   appointment: '\u{1F4C5}',
+  event: '\u{1F389}',
   task: '\u2705',
   'self-care': '\u{1F9D8}',
   general: '\u{1F514}',

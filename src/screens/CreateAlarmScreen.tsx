@@ -61,16 +61,32 @@ function formatDateDisplay(dateStr: string): string {
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
 
 const iconCategoryMap: Record<string, AlarmCategory> = {
-  '\u{1F48A}': 'meds',
-  '\u{1FA7A}': 'appointment',
-  '\u2695\uFE0F': 'meds',
-  '\u{1F4C5}': 'appointment',
-  '\u{1F465}': 'task',
-  '\u{1F4BC}': 'task',
-  '\u{1F389}': 'task',
-  '\u{1F3CB}\uFE0F': 'self-care',
-  '\u{1F634}': 'self-care',
-  '\u{1F6BF}': 'self-care',
+  // Health & Medical
+  '\u{1F48A}': 'meds',          // 💊 meds
+  '\u2695\uFE0F': 'meds',       // ⚕️ medical
+  '\u{1FA7A}': 'appointment',   // 🩺 doctor
+  '\u{1F9B7}': 'appointment',   // 🦷 dentist
+  '\u{1F4C5}': 'appointment',   // 📅 appointment
+  '\u{1F487}': 'appointment',   // 💇 haircut
+  // Events & Social
+  '\u{1F48D}': 'event',         // 💍 anniversary
+  '\u{1F382}': 'event',         // 🎂 birthday
+  '\u2764\uFE0F': 'event',      // ❤️ date
+  '\u{1F64F}': 'event',         // 🙏 church
+  '\u{1F389}': 'event',         // 🎉 celebration
+  // Work & Tasks
+  '\u{1F465}': 'task',          // 👥 meeting
+  '\u{1F4BC}': 'task',          // 💼 work
+  '\u{1F4B2}': 'task',          // 💲 bills
+  '\u{1F4DD}': 'task',          // 📝 homework
+  '\u{1F4C4}': 'task',          // 📄 documents
+  '\u{1F4E6}': 'task',          // 📦 delivery
+  // Self-Care & Wellness
+  '\u{1F3CB}\uFE0F': 'self-care', // 🏋️ dumbbell
+  '\u{1F9D8}': 'self-care',     // 🧘 yoga
+  '\u{1F4A7}': 'self-care',     // 💧 hydrate
+  '\u{1F6BF}': 'self-care',     // 🚿 shower
+  '\u{1F6CF}\uFE0F': 'self-care', // 🛏️ bedtime
 };
 
 function categoryFromIcon(emoji: string | null): AlarmCategory {
