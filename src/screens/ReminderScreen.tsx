@@ -209,7 +209,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   };
 
   const totalNonDeletedReminders = reminders.filter(r => !r.deletedAt).length;
-  const totalActiveReminders = reminders.filter(r => !r.deletedAt && !r.completed).length;
 
   const sorted = useMemo(() => {
     let list = reminders;
@@ -669,7 +668,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   return (
     <View style={styles.container}>
-      {totalActiveReminders === 0 && reminderFilter === 'active' ? (
+      {totalNonDeletedReminders === 0 ? (
         <View style={styles.empty}>
           <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
           <Text style={styles.emptyText}>Nothing to remember</Text>

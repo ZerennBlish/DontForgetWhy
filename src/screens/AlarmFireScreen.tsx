@@ -19,7 +19,7 @@ import {
   cancelTimerCountdownNotification,
   scheduleSnooze,
 } from '../services/notifications';
-import { disableAlarm, loadAlarms, saveAlarms } from '../services/storage';
+import { disableAlarm, updateSingleAlarm } from '../services/storage';
 import { loadSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -192,17 +192,14 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     try {
       const snoozeNotifId = await scheduleSnooze(alarm);
       // Persist the snooze notification ID so it can be cancelled if the
-      // alarm is deleted or disabled while snoozed
+      // alarm is deleted or disabled while snoozed.
+      // Uses updateSingleAlarm to load ALL alarms (including soft-deleted)
+      // and save the full array back — prevents wiping the trash.
       try {
-        const alarms = await loadAlarms();
-        const idx = alarms.findIndex((a) => a.id === alarm.id);
-        if (idx !== -1) {
-          alarms[idx] = {
-            ...alarms[idx],
-            notificationIds: [...(alarms[idx].notificationIds || []), snoozeNotifId],
-          };
-          await saveAlarms(alarms);
-        }
+        await updateSingleAlarm(alarm.id, (a) => ({
+          ...a,
+          notificationIds: [...(a.notificationIds || []), snoozeNotifId],
+        }));
       } catch {}
       newCount = await incrementSnoozeCount(alarm.id);
     } catch (e) {

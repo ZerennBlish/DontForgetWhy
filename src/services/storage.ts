@@ -193,6 +193,25 @@ export async function purgeDeletedAlarms(): Promise<void> {
   }
 }
 
+/**
+ * Atomically update a single alarm by ID without affecting other alarms.
+ * Loads ALL alarms (including soft-deleted), applies the update function
+ * to the matching alarm, and saves the full array back.
+ *
+ * Use this instead of loadAlarms() + saveAlarms() to avoid wiping
+ * soft-deleted alarms from storage.
+ */
+export async function updateSingleAlarm(
+  alarmId: string,
+  updateFn: (alarm: Alarm) => Alarm,
+): Promise<void> {
+  const alarms = await _loadAllAlarms();
+  const idx = alarms.findIndex((a) => a.id === alarmId);
+  if (idx === -1) return;
+  alarms[idx] = updateFn(alarms[idx]);
+  await saveAlarms(alarms);
+}
+
 export async function toggleAlarm(id: string): Promise<Alarm[]> {
   const alarms = await _loadAllAlarms();
   const updated: Alarm[] = [];

@@ -300,11 +300,16 @@ function AppNavigator() {
         type === EventType.DELIVERED;
 
       if (isNavigationEvent) {
-        // For DELIVERED, filter: only alarm/timer COMPLETION notifications.
-        // Skip countdown notifications, reminders, sound previews, etc.
+        // For DELIVERED, filter: only alarm/timer notifications that should
+        // navigate to AlarmFireScreen. Skip reminders, sound previews, etc.
+        //
+        // Timer completion notifications reuse the countdown ID
+        // (countdown-{timerId}) to replace the chronometer in-place. We
+        // distinguish them by data.timerId: the countdown chronometer has
+        // NO data field, so timerId is undefined; the completion trigger
+        // has data: { timerId }.
         if (type === EventType.DELIVERED) {
-          const isTimerCountdown = notifId?.startsWith('countdown-');
-          const isAlarmOrTimerCompletion = !!(alarmId || (timerId && !isTimerCountdown));
+          const isAlarmOrTimerCompletion = !!(alarmId || timerId);
           if (!isAlarmOrTimerCompletion) return;
         }
 
@@ -328,7 +333,10 @@ function AppNavigator() {
         // notification. Cancelling it kills the sound. AlarmFireScreen's
         // Dismiss/Snooze handlers cancel notifications when the user acts.
 
-        if (timerId && notifId && !notifId.startsWith('countdown-')) {
+        // Timer completion notifications have data.timerId set.
+        // The countdown chronometer (same ID prefix) has NO data, so
+        // timerId is undefined and this branch is skipped for it.
+        if (timerId && notifId) {
           const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
           const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
 

@@ -41,7 +41,9 @@
       "WebFetch(domain:docs.sleep.urbandroid.org)",
       "WebFetch(domain:forums.expo.dev)",
       "WebFetch(domain:sleep.urbandroid.org)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
