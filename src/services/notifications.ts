@@ -453,11 +453,13 @@ export async function scheduleTimerNotification(
     },
   };
 
-  // When using a custom sound channel, omit the notification-level sound
-  // property so Android uses the channel's sound. Setting sound: 'default'
-  // on the notification can override the channel sound on some devices.
+  // Use the same notification ID as the countdown chronometer so this
+  // REPLACES it in-place rather than appearing as a brand-new HIGH-importance
+  // notification (which Android shows as a heads-up popup on top of the
+  // full-screen activity).  Matching the alarm notification config exactly.
   return await notifee.createTriggerNotification(
     {
+      id: `countdown-${timerId}`,
       title: `${icon} Timer Complete`,
       body: `${label} is done!`,
       data: { timerId },
@@ -470,9 +472,10 @@ export async function scheduleTimerNotification(
         importance: AndroidImportance.HIGH,
         sound: customChannel ? undefined : 'default',
         loopSound: true,
+        vibrationPattern: [300, 300, 300, 300],
+        lights: ['#FF0000', 300, 600] as [string, number, number],
         ongoing: true,
         autoCancel: false,
-        vibrationPattern: [300, 300, 300, 300],
         pressAction: {
           id: 'default',
         },
