@@ -5,8 +5,19 @@ export type RootStackParamList = {
   AlarmList: undefined;
   CreateAlarm: { alarm?: Alarm } | undefined;
   CreateReminder: { reminderId?: string } | undefined;
-  AlarmFire: { alarm: Alarm; fromNotification?: boolean };
-  GuessWhy: { alarm: Alarm; fromNotification?: boolean };
+  AlarmFire: {
+    alarm?: Alarm;
+    fromNotification?: boolean;
+    isTimer?: boolean;
+    timerLabel?: string;
+    timerIcon?: string;
+    timerId?: string;
+    timerNotificationId?: string;
+    notificationId?: string;
+    guessWhyEnabled?: boolean;
+    postGuessWhy?: boolean;
+  };
+  GuessWhy: { alarm: Alarm; fromNotification?: boolean; notificationId?: string };
   Settings: undefined;
   MemoryScore: undefined;
   MemoryMatch: undefined;

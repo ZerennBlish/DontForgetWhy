@@ -7,7 +7,6 @@ import {
   TextInput,
   ScrollView,
   Animated,
-  Vibration,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatTime } from '../utils/time';
@@ -22,7 +21,6 @@ import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
 import { addForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { dismissAlarmNotification } from '../services/notifications';
 import { hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -45,7 +43,7 @@ type ResultState =
 export default function GuessWhyScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { alarm, fromNotification } = route.params;
+  const { alarm, notificationId } = route.params;
   const hasIcon = Boolean(alarm.icon) && guessWhyIcons.some((i) => i.emoji === alarm.icon);
   const [mode, setMode] = useState<'icons' | 'type'>(hasIcon ? 'icons' : 'type');
   const [attemptsLeft, setAttemptsLeft] = useState(3);
@@ -63,42 +61,15 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     });
   }, []);
 
-  // Cancel alarm notifications on mount to stop sound/vibration
-  useEffect(() => {
-    console.log('[NOTIF] GuessWhyScreen mounted — cancelling alarm notifications. notificationIds:', alarm.notificationIds, 'notificationId:', alarm.notificationId);
-    if (alarm.notificationIds?.length) {
-      for (const id of alarm.notificationIds) {
-        console.log('[NOTIF] GuessWhyScreen — cancelling notification:', id);
-        dismissAlarmNotification(id);
-      }
-    }
-    if (alarm.notificationId) {
-      console.log('[NOTIF] GuessWhyScreen — cancelling legacy notification:', alarm.notificationId);
-      dismissAlarmNotification(alarm.notificationId);
-    }
-    // Belt-and-suspenders: kill any device-level vibration
-    Vibration.cancel();
-    console.log('[NOTIF] GuessWhyScreen — Vibration.cancel() called on mount');
-  }, [alarm.notificationIds, alarm.notificationId]);
-
-  useEffect(() => {
-    if (canPlay && fromNotification) {
-      console.log('[NOTIF] GuessWhyScreen — starting screen vibration (fromNotification)');
-      Vibration.vibrate([0, 800, 400, 800], true);
-      return () => {
-        console.log('[NOTIF] GuessWhyScreen — cleanup: Vibration.cancel()');
-        Vibration.cancel();
-      };
-    }
-  }, [canPlay, fromNotification]);
+  // Sound + vibration are already stopped before we get here.
+  // AlarmFireScreen's handleGuessWhy cancels everything before navigating.
 
   useEffect(() => {
     if (!canPlay) {
-      // Defensive fallback: if GuessWhy can't play, go to AlarmFire.
-      // Pass fromNotification: false — notification was already cancelled on mount.
-      navigation.replace('AlarmFire', { alarm, fromNotification: false });
+      // Defensive fallback: if GuessWhy can't play, go to AlarmFire
+      navigation.replace('AlarmFire', { alarm, postGuessWhy: true, fromNotification: false, notificationId });
     }
-  }, [canPlay, alarm, navigation]);
+  }, [canPlay, alarm, navigation, notificationId]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -383,10 +354,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   };
 
   const handleContinue = () => {
-    Vibration.cancel();
-    // Pass fromNotification: false — notification was already handled by GuessWhy.
-    // AlarmFire should NOT restart vibration after the game completes.
-    navigation.replace('AlarmFire', { alarm, fromNotification: false });
+    // Navigate to AlarmFire with postGuessWhy — it will cancel notifications + vibration
+    navigation.replace('AlarmFire', { alarm, postGuessWhy: true, fromNotification: false, notificationId });
   };
 
   const overlayColor =

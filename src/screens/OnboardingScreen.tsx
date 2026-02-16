@@ -19,6 +19,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { setOnboardingComplete } from '../services/settings';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
+import { canUseFullScreenIntent, openFullScreenIntentSettings } from '../utils/fullScreenPermission';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
@@ -46,6 +47,7 @@ function useSlides(startSlide: number) {
   const [exactAlarmGranted, setExactAlarmGranted] = useState(false);
   const [batteryOptDisabled, setBatteryOptDisabled] = useState(false);
   const [overlayGranted, setOverlayGranted] = useState(false);
+  const [fullScreenGranted, setFullScreenGranted] = useState(false);
   const [isSamsung, setIsSamsung] = useState(false);
   const [permissionsChecked, setPermissionsChecked] = useState(false);
 
@@ -97,6 +99,13 @@ function useSlides(startSlide: number) {
         setOverlayGranted(false);
       }
 
+      try {
+        const fsiGranted = await canUseFullScreenIntent();
+        setFullScreenGranted(fsiGranted);
+      } catch {
+        setFullScreenGranted(false);
+      }
+
       setPermissionsChecked(true);
     })();
   }, []);
@@ -121,6 +130,11 @@ function useSlides(startSlide: number) {
         const result = await canDisplayOverOtherApps();
         setOverlayGranted(result);
       }
+    } catch {}
+
+    try {
+      const fsiGranted = await canUseFullScreenIntent();
+      setFullScreenGranted(fsiGranted);
     } catch {}
   }, []);
 
@@ -244,6 +258,39 @@ function useSlides(startSlide: number) {
     },
   };
 
+  const fullScreenSlide: SlideData = {
+    id: 'full-screen',
+    emoji: '\u{1F6A8}',
+    title: 'Full Screen Alarms',
+    body: 'Your alarms need permission to light up your screen and appear over the lock screen. Without this, the screen stays black when an alarm goes off.',
+    buttonLabel: fullScreenGranted ? '\u2705 Full screen enabled' : 'Open Settings',
+    isPermission: true,
+    instructions: [
+      'Go to Settings \u203A Apps',
+      'Tap Special app access',
+      'Tap Full screen notifications',
+      'Find Don\'t Forget Why and turn it ON',
+    ],
+    secondaryText: 'This lets your alarm wake your screen and show over the lock screen.',
+    permissionCheck: async () => {
+      try {
+        return await canUseFullScreenIntent();
+      } catch { return false; }
+    },
+    permissionRequest: async () => {
+      try {
+        await openFullScreenIntentSettings();
+      } catch {
+        try { await Linking.openSettings(); } catch {}
+      }
+    },
+    afterReturnCheck: async () => {
+      try {
+        return await canUseFullScreenIntent();
+      } catch { return false; }
+    },
+  };
+
   const overlaySlide: SlideData = {
     id: 'overlay',
     emoji: '\u{1F4F1}',
@@ -287,6 +334,7 @@ function useSlides(startSlide: number) {
   const slides: SlideData[] = [
     ...introSlides,
     ...permissionSlides,
+    ...(Platform.OS === 'android' ? [fullScreenSlide] : []),
     ...(isSamsung ? [samsungSlide] : []),
     overlaySlide,
     finalSlide,
@@ -299,6 +347,7 @@ function useSlides(startSlide: number) {
     notifGranted,
     exactAlarmGranted,
     batteryOptDisabled,
+    fullScreenGranted,
     overlayGranted,
   };
 }
@@ -320,6 +369,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     notifGranted,
     exactAlarmGranted,
     batteryOptDisabled,
+    fullScreenGranted,
     overlayGranted,
   } = useSlides(startSlide);
 
@@ -444,17 +494,19 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     if (slide.id === 'notifications' && notifGranted) return '\u2705 Notifications enabled';
     if (slide.id === 'exact-alarms' && exactAlarmGranted) return '\u2705 Exact alarms enabled';
     if (slide.id === 'battery' && batteryOptDisabled) return '\u2705 Battery optimization disabled';
+    if (slide.id === 'full-screen' && fullScreenGranted) return '\u2705 Full screen enabled';
     if (slide.id === 'overlay' && overlayGranted) return '\u2705 Display over apps enabled';
     return slide.buttonLabel;
-  }, [notifGranted, exactAlarmGranted, batteryOptDisabled, overlayGranted]);
+  }, [notifGranted, exactAlarmGranted, batteryOptDisabled, fullScreenGranted, overlayGranted]);
 
   const isGranted = useCallback((slide: SlideData) => {
     if (slide.id === 'notifications') return notifGranted;
     if (slide.id === 'exact-alarms') return exactAlarmGranted;
     if (slide.id === 'battery') return batteryOptDisabled;
+    if (slide.id === 'full-screen') return fullScreenGranted;
     if (slide.id === 'overlay') return overlayGranted;
     return false;
-  }, [notifGranted, exactAlarmGranted, batteryOptDisabled, overlayGranted]);
+  }, [notifGranted, exactAlarmGranted, batteryOptDisabled, fullScreenGranted, overlayGranted]);
 
   const batteryNotDone = !batteryOptDisabled;
   const otherSkippedCount = skippedPermissions.filter((p) => p !== 'battery').length;

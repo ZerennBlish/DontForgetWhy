@@ -108,9 +108,12 @@ export default function SoundPickerModal({
     };
   }, []);
 
-  // Sole path for configuring audio mode — always awaited before playback
+  // Sole path for configuring audio mode — always awaited before playback.
+  // Guarded by isActiveRef to prevent AudioFocusNotAcquiredException when
+  // the modal has closed (app may be in background context).
   const ensureAudioMode = async (): Promise<boolean> => {
     if (audioModeReady.current) return true;
+    if (!isActiveRef.current) return false;
     try {
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
@@ -121,7 +124,7 @@ export default function SoundPickerModal({
       console.log('[SoundPicker] Audio mode configured');
       return true;
     } catch (err) {
-      console.error('[SoundPicker] ensureAudioMode failed:', err);
+      console.warn('[SoundPicker] ensureAudioMode failed (app may be backgrounded):', err);
       return false;
     }
   };

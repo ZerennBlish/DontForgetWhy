@@ -33,7 +33,14 @@
       "WebFetch(domain:issuetracker.google.com)",
       "WebFetch(domain:medium.com)",
       "Bash(npx expo config:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "WebFetch(domain:www.droidcon.com)",
+      "WebFetch(domain:dontkillmyapp.com)",
+      "WebFetch(domain:source.android.com)",
+      "WebFetch(domain:victorbrandalise.com)",
+      "WebFetch(domain:docs.sleep.urbandroid.org)",
+      "WebFetch(domain:forums.expo.dev)",
+      "WebFetch(domain:sleep.urbandroid.org)"
     ]
   }
 }

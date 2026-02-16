@@ -39,6 +39,7 @@
     },
     "plugins": [
       "./plugins/withNotifee",
+      "./plugins/withAlarmWake",
       ["react-native-android-widget", {
         "widgets": [
           {

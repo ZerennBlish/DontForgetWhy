@@ -1,11 +1,10 @@
 import 'react-native-get-random-values';
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Vibration } from 'react-native';
+import { AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import notifee, { EventType } from '@notifee/react-native';
-import guessWhyIcons from './src/data/guessWhyIcons';
 import AlarmListScreen from './src/screens/AlarmListScreen';
 import CreateAlarmScreen from './src/screens/CreateAlarmScreen';
 import AlarmFireScreen from './src/screens/AlarmFireScreen';
@@ -27,6 +26,8 @@ import { setupNotificationChannel, cancelTimerCountdownNotification } from './sr
 import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
+import { getPendingAlarm, clearPendingAlarm } from './src/services/pendingAlarm';
+import type { PendingAlarmData } from './src/services/pendingAlarm';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -36,112 +37,176 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppNavigator() {
   const { colors } = useTheme();
-  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
-  useEffect(() => {
-    getOnboardingComplete().then(setOnboardingDone);
-  }, []);
-
-  const navigationTheme = useMemo(
-    () => ({
-      ...DefaultTheme,
-      colors: {
-        ...DefaultTheme.colors,
-        background: colors.background,
-        card: colors.background,
-        text: colors.textPrimary,
-        border: colors.border,
-        primary: colors.accent,
-      },
-    }),
-    [colors],
-  );
+  // Single init state: null = loading, non-null = ready to render.
+  // Combines onboarding check + cold-start alarm resolution.
+  const [initState, setInitState] = useState<{
+    onboardingDone: boolean;
+    alarmFireParams: RootStackParamList['AlarmFire'] | null;
+  } | null>(null);
 
   const navigationRef = useRef<any>(null);
   const isNavigationReady = useRef(false);
-  const pendingAlarmId = useRef<string | null>(null);
-  const pendingNotificationId = useRef<string | null>(null);
 
-  const navigateToAlarm = useCallback(async (alarmId: string, pressedNotificationId?: string) => {
-    console.log('[NOTIF] navigateToAlarm called — alarmId:', alarmId, 'pressedNotificationId:', pressedNotificationId);
+  // ── Shared navigation helper ────────────────────────────────────
+  // Navigates to AlarmFireScreen from pending alarm data or notification
+  // data. Used by: foreground event handler, onNavigationReady, AppState.
 
-    // Cancel pressed notification immediately to stop sound/vibration,
-    // even if navigation isn't ready yet (cold-start race)
-    if (pressedNotificationId) {
-      console.log('[NOTIF] navigateToAlarm — cancelling pressed notification:', pressedNotificationId);
+  const navigateToAlarmFire = useCallback(async (
+    pending: PendingAlarmData,
+  ) => {
+    if (!navigationRef.current || !isNavigationReady.current) return;
+
+    if (pending.timerId && pending.notificationId) {
+      console.log('[NOTIF] navigateToAlarmFire — timer:', pending.timerId);
+      navigationRef.current.navigate('AlarmFire', {
+        isTimer: true,
+        timerLabel: pending.timerLabel || 'Timer',
+        timerIcon: pending.timerIcon || '\u23F1\uFE0F',
+        timerId: pending.timerId,
+        timerNotificationId: pending.notificationId,
+        notificationId: pending.notificationId,
+        fromNotification: true,
+      });
+    } else if (pending.alarmId) {
+      console.log('[NOTIF] navigateToAlarmFire — alarm:', pending.alarmId);
       try {
-        await notifee.cancelNotification(pressedNotificationId);
-        console.log('[NOTIF] navigateToAlarm — pressed notification cancelled:', pressedNotificationId);
+        const alarms = await loadAlarms();
+        const alarm = alarms.find((a) => a.id === pending.alarmId);
+        if (!alarm) {
+          console.log('[NOTIF] navigateToAlarmFire — alarm not found:', pending.alarmId);
+          return;
+        }
+        const settings = await loadSettings();
+        if (navigationRef.current) {
+          navigationRef.current.navigate('AlarmFire', {
+            alarm,
+            fromNotification: true,
+            notificationId: pending.notificationId,
+            guessWhyEnabled: settings.guessWhyEnabled,
+          });
+        }
       } catch (e) {
-        console.log('[NOTIF] navigateToAlarm — cancelNotification FAILED:', pressedNotificationId, e);
+        console.error('[NOTIF] navigateToAlarmFire error:', e);
       }
-    }
-
-    // Also kill any device-level vibration (belt-and-suspenders)
-    Vibration.cancel();
-    console.log('[NOTIF] navigateToAlarm — Vibration.cancel() called');
-
-    if (!navigationRef.current || !isNavigationReady.current) {
-      console.log('[NOTIF] navigateToAlarm — navigation NOT ready, queuing alarm:', alarmId);
-      pendingAlarmId.current = alarmId;
-      pendingNotificationId.current = pressedNotificationId || null;
-      return;
-    }
-
-    const alarms = await loadAlarms();
-    const alarm = alarms.find((a) => a.id === alarmId);
-    if (!alarm) {
-      console.log('[NOTIF] navigateToAlarm — alarm not found in storage:', alarmId);
-      return;
-    }
-
-    // Dismiss all displayed notifications for this alarm
-    const idsToCancel = [...(alarm.notificationIds || [])];
-    if (alarm.notificationId && !idsToCancel.includes(alarm.notificationId)) {
-      idsToCancel.push(alarm.notificationId);
-    }
-    if (pressedNotificationId && !idsToCancel.includes(pressedNotificationId)) {
-      idsToCancel.push(pressedNotificationId);
-    }
-    console.log('[NOTIF] navigateToAlarm — cancelling all alarm notification IDs:', idsToCancel);
-    for (const id of idsToCancel) {
-      try {
-        await notifee.cancelNotification(id);
-        console.log('[NOTIF] navigateToAlarm — cancelled:', id);
-      } catch (e) {
-        console.log('[NOTIF] navigateToAlarm — cancel FAILED:', id, e);
-      }
-    }
-
-    // Kill vibration again after all cancels complete
-    Vibration.cancel();
-
-    // Auto-disable one-time alarms after firing
-    if (alarm.mode === 'one-time') {
-      disableAlarm(alarmId).then(() => refreshTimerWidget()).catch(() => {});
-    }
-
-    const settings = await loadSettings();
-    if (settings.guessWhyEnabled) {
-      // Check if GuessWhy can actually be played with this alarm
-      const hasIcon = Boolean(alarm.icon) && guessWhyIcons.some((i) => i.emoji === alarm.icon);
-      const canPlay = hasIcon || alarm.note.length >= 3;
-      if (canPlay) {
-        console.log('[NOTIF] NAVIGATING TO: GuessWhy');
-        navigationRef.current.navigate('GuessWhy', { alarm, fromNotification: true });
-      } else {
-        // Can't play GuessWhy — go directly to AlarmFire, skip GuessWhy entirely
-        console.log('[NOTIF] NAVIGATING TO: AlarmFire (GuessWhy enabled but canPlay=false)');
-        navigationRef.current.navigate('AlarmFire', { alarm, fromNotification: true });
-      }
-    } else {
-      console.log('[NOTIF] NAVIGATING TO: AlarmFire');
-      navigationRef.current.navigate('AlarmFire', { alarm, fromNotification: true });
     }
   }, []);
 
-  // Create notification channel on startup (DND bypass + alarm settings)
-  // Also load haptics setting before first interaction
+  // Consume pending alarm data from background handler and navigate.
+  // Returns true if pending data was found and navigation was attempted.
+  const consumePendingAlarm = useCallback(async (): Promise<boolean> => {
+    const pending = getPendingAlarm();
+    if (!pending) return false;
+    clearPendingAlarm();
+    console.log('[NOTIF] consumePendingAlarm — found:', JSON.stringify(pending));
+    await navigateToAlarmFire(pending);
+    return true;
+  }, [navigateToAlarmFire]);
+
+  // ── Init phase ────────────────────────────────────────────────────
+  // Runs once on mount. For TRUE cold start (app was killed):
+  //   1. Module-level pendingAlarm (set by onBackgroundEvent in index.ts)
+  //   2. notifee.getInitialNotification() (cold start from PRESS/fullScreen)
+  // Uses initialState so the navigator renders AlarmFireScreen on first frame.
+  // For warm resume (app already running), foreground handler + AppState handle it.
+  useEffect(() => {
+    (async () => {
+      try {
+        const onboardingDone = await getOnboardingComplete();
+        let alarmFireParams: RootStackParamList['AlarmFire'] | null = null;
+
+        // 1. Check pending alarm from background event handler (cold start)
+        const pending = getPendingAlarm();
+        if (pending) {
+          clearPendingAlarm();
+          console.log('[NOTIF] INIT — found pending alarm data:', JSON.stringify(pending));
+
+          if (pending.timerId && pending.notificationId) {
+            alarmFireParams = {
+              isTimer: true,
+              timerLabel: pending.timerLabel || 'Timer',
+              timerIcon: pending.timerIcon || '\u23F1\uFE0F',
+              timerId: pending.timerId,
+              timerNotificationId: pending.notificationId,
+              notificationId: pending.notificationId,
+              fromNotification: true,
+            };
+          } else if (pending.alarmId) {
+            try {
+              const alarms = await loadAlarms();
+              const alarm = alarms.find((a) => a.id === pending.alarmId);
+              if (alarm) {
+                const settings = await loadSettings();
+                alarmFireParams = {
+                  alarm,
+                  fromNotification: true,
+                  notificationId: pending.notificationId,
+                  guessWhyEnabled: settings.guessWhyEnabled,
+                };
+              }
+            } catch (e) {
+              console.error('[NOTIF] INIT — failed to load alarm:', e);
+            }
+          }
+        }
+
+        // 2. Fallback: getInitialNotification (cold start via PRESS or fullScreenAction)
+        if (!alarmFireParams) {
+          try {
+            const initial = await notifee.getInitialNotification();
+            if (initial?.notification) {
+              const notifId = initial.notification.id;
+              const alarmId = initial.notification.data?.alarmId as string | undefined;
+              const timerId = initial.notification.data?.timerId as string | undefined;
+              console.log('[NOTIF] INIT — getInitialNotification found: notifId:', notifId, 'alarmId:', alarmId, 'timerId:', timerId);
+
+              if (timerId && notifId) {
+                const tIcon = initial.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+                const tLabel = initial.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+                alarmFireParams = {
+                  isTimer: true,
+                  timerLabel: tLabel,
+                  timerIcon: tIcon,
+                  timerId,
+                  timerNotificationId: notifId,
+                  notificationId: notifId,
+                  fromNotification: true,
+                };
+              } else if (alarmId) {
+                try {
+                  const alarms = await loadAlarms();
+                  const alarm = alarms.find((a) => a.id === alarmId);
+                  if (alarm) {
+                    const settings = await loadSettings();
+                    alarmFireParams = {
+                      alarm,
+                      fromNotification: true,
+                      notificationId: notifId,
+                      guessWhyEnabled: settings.guessWhyEnabled,
+                    };
+                  }
+                } catch (e) {
+                  console.error('[NOTIF] INIT — failed to load alarm from getInitialNotification:', e);
+                }
+              }
+            } else {
+              console.log('[NOTIF] INIT — getInitialNotification returned null (normal launch)');
+            }
+          } catch (e) {
+            console.error('[NOTIF] INIT — getInitialNotification error:', e);
+          }
+        }
+
+        console.log('[NOTIF] INIT — complete. alarmFireParams:', alarmFireParams ? 'SET' : 'null');
+        setInitState({ onboardingDone, alarmFireParams });
+      } catch (e) {
+        console.error('[NOTIF] INIT — fatal error:', e);
+        setInitState({ onboardingDone: true, alarmFireParams: null });
+      }
+    })();
+  }, []);
+
+  // ── Setup ─────────────────────────────────────────────────────────
   useEffect(() => {
     setupNotificationChannel();
     refreshHapticsSetting();
@@ -158,7 +223,6 @@ function AppNavigator() {
           if (!timer.isRunning) return true;
           const completionTime = new Date(timer.startedAt).getTime() + timer.remainingSeconds * 1000;
           if (completionTime < now) {
-            // Timer completed while app was killed — cancel orphaned countdown
             cancelTimerCountdownNotification(timer.id).catch(() => {});
             changed = true;
             return false;
@@ -172,46 +236,35 @@ function AppNavigator() {
     })();
   }, []);
 
-  // Cold-start: app launched from notification tap or full-screen intent
-  useEffect(() => {
-    notifee.getInitialNotification().then(async (initial) => {
-      console.log('[NOTIF] getInitialNotification result:', initial ? 'HAS notification' : 'null');
-      if (!initial?.notification) return;
+  // ── Navigation helpers ────────────────────────────────────────────
 
-      const notifId = initial.notification.id;
-      const alarmId = initial.notification.data?.alarmId as string | undefined;
-      const timerId = initial.notification.data?.timerId as string | undefined;
-      console.log('[NOTIF] COLD START — notifId:', notifId, 'alarmId:', alarmId, 'timerId:', timerId);
+  const navigationTheme = useMemo(
+    () => ({
+      ...DefaultTheme,
+      colors: {
+        ...DefaultTheme.colors,
+        background: colors.background,
+        card: colors.background,
+        text: colors.textPrimary,
+        border: colors.border,
+        primary: colors.accent,
+      },
+    }),
+    [colors],
+  );
 
-      if (timerId && notifId) {
-        console.log('[NOTIF] COLD START — timer notification, cancelling:', notifId);
-        await notifee.cancelNotification(notifId).catch(() => {});
-        await cancelTimerCountdownNotification(timerId).catch(() => {});
-        Vibration.cancel();
-        console.log('[NOTIF] COLD START — timer Vibration.cancel() called');
-      } else if (alarmId) {
-        // Cancel notification immediately to stop sound/vibration
-        if (notifId) {
-          console.log('[NOTIF] COLD START — cancelling alarm notification:', notifId);
-          try {
-            await notifee.cancelNotification(notifId);
-            console.log('[NOTIF] COLD START — alarm notification cancelled:', notifId);
-          } catch (e) {
-            console.log('[NOTIF] COLD START — cancelNotification FAILED:', notifId, e);
-          }
-          // Also kill device-level vibration
-          Vibration.cancel();
-          console.log('[NOTIF] COLD START — Vibration.cancel() called');
-        } else {
-          console.log('[NOTIF] COLD START — WARNING: no notification ID for alarm');
-        }
-        console.log('[NOTIF] COLD START — calling navigateToAlarm');
-        navigateToAlarm(alarmId, notifId || undefined);
-      }
-    });
-  }, [navigateToAlarm]);
-
-  // Foreground: notification pressed while app is open
+  // ── Foreground event handler ──────────────────────────────────────
+  // Handles events when the app is running (foreground or warm-started).
+  // This is the PRIMARY navigation path when the app is already open.
+  //
+  // PRESS (1): User tapped the notification in the shade
+  // DELIVERED (3): Notification was actually displayed — this fires when
+  //   fullScreenAction triggers (alarm goes off). NOT the same as
+  //   TRIGGER_NOTIFICATION_CREATED (7) which fires at schedule time.
+  // DISMISSED (0): User swiped away the notification
+  //
+  // NOTE: Do NOT handle TRIGGER_NOTIFICATION_CREATED (7) here — that fires
+  // when a trigger is SCHEDULED, not when the alarm actually goes off.
   useEffect(() => {
     const unsubscribe = notifee.onForegroundEvent(async ({ type, detail }) => {
       const notifId = detail.notification?.id;
@@ -219,62 +272,123 @@ function AppNavigator() {
       const timerId = detail.notification?.data?.timerId as string | undefined;
       console.log('[NOTIF] onForegroundEvent type:', type, 'notifId:', notifId, 'alarmId:', alarmId, 'timerId:', timerId);
 
-      if (type === EventType.PRESS) {
-        if (timerId && notifId) {
-          console.log('[NOTIF] FOREGROUND PRESS — timer notification, cancelling:', notifId);
-          await notifee.cancelNotification(notifId).catch(() => {});
-          await cancelTimerCountdownNotification(timerId).catch(() => {});
-          Vibration.cancel();
-          console.log('[NOTIF] FOREGROUND PRESS — timer Vibration.cancel() called');
+      // Navigate to AlarmFireScreen on PRESS or DELIVERED only.
+      // DELIVERED (3) = notification displayed (fullScreenAction fires this).
+      // PRESS (1) = user tapped the notification.
+      const isNavigationEvent =
+        type === EventType.PRESS ||
+        type === EventType.DELIVERED;
+
+      if (isNavigationEvent) {
+        // For DELIVERED, filter: only alarm/timer COMPLETION notifications.
+        // Skip countdown notifications, reminders, sound previews, etc.
+        if (type === EventType.DELIVERED) {
+          const isTimerCountdown = notifId?.startsWith('countdown-');
+          const isAlarmOrTimerCompletion = !!(alarmId || (timerId && !isTimerCountdown));
+          if (!isAlarmOrTimerCompletion) return;
+        }
+
+        if (!navigationRef.current || !isNavigationReady.current) {
+          console.log('[NOTIF] FOREGROUND — navigation not ready, deferring to onNavigationReady');
+          return;
+        }
+
+        // Clear any pending data from background handler to prevent double navigation
+        clearPendingAlarm();
+
+        // DO NOT cancel notifications here — the alarm sound plays FROM the
+        // notification. Cancelling it kills the sound. AlarmFireScreen's
+        // Dismiss/Snooze handlers cancel notifications when the user acts.
+
+        if (timerId && notifId && !notifId.startsWith('countdown-')) {
+          const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+          const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+
+          console.log('[NOTIF] FOREGROUND — navigating to AlarmFire (timer)');
+          navigationRef.current.navigate('AlarmFire', {
+            isTimer: true,
+            timerLabel: tLabel,
+            timerIcon: tIcon,
+            timerId,
+            timerNotificationId: notifId,
+            notificationId: notifId,
+            fromNotification: true,
+          });
         } else if (alarmId) {
-          // Cancel notification immediately to stop sound/vibration
-          if (notifId) {
-            console.log('[NOTIF] FOREGROUND PRESS — cancelling alarm notification:', notifId);
-            try {
-              await notifee.cancelNotification(notifId);
-              console.log('[NOTIF] FOREGROUND PRESS — alarm notification cancelled:', notifId);
-            } catch (e) {
-              console.log('[NOTIF] FOREGROUND PRESS — cancelNotification FAILED:', notifId, e);
-            }
-            // Also kill device-level vibration
-            Vibration.cancel();
-            console.log('[NOTIF] FOREGROUND PRESS — Vibration.cancel() called');
-          } else {
-            console.log('[NOTIF] FOREGROUND PRESS — WARNING: no notification ID for alarm');
-          }
-          console.log('[NOTIF] FOREGROUND PRESS — calling navigateToAlarm');
-          navigateToAlarm(alarmId, notifId || undefined);
+          console.log('[NOTIF] FOREGROUND — navigating to AlarmFire (alarm), notifId:', notifId);
+          await navigateToAlarmFire({ alarmId, notificationId: notifId });
         }
       }
+
       if (type === EventType.DISMISSED) {
         console.log('[NOTIF] FOREGROUND DISMISSED — alarmId:', alarmId);
         if (alarmId) {
-          const alarms = await loadAlarms();
-          const alarm = alarms.find((a) => a.id === alarmId);
-          if (alarm?.mode === 'one-time') {
-            await disableAlarm(alarmId);
-            refreshTimerWidget();
-          }
+          try {
+            const alarms = await loadAlarms();
+            const alarm = alarms.find((a) => a.id === alarmId);
+            if (alarm?.mode === 'one-time') {
+              await disableAlarm(alarmId);
+              refreshTimerWidget();
+            }
+          } catch {}
         }
       }
     });
     return unsubscribe;
-  }, [navigateToAlarm]);
+  }, [navigateToAlarmFire]);
 
+  // ── Pending data consumption on navigation ready ─────────────────
+  // When the navigator becomes ready, check if there's pending alarm data
+  // from the background handler that wasn't consumed by initialState
+  // (e.g., app was already running, NavigationContainer already mounted).
+  // Use navigate() to go directly to AlarmFireScreen.
   const onNavigationReady = useCallback(() => {
     isNavigationReady.current = true;
-    console.log('[NOTIF] onNavigationReady — pendingAlarmId:', pendingAlarmId.current, 'pendingNotificationId:', pendingNotificationId.current);
-    if (pendingAlarmId.current) {
-      navigateToAlarm(pendingAlarmId.current, pendingNotificationId.current || undefined);
-      pendingAlarmId.current = null;
-      pendingNotificationId.current = null;
-    }
-  }, [navigateToAlarm]);
+    console.log('[NOTIF] onNavigationReady');
 
-  // Wait for onboarding check before rendering
-  if (onboardingDone === null) {
-    return null;
-  }
+    // Check for pending alarm data that wasn't consumed by initialState
+    const pending = getPendingAlarm();
+    if (pending) {
+      clearPendingAlarm();
+      console.log('[NOTIF] onNavigationReady — consuming pending alarm, navigating via reset');
+      // Use navigateToAlarmFire (async) — navigation is ready at this point
+      navigateToAlarmFire(pending);
+    }
+  }, [navigateToAlarmFire]);
+
+  // ── AppState fallback ────────────────────────────────────────────
+  // When the app comes to foreground, check for pending alarm data from
+  // the background handler. This catches edge cases where:
+  // - onBackgroundEvent stored pending data
+  // - fullScreenAction brought the app to foreground
+  // - But the foreground event handler didn't fire or missed the event
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && isNavigationReady.current && navigationRef.current) {
+        consumePendingAlarm();
+      }
+    });
+    return () => subscription.remove();
+  }, [consumePendingAlarm]);
+
+  // ── Render ────────────────────────────────────────────────────────
+
+  // Wait for init phase to complete before rendering the navigator.
+  // This prevents any flash of the wrong screen.
+  if (!initState) return null;
+
+  const { onboardingDone, alarmFireParams } = initState;
+
+  // For TRUE cold start: set initialState so the navigator renders
+  // AlarmFireScreen on the very first frame. AlarmList is kept at
+  // index 0 so the nav stack is clean after dismiss.
+  const initialNavState = alarmFireParams ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'AlarmFire' as const, params: alarmFireParams },
+    ],
+    index: 1,
+  } : undefined;
 
   return (
     <>
@@ -283,6 +397,7 @@ function AppNavigator() {
         theme={navigationTheme}
         ref={navigationRef}
         onReady={onNavigationReady}
+        initialState={initialNavState}
       >
         <Stack.Navigator
           initialRouteName={onboardingDone ? 'AlarmList' : 'Onboarding'}

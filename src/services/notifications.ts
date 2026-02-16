@@ -359,6 +359,58 @@ export async function cancelAllAlarms(): Promise<void> {
   await notifee.cancelAllNotifications();
 }
 
+export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string> {
+  await setupNotificationChannel();
+
+  const title = alarm.icon
+    ? `${alarm.icon} Snoozed Alarm`
+    : '\u23F0 Snoozed Alarm';
+  const body = alarm.private
+    ? (alarm.nickname || 'Alarm')
+    : (alarm.nickname || alarm.note || 'Time to wake up!');
+
+  let channelId = ALARM_CHANNEL_ID;
+  let customChannel = false;
+  if (alarm.soundUri) {
+    try {
+      channelId = await getOrCreateSoundChannel(
+        alarm.soundUri,
+        alarm.soundName || 'Custom',
+      );
+      customChannel = true;
+    } catch {
+      channelId = ALARM_CHANNEL_ID;
+    }
+  }
+
+  const trigger: TimestampTrigger = {
+    type: TriggerType.TIMESTAMP,
+    timestamp: Date.now() + minutes * 60 * 1000,
+    alarmManager: { allowWhileIdle: true },
+  };
+
+  return await notifee.createTriggerNotification(
+    {
+      title,
+      body,
+      data: { alarmId: alarm.id },
+      android: {
+        channelId,
+        fullScreenAction: { id: 'default', launchActivity: 'default' },
+        importance: AndroidImportance.HIGH,
+        sound: customChannel ? undefined : 'default',
+        loopSound: true,
+        vibrationPattern: [300, 300, 300, 300],
+        ongoing: true,
+        autoCancel: false,
+        pressAction: { id: 'default' },
+        category: AndroidCategory.ALARM,
+      },
+    },
+    trigger,
+  );
+}
+
 export async function scheduleTimerNotification(
   label: string,
   icon: string,
@@ -406,6 +458,7 @@ export async function scheduleTimerNotification(
         channelId,
         fullScreenAction: {
           id: 'default',
+          launchActivity: 'default',
         },
         importance: AndroidImportance.HIGH,
         sound: customChannel ? undefined : 'default',
