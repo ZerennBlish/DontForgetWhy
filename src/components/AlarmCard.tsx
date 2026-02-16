@@ -50,9 +50,7 @@ interface AlarmCardProps {
   guessWhyEnabled: boolean;
   isPinned: boolean;
   onToggle: (id: string) => void;
-  onDelete: (id: string) => void;
   onEdit: (alarm: Alarm) => void;
-  onPress: (alarm: Alarm) => void;
   onTogglePin: (id: string) => void;
 }
 
@@ -63,7 +61,7 @@ function getDetailLine(alarm: Alarm): string {
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned, onToggle, onDelete, onEdit, onPress, onTogglePin }: AlarmCardProps) {
+export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned, onToggle, onEdit, onTogglePin }: AlarmCardProps) {
   const { colors } = useTheme();
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -157,28 +155,6 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
     pinBtnText: {
       fontSize: 13,
     },
-    editBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 8,
-      backgroundColor: colors.activeBackground,
-    },
-    editText: {
-      color: colors.accent,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    deleteBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 8,
-      backgroundColor: colors.card,
-    },
-    deleteText: {
-      color: colors.red,
-      fontSize: 13,
-      fontWeight: '600',
-    },
   }), [colors]);
 
   useEffect(() => {
@@ -211,7 +187,7 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
   return (
     <TouchableOpacity
       style={[styles.card, !alarm.enabled && styles.cardDisabled]}
-      onPress={() => onPress(alarm)}
+      onPress={() => onEdit(alarm)}
       activeOpacity={0.7}
     >
       <View style={styles.left}>
@@ -255,12 +231,6 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
             activeOpacity={0.6}
           >
             <Text style={[styles.pinBtnText, { opacity: isPinned ? 1 : 0.3 }]}>{'\u{1F4CC}'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onEdit(alarm)} style={styles.editBtn}>
-            <Text style={styles.editText}>{'\u270F\uFE0F'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onDelete(alarm.id)} style={styles.deleteBtn}>
-            <Text style={styles.deleteText}>Delete</Text>
           </TouchableOpacity>
         </View>
       </View>

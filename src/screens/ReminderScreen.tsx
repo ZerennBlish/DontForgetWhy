@@ -406,28 +406,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     pinBtnText: {
       fontSize: 13,
     },
-    editBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 8,
-      backgroundColor: colors.activeBackground,
-    },
-    editText: {
-      color: colors.accent,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    deleteBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 8,
-      backgroundColor: colors.card,
-    },
-    deleteText: {
-      color: colors.red,
-      fontSize: 13,
-      fontWeight: '600',
-    },
     fab: {
       position: 'absolute',
       bottom: 36 + insets.bottom,
@@ -646,18 +624,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
                 <Text style={[styles.pinBtnText, { opacity: pinned ? 1 : 0.3 }]}>
                   {'\u{1F4CC}'}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => onNavigateCreate(item.id)}
-                style={styles.editBtn}
-              >
-                <Text style={styles.editText}>{'\u270F\uFE0F'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDelete(item.id)}
-                style={styles.deleteBtn}
-              >
-                <Text style={styles.deleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>

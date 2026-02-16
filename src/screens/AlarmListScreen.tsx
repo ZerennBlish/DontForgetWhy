@@ -538,14 +538,6 @@ export default function AlarmListScreen({ navigation }: Props) {
     navigation.navigate('CreateAlarm', { alarm });
   };
 
-  const handlePress = (alarm: Alarm) => {
-    if (guessWhyEnabled) {
-      navigation.navigate('GuessWhy', { alarm });
-    } else {
-      navigation.navigate('AlarmFire', { alarm });
-    }
-  };
-
   const handleTogglePin = async (id: string) => {
     const currentlyPinned = isAlarmPinned(id, pinnedAlarmIds);
     if (!currentlyPinned && pinnedAlarmIds.length >= 3) {
@@ -929,9 +921,7 @@ export default function AlarmListScreen({ navigation }: Props) {
                                   guessWhyEnabled={guessWhyEnabled}
                                   isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
                                   onToggle={handleToggle}
-                                  onDelete={handleDelete}
                                   onEdit={handleEdit}
-                                  onPress={handlePress}
                                   onTogglePin={handleTogglePin}
                                 />
                               </SwipeableRow>
