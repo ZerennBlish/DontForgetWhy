@@ -122,29 +122,31 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     };
   }, []);
 
-  const cancelAllNotifications = useCallback(() => {
+  const cancelAllNotifications = useCallback(async () => {
     Vibration.cancel();
+    const promises: Promise<void>[] = [];
     if (isTimer) {
       if (timerNotificationId) {
-        dismissAlarmNotification(timerNotificationId).catch(() => {});
+        promises.push(dismissAlarmNotification(timerNotificationId).catch(() => {}));
       }
       if (timerId) {
-        cancelTimerCountdownNotification(timerId).catch(() => {});
+        promises.push(cancelTimerCountdownNotification(timerId).catch(() => {}));
       }
     } else if (alarm) {
       if (alarm.notificationIds?.length) {
         for (const id of alarm.notificationIds) {
-          dismissAlarmNotification(id).catch(() => {});
+          promises.push(dismissAlarmNotification(id).catch(() => {}));
         }
       }
       if (alarm.notificationId) {
-        dismissAlarmNotification(alarm.notificationId).catch(() => {});
+        promises.push(dismissAlarmNotification(alarm.notificationId).catch(() => {}));
       }
     }
     // Also cancel the specific pressed/triggered notification
     if (notificationId) {
-      notifee.cancelNotification(notificationId).catch(() => {});
+      promises.push(notifee.cancelNotification(notificationId).catch(() => {}));
     }
+    await Promise.all(promises);
   }, [alarm, isTimer, timerNotificationId, timerId, notificationId]);
 
   const exitToLockScreen = useCallback(() => {
@@ -154,7 +156,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const handleDismiss = useCallback(async () => {
     try {
-      cancelAllNotifications();
+      await cancelAllNotifications();
       // Disable one-time alarms after firing
       if (!isTimer && alarm?.mode === 'one-time') {
         try {
@@ -180,7 +182,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   }, [handleDismiss]);
 
   const handleSnooze = useCallback(async () => {
-    cancelAllNotifications();
+    await cancelAllNotifications();
     if (!alarm) {
       exitToLockScreen();
       return;
@@ -222,10 +224,10 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     }, 2500);
   }, [cancelAllNotifications, exitToLockScreen, alarm, snoozeShameOpacity]);
 
-  const handleGuessWhy = useCallback(() => {
+  const handleGuessWhy = useCallback(async () => {
     if (!alarm) return;
     // Stop sound + vibration BEFORE navigating — game plays in silence
-    cancelAllNotifications();
+    await cancelAllNotifications();
     navigation.navigate('GuessWhy', {
       alarm,
       fromNotification: true,
