@@ -40,7 +40,8 @@
       "WebFetch(domain:victorbrandalise.com)",
       "WebFetch(domain:docs.sleep.urbandroid.org)",
       "WebFetch(domain:forums.expo.dev)",
-      "WebFetch(domain:sleep.urbandroid.org)"
+      "WebFetch(domain:sleep.urbandroid.org)",
+      "Bash(git add:*)"
     ]
   }
 }

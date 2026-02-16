@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -194,30 +193,6 @@ export default function TimerScreen({
       color: colors.textTertiary,
       textAlign: 'center',
       marginTop: 12,
-    },
-    empty: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingBottom: 80 + insets.bottom,
-    },
-    emptyIcon: {
-      width: 90,
-      height: 90,
-      opacity: 0.35,
-      marginBottom: 12,
-    },
-    emptyText: {
-      fontSize: 20,
-      fontWeight: '600',
-      color: colors.textPrimary,
-    },
-    emptySubtext: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      marginTop: 6,
-      textAlign: 'center',
-      paddingHorizontal: 32,
     },
     modalOverlay: {
       flex: 1,
@@ -483,20 +458,6 @@ export default function TimerScreen({
   );
 
   const modalPresetPinned = customModal ? isPinned(customModal.id, pinnedIds) : false;
-  const hasPresets = restPresets.length > 0 || recentPresets.length > 0 || !!customPreset;
-
-  if (!hasPresets && activeTimers.length === 0) {
-    return (
-      <View style={styles.empty}>
-        <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
-        <Text style={styles.emptyText}>No timers here</Text>
-        <Text style={styles.emptySubtext}>
-          Tap a preset to start one. Try not to forget about it.
-        </Text>
-      </View>
-    );
-  }
-
   return (
     <ScrollView
       style={styles.container}

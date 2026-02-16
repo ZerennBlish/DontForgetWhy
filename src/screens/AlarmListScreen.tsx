@@ -9,7 +9,9 @@ import {
   Alert,
   AppState,
   ToastAndroid,
+  useWindowDimensions,
 } from 'react-native';
+import { TabView } from 'react-native-tab-view';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
@@ -64,12 +66,19 @@ function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
 export default function AlarmListScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const layout = useWindowDimensions();
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
   const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
-  const [tab, setTab] = useState<'alarms' | 'timers' | 'reminders'>('alarms');
+  const [index, setIndex] = useState(0);
+  const tab = (['alarms', 'timers', 'reminders'] as const)[index];
+  const [routes] = useState([
+    { key: 'alarms', title: 'Alarms' },
+    { key: 'timers', title: 'Timers' },
+    { key: 'reminders', title: 'Reminders' },
+  ]);
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const [pinnedAlarmIds, setPinnedAlarmIds] = useState<string[]>([]);
   const [alarmSort, setAlarmSort] = useState<'time' | 'created' | 'name'>('time');
@@ -213,8 +222,8 @@ export default function AlarmListScreen({ navigation }: Props) {
       paddingBottom: 80 + insets.bottom,
     },
     emptyIcon: {
-      width: 90,
-      height: 90,
+      width: 120,
+      height: 120,
       opacity: 0.35,
       marginBottom: 12,
     },
@@ -388,7 +397,7 @@ export default function AlarmListScreen({ navigation }: Props) {
       const recalculated = recalculateTimers(loaded);
       setActiveTimers(recalculated);
       if (recalculated.some((t) => t.isRunning)) {
-        setTab('timers');
+        setIndex(1);
       }
       const needsSave = recalculated.some(
         (t, i) => t.remainingSeconds !== loaded[i].remainingSeconds
@@ -433,7 +442,7 @@ export default function AlarmListScreen({ navigation }: Props) {
           setActiveTimers((prev) => {
             const prevIds = new Set(prev.map((t) => t.id));
             if (recalculated.some((t) => !prevIds.has(t.id))) {
-              setTab('timers');
+              setIndex(1);
             }
             return recalculated;
           });
@@ -686,6 +695,8 @@ export default function AlarmListScreen({ navigation }: Props) {
     }
   };
 
+  const hasNonDeletedAlarms = alarms.some(a => !a.deletedAt);
+
   const filteredAlarms = useMemo(() => {
     let list = alarms;
 
@@ -762,36 +773,21 @@ export default function AlarmListScreen({ navigation }: Props) {
         </Text>
 
         <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, tab === 'alarms' && styles.tabActive]}
-            onPress={() => { hapticLight(); setTab('alarms'); }}
-            activeOpacity={0.7}
-          >
-            <Text numberOfLines={1} style={[styles.tabText, tab === 'alarms' && styles.tabTextActive]}>
-              Alarms
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, tab === 'timers' && styles.tabActive]}
-            onPress={() => { hapticLight(); setTab('timers'); }}
-            activeOpacity={0.7}
-          >
-            <Text numberOfLines={1} style={[styles.tabText, tab === 'timers' && styles.tabTextActive]}>
-              Timers
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, tab === 'reminders' && styles.tabActive]}
-            onPress={() => { hapticLight(); setTab('reminders'); }}
-            activeOpacity={0.7}
-          >
-            <Text numberOfLines={1} style={[styles.tabText, tab === 'reminders' && styles.tabTextActive]}>
-              Reminders
-            </Text>
-          </TouchableOpacity>
+          {routes.map((route, i) => (
+            <TouchableOpacity
+              key={route.key}
+              style={[styles.tab, index === i && styles.tabActive]}
+              onPress={() => { hapticLight(); setIndex(i); }}
+              activeOpacity={0.7}
+            >
+              <Text numberOfLines={1} style={[styles.tabText, index === i && styles.tabTextActive]}>
+                {route.title}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {tab === 'alarms' && hasPlayed && stats.streak > 0 && (
+        {index === 0 && hasPlayed && stats.streak > 0 && (
           <View style={styles.streakRow}>
             <Text
               style={[
@@ -808,163 +804,192 @@ export default function AlarmListScreen({ navigation }: Props) {
         )}
       </View>
 
-      {tab === 'alarms' ? (
-        <>
-          {alarms.length === 0 ? (
-            <View style={styles.empty}>
-              <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
-              <Text style={styles.emptyText}>No alarms yet</Text>
-              <Text style={styles.emptySubtext}>
-                Tap + to set one and immediately forget why.
-              </Text>
-              <Text style={styles.emptyQuote}>{appQuote}</Text>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.quoteText} numberOfLines={2}>
-                {appQuote}
-              </Text>
-
-              <View style={styles.sortFilterToggleRow}>
-                <TouchableOpacity
-                  style={styles.sortFilterToggleBtn}
-                  onPress={() => { hapticLight(); setShowSortFilter((prev) => !prev); }}
-                  activeOpacity={0.7}
-                >
-                  {hasNonDefaultSortFilter && <View style={styles.sortFilterDot} />}
-                  <Text style={styles.sortFilterToggleText}>
-                    Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {showSortFilter && (
-                <>
-                  <Text style={styles.sortFilterLabel}>Sort</Text>
-                  <View style={styles.sortFilterRow}>
-                    {(['time', 'created', 'name'] as const).map((s) => (
-                      <TouchableOpacity
-                        key={s}
-                        style={[styles.pill, alarmSort === s && styles.pillActive]}
-                        onPress={() => { hapticLight(); setAlarmSort(s); }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.pillText, alarmSort === s && styles.pillTextActive]}>
-                          {s === 'time' ? 'Time' : s === 'created' ? 'Created' : 'Name'}
+      <TabView
+        navigationState={{ index, routes }}
+        renderScene={({ route }) => {
+          switch (route.key) {
+            case 'alarms':
+              return (
+                <View style={{ flex: 1 }}>
+                  {!hasNonDeletedAlarms && alarmFilter !== 'deleted' ? (
+                    <View style={styles.empty}>
+                      <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
+                      <Text style={styles.emptyText}>No alarms yet</Text>
+                      <Text style={styles.emptySubtext}>
+                        Tap + to set one and immediately forget why.
+                      </Text>
+                      <Text style={styles.emptyQuote}>{appQuote}</Text>
+                    </View>
+                  ) : (
+                    <>
+                      {hasNonDeletedAlarms && (
+                        <Text style={styles.quoteText} numberOfLines={2}>
+                          {appQuote}
                         </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                      )}
 
-                  <Text style={styles.sortFilterLabel}>Filter</Text>
-                  <View style={styles.sortFilterRow}>
-                    {(['all', 'active', 'one-time', 'recurring', 'deleted'] as const).map((f) => (
-                      <TouchableOpacity
-                        key={f}
-                        style={[styles.pill, alarmFilter === f && styles.pillActive]}
-                        onPress={() => { hapticLight(); setAlarmFilter(f); }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.pillText, alarmFilter === f && styles.pillTextActive]}>
-                          {f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'one-time' ? 'One-time' : f === 'recurring' ? 'Recurring' : 'Deleted'}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </>
-              )}
-
-              <FlatList
-                data={filteredAlarms}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => {
-                  if (item.deletedAt) {
-                    return (
-                      <View style={styles.deletedCard}>
-                        <View style={styles.deletedLeft}>
-                          <Text style={styles.deletedTime}>
-                            {formatTime(item.time, timeFormat)}
+                      <View style={styles.sortFilterToggleRow}>
+                        <TouchableOpacity
+                          style={styles.sortFilterToggleBtn}
+                          onPress={() => { hapticLight(); setShowSortFilter((prev) => { if (prev) setAlarmFilter('all'); return !prev; }); }}
+                          activeOpacity={0.7}
+                        >
+                          {hasNonDefaultSortFilter && <View style={styles.sortFilterDot} />}
+                          <Text style={styles.sortFilterToggleText}>
+                            Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
                           </Text>
-                          <Text style={styles.deletedDetail} numberOfLines={1}>
-                            {item.icon || '\u23F0'} {item.nickname || item.note || 'Alarm'}
-                          </Text>
-                          <Text style={styles.deletedAgo}>
-                            {formatDeletedAgo(item.deletedAt)}
-                          </Text>
-                        </View>
-                        <View style={styles.deletedRight}>
-                          <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
-                            <Text style={styles.restoreText}>Restore</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
-                            <Text style={styles.foreverText}>Forever</Text>
-                          </TouchableOpacity>
-                        </View>
+                        </TouchableOpacity>
                       </View>
-                    );
+
+                      {showSortFilter && (
+                        <>
+                          <Text style={styles.sortFilterLabel}>Sort</Text>
+                          <View style={styles.sortFilterRow}>
+                            {(['time', 'created', 'name'] as const).map((s) => (
+                              <TouchableOpacity
+                                key={s}
+                                style={[styles.pill, alarmSort === s && styles.pillActive]}
+                                onPress={() => { hapticLight(); setAlarmSort(s); }}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={[styles.pillText, alarmSort === s && styles.pillTextActive]}>
+                                  {s === 'time' ? 'Time' : s === 'created' ? 'Created' : 'Name'}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+
+                          <Text style={styles.sortFilterLabel}>Filter</Text>
+                          <View style={styles.sortFilterRow}>
+                            {(['all', 'active', 'one-time', 'recurring', 'deleted'] as const).map((f) => (
+                              <TouchableOpacity
+                                key={f}
+                                style={[styles.pill, alarmFilter === f && styles.pillActive]}
+                                onPress={() => { hapticLight(); setAlarmFilter(f); }}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={[styles.pillText, alarmFilter === f && styles.pillTextActive]}>
+                                  {f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'one-time' ? 'One-time' : f === 'recurring' ? 'Recurring' : 'Deleted'}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </>
+                      )}
+
+                      {filteredAlarms.length === 0 ? (
+                        <View style={styles.empty}>
+                          <Text style={styles.emptyText}>No matches</Text>
+                          <Text style={styles.emptySubtext}>Try a different filter.</Text>
+                        </View>
+                      ) : (
+                        <FlatList
+                          data={filteredAlarms}
+                          keyExtractor={(item) => item.id}
+                          renderItem={({ item }) => {
+                            if (item.deletedAt) {
+                              return (
+                                <View style={styles.deletedCard}>
+                                  <View style={styles.deletedLeft}>
+                                    <Text style={styles.deletedTime}>
+                                      {formatTime(item.time, timeFormat)}
+                                    </Text>
+                                    <Text style={styles.deletedDetail} numberOfLines={1}>
+                                      {item.icon || '\u23F0'} {item.nickname || item.note || 'Alarm'}
+                                    </Text>
+                                    <Text style={styles.deletedAgo}>
+                                      {formatDeletedAgo(item.deletedAt)}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.deletedRight}>
+                                    <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
+                                      <Text style={styles.restoreText}>Restore</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
+                                      <Text style={styles.foreverText}>Forever</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                </View>
+                              );
+                            }
+                            return (
+                              <SwipeableRow
+                                onSwipeLeft={() => handleDelete(item.id)}
+                                onSwipeRight={() => handleDelete(item.id)}
+                                leftColor="#2E1A1A"
+                                leftIcon={'\u{1F5D1}'}
+                                leftIconColor="#B0B0CC"
+                                rightColor="#2E1A1A"
+                                rightIcon={'\u{1F5D1}'}
+                                rightIconColor="#B0B0CC"
+                              >
+                                <AlarmCard
+                                  alarm={item}
+                                  timeFormat={timeFormat}
+                                  guessWhyEnabled={guessWhyEnabled}
+                                  isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
+                                  onToggle={handleToggle}
+                                  onDelete={handleDelete}
+                                  onEdit={handleEdit}
+                                  onPress={handlePress}
+                                  onTogglePin={handleTogglePin}
+                                />
+                              </SwipeableRow>
+                            );
+                          }}
+                          contentContainerStyle={styles.list}
+                          showsVerticalScrollIndicator={false}
+                        />
+                      )}
+                    </>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.fab}
+                    onPress={() => navigation.navigate('CreateAlarm')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.fabText}>+</Text>
+                  </TouchableOpacity>
+
+                  <UndoToast
+                    key={undoKey}
+                    visible={showUndo}
+                    message="Alarm deleted"
+                    onUndo={handleUndoDelete}
+                    onDismiss={handleUndoDismiss}
+                  />
+                </View>
+              );
+            case 'timers':
+              return (
+                <TimerScreen
+                  activeTimers={activeTimers}
+                  onAddTimer={handleAddTimer}
+                  onRemoveTimer={handleRemoveTimer}
+                  onTogglePause={handleTogglePause}
+                />
+              );
+            case 'reminders':
+              return (
+                <ReminderScreen
+                  onNavigateCreate={(reminderId) =>
+                    navigation.navigate('CreateReminder', reminderId ? { reminderId } : undefined)
                   }
-                  return (
-                    <SwipeableRow
-                      onSwipeLeft={() => handleDelete(item.id)}
-                      onSwipeRight={() => handleDelete(item.id)}
-                      leftColor="#2E1A1A"
-                      leftIcon={'\u{1F5D1}'}
-                      leftIconColor="#B0B0CC"
-                      rightColor="#2E1A1A"
-                      rightIcon={'\u{1F5D1}'}
-                      rightIconColor="#B0B0CC"
-                    >
-                      <AlarmCard
-                        alarm={item}
-                        timeFormat={timeFormat}
-                        guessWhyEnabled={guessWhyEnabled}
-                        isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
-                        onToggle={handleToggle}
-                        onDelete={handleDelete}
-                        onEdit={handleEdit}
-                        onPress={handlePress}
-                        onTogglePin={handleTogglePin}
-                      />
-                    </SwipeableRow>
-                  );
-                }}
-                contentContainerStyle={styles.list}
-                showsVerticalScrollIndicator={false}
-              />
-            </>
-          )}
-
-          <TouchableOpacity
-            style={styles.fab}
-            onPress={() => navigation.navigate('CreateAlarm')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.fabText}>+</Text>
-          </TouchableOpacity>
-
-          <UndoToast
-            key={undoKey}
-            visible={showUndo}
-            message="Alarm deleted"
-            onUndo={handleUndoDelete}
-            onDismiss={handleUndoDismiss}
-          />
-        </>
-      ) : tab === 'timers' ? (
-        <TimerScreen
-          activeTimers={activeTimers}
-          onAddTimer={handleAddTimer}
-          onRemoveTimer={handleRemoveTimer}
-          onTogglePause={handleTogglePause}
-        />
-      ) : (
-        <ReminderScreen
-          onNavigateCreate={(reminderId) =>
-            navigation.navigate('CreateReminder', reminderId ? { reminderId } : undefined)
+                  onReminderCountChange={setReminderCount}
+                />
+              );
+            default:
+              return null;
           }
-          onReminderCountChange={setReminderCount}
-        />
-      )}
+        }}
+        renderTabBar={() => null}
+        onIndexChange={(i) => { hapticLight(); setIndex(i); }}
+        initialLayout={{ width: layout.width }}
+        lazy
+        lazyPreloadDistance={0}
+        swipeEnabled
+      />
     </View>
   );
 }

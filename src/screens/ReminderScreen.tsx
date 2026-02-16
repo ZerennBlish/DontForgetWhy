@@ -28,6 +28,7 @@ import {
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { loadSettings } from '../services/settings';
 import { formatTime } from '../utils/time';
+import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
@@ -83,6 +84,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   const [deletedReminderPinned, setDeletedReminderPinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
   const [undoKey, setUndoKey] = useState(0);
+  const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
 
   const loadData = useCallback(async () => {
     const [loaded, settings] = await Promise.all([
@@ -97,6 +99,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   useFocusEffect(
     useCallback(() => {
+      setAppQuote(getRandomAppOpenQuote());
       loadData();
     }, [loadData]),
   );
@@ -205,6 +208,9 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     );
   };
 
+  const totalNonDeletedReminders = reminders.filter(r => !r.deletedAt).length;
+  const totalActiveReminders = reminders.filter(r => !r.deletedAt && !r.completed).length;
+
   const sorted = useMemo(() => {
     let list = reminders;
 
@@ -282,8 +288,8 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       paddingBottom: 80 + insets.bottom,
     },
     emptyIcon: {
-      width: 90,
-      height: 90,
+      width: 120,
+      height: 120,
       opacity: 0.35,
       marginBottom: 12,
     },
@@ -296,6 +302,23 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       fontSize: 14,
       color: colors.textTertiary,
       marginTop: 6,
+    },
+    emptyQuote: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      marginTop: 16,
+      paddingHorizontal: 32,
+    },
+    quoteText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      opacity: 0.7,
+      textAlign: 'center',
+      paddingHorizontal: 20,
+      marginBottom: 4,
     },
     card: {
       backgroundColor: colors.card,
@@ -646,20 +669,27 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   return (
     <View style={styles.container}>
-      {reminders.length === 0 ? (
+      {totalActiveReminders === 0 && reminderFilter === 'active' ? (
         <View style={styles.empty}>
           <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
           <Text style={styles.emptyText}>Nothing to remember</Text>
           <Text style={styles.emptySubtext}>
             Must be nice. Tap + to ruin that.
           </Text>
+          <Text style={styles.emptyQuote}>{appQuote}</Text>
         </View>
       ) : (
         <>
+          {totalNonDeletedReminders > 0 && (
+            <Text style={styles.quoteText} numberOfLines={2}>
+              {appQuote}
+            </Text>
+          )}
+
           <View style={styles.sortFilterToggleRow}>
             <TouchableOpacity
               style={styles.sortFilterToggleBtn}
-              onPress={() => { hapticLight(); setShowSortFilter((prev) => !prev); }}
+              onPress={() => { hapticLight(); setShowSortFilter((prev) => { if (prev) setReminderFilter('active'); return !prev; }); }}
               activeOpacity={0.7}
             >
               {(reminderSort !== 'due' || reminderFilter !== 'active') && <View style={styles.sortFilterDot} />}
@@ -707,7 +737,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
           {sorted.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>{'\u{1F50D}'}</Text>
+              <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
               <Text style={styles.emptyText}>No matches</Text>
               <Text style={styles.emptySubtext}>Try a different filter.</Text>
             </View>

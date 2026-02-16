@@ -9,14 +9,14 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 3. **Recurring alarm mode** — Select specific days of the week (Mon-Sun) with quick-select buttons for Weekdays, Weekends, or All Days; one weekly trigger per selected day
 4. **One-time alarm mode** — Select a specific date from an inline calendar picker; rejects past dates and times; no repeat
 5. **Alarm list** — Main screen shows all alarms with enable/disable switch, edit button, delete button (with confirmation), and pin-to-widget button
-6. **Alarms / Timers / Reminders tab switcher** — Pill-shaped 3-tab toggle on the main screen switches between alarm list, timer grid, and reminders list
+6. **Alarms / Timers / Reminders tab switcher** — Pill-shaped 3-tab toggle on the main screen switches between alarm list, timer grid, and reminders list; also supports horizontal swipe between tabs via `react-native-tab-view`
 7. **One-time auto-disable** — One-time alarms are automatically disabled after firing (via `disableAlarm` in App.tsx); `disableAlarm` also cancels all scheduled notifications for the alarm
 8. **12/24 hour time format** — Setting in SettingsScreen; affects alarm card display, fire screen display, widget display, and time input format on create/edit screen
 9. **Icon picker** — 25-emoji grid on create/edit screen; selected icon auto-maps to a category behind the scenes
 10. **Category auto-mapping** — Icon selection drives the category field via `iconCategoryMap` (10 mapped icons); unrecognized icons default to `'general'`
 11. **Private alarm mode** — Hides note/icon/nickname on the alarm card, shows "Private Alarm"; tap eye icon to peek for 3 seconds
 12. **Motivational quotes** — Random quote from a pool of 12, assigned at alarm creation and shown on the fire screen
-13. **App-open quotes** — 38 snarky rotating quotes displayed as a compact italic line (no card background, smaller font) under the tabs; moves to empty-state center when no items exist; refreshes on every screen focus via useFocusEffect
+13. **App-open quotes** — 38 snarky rotating quotes displayed as a compact italic line (no card background, smaller font) under the tabs; moves to empty-state center when no items exist; refreshes on every screen focus via useFocusEffect; shared quote pool also used on the Reminders tab (see Feature 65)
 14. **Rotating placeholder text** — The note input field shows a random witty placeholder from a pool of 12
 15. **Guess Why mini-game** — When enabled (default: ON), you must guess why you set the alarm before seeing the answer; 3 attempts via icon grid or free-text input
 16. **Guess Why info hiding** — When Guess Why is enabled, alarm cards show deterministic mystery text, notifications use generic text, widget alarms show "Mystery" — prevents cheating across the entire UI
@@ -59,12 +59,16 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 53. **Migration support** — `migrateAlarm()` handles old data formats: single `notificationId` to `notificationIds[]`, boolean `recurring` to `mode` + `days`, numeric day arrays to string-based `AlarmDay[]`
 54. **Custom alarm sounds** — Per-alarm sound selection from system ringtones/alarm sounds via reusable SoundPickerModal bottom sheet; react-native-notification-sounds lists available system sounds; preview playback via expo-av with audioModeReady ref pattern; dynamic Notifee channel creation per unique sound URI (`alarm_custom_{mediaId}`); backward compatible with existing default channel
 55. **Custom timer sounds** — Default timer completion sound configurable in Settings via SoundPickerModal; saved to AsyncStorage (`defaultTimerSound` key); applied to timer completion notifications via dynamic channel (`timer_custom_{mediaId}` prefix); works for both in-app timer starts and headless widget timer starts; falls back to default alarm channel when no custom sound set
-56. **Sort & Filter collapsible** — Sort and filter controls collapsed behind a right-aligned "Sort & Filter ▼" toggle button, default collapsed; active filter dot indicator appears when non-default sort/filter is applied; same collapsible pattern applied across Alarms, Timers, and Reminders tabs
+56. **Sort & Filter collapsible** — Sort and filter controls collapsed behind a right-aligned "Sort & Filter ▼" toggle button, default collapsed; active filter dot indicator appears when non-default sort/filter is applied; same collapsible pattern applied across Alarms, Timers, and Reminders tabs; collapsing resets the filter to its default value (Alarms → "All", Reminders → "Active") to prevent users from getting stuck in an unexpected filter view
 57. **Live subtitle counts** — Header subtitle dynamically shows "X alarms · Y timers · Z reminders" with live updates as items are added, removed, or toggled
 58. **Trivia game** — Category-based trivia with online (OpenTDB API) and offline (320+ built-in questions) modes; 9 categories: Science & Nature (🔬), History (🏛️), Music (🎵), Movies & TV (🎬), Geography (🌍), Sports (🏆), Technology (💻), Food & Drink (🍽️), General Knowledge (🧠); 2-column category grid with General Knowledge centered alone on bottom row; per-category stats tracking
 59. **Full-screen alarm wake** — Screen wakes and shows AlarmFireScreen over lock screen via custom Expo config plugin (`plugins/withAlarmWake.js`); injects `setShowWhenLocked(true)`, `setTurnScreenOn(true)`, `FLAG_KEEP_SCREEN_ON`, and `KeyguardManager.requestDismissKeyguard()`; works for both alarms and timers; Samsung requires Settings > Apps > Special app access > Full screen notifications enabled; runtime check via `canUseFullScreenIntent` in `fullScreenPermission.ts`; onboarding slide guides users through permission setup
 60. **AlarmFireScreen redesign** — Dedicated full-screen alarm UI with large touch targets for half-asleep use; shows time (or "Timer Complete"), icon emoji, and label (nickname or "Alarm"/"Timer"); optional sound name display for custom sounds; three action buttons: Dismiss (red, cancels everything + exits to lock screen), Snooze 5 min (cancels + reschedules + shows shame message overlay + exits), and Guess Why (cancels alarm sound/vibration, navigates to game in silence); Dismiss/Snooze return to lock screen via `BackHandler.exitApp()`; also handles timer completions with timer-specific display
 61. **Single-field time input** — Replaced two-field hour:minute picker with single auto-formatting TextInput; type raw digits and colon is inserted automatically ("6" → "6", "63" → "6:3", "630" → "6:30", "0630" → "06:30"); `rawDigits` state stores just digits, `formatTimeDisplay()` adds colon for display, `parseRawDigits()` extracts hours/minutes for saving; AM/PM toggle preserved for 12h mode; applied to both CreateAlarmScreen and CreateReminderScreen
+62. **Swipe between tabs** — Horizontal swipe navigation between Alarms, Timers, and Reminders tabs using `react-native-tab-view` + `react-native-pager-view`; native Android ViewPager2 handles gesture priority so child SwipeableRow swipe-to-delete/complete gestures take precedence over page swiping; custom pill tab bar remains in the header above TabView (`renderTabBar={() => null}` suppresses default); `lazy` rendering with `lazyPreloadDistance={0}` for deferred tab initialization; haptic feedback on both pill tap and swipe completion; pills stay synced with swipe index; timer countdown continues across tab switches since timer state lives in parent AlarmListScreen; requires new EAS build (native module)
+63. **Soft delete / Trash system** — Alarms and reminders are soft-deleted via a timestamped `deletedAt` field instead of permanently removed; "Deleted" filter in Sort & Filter shows trash items sorted newest-first with "X min/hours/days ago" labels via `formatDeletedAgo()`; swipe left to restore from trash (reschedules notifications for enabled alarms / active reminders with due times); swipe right to permanently delete; notifications cancelled on soft-delete, rescheduled on restore; `loadAlarms(true)` and `getReminders(true)` load all items including soft-deleted for trash view
+64. **Reminder icon-only save** — Reminders can be saved with just an icon and no text; validation on CreateReminderScreen accepts either text or icon (`!text.trim() && !selectedIcon` triggers error)
+65. **Reminder quotes** — Snarky rotating quotes on the Reminders tab matching the alarm quote pattern from `appOpenQuotes.ts`; centered in empty state below the app icon; compact italic line above the sort/filter row when reminders exist; refreshes on screen focus via `useFocusEffect` calling `getRandomAppOpenQuote()`
 
 ## 2. Data Models
 
@@ -90,6 +94,7 @@ interface Alarm {
   soundUri?: string;       // content:// URI from system sound picker (for custom notification channel)
   soundName?: string;      // Display name of selected system sound
   soundID?: number;        // Numeric ID from react-native-notification-sounds (for picker checkmark state)
+  deletedAt?: string;      // ISO 8601 timestamp of soft-delete (null/undefined = not deleted)
   /** @deprecated */ notificationId?: string;
   /** @deprecated */ recurring?: boolean;
 }
@@ -112,6 +117,7 @@ interface Reminder {
   dueTime: string | null;   // "HH:MM" 24h format or null (drives notifications)
   notificationId: string | null; // Notifee notification ID
   pinned: boolean;
+  deletedAt?: string;      // ISO 8601 timestamp of soft-delete (null/undefined = not deleted)
 }
 ```
 
@@ -326,13 +332,13 @@ type RootStackParamList = {
 15 navigation routes + 2 inline screens (TimerScreen and ReminderScreen rendered as tabs inside AlarmListScreen).
 
 ### AlarmList (`AlarmListScreen.tsx`)
-Main hub. Header shows app title, subtitle with live counts ("X alarms · Y timers · Z reminders"), game controller button, trophy button (if games played), gear button. Pill-shaped 3-tab switcher (Alarms / Timers / Reminders). A compact italic quote line appears under the tabs (no card background); moves to empty-state center when no items exist. Streak row ("🔥 X in a row") displays only when streak > 0. Sort & Filter controls are collapsed behind a right-aligned "Sort & Filter ▼" toggle (default collapsed) with an active-filter dot indicator; same collapsible pattern applied across all three tabs. Alarms tab shows FlatList of AlarmCards (with `guessWhyEnabled` prop for info hiding + pin button), and a FAB (+) to create. Timers tab renders TimerScreen inline. Reminders tab renders ReminderScreen inline. Timer management (start, pause/resume, dismiss, notifications) is handled here and passed to TimerScreen via props. AppState listener reloads active timers when the app returns to foreground (picks up widget-started timers and auto-switches to Timers tab if new ones found).
+Main hub. Header shows app title, subtitle with live counts ("X alarms · Y timers · Z reminders"), game controller button, trophy button (if games played), gear button. Pill-shaped 3-tab switcher (Alarms / Timers / Reminders) synced with `react-native-tab-view` TabView for horizontal swipe navigation. A compact italic quote line appears under the tabs (no card background); moves to empty-state center when no items exist. Streak row ("🔥 X in a row") displays only when streak > 0. Sort & Filter controls are collapsed behind a right-aligned "Sort & Filter ▼" toggle (default collapsed) with an active-filter dot indicator; collapsing resets filter to default; same collapsible pattern applied across all three tabs. Alarms tab shows FlatList of AlarmCards (with `guessWhyEnabled` prop for info hiding + pin button), and a FAB (+) to create; empty state shows app icon (120px, 0.35 opacity) when no non-deleted alarms exist; "No matches" fallback when filter/sort yields empty results. Timers tab renders TimerScreen inline. Reminders tab renders ReminderScreen inline. Timer management (start, pause/resume, dismiss, notifications) is handled here and passed to TimerScreen via props. AppState listener reloads active timers when the app returns to foreground (picks up widget-started timers and auto-switches to Timers tab if new ones found). Tab state uses `index` (0/1/2) with derived `tab` for backward compatibility; `routes` array drives both TabView and pill buttons.
 
 ### CreateAlarm (`CreateAlarmScreen.tsx`)
 Slide-from-bottom modal. Single auto-formatting time input: type raw digits and colon is inserted automatically ("630" → "6:30"); `rawDigits` state stores just digits, max 4 chars. In 12h mode: AM/PM toggle buttons appear beside the input. In 24h mode: no AM/PM. Schedule section with Recurring/One-time mode toggle. Recurring: day-of-week selector (7 circle buttons) + Weekdays/Weekends quick-select. One-time: inline calendar picker with month navigation, past dates disabled, past-time validation on save. Nickname field (shows on lock screen). Note field with random placeholder and character counter (200 max). 25-icon picker grid. Sound picker row opens SoundPickerModal to select a system ringtone/alarm sound; shows current selection name or "Default". Private alarm toggle card. Save button. In edit mode, pre-fills all fields and button says "Update Alarm". Requires at least a note or an icon. Notification permission only requested when scheduling is needed. Save wrapped in try/catch with user-facing Alert on failure. Refreshes widgets on save.
 
 ### CreateReminder (`CreateReminderScreen.tsx`)
-Slide-from-bottom modal. Text field with random placeholder and character counter (200 max). Nickname field (optional, for privacy). 25-icon picker grid. Private toggle card. Due Time toggle with single auto-formatting time input (same pattern as CreateAlarm — `rawDigits` state, `formatTimeDisplay()`, `parseRawDigits()`); drives notification scheduling. Due Date toggle with inline calendar picker. Save button. In edit mode, loads existing reminder and button says "Update Reminder". Requires text. Warns if combined date+time is in the past (with "Save Anyway" option). Refreshes widgets on save.
+Slide-from-bottom modal. Text field with random placeholder and character counter (200 max). Nickname field (optional, for privacy). 25-icon picker grid. Private toggle card. Due Time toggle with single auto-formatting time input (same pattern as CreateAlarm — `rawDigits` state, `formatTimeDisplay()`, `parseRawDigits()`); drives notification scheduling. Due Date toggle with inline calendar picker. Save button. In edit mode, loads existing reminder and button says "Update Reminder". Requires text or icon (either one is sufficient). Warns if combined date+time is in the past (with "Save Anyway" option). Refreshes widgets on save.
 
 ### AlarmFire (`AlarmFireScreen.tsx`)
 Full-screen alarm UI with large touch targets for half-asleep use. Keeps screen awake via `useKeepAwake()`. Top section: formatted time (or "Timer Complete" for timers), icon emoji, label (nickname or "Alarm"/"Timer"), optional sound name. Bottom section: up to 3 action buttons stacked vertically.
@@ -410,7 +416,7 @@ src/
 │   ├── MemoryMatchScreen.tsx      Card-flip matching game with 3 difficulties and best scores
 │   ├── MemoryScoreScreen.tsx      Stats dashboard with rank, streak, win/loss totals
 │   ├── OnboardingScreen.tsx       Multi-slide onboarding with full-screen alarm permission slide
-│   ├── ReminderScreen.tsx         Reminder list rendered as tab in AlarmListScreen
+│   ├── ReminderScreen.tsx         Reminder list rendered as tab in AlarmListScreen; quotes, soft-delete, empty state with app icon
 │   ├── SettingsScreen.tsx         Time format, vibration, timer sound, theme picker, permissions, about
 │   ├── SudokuScreen.tsx           Full Sudoku with 3 difficulties, notes, pause, best scores
 │   ├── TimerScreen.tsx            Timer preset grid + active countdown timers + pin-to-widget
@@ -1021,7 +1027,7 @@ Music and Movies & TV were split from a former "Pop Culture" category. Old Pop C
 ## 15. Features Explored and Removed
 
 - **Preset alarm sound picker** — An early version had 6 preset alarm sounds (`alarmSounds.ts`: Default, Gentle, Urgent, Classic, Digital, Silent) with static Notifee channels per preset. These all used `sound: 'default'` and sounded identical on most devices. Replaced by the real system ringtone picker (Feature 54) using `react-native-notification-sounds` + dynamic channels with actual content:// URIs. The preset channel definitions remain in `notifications.ts` for backward compatibility but the picker UI was removed from Settings.
-- **Swipe between tabs** — Attempted horizontal swipe gesture to switch between Alarms/Timers/Reminders tabs; removed due to gesture conflicts with SwipeableRow swipe-to-delete/complete actions on alarm cards and reminder items.
+- **Swipe between tabs (PanResponder version)** — Initial attempt using a manual PanResponder on the tab content area; removed due to gesture conflicts with SwipeableRow swipe-to-delete/complete actions on alarm cards and reminder items. **Re-implemented successfully** in Feature 62 using `react-native-tab-view` + `react-native-pager-view`, which resolve gesture conflicts at the native level (Android ViewPager2 defers to child gesture handlers).
 
 ## 16. Key Implementation Patterns
 
@@ -1054,6 +1060,8 @@ Both CreateAlarmScreen and CreateReminderScreen use the same auto-formatting tim
 - `react-native-notification-sounds` — Lists system ringtones/alarm/notification sounds on Android. Returns `{ title, url, soundID }[]` where `url` is a `content://media/internal/audio/media/{id}` URI.
 - `expo-av` (~16.0.8) — Audio preview playback in SoundPickerModal. Deprecated in SDK 54 (replaced by `expo-audio`/`expo-video`) but functional.
 - `expo-keep-awake` — Keeps screen awake on AlarmFireScreen via `useKeepAwake()`.
+- `react-native-tab-view` (^4.2.2) — Tab view component with swipe gesture support; provides `TabView` with `lazy` rendering, custom `renderTabBar`, and `onIndexChange`. Used for horizontal swipe navigation between Alarms/Timers/Reminders tabs.
+- `react-native-pager-view` (6.9.1) — Native Android ViewPager2 backend for `react-native-tab-view`. Handles gesture priority at the native level so child horizontal gestures (SwipeableRow) take precedence over page swiping. **Requires a new EAS build** (native module).
 
 ## 17. Development Workflow
 
@@ -1078,3 +1086,14 @@ Both CreateAlarmScreen and CreateReminderScreen use the same auto-formatting tim
 - `disableAlarm` now cancels all scheduled notifications
 - `soundID` persisted for picker checkmark state
 - Stale reminder count in subtitle fixed
+
+**Audit 11: Swipe Tabs, Soft Delete & Empty States**
+- Swipe between tabs via `react-native-tab-view` + `react-native-pager-view` — gesture conflict with SwipeableRow resolved at native level
+- Soft delete / trash system for alarms and reminders with restore and permanent delete
+- Empty state rendering fixed: `loadAlarms(true)` / `getReminders(true)` load soft-deleted items; empty state condition now checks `hasNonDeletedAlarms` / `totalActiveReminders` instead of raw array length
+- Reminder empty state correctly distinguishes between "zero active reminders" (show app icon empty state) and "filter yields no results" (show "No matches" fallback)
+- Sort & Filter resets filter to default on collapse to prevent stuck-in-filter states
+- Timer empty state removed (preset grid IS the content)
+- App icon (120x120, opacity 0.35) replaces all emoji-based empty state icons
+- Reminder quotes added using shared `appOpenQuotes.ts` pool
+- Reminder icon-only save validation fixed (accepts text or icon)
