@@ -29,7 +29,6 @@ import { refreshTimerWidget } from '../widget/updateWidget';
 import { getReminders } from '../services/reminderStorage';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
-import SwipeableRow from '../components/SwipeableRow';
 import UndoToast from '../components/UndoToast';
 import TimerScreen from './TimerScreen';
 import ReminderScreen from './ReminderScreen';
@@ -221,12 +220,6 @@ export default function AlarmListScreen({ navigation }: Props) {
       alignItems: 'center',
       paddingBottom: 80 + insets.bottom,
     },
-    emptyIcon: {
-      width: 120,
-      height: 120,
-      opacity: 0.35,
-      marginBottom: 12,
-    },
     emptyText: {
       fontSize: 20,
       fontWeight: '600',
@@ -236,14 +229,6 @@ export default function AlarmListScreen({ navigation }: Props) {
       fontSize: 14,
       color: colors.textTertiary,
       marginTop: 6,
-    },
-    emptyQuote: {
-      fontSize: 15,
-      color: colors.textSecondary,
-      fontStyle: 'italic',
-      textAlign: 'center',
-      marginTop: 16,
-      paddingHorizontal: 32,
     },
     fab: {
       position: 'absolute',
@@ -358,6 +343,17 @@ export default function AlarmListScreen({ navigation }: Props) {
       color: colors.red,
       fontSize: 13,
       fontWeight: '600',
+    },
+    watermark: {
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: '100%' as unknown as number,
+      height: '100%' as unknown as number,
+      opacity: 0.07,
+      zIndex: 0,
     },
   }), [colors, insets.bottom]);
 
@@ -687,8 +683,6 @@ export default function AlarmListScreen({ navigation }: Props) {
     }
   };
 
-  const hasNonDeletedAlarms = alarms.some(a => !a.deletedAt);
-
   const filteredAlarms = useMemo(() => {
     let list = alarms;
 
@@ -726,6 +720,12 @@ export default function AlarmListScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      <Image
+        source={require('../../assets/fullscreenicon.png')}
+        style={styles.watermark}
+        resizeMode="cover"
+        pointerEvents="none"
+      />
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Don't Forget Why</Text>
@@ -803,135 +803,114 @@ export default function AlarmListScreen({ navigation }: Props) {
             case 'alarms':
               return (
                 <View style={{ flex: 1 }}>
-                  {!hasNonDeletedAlarms && alarmFilter !== 'deleted' ? (
-                    <View style={styles.empty}>
-                      <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
-                      <Text style={styles.emptyText}>No alarms yet</Text>
-                      <Text style={styles.emptySubtext}>
-                        Tap + to set one and immediately forget why.
-                      </Text>
-                      <Text style={styles.emptyQuote}>{appQuote}</Text>
-                    </View>
-                  ) : (
-                    <>
-                      {hasNonDeletedAlarms && (
-                        <Text style={styles.quoteText} numberOfLines={2}>
-                          {appQuote}
-                        </Text>
-                      )}
+                  <Text style={styles.quoteText} numberOfLines={2}>
+                    {appQuote}
+                  </Text>
 
-                      <View style={styles.sortFilterToggleRow}>
-                        <TouchableOpacity
-                          style={styles.sortFilterToggleBtn}
-                          onPress={() => { hapticLight(); setShowSortFilter((prev) => { if (prev) setAlarmFilter('all'); return !prev; }); }}
-                          activeOpacity={0.7}
-                        >
-                          {hasNonDefaultSortFilter && <View style={styles.sortFilterDot} />}
-                          <Text style={styles.sortFilterToggleText}>
-                            Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
-                          </Text>
-                        </TouchableOpacity>
+                  <View style={styles.sortFilterToggleRow}>
+                    <TouchableOpacity
+                      style={styles.sortFilterToggleBtn}
+                      onPress={() => { hapticLight(); setShowSortFilter((prev) => !prev); }}
+                      activeOpacity={0.7}
+                    >
+                      {hasNonDefaultSortFilter && <View style={styles.sortFilterDot} />}
+                      <Text style={styles.sortFilterToggleText}>
+                        Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {showSortFilter && (
+                    <>
+                      <Text style={styles.sortFilterLabel}>Sort</Text>
+                      <View style={styles.sortFilterRow}>
+                        {(['time', 'created', 'name'] as const).map((s) => (
+                          <TouchableOpacity
+                            key={s}
+                            style={[styles.pill, alarmSort === s && styles.pillActive]}
+                            onPress={() => { hapticLight(); setAlarmSort(s); }}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={[styles.pillText, alarmSort === s && styles.pillTextActive]}>
+                              {s === 'time' ? 'Time' : s === 'created' ? 'Created' : 'Name'}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
                       </View>
 
-                      {showSortFilter && (
-                        <>
-                          <Text style={styles.sortFilterLabel}>Sort</Text>
-                          <View style={styles.sortFilterRow}>
-                            {(['time', 'created', 'name'] as const).map((s) => (
-                              <TouchableOpacity
-                                key={s}
-                                style={[styles.pill, alarmSort === s && styles.pillActive]}
-                                onPress={() => { hapticLight(); setAlarmSort(s); }}
-                                activeOpacity={0.7}
-                              >
-                                <Text style={[styles.pillText, alarmSort === s && styles.pillTextActive]}>
-                                  {s === 'time' ? 'Time' : s === 'created' ? 'Created' : 'Name'}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-
-                          <Text style={styles.sortFilterLabel}>Filter</Text>
-                          <View style={styles.sortFilterRow}>
-                            {(['all', 'active', 'one-time', 'recurring', 'deleted'] as const).map((f) => (
-                              <TouchableOpacity
-                                key={f}
-                                style={[styles.pill, alarmFilter === f && styles.pillActive]}
-                                onPress={() => { hapticLight(); setAlarmFilter(f); }}
-                                activeOpacity={0.7}
-                              >
-                                <Text style={[styles.pillText, alarmFilter === f && styles.pillTextActive]}>
-                                  {f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'one-time' ? 'One-time' : f === 'recurring' ? 'Recurring' : 'Deleted'}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        </>
-                      )}
-
-                      {filteredAlarms.length === 0 ? (
-                        <View style={styles.empty}>
-                          <Text style={styles.emptyText}>No matches</Text>
-                          <Text style={styles.emptySubtext}>Try a different filter.</Text>
-                        </View>
-                      ) : (
-                        <FlatList
-                          data={filteredAlarms}
-                          keyExtractor={(item) => item.id}
-                          renderItem={({ item }) => {
-                            if (item.deletedAt) {
-                              return (
-                                <View style={styles.deletedCard}>
-                                  <View style={styles.deletedLeft}>
-                                    <Text style={styles.deletedTime}>
-                                      {formatTime(item.time, timeFormat)}
-                                    </Text>
-                                    <Text style={styles.deletedDetail} numberOfLines={1}>
-                                      {item.icon || '\u23F0'} {item.nickname || item.note || 'Alarm'}
-                                    </Text>
-                                    <Text style={styles.deletedAgo}>
-                                      {formatDeletedAgo(item.deletedAt)}
-                                    </Text>
-                                  </View>
-                                  <View style={styles.deletedRight}>
-                                    <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
-                                      <Text style={styles.restoreText}>Restore</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
-                                      <Text style={styles.foreverText}>Forever</Text>
-                                    </TouchableOpacity>
-                                  </View>
-                                </View>
-                              );
-                            }
-                            return (
-                              <SwipeableRow
-                                onSwipeLeft={() => handleDelete(item.id)}
-                                onSwipeRight={() => handleDelete(item.id)}
-                                leftColor="#2E1A1A"
-                                leftIcon={'\u{1F5D1}'}
-                                leftIconColor="#B0B0CC"
-                                rightColor="#2E1A1A"
-                                rightIcon={'\u{1F5D1}'}
-                                rightIconColor="#B0B0CC"
-                              >
-                                <AlarmCard
-                                  alarm={item}
-                                  timeFormat={timeFormat}
-                                  guessWhyEnabled={guessWhyEnabled}
-                                  isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
-                                  onToggle={handleToggle}
-                                  onEdit={handleEdit}
-                                  onTogglePin={handleTogglePin}
-                                />
-                              </SwipeableRow>
-                            );
-                          }}
-                          contentContainerStyle={styles.list}
-                          showsVerticalScrollIndicator={false}
-                        />
-                      )}
+                      <Text style={styles.sortFilterLabel}>Filter</Text>
+                      <View style={styles.sortFilterRow}>
+                        {(['all', 'active', 'one-time', 'recurring', 'deleted'] as const).map((f) => (
+                          <TouchableOpacity
+                            key={f}
+                            style={[styles.pill, alarmFilter === f && styles.pillActive]}
+                            onPress={() => { hapticLight(); setAlarmFilter(f); }}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={[styles.pillText, alarmFilter === f && styles.pillTextActive]}>
+                              {f === 'all' ? 'All' : f === 'active' ? 'Active' : f === 'one-time' ? 'One-time' : f === 'recurring' ? 'Recurring' : 'Deleted'}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
                     </>
+                  )}
+
+                  {filteredAlarms.length === 0 ? (
+                    <View style={styles.empty}>
+                      <Text style={styles.emptyText}>
+                        {alarms.length === 0 ? 'No alarms yet' : 'No matches'}
+                      </Text>
+                      <Text style={styles.emptySubtext}>
+                        {alarms.length === 0 ? 'Tap + to set one and immediately forget why.' : 'Try a different filter.'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <FlatList
+                      data={filteredAlarms}
+                      keyExtractor={(item) => item.id}
+                      renderItem={({ item }) => {
+                        if (item.deletedAt) {
+                          return (
+                            <View style={styles.deletedCard}>
+                              <View style={styles.deletedLeft}>
+                                <Text style={styles.deletedTime}>
+                                  {formatTime(item.time, timeFormat)}
+                                </Text>
+                                <Text style={styles.deletedDetail} numberOfLines={1}>
+                                  {item.icon || '\u23F0'} {item.nickname || item.note || 'Alarm'}
+                                </Text>
+                                <Text style={styles.deletedAgo}>
+                                  {formatDeletedAgo(item.deletedAt)}
+                                </Text>
+                              </View>
+                              <View style={styles.deletedRight}>
+                                <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
+                                  <Text style={styles.restoreText}>Restore</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
+                                  <Text style={styles.foreverText}>Forever</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          );
+                        }
+                        return (
+                            <AlarmCard
+                              alarm={item}
+                              timeFormat={timeFormat}
+                              guessWhyEnabled={guessWhyEnabled}
+                              isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
+                              onToggle={handleToggle}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                              onTogglePin={handleTogglePin}
+                            />
+                        );
+                      }}
+                      contentContainerStyle={styles.list}
+                      showsVerticalScrollIndicator={false}
+                    />
                   )}
 
                   <TouchableOpacity

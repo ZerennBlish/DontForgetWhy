@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -44,7 +44,7 @@ export default function GamesScreen({ navigation }: Props) {
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: colors.background,
+          backgroundColor: 'transparent',
         },
         content: {
           paddingBottom: 60 + insets.bottom,
@@ -63,22 +63,22 @@ export default function GamesScreen({ navigation }: Props) {
         title: {
           fontSize: 28,
           fontWeight: '800',
-          color: colors.textPrimary,
+          color: '#FFFFFF',
         },
         subtitle: {
           fontSize: 15,
-          color: colors.textTertiary,
+          color: 'rgba(255,255,255,0.7)',
           marginTop: 6,
           fontStyle: 'italic',
         },
         gameCard: {
           marginHorizontal: 16,
           marginTop: 12,
-          backgroundColor: colors.card,
+          backgroundColor: 'rgba(255,255,255,0.15)',
           borderRadius: 16,
           padding: 20,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: 'rgba(255,255,255,0.2)',
           flexDirection: 'row',
           alignItems: 'center',
           gap: 16,
@@ -92,26 +92,26 @@ export default function GamesScreen({ navigation }: Props) {
         gameName: {
           fontSize: 18,
           fontWeight: '700',
-          color: colors.textPrimary,
+          color: '#FFFFFF',
         },
         gameDesc: {
           fontSize: 14,
-          color: colors.textSecondary,
+          color: 'rgba(255,255,255,0.7)',
           marginTop: 4,
           lineHeight: 20,
         },
         chevron: {
           fontSize: 18,
-          color: colors.textTertiary,
+          color: 'rgba(255,255,255,0.5)',
         },
         guessWhyCard: {
           marginHorizontal: 16,
           marginTop: 12,
-          backgroundColor: colors.card,
+          backgroundColor: 'rgba(255,255,255,0.15)',
           borderRadius: 16,
           padding: 20,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: 'rgba(255,255,255,0.2)',
           flexDirection: 'row',
           alignItems: 'center',
           gap: 16,
@@ -124,14 +124,14 @@ export default function GamesScreen({ navigation }: Props) {
         },
         guessWhySubtext: {
           fontSize: 13,
-          color: colors.textTertiary,
+          color: 'rgba(255,255,255,0.7)',
           fontStyle: 'italic',
           marginTop: 4,
         },
         statsCard: {
           marginHorizontal: 16,
           marginTop: 16,
-          backgroundColor: colors.card,
+          backgroundColor: 'rgba(255,255,255,0.15)',
           borderRadius: 16,
           padding: 20,
           borderWidth: 2,
@@ -145,6 +145,8 @@ export default function GamesScreen({ navigation }: Props) {
   );
 
   return (
+    <ImageBackground source={require('../../assets/brain.png')} style={{ flex: 1 }} resizeMode="cover">
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
@@ -199,7 +201,7 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trivia</Text>
           <Text style={styles.gameDesc}>
-            Test your knowledge across 8 categories. 300+ questions offline, unlimited online.
+            10 categories. 370+ questions offline.
           </Text>
         </View>
         <Text style={styles.chevron}>{'\u203A'}</Text>
@@ -255,5 +257,7 @@ export default function GamesScreen({ navigation }: Props) {
         <Text style={styles.chevron}>{'\u203A'}</Text>
       </TouchableOpacity>
     </ScrollView>
+    </View>
+    </ImageBackground>
   );
 }

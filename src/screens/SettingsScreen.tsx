@@ -9,6 +9,7 @@ import {
   Modal,
   Linking,
   Platform,
+  ImageBackground,
 } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,7 +43,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     scrollContent: {
       paddingBottom: 40 + insets.bottom,
@@ -61,15 +62,15 @@ export default function SettingsScreen({ navigation }: Props) {
     title: {
       fontSize: 28,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: '#FFFFFF',
     },
     card: {
       marginHorizontal: 16,
-      backgroundColor: colors.card,
+      backgroundColor: 'rgba(255,255,255,0.15)',
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.2)',
     },
     row: {
       flexDirection: 'row',
@@ -79,20 +80,20 @@ export default function SettingsScreen({ navigation }: Props) {
     label: {
       fontSize: 16,
       fontWeight: '600',
-      color: colors.textPrimary,
+      color: '#FFFFFF',
       flex: 1,
       marginRight: 12,
     },
     description: {
       fontSize: 14,
-      color: colors.textTertiary,
+      color: 'rgba(255,255,255,0.7)',
       marginTop: 12,
       lineHeight: 20,
     },
     sectionLabel: {
       fontSize: 16,
       fontWeight: '600',
-      color: colors.textPrimary,
+      color: '#FFFFFF',
       marginBottom: 16,
     },
     themeGrid: {
@@ -128,7 +129,7 @@ export default function SettingsScreen({ navigation }: Props) {
     themeName: {
       fontSize: 11,
       fontWeight: '500',
-      color: colors.textSecondary,
+      color: 'rgba(255,255,255,0.7)',
       marginTop: 6,
       textAlign: 'center',
     },
@@ -213,7 +214,7 @@ export default function SettingsScreen({ navigation }: Props) {
     },
     setupGuideDesc: {
       fontSize: 14,
-      color: colors.textTertiary,
+      color: 'rgba(255,255,255,0.7)',
       marginTop: 12,
       lineHeight: 20,
     },
@@ -224,12 +225,12 @@ export default function SettingsScreen({ navigation }: Props) {
     },
     aboutChevron: {
       fontSize: 18,
-      color: colors.textTertiary,
+      color: 'rgba(255,255,255,0.5)',
     },
     timerSoundValue: {
       fontSize: 14,
       fontWeight: '500',
-      color: colors.textSecondary,
+      color: 'rgba(255,255,255,0.7)',
       marginRight: 8,
     },
   }), [colors, insets.bottom]);
@@ -303,6 +304,8 @@ export default function SettingsScreen({ navigation }: Props) {
   const isCustomActive = themeName === 'custom';
 
   return (
+    <ImageBackground source={require('../../assets/gear.png')} style={{ flex: 1 }} resizeMode="cover">
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
@@ -544,5 +547,7 @@ export default function SettingsScreen({ navigation }: Props) {
         onClose={() => setTimerSoundPickerVisible(false)}
       />
     </ScrollView>
+    </View>
+    </ImageBackground>
   );
 }

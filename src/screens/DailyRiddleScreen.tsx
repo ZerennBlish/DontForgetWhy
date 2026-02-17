@@ -8,6 +8,7 @@ import {
   TextInput,
   Animated,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -275,7 +276,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: colors.background,
+          backgroundColor: 'transparent',
         },
         scrollContent: {
           paddingBottom: 60 + insets.bottom,
@@ -294,7 +295,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         title: {
           fontSize: 28,
           fontWeight: '800',
-          color: colors.textPrimary,
+          color: '#FFFFFF',
         },
         dateText: {
           fontSize: 15,
@@ -1096,6 +1097,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   // ─── Main Render ───────────────────────────────────────────────────────
 
   return (
+    <ImageBackground source={require('../../assets/door.png')} style={{ flex: 1 }} resizeMode="cover">
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
@@ -1167,5 +1170,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
 
       {mode === 'daily' ? renderDaily() : renderBrowse()}
     </ScrollView>
+    </View>
+    </ImageBackground>
   );
 }

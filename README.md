@@ -1,19 +1,22 @@
 # Don't Forget Why
 
-A mobile alarm app that forces you to remember *why* you set each alarm — not just when it goes off. Includes a full timer system with quick-tap presets, two home screen widgets (compact + detailed) with pinnable presets and alarms, a "Guess Why" memory mini-game that hides alarm details across the entire UI, recurring and one-time alarm scheduling, Memory Match and Sudoku mini-games, escalating snooze shame, a full theme system with 8 presets + custom color picker, full-screen alarm wake over lock screen, per-alarm custom sounds from system ringtones, and a sarcastic personality throughout.
+A mobile alarm app that forces you to remember *why* you set each alarm — not just when it goes off. Includes a full timer system with quick-tap presets, two home screen widgets (compact + detailed) with pinnable presets and alarms, a "Guess Why" memory mini-game that hides alarm details across the entire UI, recurring and one-time alarm scheduling, Memory Match, Sudoku, Trivia, and Daily Riddle mini-games, escalating snooze shame, a full theme system with 8 presets + custom color picker, full-screen alarm wake over lock screen, per-alarm custom sounds from system ringtones, background images with dark overlays on all game screens, a full-screen app icon watermark behind the main tabs, and a sarcastic personality throughout.
+
+**Publisher:** Bald Guy & Company Games
+**Feedback:** baldguyandcompanygames@gmail.com
 
 ## 1. Features List
 
-1. **Alarm creation** — Set time via single auto-formatting input (type "630" to get "6:30"), 12h with AM/PM or 24h based on settings, add a note explaining *why*, optional nickname, optional icon (25 emojis), optional private toggle, optional custom sound
-2. **Alarm editing** — Tap edit on any alarm card to modify time, nickname, note, icon, privacy, mode, sound, and schedule; reschedules notifications on save
+1. **Alarm creation** — Set time via single auto-formatting input (type "630" to get "6:30"), 12h with AM/PM or 24h based on settings, add a note explaining *why*, optional nickname, optional icon (38 emojis + custom), optional private toggle, optional custom sound
+2. **Alarm editing** — Tap any alarm card to edit time, nickname, note, icon, privacy, mode, sound, and schedule; reschedules notifications on save
 3. **Recurring alarm mode** — Select specific days of the week (Mon-Sun) with quick-select buttons for Weekdays, Weekends, or All Days; one weekly trigger per selected day
 4. **One-time alarm mode** — Select a specific date from an inline calendar picker; rejects past dates and times; no repeat
-5. **Alarm list** — Main screen shows all alarms with enable/disable switch, edit button, delete button (with confirmation), and pin-to-widget button
+5. **Alarm list** — Main screen shows all alarms with enable/disable switch, tap-to-edit, swipe-to-delete, and pin-to-widget button
 6. **Alarms / Timers / Reminders tab switcher** — Pill-shaped 3-tab toggle on the main screen switches between alarm list, timer grid, and reminders list; also supports horizontal swipe between tabs via `react-native-tab-view`
 7. **One-time auto-disable** — One-time alarms are automatically disabled after firing (via `disableAlarm` in App.tsx); `disableAlarm` also cancels all scheduled notifications for the alarm
 8. **12/24 hour time format** — Setting in SettingsScreen; affects alarm card display, fire screen display, widget display, and time input format on create/edit screen
-9. **Icon picker** — 25-emoji grid on create/edit screen; selected icon auto-maps to a category behind the scenes
-10. **Category auto-mapping** — Icon selection drives the category field via `iconCategoryMap` (10 mapped icons); unrecognized icons default to `'general'`
+9. **Icon picker** — 38-emoji grid (+ custom) on create/edit screen organized into 6 categories (Health & Medical, Events & Social, Work & Tasks, Home & Errands, Self-Care & Wellness, Travel & Other); selected icon auto-maps to a category behind the scenes
+10. **Category auto-mapping** — Icon selection drives the category field via `iconCategoryMap` (22 mapped icons across 4 categories); unrecognized icons default to `'general'`
 11. **Private alarm mode** — Hides note/icon/nickname on the alarm card, shows "Private Alarm"; tap eye icon to peek for 3 seconds
 12. **Motivational quotes** — Random quote from a pool of 12, assigned at alarm creation and shown on the fire screen
 13. **App-open quotes** — 38 snarky rotating quotes displayed as a compact italic line (no card background, smaller font) under the tabs; moves to empty-state center when no items exist; refreshes on every screen focus via useFocusEffect; shared quote pool also used on the Reminders tab (see Feature 65)
@@ -26,7 +29,7 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 20. **Memory rank tiers** — Five ranks from "Goldfish With Amnesia" (0-29%) to "Memory of an Elephant With a Vendetta" (90-100%)
 21. **Forget Log** — Chronological list of every alarm you failed or skipped in Guess Why, with note, nickname, icon, timestamp, and result badge
 22. **Snooze with escalating shame** — 4 tiers of 3 increasingly judgmental messages; snooze count tracked per-alarm in AsyncStorage (`snoozeCount_{alarmId}`); shame overlay shown briefly before exiting to lock screen
-23. **Timer system** — 36 labeled presets (35 standard + 1 custom) in a 3-column grid; tap to start countdown
+23. **Timer system** — 46 labeled presets (45 standard + 1 custom) in a 3-column grid; tap to start countdown
 24. **Timer custom duration** — Long-press any preset to override its duration via modal with hours/minutes/seconds inputs (saved per-preset in AsyncStorage)
 25. **Timer recently-used sorting** — Used presets float to a "Recent" section at the top; up to 20 tracked
 26. **Active timer management** — Live countdown display with pause/resume toggle and dismiss (X) button; persisted across app reloads
@@ -48,7 +51,7 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 42. **Notification privacy** — Alarm note (the "why") is never included in the notification body
 43. **Memory Match mini-game** — Card-flip matching game with 3 difficulties (3x4, 4x4, 5x4), par scoring, animated card flip (scaleX interpolation), best scores per difficulty
 44. **Sudoku mini-game** — Full Sudoku with 3 difficulties, backtracking puzzle generator with unique-solution validation, pencil notes, pause/save/resume, difficulty-scaled assistance, star rating, best scores per difficulty
-45. **Games hub** — Central screen with Memory Match card, Sudoku card, and Guess Why toggle; accessible from game controller icon on main screen
+45. **Games hub** — Central screen with Daily Riddle, Memory Match, Trivia, Sudoku cards, Guess Why toggle, and Your Stats link; brain background image with semi-transparent glass-style cards
 46. **Theme system** — 8 preset themes (4 dark, 4 light) + custom color picker; all styles react via useMemo
 47. **Custom theme generator** — Pick any accent color; generates full dark or light theme from luminance analysis with color mixing
 48. **Theme persistence** — Selected theme and custom accent color saved to AsyncStorage, restored on app launch
@@ -61,7 +64,7 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 55. **Custom timer sounds** — Default timer completion sound configurable in Settings via SoundPickerModal; saved to AsyncStorage (`defaultTimerSound` key); applied to timer completion notifications via dynamic channel (`timer_custom_{mediaId}` prefix); works for both in-app timer starts and headless widget timer starts; falls back to default alarm channel when no custom sound set
 56. **Sort & Filter collapsible** — Sort and filter controls collapsed behind a right-aligned "Sort & Filter ▼" toggle button, default collapsed; active filter dot indicator appears when non-default sort/filter is applied; same collapsible pattern applied across Alarms, Timers, and Reminders tabs; collapsing resets the filter to its default value (Alarms → "All", Reminders → "Active") to prevent users from getting stuck in an unexpected filter view
 57. **Live subtitle counts** — Header subtitle dynamically shows "X alarms · Y timers · Z reminders" with live updates as items are added, removed, or toggled
-58. **Trivia game** — Category-based trivia with online (OpenTDB API) and offline (320+ built-in questions) modes; 9 categories: Science & Nature (🔬), History (🏛️), Music (🎵), Movies & TV (🎬), Geography (🌍), Sports (🏆), Technology (💻), Food & Drink (🍽️), General Knowledge (🧠); 2-column category grid with General Knowledge centered alone on bottom row; per-category stats tracking
+58. **Trivia game** — Category-based trivia with online (OpenTDB API) and offline (410+ built-in questions) modes; 10 categories: Science & Nature (🔬), History (🏛️), Music (🎵), Movies & TV (🎬), Geography (🌍), Sports (🏆), Technology (💻), Food & Drink (🍽️), General Knowledge (🧠), Kids (🧒); difficulty filter (Easy/Medium/Hard/All); timer speed (Relaxed 25s / Normal 15s / Blitz 8s); 2-column category grid with General Knowledge centered alone on bottom row; per-category stats tracking; online mode disabled with "Coming soon" alert
 59. **Full-screen alarm wake** — Screen wakes and shows AlarmFireScreen over lock screen via custom Expo config plugin (`plugins/withAlarmWake.js`); injects `setShowWhenLocked(true)`, `setTurnScreenOn(true)`, `FLAG_KEEP_SCREEN_ON`, and `KeyguardManager.requestDismissKeyguard()`; works for both alarms and timers; Samsung requires Settings > Apps > Special app access > Full screen notifications enabled; runtime check via `canUseFullScreenIntent` in `fullScreenPermission.ts`; onboarding slide guides users through permission setup
 60. **AlarmFireScreen redesign** — Dedicated full-screen alarm UI with large touch targets for half-asleep use; shows time (or "Timer Complete"), icon emoji, and label (nickname or "Alarm"/"Timer"); optional sound name display for custom sounds; three action buttons: Dismiss (red, cancels everything + exits to lock screen), Snooze 5 min (cancels + reschedules + shows shame message overlay + exits), and Guess Why (cancels alarm sound/vibration, navigates to game in silence); Dismiss/Snooze return to lock screen via `BackHandler.exitApp()`; also handles timer completions with timer-specific display
 61. **Single-field time input** — Replaced two-field hour:minute picker with single auto-formatting TextInput; type raw digits and colon is inserted automatically ("6" → "6", "63" → "6:3", "630" → "6:30", "0630" → "06:30"); `rawDigits` state stores just digits, `formatTimeDisplay()` adds colon for display, `parseRawDigits()` extracts hours/minutes for saving; AM/PM toggle preserved for 12h mode; applied to both CreateAlarmScreen and CreateReminderScreen
@@ -69,6 +72,17 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 63. **Soft delete / Trash system** — Alarms and reminders are soft-deleted via a timestamped `deletedAt` field instead of permanently removed; "Deleted" filter in Sort & Filter shows trash items sorted newest-first with "X min/hours/days ago" labels via `formatDeletedAgo()`; swipe left to restore from trash (reschedules notifications for enabled alarms / active reminders with due times); swipe right to permanently delete; notifications cancelled on soft-delete, rescheduled on restore; `loadAlarms(true)` and `getReminders(true)` load all items including soft-deleted for trash view
 64. **Reminder icon-only save** — Reminders can be saved with just an icon and no text; validation on CreateReminderScreen accepts either text or icon (`!text.trim() && !selectedIcon` triggers error)
 65. **Reminder quotes** — Snarky rotating quotes on the Reminders tab matching the alarm quote pattern from `appOpenQuotes.ts`; centered in empty state below the app icon; compact italic line above the sort/filter row when reminders exist; refreshes on screen focus via `useFocusEffect` calling `getRandomAppOpenQuote()`
+66. **Icon reorganization** — 38 alarm/reminder icons (up from 25) organized into 6 categories (Health & Medical, Events & Social, Work & Tasks, Home & Errands, Self-Care & Wellness, Travel & Other); 13 new icons: 🦷 dentist, 💍 anniversary, 🎂 birthday, ❤️ date, 🙏 church, 💲 bills, 📝 homework, 📦 delivery, 🚌 transit, 🔒 door, 🧘 yoga, 💧 hydrate, 🛏️ bedtime, 💇 haircut, ✈️ travel, 🔨 auction; `iconCategoryMap` expanded to 22 entries with new `event` category; timer presets expanded to 46 (45 standard + custom)
+67. **Tap-to-edit** — Alarm and reminder cards open the edit screen on tap (removed pencil icon); alarm cards use `onEdit` callback, reminder cards use `onNavigateCreate` callback
+68. **Send Feedback** — Settings screen includes a "Send Feedback" card that opens a `mailto:baldguyandcompanygames@gmail.com` link pre-filled with app version and device info
+69. **Trivia difficulty filter** — Pill selectors for All, Easy, Medium, Hard on the trivia category screen; filters the offline question pool by difficulty; online mode passes difficulty to the API
+70. **Trivia timer speed** — Three speed options: Relaxed (25s), Normal (15s), Blitz (8s); pill selectors on the trivia category screen; controls the per-question countdown timer
+71. **Kids trivia category** — 45 age-appropriate trivia questions across easy/medium/hard difficulty; offline only (excluded from OpenTDB online mode); 🧒 emoji in category grid
+72. **Music and Movies & TV trivia categories** — Split from a former "Pop Culture" category; now 10 total trivia categories; old Pop Culture seen-question tracking cleared for a fresh start
+73. **Online mode disabled** — Trivia online mode shows "Coming soon" alert and button is dimmed (`opacity: 0.4`); Daily Riddle "Fresh Riddles" (online) tab is disabled with "Online riddles coming soon" text
+74. **Background images on game screens** — Seven screens use `ImageBackground` with dark overlays and semi-transparent glass-style cards: Games Hub (`brain.png`, 0.55 overlay), Settings (`gear.png`, 0.6 overlay), Trivia (`questionmark.png`, 0.55 overlay), Daily Riddle (`door.png`, 0.55 overlay), Memory Match (`oakbackground.png`, 0.6 overlay), Sudoku (`newspaper.png`, 0.65 overlay), Guess Why (`gameclock.png`, 0.55 overlay)
+75. **Semi-transparent cards** — Games Hub and Settings screens use glass-style cards with `backgroundColor: 'rgba(255,255,255,0.15)'` and `borderColor: 'rgba(255,255,255,0.2)'` on all card elements, replacing opaque `colors.card` backgrounds
+76. **App icon watermark** — Full-screen `fullscreenicon.png` watermark rendered as first child of the root container in AlarmListScreen, positioned absolutely to fill edge to edge (`position: absolute, top/left/right/bottom: 0, width/height: 100%`); `resizeMode="cover"`, `opacity: 0.07`, `pointerEvents="none"`; sits behind the header, tab pills, and all tab content (Alarms, Timers, Reminders) as a single shared watermark
 
 ## 2. Data Models
 
@@ -99,7 +113,7 @@ interface Alarm {
   /** @deprecated */ recurring?: boolean;
 }
 
-type AlarmCategory = 'meds' | 'appointment' | 'task' | 'self-care' | 'general';
+type AlarmCategory = 'meds' | 'appointment' | 'event' | 'task' | 'self-care' | 'general';
 ```
 
 ### Reminder (`src/types/reminder.ts`)
@@ -332,13 +346,13 @@ type RootStackParamList = {
 15 navigation routes + 2 inline screens (TimerScreen and ReminderScreen rendered as tabs inside AlarmListScreen).
 
 ### AlarmList (`AlarmListScreen.tsx`)
-Main hub. Header shows app title, subtitle with live counts ("X alarms · Y timers · Z reminders"), game controller button, trophy button (if games played), gear button. Pill-shaped 3-tab switcher (Alarms / Timers / Reminders) synced with `react-native-tab-view` TabView for horizontal swipe navigation. A compact italic quote line appears under the tabs (no card background); moves to empty-state center when no items exist. Streak row ("🔥 X in a row") displays only when streak > 0. Sort & Filter controls are collapsed behind a right-aligned "Sort & Filter ▼" toggle (default collapsed) with an active-filter dot indicator; collapsing resets filter to default; same collapsible pattern applied across all three tabs. Alarms tab shows FlatList of AlarmCards (with `guessWhyEnabled` prop for info hiding + pin button), and a FAB (+) to create; empty state shows app icon (120px, 0.35 opacity) when no non-deleted alarms exist; "No matches" fallback when filter/sort yields empty results. Timers tab renders TimerScreen inline. Reminders tab renders ReminderScreen inline. Timer management (start, pause/resume, dismiss, notifications) is handled here and passed to TimerScreen via props. AppState listener reloads active timers when the app returns to foreground (picks up widget-started timers and auto-switches to Timers tab if new ones found). Tab state uses `index` (0/1/2) with derived `tab` for backward compatibility; `routes` array drives both TabView and pill buttons.
+Main hub. A full-screen `fullscreenicon.png` watermark is rendered as the first child of the root container (absolutely positioned, 100% width/height, `resizeMode="cover"`, opacity 0.07, `pointerEvents="none"`) — it sits behind everything: header, pills, and all tab content. Header shows app title, subtitle with live counts ("X alarms · Y timers · Z reminders"), game controller button, trophy button (if games played), gear button. Pill-shaped 3-tab switcher (Alarms / Timers / Reminders) synced with `react-native-tab-view` TabView for horizontal swipe navigation. A compact italic quote line appears under the tabs (no card background); moves to empty-state center when no items exist. Streak row ("🔥 X in a row") displays only when streak > 0. Sort & Filter controls are collapsed behind a right-aligned "Sort & Filter ▼" toggle (default collapsed) with an active-filter dot indicator; collapsing resets filter to default; same collapsible pattern applied across all three tabs. Alarms tab shows FlatList of AlarmCards (with `guessWhyEnabled` prop for info hiding + pin button), and a FAB (+) to create; empty state shows app icon (120px, 0.35 opacity) when no non-deleted alarms exist; "No matches" fallback when filter/sort yields empty results. Timers tab renders TimerScreen inline. Reminders tab renders ReminderScreen inline. Timer management (start, pause/resume, dismiss, notifications) is handled here and passed to TimerScreen via props. AppState listener reloads active timers when the app returns to foreground (picks up widget-started timers and auto-switches to Timers tab if new ones found). Tab state uses `index` (0/1/2) with derived `tab` for backward compatibility; `routes` array drives both TabView and pill buttons.
 
 ### CreateAlarm (`CreateAlarmScreen.tsx`)
-Slide-from-bottom modal. Single auto-formatting time input: type raw digits and colon is inserted automatically ("630" → "6:30"); `rawDigits` state stores just digits, max 4 chars. In 12h mode: AM/PM toggle buttons appear beside the input. In 24h mode: no AM/PM. Schedule section with Recurring/One-time mode toggle. Recurring: day-of-week selector (7 circle buttons) + Weekdays/Weekends quick-select. One-time: inline calendar picker with month navigation, past dates disabled, past-time validation on save. Nickname field (shows on lock screen). Note field with random placeholder and character counter (200 max). 25-icon picker grid. Sound picker row opens SoundPickerModal to select a system ringtone/alarm sound; shows current selection name or "Default". Private alarm toggle card. Save button. In edit mode, pre-fills all fields and button says "Update Alarm". Requires at least a note or an icon. Notification permission only requested when scheduling is needed. Save wrapped in try/catch with user-facing Alert on failure. Refreshes widgets on save.
+Slide-from-bottom modal. Single auto-formatting time input: type raw digits and colon is inserted automatically ("630" → "6:30"); `rawDigits` state stores just digits, max 4 chars. In 12h mode: AM/PM toggle buttons appear beside the input. In 24h mode: no AM/PM. Schedule section with Recurring/One-time mode toggle. Recurring: day-of-week selector (7 circle buttons) + Weekdays/Weekends quick-select. One-time: inline calendar picker with month navigation, past dates disabled, past-time validation on save. Nickname field (shows on lock screen). Note field with random placeholder and character counter (200 max). 38-icon picker grid (+ custom) organized into 6 categories. Sound picker row opens SoundPickerModal to select a system ringtone/alarm sound; shows current selection name or "Default". Private alarm toggle card. Save button. In edit mode, pre-fills all fields and button says "Update Alarm". Requires at least a note or an icon. Notification permission only requested when scheduling is needed. Save wrapped in try/catch with user-facing Alert on failure. Refreshes widgets on save.
 
 ### CreateReminder (`CreateReminderScreen.tsx`)
-Slide-from-bottom modal. Text field with random placeholder and character counter (200 max). Nickname field (optional, for privacy). 25-icon picker grid. Private toggle card. Due Time toggle with single auto-formatting time input (same pattern as CreateAlarm — `rawDigits` state, `formatTimeDisplay()`, `parseRawDigits()`); drives notification scheduling. Due Date toggle with inline calendar picker. Save button. In edit mode, loads existing reminder and button says "Update Reminder". Requires text or icon (either one is sufficient). Warns if combined date+time is in the past (with "Save Anyway" option). Refreshes widgets on save.
+Slide-from-bottom modal. Text field with random placeholder and character counter (200 max). Nickname field (optional, for privacy). 38-icon picker grid (+ custom) organized into 6 categories. Private toggle card. Due Time toggle with single auto-formatting time input (same pattern as CreateAlarm — `rawDigits` state, `formatTimeDisplay()`, `parseRawDigits()`); drives notification scheduling. Due Date toggle with inline calendar picker. Save button. In edit mode, loads existing reminder and button says "Update Reminder". Requires text or icon (either one is sufficient). Warns if combined date+time is in the past (with "Save Anyway" option). Refreshes widgets on save.
 
 ### AlarmFire (`AlarmFireScreen.tsx`)
 Full-screen alarm UI with large touch targets for half-asleep use. Keeps screen awake via `useKeepAwake()`. Top section: formatted time (or "Timer Complete" for timers), icon emoji, label (nickname or "Alarm"/"Timer"), optional sound name. Bottom section: up to 3 action buttons stacked vertically.
@@ -354,25 +368,31 @@ Full-screen alarm UI with large touch targets for half-asleep use. Keeps screen 
 **cancelAllNotifications()**: Cancels vibration + dismisses all notification IDs (array format + legacy single ID) + cancels timer countdown notification + cancels the specific triggered notification via `notifee.cancelNotification()`.
 
 ### GuessWhy (`GuessWhyScreen.tsx`)
-Full-screen fade-in, gesture disabled. Sound and vibration are already stopped before arrival (AlarmFireScreen's handleGuessWhy cancels everything before navigating). If the alarm has no icon and a note shorter than 3 characters, immediately replaces itself with AlarmFire (no stats recorded). Top: alarm icon/category emoji + time + category label. Game area card with Icons/Type It mode toggle (Icons mode disabled if alarm has no icon). Icons mode: scrollable 4-column grid of 25 icons with labels; match is exact emoji equality. Type It mode: text input with Guess button (min 3 chars); match checks substring in note, or icon ID for icon-only alarms. 3 attempts. Shake animation on wrong guess. Result overlay (green win / red lose / amber skip) with snarky message. Continue navigates to AlarmFire via `navigation.replace` with `postGuessWhy: true`. Losses and skips logged to Forget Log.
+Full-screen fade-in with `gameclock.png` background image (`rgba(0,0,0,0.55)` overlay), gesture disabled. Sound and vibration are already stopped before arrival (AlarmFireScreen's handleGuessWhy cancels everything before navigating). If the alarm has no icon and a note shorter than 3 characters, immediately replaces itself with AlarmFire (no stats recorded). Top: alarm icon/category emoji + time + category label. Game area card with Icons/Type It mode toggle (Icons mode disabled if alarm has no icon). Icons mode: scrollable 4-column grid of 38 icons (+ custom) with labels; match is exact emoji equality. Type It mode: text input with Guess button (min 3 chars); match checks substring in note, or icon ID for icon-only alarms. 3 attempts. Shake animation on wrong guess. Result overlay (green win / red lose / amber skip) with snarky message. Continue navigates to AlarmFire via `navigation.replace` with `postGuessWhy: true`. Losses and skips logged to Forget Log.
 
 ### Settings (`SettingsScreen.tsx`)
-Back button + title. Toggle for "24-Hour Time". Toggle for "Vibration" (haptic feedback). Timer Sound row opens SoundPickerModal to pick the default timer completion sound (shows current selection name or "Default"). Theme picker: 8 preset theme circles in a grid + 9th "Custom" circle. Custom opens a reanimated-color-picker modal with Panel1 + HueSlider + Preview. Permissions card with Setup Guide button (re-opens onboarding at permissions slide). About card links to AboutScreen.
+Back button + title. `gear.png` background image with `rgba(0,0,0,0.6)` dark overlay. Semi-transparent glass-style cards (`rgba(255,255,255,0.15)` background, `rgba(255,255,255,0.2)` border). Toggle for "24-Hour Time". Toggle for "Vibration" (haptic feedback). Timer Sound row opens SoundPickerModal to pick the default timer completion sound (shows current selection name or "Default"). Theme picker: 8 preset theme circles in a grid + 9th "Custom" circle. Custom opens a reanimated-color-picker modal with Panel1 + HueSlider + Preview. Send Feedback card opens `mailto:baldguyandcompanygames@gmail.com` with app version and device info pre-filled. Permissions card with Setup Guide button (re-opens onboarding at permissions slide). About card links to AboutScreen.
 
 ### Onboarding (`OnboardingScreen.tsx`)
 Multi-slide onboarding flow. Includes a full-screen alarm permission slide that guides users through enabling `canUseFullScreenIntent` (required on Android 14+ and Samsung devices). Uses `fullScreenPermission.ts` to check permission status and open system settings.
 
 ### Games (`GamesScreen.tsx`)
-Hub screen with Memory Match card, Sudoku card, and Guess Why toggle switch. Game controller icon on main screen navigates here.
+Hub screen with `brain.png` background image (`rgba(0,0,0,0.55)` overlay). Semi-transparent glass-style cards. Five game cards: Daily Riddle (with streak display), Memory Match, Trivia ("300+ questions offline, unlimited online"), Sudoku, and Guess Why (toggle switch, not navigable). Your Stats card links to MemoryScore. Game controller icon on main screen navigates here.
 
 ### MemoryScore (`MemoryScoreScreen.tsx`)
 Rank emoji + rank title (colored) + win percentage + subtitle. Stats card with wins, losses, skips, streak, best streak, total games. "What Did I Forget?" button links to ForgetLog. Red "Reset Stats" button with confirmation.
 
 ### MemoryMatch (`MemoryMatchScreen.tsx`)
-Difficulty select: Easy (3x4, 6 pairs, par 8), Medium (4x4, 8 pairs, par 12), Hard (5x4, 10 pairs, par 16). Each shows best score. Game board with animated card flips (Animated scaleX interpolation, 300ms). Timer starts on first card flip. Win screen with star rating (below par = 3 stars, at par = 2, above = 1), snarky message, play again button. Best scores saved per difficulty.
+`oakbackground.png` background image with `rgba(0,0,0,0.6)` dark overlay on all phases. Difficulty select: Easy (3x4, 6 pairs, par 8), Medium (4x4, 8 pairs, par 12), Hard (5x4, 10 pairs, par 16). Each shows best score. Game board with animated card flips (Animated scaleX interpolation, 300ms). Timer starts on first card flip. Win screen with star rating (below par = 3 stars, at par = 2, above = 1), snarky message, play again button. Best scores saved per difficulty.
 
 ### Sudoku (`SudokuScreen.tsx`)
-Difficulty select: Easy (46-51 clues), Medium (36-41 clues), Hard (26-31 clues). Each shows best score. Continue button if saved game exists. Full 9x9 grid with tap-to-select, number pad, pencil notes toggle, erase button. Difficulty-scaled assistance: Easy shows errors + highlighting + remaining counts; Medium shows errors + highlighting; Hard shows nothing during play, reveals on win. Pause saves game to AsyncStorage. Win screen with star rating (0 mistakes = 3 stars, 1-3 = 2, 4+ = 1), "Let's see how you actually did..." text on hard mode, snarky message. Best scores saved per difficulty.
+`newspaper.png` background image with `rgba(0,0,0,0.65)` dark overlay on all phases. Difficulty select: Easy (46-51 clues), Medium (36-41 clues), Hard (26-31 clues). Each shows best score. Continue button if saved game exists. Full 9x9 grid with tap-to-select, number pad, pencil notes toggle, erase button. Difficulty-scaled assistance: Easy shows errors + highlighting + remaining counts; Medium shows errors + highlighting; Hard shows nothing during play, reveals on win. Pause saves game to AsyncStorage. Win screen with star rating (0 mistakes = 3 stars, 1-3 = 2, 4+ = 1), "Let's see how you actually did..." text on hard mode, snarky message. Best scores saved per difficulty.
+
+### DailyRiddle (`DailyRiddleScreen.tsx`)
+`door.png` background image with `rgba(0,0,0,0.55)` dark overlay. Daily mode vs Browse mode toggle. Offline riddle bank with search and category filters (memory, classic, logic, wordplay, quick). Streak tracking and hint system. "Fresh Riddles" (online) tab disabled with `pointerEvents="none"`, `opacity: 0.4`, and "Online riddles coming soon" text.
+
+### Trivia (`TriviaScreen.tsx`)
+`questionmark.png` background image with `rgba(0,0,0,0.55)` dark overlay. 10-category grid with emoji icons. Difficulty filter pills (All/Easy/Medium/Hard). Timer speed pills (Relaxed 25s / Normal 15s / Blitz 8s). Online mode button dimmed (`opacity: 0.4`) with "Coming soon" alert. Kids and Food categories excluded from online mode. Per-category stats tracking with seen-question deduplication.
 
 ### ForgetLog (`ForgetLogScreen.tsx`)
 FlatList of ForgetEntry cards with emoji, note, nickname, result badge (Forgot/Skipped), timestamp. Empty state message. "Clear Log" button with confirmation.
@@ -383,9 +403,24 @@ Rendered inline as a tab in AlarmListScreen. Active timers section with countdow
 ## 5. File Structure
 
 ```
+assets/
+├── adaptive-icon.png          App icon (adaptive)
+├── brain.png                  Games Hub background image
+├── door.png                   Daily Riddle background image
+├── favicon.png                Web favicon
+├── fullscreenicon.png         Full-screen watermark for main tabs
+├── gameclock.png              Guess Why background image
+├── gear.png                   Settings background image
+├── icon.png                   App icon (standard) + empty state icon
+├── newspaper.png              Sudoku background image
+├── oakbackground.png          Memory Match background image
+├── old.png                    Legacy asset
+├── questionmark.png           Trivia background image
+└── splash-icon.png            Splash screen icon
+
 src/
 ├── components/
-│   ├── AlarmCard.tsx              Alarm list item card with peek, toggle, edit, delete, pin, Guess Why hiding
+│   ├── AlarmCard.tsx              Alarm list item card with peek, toggle, tap-to-edit, swipe-to-delete, pin, Guess Why hiding
 │   ├── ErrorBoundary.tsx          Error boundary with fallback UI
 │   ├── SoundPickerModal.tsx       Reusable bottom sheet for picking system sounds; search filter, expo-av preview, selection
 │   ├── SwipeableRow.tsx           Swipeable row component for swipe-to-delete/complete actions
@@ -393,34 +428,34 @@ src/
 ├── data/
 │   ├── alarmSounds.ts             Legacy preset alarm sound definitions (backward compat)
 │   ├── appOpenQuotes.ts           38 snarky quotes shown when opening the app
-│   ├── guessWhyIcons.ts           25-icon array for icon picker + Guess Why game grid
+│   ├── guessWhyIcons.ts           38-icon array (+ custom) for icon picker + Guess Why game grid, organized into 6 categories
 │   ├── guessWhyMessages.ts        Win (7), lose (6), skip (4) messages for Guess Why
 │   ├── memoryRanks.ts             5 rank tiers + unranked, with emoji and color
 │   ├── placeholders.ts            12 rotating placeholder strings for note input
 │   ├── riddles.ts                 Daily riddle data
 │   ├── snoozeMessages.ts          4 tiers of 3 escalating snooze shame messages
-│   ├── timerPresets.ts            35 default timer presets + 1 custom entry (36 total)
-│   └── triviaQuestions.ts         320+ built-in trivia questions across 9 categories
+│   ├── timerPresets.ts            45 default timer presets + 1 custom entry (46 total)
+│   └── triviaQuestions.ts         410+ built-in trivia questions across 10 categories (including 45 Kids questions)
 ├── navigation/
 │   └── types.ts                   RootStackParamList with all screen route params
 ├── screens/
 │   ├── AboutScreen.tsx            About page with app info
 │   ├── AlarmFireScreen.tsx        Full-screen alarm UI with Dismiss, Snooze, Guess Why buttons
-│   ├── AlarmListScreen.tsx        Main screen with alarm list, timer tab, reminders tab, FAB, timer management
-│   ├── CreateAlarmScreen.tsx      Create/edit alarm with single-field time input, schedule, nickname, note, icon, sound, privacy
-│   ├── CreateReminderScreen.tsx   Create/edit reminder with single-field time input, due date/time, icon, privacy
-│   ├── DailyRiddleScreen.tsx      Daily riddle mini-game
+│   ├── AlarmListScreen.tsx        Main screen with fullscreenicon watermark, alarm list, timer tab, reminders tab, FAB, timer management
+│   ├── CreateAlarmScreen.tsx      Create/edit alarm with single-field time input, schedule, nickname, note, 38 icons, sound, privacy
+│   ├── CreateReminderScreen.tsx   Create/edit reminder with single-field time input, due date/time, 38 icons, privacy
+│   ├── DailyRiddleScreen.tsx      Daily riddle mini-game; door.png background; online mode disabled
 │   ├── ForgetLogScreen.tsx        Chronological log of forgotten/skipped alarms
-│   ├── GamesScreen.tsx            Games hub with Memory Match, Sudoku, Guess Why toggle
-│   ├── GuessWhyScreen.tsx         Mini-game: guess the alarm reason in 3 attempts (plays in silence)
-│   ├── MemoryMatchScreen.tsx      Card-flip matching game with 3 difficulties and best scores
+│   ├── GamesScreen.tsx            Games hub with 5 game cards + stats; brain.png background; semi-transparent cards
+│   ├── GuessWhyScreen.tsx         Mini-game: guess the alarm reason in 3 attempts; gameclock.png background
+│   ├── MemoryMatchScreen.tsx      Card-flip matching game with 3 difficulties; oakbackground.png background
 │   ├── MemoryScoreScreen.tsx      Stats dashboard with rank, streak, win/loss totals
 │   ├── OnboardingScreen.tsx       Multi-slide onboarding with full-screen alarm permission slide
 │   ├── ReminderScreen.tsx         Reminder list rendered as tab in AlarmListScreen; quotes, soft-delete, empty state with app icon
-│   ├── SettingsScreen.tsx         Time format, vibration, timer sound, theme picker, permissions, about
-│   ├── SudokuScreen.tsx           Full Sudoku with 3 difficulties, notes, pause, best scores
+│   ├── SettingsScreen.tsx         Time format, vibration, timer sound, theme picker, send feedback, permissions, about; gear.png background; semi-transparent cards
+│   ├── SudokuScreen.tsx           Full Sudoku with 3 difficulties, notes, pause, best scores; newspaper.png background
 │   ├── TimerScreen.tsx            Timer preset grid + active countdown timers + pin-to-widget
-│   └── TriviaScreen.tsx           Category-based trivia with 9 categories, online/offline modes
+│   └── TriviaScreen.tsx           Category-based trivia with 10 categories, difficulty filter, timer speed, online/offline modes; questionmark.png background
 ├── services/
 │   ├── connectivity.ts            Network connectivity check utility
 │   ├── forgetLog.ts               CRUD for ForgetEntry[] with runtime validation
@@ -611,42 +646,60 @@ Light theme mix ratios: background 90% white, card 78% white, textPrimary 88% bl
 | `rgba(0,0,0,0.7)` | modalOverlay | TimerScreen, SettingsScreen modal backdrop |
 | `rgba(255,255,255,0.25)` | overlayButton | GuessWhyScreen overlay continue button |
 | `#FFFFFF` | overlayText | Overlay text (always on colored bg) |
+| `rgba(255,255,255,0.15)` | glass card bg | GamesScreen, SettingsScreen semi-transparent card backgrounds |
+| `rgba(255,255,255,0.2)` | glass card border | GamesScreen, SettingsScreen semi-transparent card borders |
 | Widget: `#121220` bg, `#1E1E2E` cell bg, `#EAEAFF` text, `#B0B0CC` secondary text, `#2A2A3E` border, `#4A90D9` pinned border | — | TimerWidget.tsx + DetailedWidget.tsx (hardcoded midnight theme) |
 | Rank colors: `#FFD700`, `#4A90D9`, `#B0B0CC`, `#FF9F43`, `#FF6B6B`, `#7A7A9E` | — | memoryRanks.ts (data-driven) |
 
 ## 7. Icon Orders
 
-### Alarm Icons (25 icons, `guessWhyIcons.ts`)
+### Alarm/Reminder Icons (38 icons + custom, `guessWhyIcons.ts`)
 
-| # | ID | Emoji |
-|---|---|---|
-| 1 | meds | 💊 |
-| 2 | doctor | 🩺 |
-| 3 | medical | ⚕️ |
-| 4 | appointment | 📅 |
-| 5 | meeting | 👥 |
-| 6 | work | 💼 |
-| 7 | kids | 👶 |
-| 8 | phone | 📱 |
-| 9 | meal | 🍽️ |
-| 10 | shopping | 🛒 |
-| 11 | pet | 🐾 |
-| 12 | car | 🚗 |
-| 13 | money | 💰 |
-| 14 | cleaning | 🧹 |
-| 15 | laundry | 👕 |
-| 16 | trash | 🗑 |
-| 17 | dumbbell | 🏋️ |
-| 18 | sleep | 😴 |
-| 19 | shower | 🚿 |
-| 20 | computer | 💻 |
-| 21 | book | 📖 |
-| 22 | mail | 📬 |
-| 23 | plant | 🌱 |
-| 24 | celebration | 🎉 |
-| 25 | school | 🏫 |
+| # | Category | ID | Emoji |
+|---|---|---|---|
+| 1 | Health & Medical | meds | 💊 |
+| 2 | Health & Medical | doctor | 🩺 |
+| 3 | Health & Medical | medical | ⚕️ |
+| 4 | Health & Medical | dentist | 🦷 |
+| 5 | Events & Social | appointment | 📅 |
+| 6 | Events & Social | meeting | 👥 |
+| 7 | Events & Social | anniversary | 💍 |
+| 8 | Events & Social | birthday | 🎂 |
+| 9 | Events & Social | date | ❤️ |
+| 10 | Events & Social | church | 🙏 |
+| 11 | Events & Social | celebration | 🎉 |
+| 12 | Work & Tasks | work | 💼 |
+| 13 | Work & Tasks | bills | 💲 |
+| 14 | Work & Tasks | homework | 📝 |
+| 15 | Work & Tasks | documents | 📄 |
+| 16 | Work & Tasks | computer | 💻 |
+| 17 | Work & Tasks | phone | 📱 |
+| 18 | Work & Tasks | mail | 📬 |
+| 19 | Work & Tasks | school | 🏫 |
+| 20 | Home & Errands | kids | 👶 |
+| 21 | Home & Errands | pet | 🐾 |
+| 22 | Home & Errands | meal | 🍽️ |
+| 23 | Home & Errands | shopping | 🛒 |
+| 24 | Home & Errands | delivery | 📦 |
+| 25 | Home & Errands | car | 🚗 |
+| 26 | Home & Errands | transit | 🚌 |
+| 27 | Home & Errands | cleaning | 🧹 |
+| 28 | Home & Errands | laundry | 👕 |
+| 29 | Home & Errands | trash | 🗑 |
+| 30 | Home & Errands | door | 🔒 |
+| 31 | Home & Errands | plant | 🌱 |
+| 32 | Self-Care & Wellness | dumbbell | 🏋️ |
+| 33 | Self-Care & Wellness | yoga | 🧘 |
+| 34 | Self-Care & Wellness | hydrate | 💧 |
+| 35 | Self-Care & Wellness | shower | 🚿 |
+| 36 | Self-Care & Wellness | bedtime | 🛏️ |
+| 37 | Self-Care & Wellness | haircut | 💇 |
+| 38 | Travel & Other | travel | ✈️ |
+| 39 | Travel & Other | auction | 🔨 |
+| 40 | Travel & Other | book | 📖 |
+| — | — | custom | ➕ |
 
-### Timer Presets (36 presets, `timerPresets.ts`)
+### Timer Presets (46 presets, `timerPresets.ts`)
 
 | # | ID | Icon | Label | Default Duration |
 |---|---|---|---|---|
@@ -657,58 +710,78 @@ Light theme mix ratios: background 90% white, card 78% white, textPrimary 88% bl
 | 5 | lunch | 🍽️ | Meal | 1 h |
 | 6 | nap | 😴 | Nap | 30 min |
 | 7 | workout | 🏋️ | Workout | 45 min |
-| 8 | meds | 💊 | Meds | 5 min |
-| 9 | doctor | 🩺 | Doctor | 30 min |
-| 10 | medical | ⚕️ | Medical | 4 h |
-| 11 | shopping | 🛒 | Shopping | 1 h |
-| 12 | tea | 🫖 | Tea | 4 min |
-| 13 | eggs | 🥚 | Eggs | 10 min |
-| 14 | microwave | ♨️ | Microwave | 2 min |
-| 15 | pet | 🐾 | Pet | 15 min |
-| 16 | kids | 👶 | Kids | 30 min |
-| 17 | parking | 🅿️ | Parking | 1 h |
-| 18 | delivery | 📦 | Delivery | 30 min |
-| 19 | grill | 🥩 | Grill | 15 min |
-| 20 | bath | 🛁 | Bath | 20 min |
-| 21 | charge | 🔋 | Charge | 45 min |
-| 22 | game | 🎮 | Game | 1 h |
-| 23 | meeting | 👥 | Meeting | 30 min |
-| 24 | work | 💼 | Work | 1 h |
-| 25 | celebration | 🎉 | Celebration | 1 h |
-| 26 | dishwasher | 🫧 | Dishes | 1 h |
-| 27 | heater | 🌡 | Heater | 30 min |
-| 28 | water | 🚰 | Water | 10 min |
-| 29 | door | 🔒 | Door | 1 min |
-| 30 | garage | 🚗 | Garage | 1 min |
-| 31 | trash | 🗑 | Trash | 5 min |
-| 32 | school | 🏫 | School | 1 h |
-| 33 | computer | 💻 | Computer | 30 min |
-| 34 | documents | 📄 | Docs | 5 min |
-| 35 | car | 🚗 | Car | 30 min |
-| 36 | transit | 🚌 | Transit | 15 min |
+| 8 | yoga | 🧘 | Yoga | 20 min |
+| 9 | meds | 💊 | Meds | 5 min |
+| 10 | doctor | 🩺 | Doctor | 30 min |
+| 11 | medical | ⚕️ | Medical | 4 h |
+| 12 | hydrate | 💧 | Hydrate | 30 min |
+| 13 | shopping | 🛒 | Shopping | 1 h |
+| 14 | tea | 🫖 | Tea | 4 min |
+| 15 | eggs | 🥚 | Eggs | 10 min |
+| 16 | microwave | ♨️ | Microwave | 2 min |
+| 17 | pet | 🐾 | Pet | 15 min |
+| 18 | kids | 👶 | Kids | 30 min |
+| 19 | parking | 🅿️ | Parking | 1 h |
+| 20 | delivery | 📦 | Delivery | 30 min |
+| 21 | grill | 🥩 | Grill | 15 min |
+| 22 | bath | 🛁 | Bath | 20 min |
+| 23 | charge | 🔋 | Charge | 45 min |
+| 24 | game | 🎮 | Game | 1 h |
+| 25 | meeting | 👥 | Meeting | 30 min |
+| 26 | work | 💼 | Work | 1 h |
+| 27 | homework | 📝 | Homework | 30 min |
+| 28 | book | 📖 | Book | 30 min |
+| 29 | celebration | 🎉 | Celebration | 1 h |
+| 30 | cleaning | 🧹 | Cleaning | 30 min |
+| 31 | dishwasher | 🫧 | Dishes | 1 h |
+| 32 | plant | 🌱 | Plant | 15 min |
+| 33 | heater | 🌡 | Heater | 30 min |
+| 34 | water | 🚰 | Water | 10 min |
+| 35 | door | 🔒 | Door | 1 min |
+| 36 | garage | 🚗 | Garage | 1 min |
+| 37 | trash | 🗑 | Trash | 5 min |
+| 38 | school | 🏫 | School | 1 h |
+| 39 | computer | 💻 | Computer | 30 min |
+| 40 | documents | 📄 | Docs | 5 min |
+| 41 | auction | 🔨 | Auction | 10 min |
+| 42 | car | 🚗 | Car | 30 min |
+| 43 | transit | 🚌 | Transit | 15 min |
 | — | custom | ➕ | Custom | 0 (prompts modal) |
 
 ## 8. Icon-to-Category Mapping
 
 Defined in `CreateAlarmScreen.tsx` via `iconCategoryMap`. When a user selects an icon, the alarm's category is set automatically. Icons not in this map default to `'general'`.
 
-| Icon | Category |
-|---|---|
-| 💊 | `meds` |
-| 🩺 | `appointment` |
-| ⚕️ | `meds` |
-| 📅 | `appointment` |
-| 👥 | `task` |
-| 💼 | `task` |
-| 🎉 | `task` |
-| 🏋️ | `self-care` |
-| 😴 | `self-care` |
-| 🚿 | `self-care` |
-| *(all others)* | `general` |
+| Icon | ID | Category |
+|---|---|---|
+| 💊 | meds | `meds` |
+| ⚕️ | medical | `meds` |
+| 🩺 | doctor | `appointment` |
+| 🦷 | dentist | `appointment` |
+| 📅 | appointment | `appointment` |
+| 💇 | haircut | `appointment` |
+| 💍 | anniversary | `event` |
+| 🎂 | birthday | `event` |
+| ❤️ | date | `event` |
+| 🙏 | church | `event` |
+| 🎉 | celebration | `event` |
+| 👥 | meeting | `task` |
+| 💼 | work | `task` |
+| 💲 | bills | `task` |
+| 📝 | homework | `task` |
+| 📄 | documents | `task` |
+| 📦 | delivery | `task` |
+| 🏋️ | dumbbell | `self-care` |
+| 🧘 | yoga | `self-care` |
+| 💧 | hydrate | `self-care` |
+| 🚿 | shower | `self-care` |
+| 🛏️ | bedtime | `self-care` |
+| *(all others)* | — | `general` |
 
 Category display labels on alarm cards:
 - meds -> "💊 Meds"
 - appointment -> "📅 Appt"
+- event -> "🎉 Event"
 - task -> "✅ Task"
 - self-care -> "🧘 Self-Care"
 - general -> "🔔 General"
@@ -748,8 +821,7 @@ Uses `getDetailLine(alarm)` to determine the detail text:
 - **Pin icon**: Shows 📌 next to time when alarm is pinned to widget
 - **Enable/disable switch**
 - **Pin button**: Toggle pin to widget
-- **Edit button**: Opens CreateAlarmScreen in edit mode
-- **Delete button**: Triggers confirmation dialog
+- **Tap-to-edit**: Tapping the card opens CreateAlarmScreen in edit mode (pencil icon removed)
 
 **Disabled state**: Entire card at `opacity: 0.5` when `alarm.enabled` is false.
 
@@ -923,7 +995,7 @@ if days.length < 7:
 
 ### Memory Match (`MemoryMatchScreen.tsx`)
 
-Card-flip matching game. Find all matching pairs of emoji cards.
+Card-flip matching game with `oakbackground.png` background image (`rgba(0,0,0,0.6)` overlay). Find all matching pairs of emoji cards.
 
 **Difficulties**:
 | Level | Grid | Pairs | Par |
@@ -949,7 +1021,7 @@ Card-flip matching game. Find all matching pairs of emoji cards.
 
 ### Sudoku (`SudokuScreen.tsx` + `utils/sudoku.ts`)
 
-Full 9x9 Sudoku with puzzle generation, pencil notes, and difficulty-scaled assistance.
+Full 9x9 Sudoku with `newspaper.png` background image (`rgba(0,0,0,0.65)` overlay), puzzle generation, pencil notes, and difficulty-scaled assistance.
 
 **Puzzle Generator** (`generatePuzzle(difficulty)`):
 - Generates a complete solution via `solveFull()` (backtracking with randomized number order)
@@ -992,44 +1064,82 @@ Full 9x9 Sudoku with puzzle generation, pencil notes, and difficulty-scaled assi
 
 ### Trivia (`TriviaScreen.tsx` + `triviaAI.ts` + `triviaQuestions.ts`)
 
-Category-based trivia with dual question sources.
+Category-based trivia with `questionmark.png` background image (`rgba(0,0,0,0.55)` overlay) and dual question sources.
 
-**9 Categories**:
-| Category | Emoji | OpenTDB ID |
-|---|---|---|
-| Science & Nature | 🔬 | 17 |
-| History | 🏛️ | 23 |
-| Music | 🎵 | 12 |
-| Movies & TV | 🎬 | 11 or 14 (random) |
-| Geography | 🌍 | 22 |
-| Sports | 🏆 | 21 |
-| Technology | 💻 | 18 |
-| Food & Drink | 🍽️ | — (offline only) |
-| General Knowledge | 🧠 | 9 |
+**10 Categories**:
+| Category | Emoji | OpenTDB ID | Notes |
+|---|---|---|---|
+| Science & Nature | 🔬 | 17 | |
+| History | 🏛️ | 23 | |
+| Music | 🎵 | 12 | |
+| Movies & TV | 🎬 | 11 or 14 (random) | |
+| Geography | 🌍 | 22 | |
+| Sports | 🏆 | 21 | |
+| Technology | 💻 | 18 | |
+| Food & Drink | 🍽️ | — | Offline only |
+| General Knowledge | 🧠 | 9 | |
+| Kids | 🧒 | — | Offline only, 45 age-appropriate questions |
 
 Music and Movies & TV were split from a former "Pop Culture" category. Old Pop Culture seen-question tracking was cleared for a fresh start on the new categories.
 
-**Category grid layout**: 8 categories in a 2-column grid, General Knowledge centered alone on a bottom row.
+**Difficulty filter**: Pill selectors for All, Easy, Medium, Hard. Filters offline question pool by difficulty; passes difficulty to OpenTDB API for online mode.
+
+**Timer speed**: Three options — Relaxed (25s), Normal (15s), Blitz (8s). Pill selectors control the per-question countdown timer.
+
+**Category grid layout**: 8 categories in a 2-column grid, General Knowledge centered alone on a bottom row. Kids shown in grid.
 
 **Question sources**:
-- **Online**: Fetches from OpenTDB API by category ID. Movies & TV randomly picks between OpenTDB categories 11 (Film) and 14 (Television).
-- **Offline**: 320+ built-in questions in `triviaQuestions.ts` (including 36 General Knowledge questions `general_049`–`general_084`), used as fallback or when offline.
+- **Online**: Fetches from OpenTDB API by category ID. Movies & TV randomly picks between OpenTDB categories 11 (Film) and 14 (Television). **Currently disabled** — button dimmed with "Coming soon" alert. Food and Kids categories excluded from online mode.
+- **Offline**: 410+ built-in questions in `triviaQuestions.ts` (including 45 Kids questions), used as fallback or when offline.
 
 **General Knowledge**: Pulls from ALL categories (grab bag design) in addition to its own dedicated questions. Seen-question reset fires at 0 remaining (not < 10).
 
 **Stats**: Per-category tracking of games played, correct answers, and streaks.
 
-## 14. Remaining / Planned Features
+### Daily Riddle (`DailyRiddleScreen.tsx`)
+
+Daily riddle mini-game with `door.png` background image (`rgba(0,0,0,0.55)` overlay). Daily mode vs Browse mode toggle. Offline riddle bank with search and category filters (memory, classic, logic, wordplay, quick). Streak tracking and hint system. Seen/unseen tracking. "Fresh Riddles" (online) tab disabled with `pointerEvents="none"`, `opacity: 0.4`, and "Online riddles coming soon" text.
+
+## 14. Background Images & Visual Effects
+
+### Game Screen Backgrounds
+Seven screens use `ImageBackground` with semi-transparent dark overlays:
+
+| Screen | Asset | Overlay |
+|---|---|---|
+| Games Hub | `brain.png` | `rgba(0,0,0,0.55)` |
+| Settings | `gear.png` | `rgba(0,0,0,0.6)` |
+| Trivia | `questionmark.png` | `rgba(0,0,0,0.55)` |
+| Daily Riddle | `door.png` | `rgba(0,0,0,0.55)` |
+| Memory Match | `oakbackground.png` | `rgba(0,0,0,0.6)` |
+| Sudoku | `newspaper.png` | `rgba(0,0,0,0.65)` |
+| Guess Why | `gameclock.png` | `rgba(0,0,0,0.55)` |
+
+### Semi-Transparent Glass Cards
+Games Hub and Settings screens use glass-style cards:
+- Background: `rgba(255,255,255,0.15)`
+- Border: `rgba(255,255,255,0.2)`
+- Replaces opaque `colors.card` backgrounds on these screens
+
+### App Icon Watermark
+AlarmListScreen renders `fullscreenicon.png` as a full-screen watermark:
+- First child of root container (behind header, tabs, and all tab content)
+- `position: absolute`, `top/left/right/bottom: 0`, `width/height: 100%`
+- `resizeMode="cover"`, `opacity: 0.07`, `pointerEvents="none"`
+- Single shared watermark visible across all three tabs (Alarms, Timers, Reminders)
+
+## 15. Remaining / Planned Features
 
 - **Widget theme matching** — Widgets currently use hardcoded midnight theme colors; could match the user's selected theme
+- **Online mode** — Trivia and Daily Riddle online modes are built but disabled with "Coming soon" messaging
 - **Play Store publication** — App is configured for production builds via EAS but not yet published
 
-## 15. Features Explored and Removed
+## 16. Features Explored and Removed
 
 - **Preset alarm sound picker** — An early version had 6 preset alarm sounds (`alarmSounds.ts`: Default, Gentle, Urgent, Classic, Digital, Silent) with static Notifee channels per preset. These all used `sound: 'default'` and sounded identical on most devices. Replaced by the real system ringtone picker (Feature 54) using `react-native-notification-sounds` + dynamic channels with actual content:// URIs. The preset channel definitions remain in `notifications.ts` for backward compatibility but the picker UI was removed from Settings.
 - **Swipe between tabs (PanResponder version)** — Initial attempt using a manual PanResponder on the tab content area; removed due to gesture conflicts with SwipeableRow swipe-to-delete/complete actions on alarm cards and reminder items. **Re-implemented successfully** in Feature 62 using `react-native-tab-view` + `react-native-pager-view`, which resolve gesture conflicts at the native level (Android ViewPager2 defers to child gesture handlers).
 
-## 16. Key Implementation Patterns
+## 17. Key Implementation Patterns
 
 ### Android Notification Channel Immutability
 Channels cannot be modified after creation on Android 8+. Changing a sound means creating a new channel with a new ID. `getOrCreateSoundChannel()` derives channel IDs deterministically from the content:// URI's numeric media ID (`extractMediaId()`), so the same sound always maps to the same channel. Old channels accumulate but are harmless.
@@ -1056,14 +1166,16 @@ Both CreateAlarmScreen and CreateReminderScreen use the same auto-formatting tim
 - `handleTimeInput(text)`: strips non-digits from input, caps at 4 chars
 - On save: `parseRawDigits` → clamp hours/minutes → convert 12h→24h if needed → format as "HH:MM"
 
-### New Dependencies
+### Dependencies
 - `react-native-notification-sounds` — Lists system ringtones/alarm/notification sounds on Android. Returns `{ title, url, soundID }[]` where `url` is a `content://media/internal/audio/media/{id}` URI.
 - `expo-av` (~16.0.8) — Audio preview playback in SoundPickerModal. Deprecated in SDK 54 (replaced by `expo-audio`/`expo-video`) but functional.
 - `expo-keep-awake` — Keeps screen awake on AlarmFireScreen via `useKeepAwake()`.
 - `react-native-tab-view` (^4.2.2) — Tab view component with swipe gesture support; provides `TabView` with `lazy` rendering, custom `renderTabBar`, and `onIndexChange`. Used for horizontal swipe navigation between Alarms/Timers/Reminders tabs.
 - `react-native-pager-view` (6.9.1) — Native Android ViewPager2 backend for `react-native-tab-view`. Handles gesture priority at the native level so child horizontal gestures (SwipeableRow) take precedence over page swiping. **Requires a new EAS build** (native module).
+- `react-native-android-widget` (~0.20.1) — Android home screen widget support with FlexWidget/TextWidget components.
+- `reanimated-color-picker` (^4.2.0) — Color picker for custom theme accent selection, built on react-native-reanimated.
 
-## 17. Development Workflow
+## 18. Development Workflow
 
 ### Four-AI Team
 - **Opus** (Claude Opus) — Architecture decisions, system design, complex problem-solving
@@ -1097,3 +1209,18 @@ Both CreateAlarmScreen and CreateReminderScreen use the same auto-formatting tim
 - App icon (120x120, opacity 0.35) replaces all emoji-based empty state icons
 - Reminder quotes added using shared `appOpenQuotes.ts` pool
 - Reminder icon-only save validation fixed (accepts text or icon)
+
+**Audit 12: Icon Reorganization, Trivia Expansion & UI Polish**
+- Icon set expanded from 25 to 38 with 6 organized categories
+- Timer presets expanded from 36 to 46
+- `iconCategoryMap` expanded to 22 entries with new `event` category (6 categories total: meds, appointment, event, task, self-care, general)
+- Tap-to-edit on alarm and reminder cards (pencil icon removed)
+- Send Feedback email card in Settings (baldguyandcompanygames@gmail.com)
+- Trivia difficulty filter (Easy/Medium/Hard/All)
+- Trivia timer speed (Relaxed 25s / Normal 15s / Blitz 8s)
+- Kids trivia category (45 age-appropriate questions, offline only)
+- Music and Movies & TV trivia categories (10 total, split from Pop Culture)
+- Online mode disabled with "Coming soon" for Trivia and Daily Riddle
+- Background images on 7 game screens with dark overlays
+- Semi-transparent glass-style cards on Games Hub and Settings
+- Full-screen app icon watermark on main alarm/timer/reminder tabs

@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
+  Alert,
+  ImageBackground,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
@@ -278,6 +280,14 @@ export default function TriviaScreen({ navigation }: Props) {
       }
     }
 
+    if (roundQuestions.length === 0) {
+      Alert.alert(
+        'No Questions Available',
+        'No questions available for this category and difficulty. Try a different combination.',
+      );
+      return;
+    }
+
     setIsOnlineRound(usingOnline);
     setQuestions(roundQuestions);
     setCurrentIndex(0);
@@ -348,6 +358,8 @@ export default function TriviaScreen({ navigation }: Props) {
   // ─── Category Select ───
   if (phase === 'category') {
     return (
+      <ImageBackground source={require('../../assets/questionmark.png')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
@@ -356,24 +368,22 @@ export default function TriviaScreen({ navigation }: Props) {
           <Text style={styles.title}>Trivia Time</Text>
         </View>
 
-        {/* Online/Offline toggle (disabled — coming soon) */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 12 }}>
-          <View
-            style={[styles.modeToggle, { opacity: 0.4, marginHorizontal: 0, marginBottom: 0 }]}
-            pointerEvents="none"
-          >
-            <Text style={styles.modeIcon}>{'\u{1F310}'}</Text>
-            <Text style={[styles.modeText, { color: colors.textTertiary }]}>Online</Text>
-          </View>
-          <Text style={{ fontSize: 12, color: colors.textTertiary, fontStyle: 'italic' }}>Coming soon</Text>
-        </View>
+        {/* Online/Offline toggle (disabled) */}
+        <TouchableOpacity
+          style={[styles.modeToggle, { opacity: 0.4 }]}
+          onPress={() => Alert.alert('Online Mode', 'Online mode coming in a future update')}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.modeIcon}>{'\u{1F310}'}</Text>
+          <Text style={[styles.modeText, { color: colors.textTertiary }]}>Online</Text>
+        </TouchableOpacity>
 
         {allSeenMessage && (
           <Text style={styles.seenNote}>{allSeenMessage}</Text>
         )}
 
         <View style={styles.categoryGrid}>
-          {TRIVIA_CATEGORIES.filter((cat) => cat.id !== 'general').map((cat) => (
+          {TRIVIA_CATEGORIES.map((cat) => (
             <TouchableOpacity
               key={cat.id}
               style={[styles.categoryCard, selectedCategory === cat.id && styles.categoryCardActive]}
@@ -384,18 +394,6 @@ export default function TriviaScreen({ navigation }: Props) {
               <Text style={[styles.categoryLabel, selectedCategory === cat.id && styles.categoryLabelActive]}>{cat.label}</Text>
             </TouchableOpacity>
           ))}
-        </View>
-
-        {/* General Knowledge centered at bottom */}
-        <View style={styles.generalRow}>
-          <TouchableOpacity
-            style={[styles.categoryCard, selectedCategory === 'general' && styles.categoryCardActive]}
-            onPress={() => { hapticLight(); setSelectedCategory('general'); }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.categoryEmoji}>{CATEGORY_EMOJIS.general}</Text>
-            <Text style={[styles.categoryLabel, selectedCategory === 'general' && styles.categoryLabelActive]}>General Knowledge</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Difficulty pills */}
@@ -443,6 +441,8 @@ export default function TriviaScreen({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+      </View>
+      </ImageBackground>
     );
   }
 
@@ -450,6 +450,8 @@ export default function TriviaScreen({ navigation }: Props) {
   if (phase === 'results') {
     const catInfo = TRIVIA_CATEGORIES.find((c) => c.id === selectedCategory);
     return (
+      <ImageBackground source={require('../../assets/questionmark.png')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsTitle}>Round Complete</Text>
@@ -511,6 +513,8 @@ export default function TriviaScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </View>
+      </ImageBackground>
     );
   }
 
@@ -520,6 +524,8 @@ export default function TriviaScreen({ navigation }: Props) {
   const timerColor = timeLeft <= 5 ? colors.red : colors.accent;
 
   return (
+    <ImageBackground source={require('../../assets/questionmark.png')} style={{ flex: 1 }} resizeMode="cover">
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.container}>
       {/* Top bar */}
       <View style={styles.topBar}>
@@ -605,6 +611,8 @@ export default function TriviaScreen({ navigation }: Props) {
         <Text style={styles.timeoutText}>Time's up!</Text>
       )}
     </View>
+    </View>
+    </ImageBackground>
   );
 }
 
@@ -612,7 +620,7 @@ function makeStyles(colors: any, insets: any) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     scrollContent: {
       paddingBottom: 40 + insets.bottom,
@@ -631,7 +639,7 @@ function makeStyles(colors: any, insets: any) {
     title: {
       fontSize: 28,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: '#FFFFFF',
     },
 
     // Mode toggle
@@ -643,10 +651,10 @@ function makeStyles(colors: any, insets: any) {
       marginBottom: 12,
       paddingHorizontal: 14,
       paddingVertical: 8,
-      backgroundColor: colors.card,
+      backgroundColor: 'rgba(255,255,255,0.15)',
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.2)',
       gap: 6,
     },
     modeIcon: {
@@ -674,12 +682,12 @@ function makeStyles(colors: any, insets: any) {
     },
     categoryCard: {
       width: '46%',
-      backgroundColor: colors.card,
+      backgroundColor: 'rgba(255,255,255,0.15)',
       borderRadius: 16,
       padding: 20,
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.2)',
       gap: 8,
     },
     categoryEmoji: {
@@ -698,13 +706,6 @@ function makeStyles(colors: any, insets: any) {
     categoryLabelActive: {
       color: colors.accent,
     },
-    generalRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      paddingHorizontal: 12,
-      marginTop: 12,
-    },
-
     // Pill selectors
     pillSectionLabel: {
       fontSize: 13,
@@ -724,9 +725,9 @@ function makeStyles(colors: any, insets: any) {
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 20,
-      backgroundColor: colors.card,
+      backgroundColor: 'rgba(255,255,255,0.15)',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.2)',
     },
     pillActive: {
       backgroundColor: colors.accent,

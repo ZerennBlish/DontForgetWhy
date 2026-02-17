@@ -7,6 +7,7 @@ import {
   Animated,
   Dimensions,
   ScrollView,
+  ImageBackground,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -395,7 +396,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: colors.background,
+          backgroundColor: 'transparent',
         },
 
         // Difficulty Select
@@ -416,7 +417,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         title: {
           fontSize: 28,
           fontWeight: '800',
-          color: colors.textPrimary,
+          color: '#FFFFFF',
         },
         selectSubtitle: {
           fontSize: 15,
@@ -426,11 +427,11 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         difficultyBtn: {
           marginHorizontal: 16,
           marginTop: 12,
-          backgroundColor: colors.card,
+          backgroundColor: 'rgba(255,255,255,0.15)',
           borderRadius: 16,
           padding: 20,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: 'rgba(255,255,255,0.2)',
         },
         difficultyLabel: {
           fontSize: 20,
@@ -577,42 +578,46 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
   if (gamePhase === 'select') {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backBtn}>{'<'} Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
-          <Text style={styles.selectSubtitle}>Find all the matching pairs!</Text>
-        </View>
+      <ImageBackground source={require('../../assets/oakbackground.png')} style={{ flex: 1 }} resizeMode="cover">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
+                <Text style={styles.backBtn}>{'<'} Back</Text>
+              </TouchableOpacity>
+              <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
+              <Text style={styles.selectSubtitle}>Find all the matching pairs!</Text>
+            </View>
 
-        {(['easy', 'medium', 'hard'] as Difficulty[]).map((diff) => {
-          const config = DIFFICULTY_CONFIG[diff];
-          const best = bestScores[diff];
-          return (
-            <TouchableOpacity
-              key={diff}
-              style={styles.difficultyBtn}
-              onPress={() => startGame(diff)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.difficultyLabel}>{config.label}</Text>
-              <Text style={styles.difficultyInfo}>
-                {config.cols}{'\u00D7'}{config.rows} {'\u00B7'} {config.pairs} pairs {'\u00B7'} Par: {config.par} moves
-              </Text>
-              {best ? (
-                <Text style={styles.bestScoreText}>
-                  {'\u{1F3C6}'} Best: {best.bestMoves} moves ({formatTime(best.bestTime)})
-                </Text>
-              ) : (
-                <Text style={[styles.bestScoreText, { color: colors.textTertiary }]}>
-                  No games played yet
-                </Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+            {(['easy', 'medium', 'hard'] as Difficulty[]).map((diff) => {
+              const config = DIFFICULTY_CONFIG[diff];
+              const best = bestScores[diff];
+              return (
+                <TouchableOpacity
+                  key={diff}
+                  style={styles.difficultyBtn}
+                  onPress={() => startGame(diff)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.difficultyLabel}>{config.label}</Text>
+                  <Text style={styles.difficultyInfo}>
+                    {config.cols}{'\u00D7'}{config.rows} {'\u00B7'} {config.pairs} pairs {'\u00B7'} Par: {config.par} moves
+                  </Text>
+                  {best ? (
+                    <Text style={styles.bestScoreText}>
+                      {'\u{1F3C6}'} Best: {best.bestMoves} moves ({formatTime(best.bestTime)})
+                    </Text>
+                  ) : (
+                    <Text style={[styles.bestScoreText, { color: colors.textTertiary }]}>
+                      No games played yet
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </ImageBackground>
     );
   }
 
@@ -623,56 +628,60 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     const stars = finalMoves < par ? 3 : finalMoves === par ? 2 : 1;
 
     return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.winContent}
-      >
-        <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
-        <Text style={styles.winTitle}>Congratulations!</Text>
-        <Text style={styles.starsText}>{'\u2B50'.repeat(stars)}</Text>
+      <ImageBackground source={require('../../assets/oakbackground.png')} style={{ flex: 1 }} resizeMode="cover">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.winContent}
+          >
+            <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
+            <Text style={styles.winTitle}>Congratulations!</Text>
+            <Text style={styles.starsText}>{'\u2B50'.repeat(stars)}</Text>
 
-        <View style={styles.winStatsCard}>
-          <View style={styles.winStatRow}>
-            <Text style={styles.winStatLabel}>Moves</Text>
-            <Text style={styles.winStatValue}>{finalMoves}</Text>
-          </View>
-          <View style={styles.winDivider} />
-          <View style={styles.winStatRow}>
-            <Text style={styles.winStatLabel}>Time</Text>
-            <Text style={styles.winStatValue}>{formatTime(finalTime)}</Text>
-          </View>
-          <View style={styles.winDivider} />
-          <View style={styles.winStatRow}>
-            <Text style={styles.winStatLabel}>Par</Text>
-            <Text style={styles.winStatValue}>{par} moves</Text>
-          </View>
-          <View style={styles.winDivider} />
-          <View style={styles.winStatRow}>
-            <Text style={styles.winStatLabel}>Rating</Text>
-            <Text style={styles.winStatValue}>
-              {stars === 3 ? 'Amazing!' : stars === 2 ? 'On par' : 'Keep trying'}
-            </Text>
-          </View>
+            <View style={styles.winStatsCard}>
+              <View style={styles.winStatRow}>
+                <Text style={styles.winStatLabel}>Moves</Text>
+                <Text style={styles.winStatValue}>{finalMoves}</Text>
+              </View>
+              <View style={styles.winDivider} />
+              <View style={styles.winStatRow}>
+                <Text style={styles.winStatLabel}>Time</Text>
+                <Text style={styles.winStatValue}>{formatTime(finalTime)}</Text>
+              </View>
+              <View style={styles.winDivider} />
+              <View style={styles.winStatRow}>
+                <Text style={styles.winStatLabel}>Par</Text>
+                <Text style={styles.winStatValue}>{par} moves</Text>
+              </View>
+              <View style={styles.winDivider} />
+              <View style={styles.winStatRow}>
+                <Text style={styles.winStatLabel}>Rating</Text>
+                <Text style={styles.winStatValue}>
+                  {stars === 3 ? 'Amazing!' : stars === 2 ? 'On par' : 'Keep trying'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.winMessage}>{`"${winMessage}"`}</Text>
+
+            <TouchableOpacity
+              style={styles.playAgainBtn}
+              onPress={() => startGame(difficulty)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.playAgainText}>Play Again</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.changeDifficultyBtn}
+              onPress={() => setGamePhase('select')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-
-        <Text style={styles.winMessage}>{`"${winMessage}"`}</Text>
-
-        <TouchableOpacity
-          style={styles.playAgainBtn}
-          onPress={() => startGame(difficulty)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.playAgainText}>Play Again</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.changeDifficultyBtn}
-          onPress={() => setGamePhase('select')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      </ImageBackground>
     );
   }
 
@@ -688,43 +697,47 @@ export default function MemoryMatchScreen({ navigation }: Props) {
   const gridWidth = config.cols * cardSize + (config.cols - 1) * CARD_GAP;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.gameHeader}>
-        <View style={styles.gameHeaderRow}>
-          <TouchableOpacity onPress={handleBackFromGame} activeOpacity={0.7}>
-            <Text style={styles.backBtn}>{'<'} Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.gameDifficulty}>{config.label}</Text>
-        </View>
-        <View style={styles.statsRow}>
-          <Text style={styles.statText}>Moves: {moves}</Text>
-          <Text style={styles.statText}>{formatTime(elapsedTime)}</Text>
-        </View>
-      </View>
+    <ImageBackground source={require('../../assets/oakbackground.png')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+        <View style={styles.container}>
+          <View style={styles.gameHeader}>
+            <View style={styles.gameHeaderRow}>
+              <TouchableOpacity onPress={handleBackFromGame} activeOpacity={0.7}>
+                <Text style={styles.backBtn}>{'<'} Back</Text>
+              </TouchableOpacity>
+              <Text style={styles.gameDifficulty}>{config.label}</Text>
+            </View>
+            <View style={styles.statsRow}>
+              <Text style={styles.statText}>Moves: {moves}</Text>
+              <Text style={styles.statText}>{formatTime(elapsedTime)}</Text>
+            </View>
+          </View>
 
-      <View style={styles.gridContainer}>
-        <View
-          style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: CARD_GAP,
-            width: gridWidth,
-          }}
-        >
-          {cards.map((card, index) => (
-            <CardComponent
-              key={`${gameId}-${index}`}
-              index={index}
-              emoji={card.emoji}
-              isMatched={card.isMatched}
-              flipAnim={flipAnims.current[index]}
-              onPress={handleCardPress}
-              cardSize={cardSize}
-              colors={colors}
-            />
-          ))}
+          <View style={styles.gridContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: CARD_GAP,
+                width: gridWidth,
+              }}
+            >
+              {cards.map((card, index) => (
+                <CardComponent
+                  key={`${gameId}-${index}`}
+                  index={index}
+                  emoji={card.emoji}
+                  isMatched={card.isMatched}
+                  flipAnim={flipAnims.current[index]}
+                  onPress={handleCardPress}
+                  cardSize={cardSize}
+                  colors={colors}
+                />
+              ))}
+            </View>
+          </View>
         </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 }

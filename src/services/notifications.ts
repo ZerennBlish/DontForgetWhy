@@ -371,7 +371,7 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
   if (settings.guessWhyEnabled) {
     body = 'Snoozed \u2014 can you remember why?';
   } else if (alarm.private) {
-    body = alarm.nickname || 'Alarm';
+    body = 'Snoozed \u2014 time to wake up!';
   } else {
     body = alarm.nickname || alarm.note || 'Time to wake up!';
   }

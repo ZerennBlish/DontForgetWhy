@@ -7,6 +7,7 @@ import {
   ScrollView,
   Dimensions,
   Alert,
+  ImageBackground,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -517,6 +518,8 @@ export default function SudokuScreen({ navigation }: Props) {
 
   if (gamePhase === 'select') {
     return (
+      <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
@@ -575,6 +578,8 @@ export default function SudokuScreen({ navigation }: Props) {
           );
         })}
       </ScrollView>
+      </View>
+      </ImageBackground>
     );
   }
 
@@ -582,6 +587,8 @@ export default function SudokuScreen({ navigation }: Props) {
 
   if (gamePhase === 'paused') {
     return (
+      <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <View style={[styles.container, styles.centeredContent]}>
         <Text style={styles.pauseEmoji}>{'\u23F8\uFE0F'}</Text>
         <Text style={styles.pauseTitle}>Paused</Text>
@@ -597,6 +604,8 @@ export default function SudokuScreen({ navigation }: Props) {
           <Text style={styles.changeDifficultyText}>Quit Game</Text>
         </TouchableOpacity>
       </View>
+      </View>
+      </ImageBackground>
     );
   }
 
@@ -606,6 +615,8 @@ export default function SudokuScreen({ navigation }: Props) {
     const stars = getStars(finalMistakes, finalHints);
     const isHard = difficulty === 'hard';
     return (
+      <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
         <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
         <Text style={styles.winTitle}>Puzzle Complete!</Text>
@@ -666,12 +677,16 @@ export default function SudokuScreen({ navigation }: Props) {
           <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
         </TouchableOpacity>
       </ScrollView>
+      </View>
+      </ImageBackground>
     );
   }
 
   // ---------- Render: Game Board ----------
 
   return (
+    <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.gameHeader}>
@@ -716,13 +731,12 @@ export default function SudokuScreen({ navigation }: Props) {
                 const borderLeft = col === 0 ? 2 : 0;
                 const borderTop = row === 0 ? 2 : 0;
 
-                let bgColor = colors.card;
-                if (isSelected) bgColor = colors.accent;
-                else if (sameNum) bgColor = colors.activeBackground;
-                else if (highlighted) bgColor = colors.background;
+                let bgColor = 'transparent';
+                if (isSelected) bgColor = 'rgba(255,255,255,0.15)';
+                else if (sameNum) bgColor = 'rgba(255,255,255,0.08)';
+                else if (highlighted) bgColor = 'rgba(255,255,255,0.05)';
 
-                let textColor = isGiven ? colors.textSecondary : colors.textPrimary;
-                if (isSelected) textColor = colors.overlayText;
+                const isWrong = !isGiven && value !== 0 && value !== solutionGrid[row]?.[col];
 
                 return (
                   <TouchableOpacity
@@ -737,7 +751,7 @@ export default function SudokuScreen({ navigation }: Props) {
                         borderBottomWidth: borderBottom,
                         borderLeftWidth: borderLeft,
                         borderTopWidth: borderTop,
-                        borderColor: colors.border,
+                        borderColor: 'rgba(255,255,255,0.3)',
                       },
                     ]}
                   >
@@ -746,7 +760,7 @@ export default function SudokuScreen({ navigation }: Props) {
                         style={[
                           styles.cellText,
                           {
-                            color: textColor,
+                            color: isWrong ? '#C0392B' : isGiven ? '#000000' : '#1A1A44',
                             fontWeight: isGiven ? '700' : '500',
                           },
                         ]}
@@ -760,7 +774,7 @@ export default function SudokuScreen({ navigation }: Props) {
                             key={n}
                             style={[
                               styles.noteText,
-                              { color: cellNotes.includes(n) ? colors.textSecondary : 'transparent' },
+                              { color: cellNotes.includes(n) ? '#999999' : 'transparent' },
                             ]}
                           >
                             {n}
@@ -827,6 +841,8 @@ export default function SudokuScreen({ navigation }: Props) {
         </View>
       </View>
     </View>
+    </View>
+    </ImageBackground>
   );
 }
 
@@ -836,7 +852,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     selectContent: {
       paddingBottom: 60 + bottomInset,
@@ -865,11 +881,11 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
     difficultyBtn: {
       marginHorizontal: 16,
       marginTop: 12,
-      backgroundColor: colors.card,
+      backgroundColor: 'rgba(255,255,255,0.15)',
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.2)',
     },
     difficultyLabel: {
       fontSize: 20,
@@ -1062,9 +1078,10 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
     gridOuter: {
       width: cellSize * 9 + 4,
       borderWidth: 2,
-      borderColor: colors.textSecondary,
-      borderRadius: 4,
+      borderColor: 'rgba(255,255,255,0.5)',
+      borderRadius: 2,
       overflow: 'hidden',
+      backgroundColor: 'transparent',
     },
     gridRow: {
       flexDirection: 'row',

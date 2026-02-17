@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert } from 'react-native';
 import { Alarm, AlarmCategory, ALL_DAYS, WEEKDAYS, WEEKENDS, AlarmDay } from '../types/alarm';
 import { formatTime } from '../utils/time';
 import { useTheme } from '../theme/ThemeContext';
@@ -51,6 +51,7 @@ interface AlarmCardProps {
   isPinned: boolean;
   onToggle: (id: string) => void;
   onEdit: (alarm: Alarm) => void;
+  onDelete: (id: string) => void;
   onTogglePin: (id: string) => void;
 }
 
@@ -61,7 +62,7 @@ function getDetailLine(alarm: Alarm): string {
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned, onToggle, onEdit, onTogglePin }: AlarmCardProps) {
+export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned, onToggle, onEdit, onDelete, onTogglePin }: AlarmCardProps) {
   const { colors } = useTheme();
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -155,6 +156,14 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
     pinBtnText: {
       fontSize: 13,
     },
+    deleteBtn: {
+      paddingHorizontal: 6,
+      paddingVertical: 4,
+    },
+    deleteText: {
+      fontSize: 12,
+      color: colors.red,
+    },
   }), [colors]);
 
   useEffect(() => {
@@ -233,6 +242,16 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
             <Text style={[styles.pinBtnText, { opacity: isPinned ? 1 : 0.3 }]}>{'\u{1F4CC}'}</Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          onPress={() => Alert.alert('Delete this alarm?', '', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => onDelete(alarm.id) },
+          ])}
+          style={styles.deleteBtn}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.deleteText}>Delete</Text>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ImageBackground } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -202,6 +202,8 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   );
 
   return (
+    <ImageBackground source={require('../../assets/library.png')} style={{ flex: 1 }} resizeMode="cover">
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
@@ -513,6 +515,8 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         <Text style={styles.resetAllBtnText}>Reset All Scores</Text>
       </TouchableOpacity>
     </ScrollView>
+    </View>
+    </ImageBackground>
   );
 }
 
@@ -520,7 +524,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     content: {
       paddingBottom: 60 + bottomInset,
@@ -539,18 +543,18 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
     title: {
       fontSize: 28,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: '#FFFFFF',
     },
 
     // Overall summary
     summaryCard: {
       marginHorizontal: 16,
       marginBottom: 8,
-      backgroundColor: colors.card,
+      backgroundColor: 'rgba(255,255,255,0.15)',
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.2)',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 16,
@@ -578,11 +582,11 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
     sectionCard: {
       marginHorizontal: 16,
       marginTop: 12,
-      backgroundColor: colors.card,
+      backgroundColor: 'rgba(255,255,255,0.15)',
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.2)',
     },
     sectionTitle: {
       fontSize: 18,
@@ -600,7 +604,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
     },
     breakdownBar: {
       height: 6,
-      backgroundColor: colors.border,
+      backgroundColor: 'rgba(255,255,255,0.1)',
       borderRadius: 3,
       marginBottom: 14,
       overflow: 'hidden',
@@ -644,7 +648,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
     },
     divider: {
       height: 1,
-      backgroundColor: colors.border,
+      backgroundColor: 'rgba(255,255,255,0.15)',
       marginVertical: 6,
     },
 
@@ -668,7 +672,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
     // Buttons inside sections
     sectionBtn: {
       marginTop: 16,
-      backgroundColor: colors.background,
+      backgroundColor: 'rgba(255,255,255,0.1)',
       borderRadius: 12,
       paddingVertical: 14,
       alignItems: 'center',
@@ -683,7 +687,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
     resetAllBtn: {
       marginHorizontal: 16,
       marginTop: 24,
-      backgroundColor: colors.card,
+      backgroundColor: 'rgba(255,255,255,0.15)',
       borderRadius: 16,
       paddingVertical: 16,
       alignItems: 'center',

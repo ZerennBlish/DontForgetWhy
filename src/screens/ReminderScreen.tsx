@@ -2,11 +2,11 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  Image,
   FlatList,
   StyleSheet,
   TouchableOpacity,
   ToastAndroid,
+  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Reminder } from '../types/reminder';
@@ -32,7 +32,6 @@ import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
-import SwipeableRow from '../components/SwipeableRow';
 import UndoToast from '../components/UndoToast';
 
 interface ReminderScreenProps {
@@ -128,27 +127,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     refreshTimerWidget();
   };
 
-  const handleSwipeComplete = async (id: string) => {
-    hapticMedium();
-    try {
-      const updated = await toggleReminderComplete(id);
-      if (!updated) return;
-      if (updated.completed && updated.notificationId) {
-        await cancelReminderNotification(updated.notificationId).catch(() => {});
-      } else if (!updated.completed && updated.dueTime) {
-        const notifId = await scheduleReminderNotification(updated).catch(() => null);
-        if (notifId) {
-          const { updateReminder } = await import('../services/reminderStorage');
-          await updateReminder({ ...updated, notificationId: notifId });
-        }
-      }
-      refreshTimerWidget();
-      await loadData();
-    } catch (e) {
-      console.error('[SWIPE COMPLETE]', e);
-    }
-  };
-
   const handleDelete = async (id: string) => {
     hapticHeavy();
     const reminder = reminders.find((r) => r.id === id);
@@ -207,8 +185,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       ToastAndroid.SHORT,
     );
   };
-
-  const totalNonDeletedReminders = reminders.filter(r => !r.deletedAt).length;
 
   const sorted = useMemo(() => {
     let list = reminders;
@@ -286,12 +262,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       alignItems: 'center',
       paddingBottom: 80 + insets.bottom,
     },
-    emptyIcon: {
-      width: 120,
-      height: 120,
-      opacity: 0.35,
-      marginBottom: 12,
-    },
     emptyText: {
       fontSize: 20,
       fontWeight: '600',
@@ -301,14 +271,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       fontSize: 14,
       color: colors.textTertiary,
       marginTop: 6,
-    },
-    emptyQuote: {
-      fontSize: 15,
-      color: colors.textSecondary,
-      fontStyle: 'italic',
-      textAlign: 'center',
-      marginTop: 16,
-      paddingHorizontal: 32,
     },
     quoteText: {
       fontSize: 13,
@@ -515,6 +477,22 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       fontSize: 13,
       fontWeight: '600',
     },
+    doneBtn: {
+      paddingHorizontal: 6,
+      paddingVertical: 4,
+    },
+    doneText: {
+      fontSize: 12,
+      color: colors.accent,
+    },
+    deleteBtn: {
+      paddingHorizontal: 6,
+      paddingVertical: 4,
+    },
+    deleteText: {
+      fontSize: 12,
+      color: colors.red,
+    },
   }), [colors, insets.bottom]);
 
   const isOverdue = (dateStr: string): boolean => {
@@ -559,16 +537,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       : item.text ? `${item.icon} ${item.text}` : item.icon;
 
     return (
-      <SwipeableRow
-        onSwipeLeft={() => handleDelete(item.id)}
-        onSwipeRightAnimateOut={() => handleSwipeComplete(item.id)}
-        leftColor="#1A2E1A"
-        leftIcon={'\u2705'}
-        leftIconColor="#B0B0CC"
-        rightColor="#2E1A1A"
-        rightIcon={'\u{1F5D1}'}
-        rightIconColor="#B0B0CC"
-      >
         <View style={[styles.card, item.completed && styles.cardCompleted]}>
           <TouchableOpacity
             style={[styles.checkbox, item.completed && styles.checkboxDone]}
@@ -581,7 +549,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
           <TouchableOpacity
             style={styles.middle}
             onPress={() => onNavigateCreate(item.id)}
-            onLongPress={() => handleDelete(item.id)}
             activeOpacity={0.7}
           >
             <Text
@@ -626,96 +593,102 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
                 </Text>
               </TouchableOpacity>
             </View>
+            {!item.completed && (
+              <TouchableOpacity
+                onPress={() => handleToggleComplete(item.id)}
+                style={styles.doneBtn}
+                activeOpacity={0.6}
+              >
+                <Text style={styles.doneText}>Done</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => Alert.alert('Delete this reminder?', '', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item.id) },
+              ])}
+              style={styles.deleteBtn}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.deleteText}>Delete</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </SwipeableRow>
     );
   };
 
   return (
     <View style={styles.container}>
-      {totalNonDeletedReminders === 0 ? (
-        <View style={styles.empty}>
-          <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
-          <Text style={styles.emptyText}>Nothing to remember</Text>
-          <Text style={styles.emptySubtext}>
-            Must be nice. Tap + to ruin that.
-          </Text>
-          <Text style={styles.emptyQuote}>{appQuote}</Text>
-        </View>
-      ) : (
-        <>
-          {totalNonDeletedReminders > 0 && (
-            <Text style={styles.quoteText} numberOfLines={2}>
-              {appQuote}
-            </Text>
-          )}
+      <Text style={styles.quoteText} numberOfLines={2}>
+        {appQuote}
+      </Text>
 
-          <View style={styles.sortFilterToggleRow}>
-            <TouchableOpacity
-              style={styles.sortFilterToggleBtn}
-              onPress={() => { hapticLight(); setShowSortFilter((prev) => { if (prev) setReminderFilter('active'); return !prev; }); }}
-              activeOpacity={0.7}
-            >
-              {(reminderSort !== 'due' || reminderFilter !== 'active') && <View style={styles.sortFilterDot} />}
-              <Text style={styles.sortFilterToggleText}>
-                Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
-              </Text>
-            </TouchableOpacity>
+      <View style={styles.sortFilterToggleRow}>
+        <TouchableOpacity
+          style={styles.sortFilterToggleBtn}
+          onPress={() => { hapticLight(); setShowSortFilter((prev) => !prev); }}
+          activeOpacity={0.7}
+        >
+          {(reminderSort !== 'due' || reminderFilter !== 'active') && <View style={styles.sortFilterDot} />}
+          <Text style={styles.sortFilterToggleText}>
+            Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {showSortFilter && (
+        <>
+          <Text style={styles.sortFilterLabel}>Sort</Text>
+          <View style={styles.sortFilterRow}>
+            {(['due', 'created', 'name'] as const).map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[styles.pill, reminderSort === s && styles.pillActive]}
+                onPress={() => { hapticLight(); setReminderSort(s); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.pillText, reminderSort === s && styles.pillTextActive]}>
+                  {s === 'due' ? 'Due Date' : s === 'created' ? 'Created' : 'Name'}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
-          {showSortFilter && (
-            <>
-              <Text style={styles.sortFilterLabel}>Sort</Text>
-              <View style={styles.sortFilterRow}>
-                {(['due', 'created', 'name'] as const).map((s) => (
-                  <TouchableOpacity
-                    key={s}
-                    style={[styles.pill, reminderSort === s && styles.pillActive]}
-                    onPress={() => { hapticLight(); setReminderSort(s); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.pillText, reminderSort === s && styles.pillTextActive]}>
-                      {s === 'due' ? 'Due Date' : s === 'created' ? 'Created' : 'Name'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.sortFilterLabel}>Filter</Text>
-              <View style={styles.sortFilterRow}>
-                {(['active', 'completed', 'has-date', 'deleted'] as const).map((f) => (
-                  <TouchableOpacity
-                    key={f}
-                    style={[styles.pill, reminderFilter === f && styles.pillActive]}
-                    onPress={() => { hapticLight(); setReminderFilter(f); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.pillText, reminderFilter === f && styles.pillTextActive]}>
-                      {f === 'active' ? 'Active' : f === 'completed' ? 'Completed' : f === 'has-date' ? 'Has Date' : 'Deleted'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
-          )}
-
-          {sorted.length === 0 ? (
-            <View style={styles.empty}>
-              <Image source={require('../../assets/icon.png')} style={styles.emptyIcon} />
-              <Text style={styles.emptyText}>No matches</Text>
-              <Text style={styles.emptySubtext}>Try a different filter.</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={sorted}
-              keyExtractor={(item) => item.id}
-              renderItem={renderItem}
-              contentContainerStyle={styles.list}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
+          <Text style={styles.sortFilterLabel}>Filter</Text>
+          <View style={styles.sortFilterRow}>
+            {(['active', 'completed', 'has-date', 'deleted'] as const).map((f) => (
+              <TouchableOpacity
+                key={f}
+                style={[styles.pill, reminderFilter === f && styles.pillActive]}
+                onPress={() => { hapticLight(); setReminderFilter(f); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.pillText, reminderFilter === f && styles.pillTextActive]}>
+                  {f === 'active' ? 'Active' : f === 'completed' ? 'Completed' : f === 'has-date' ? 'Has Date' : 'Deleted'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </>
+      )}
+
+      {sorted.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>
+            {reminders.length === 0 ? 'Nothing to remember' : 'No matches'}
+          </Text>
+          <Text style={styles.emptySubtext}>
+            {reminders.length === 0 ? 'Must be nice. Tap + to ruin that.' : 'Try a different filter.'}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={sorted}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
       )}
 
       <TouchableOpacity

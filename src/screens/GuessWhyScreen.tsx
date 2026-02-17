@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   Animated,
+  ImageBackground,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatTime } from '../utils/time';
@@ -75,7 +76,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
       paddingTop: 60,
       paddingBottom: 60 + insets.bottom,
       paddingHorizontal: 24,
@@ -92,7 +93,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     time: {
       fontSize: 56,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: '#FFFFFF',
       letterSpacing: -2,
     },
     categoryLabel: {
@@ -376,6 +377,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const displayEmoji = alarm.icon || categoryEmoji[alarm.category] || '\u{1F514}';
 
   return (
+    <ImageBackground source={require('../../assets/gameclock.png')} style={{ flex: 1 }} resizeMode="cover">
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.container}>
       {/* Top section */}
       <View style={styles.top}>
@@ -487,5 +490,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       </View>
     </View>
+    </View>
+    </ImageBackground>
   );
 }
