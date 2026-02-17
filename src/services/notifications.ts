@@ -588,39 +588,7 @@ export async function cancelReminderNotification(notificationId: string): Promis
 // --- Sound preview ---
 
 let _previewTimer: ReturnType<typeof setTimeout> | null = null;
-
-export async function previewAlarmSound(channelId: string, label: string): Promise<void> {
-  await setupNotificationChannel();
-
-  // Cancel any existing preview first
-  if (_previewTimer) {
-    clearTimeout(_previewTimer);
-    _previewTimer = null;
-  }
-  await notifee.cancelNotification('sound_preview');
-
-  const isSilent = channelId === 'alarms_silent';
-
-  await notifee.displayNotification({
-    id: 'sound_preview',
-    title: `${label} Preview`,
-    body: 'This is what your alarm will sound like.',
-    android: {
-      channelId,
-      importance: AndroidImportance.HIGH,
-      sound: isSilent ? undefined : 'default',
-      pressAction: { id: 'default' },
-    },
-  });
-
-  // Auto-cancel after 3 seconds
-  _previewTimer = setTimeout(async () => {
-    try {
-      await notifee.cancelNotification('sound_preview');
-    } catch {}
-    _previewTimer = null;
-  }, 3000);
-}
+let _previewCallId = 0;
 
 /**
  * Preview a system sound by firing a short Notifee notification on a
@@ -635,6 +603,10 @@ export async function previewSystemSound(
   // Cancel any existing preview first
   await cancelSoundPreview();
 
+  // Guard against rapid taps: if a newer call arrives while we await,
+  // bail out so only the latest preview wins.
+  const callId = ++_previewCallId;
+
   // Create a preview-specific channel: DEFAULT importance, no DND bypass
   const channelId = `preview_${extractMediaId(soundUri)}`;
   await notifee.createChannel({
@@ -646,6 +618,8 @@ export async function previewSystemSound(
     bypassDnd: false,
   });
 
+  if (callId !== _previewCallId) return;
+
   await notifee.displayNotification({
     id: 'sound_preview',
     title: `\u{1F50A} ${soundName}`,
@@ -656,6 +630,8 @@ export async function previewSystemSound(
       pressAction: { id: 'default' },
     },
   });
+
+  if (callId !== _previewCallId) return;
 
   // Auto-cancel after 3 seconds
   _previewTimer = setTimeout(async () => {

@@ -60,7 +60,7 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 51. **Trophy navigation** — Trophy icon in header navigates to Memory Score; only visible after first game played
 52. **Orphaned timer cleanup** — On app launch, expired timers from when the app was killed are cleaned up and their countdown notifications cancelled
 53. **Migration support** — `migrateAlarm()` handles old data formats: single `notificationId` to `notificationIds[]`, boolean `recurring` to `mode` + `days`, numeric day arrays to string-based `AlarmDay[]`
-54. **Custom alarm sounds** — Per-alarm sound selection from system ringtones/alarm sounds via reusable SoundPickerModal bottom sheet; react-native-notification-sounds lists available system sounds; preview playback via expo-av with audioModeReady ref pattern; dynamic Notifee channel creation per unique sound URI (`alarm_custom_{mediaId}`); backward compatible with existing default channel
+54. **Custom alarm sounds** — Per-alarm sound selection from system ringtones/alarm sounds via reusable SoundPickerModal bottom sheet; react-native-notification-sounds lists available system sounds; preview playback via Notifee notification on a dedicated low-importance channel (`preview_{mediaId}`), auto-cancelled after 3 seconds; dynamic Notifee channel creation per unique sound URI (`alarm_custom_{mediaId}`); backward compatible with existing default channel
 55. **Custom timer sounds** — Default timer completion sound configurable in Settings via SoundPickerModal; saved to AsyncStorage (`defaultTimerSound` key); applied to timer completion notifications via dynamic channel (`timer_custom_{mediaId}` prefix); works for both in-app timer starts and headless widget timer starts; falls back to default alarm channel when no custom sound set
 56. **Sort & Filter collapsible** — Sort and filter controls collapsed behind a right-aligned "Sort & Filter ▼" toggle button, default collapsed; active filter dot indicator appears when non-default sort/filter is applied; same collapsible pattern applied across Alarms, Timers, and Reminders tabs; toggle button always visible even on empty states so users can access "Deleted" filter to restore trashed items
 57. **Live subtitle counts** — Header subtitle dynamically shows "X alarms · Y timers · Z reminders" with live updates as items are added, removed, or toggled
@@ -423,7 +423,7 @@ src/
 ├── components/
 │   ├── AlarmCard.tsx              Alarm list item card with peek, toggle, tap-to-edit, delete button, pin, Guess Why hiding
 │   ├── ErrorBoundary.tsx          Error boundary with fallback UI
-│   ├── SoundPickerModal.tsx       Reusable bottom sheet for picking system sounds; search filter, expo-av preview, selection
+│   ├── SoundPickerModal.tsx       Reusable bottom sheet for picking system sounds; search filter, Notifee-based preview via previewSystemSound()/cancelSoundPreview(), selection
 │   ├── SwipeableRow.tsx           Swipeable row component (no longer used on alarm/reminder cards due to tab-view gesture conflict)
 │   └── UndoToast.tsx              Undo toast notification component
 ├── data/
@@ -462,7 +462,7 @@ src/
 │   ├── forgetLog.ts               CRUD for ForgetEntry[] with runtime validation
 │   ├── guessWhyStats.ts           Win/loss/skip/streak tracking with per-field numeric validation
 │   ├── memoryScore.ts             Memory score utilities
-│   ├── notifications.ts           @notifee scheduling, channels (static + dynamic per-sound), triggers, countdown, cancellation, fullScreenAction
+│   ├── notifications.ts           @notifee scheduling, channels (static + dynamic per-sound), triggers, countdown, cancellation, fullScreenAction, previewSystemSound/cancelSoundPreview for sound picker
 │   ├── pendingAlarm.ts            Module-level bridge between headless background handler and React navigation tree
 │   ├── quotes.ts                  12 motivational quotes assigned to alarms at creation
 │   ├── reminderStorage.ts         Reminder CRUD operations
@@ -1142,14 +1142,15 @@ AlarmListScreen renders `fullscreenicon.png` as a full-screen watermark:
 - **Preset alarm sound picker** — An early version had 6 preset alarm sounds (`alarmSounds.ts`: Default, Gentle, Urgent, Classic, Digital, Silent) with static Notifee channels per preset. These all used `sound: 'default'` and sounded identical on most devices. Replaced by the real system ringtone picker (Feature 54) using `react-native-notification-sounds` + dynamic channels with actual content:// URIs. The preset channel definitions remain in `notifications.ts` for backward compatibility but the picker UI was removed from Settings.
 - **Swipe between tabs (PanResponder version)** — Initial attempt using a manual PanResponder on the tab content area; removed due to gesture conflicts with SwipeableRow swipe-to-delete/complete actions on alarm cards and reminder items. **Re-implemented successfully** in Feature 62 using `react-native-tab-view` + `react-native-pager-view`, which resolve gesture conflicts at the native level (Android ViewPager2 defers to child gesture handlers).
 - **SwipeableRow swipe-to-delete/complete on alarm and reminder cards** — Horizontal swipe gestures on alarm cards (swipe-to-delete) and reminder cards (swipe-to-delete + swipe-to-complete) conflicted with `react-native-tab-view` horizontal tab swiping. Native ViewPager2 gesture priority couldn't reliably disambiguate same-axis swipes. Replaced with tap-based buttons: red "Delete" text button (with confirmation Alert) on alarm and reminder cards, green "Done" text button on reminder cards. SwipeableRow component may still exist but is no longer used on main list cards.
+- **expo-av dependency** — Replaced entirely by Notifee-based sound preview. expo-av was causing silent failures in release/preview builds (`Audio.setAudioModeAsync()` and `Audio.Sound.createAsync()` failed without the dev server). Sound preview now uses `previewSystemSound()` which fires a short Notifee notification on a dedicated channel — the same proven playback path used by actual alarms and timers.
 
 ## 17. Key Implementation Patterns
 
 ### Android Notification Channel Immutability
 Channels cannot be modified after creation on Android 8+. Changing a sound means creating a new channel with a new ID. `getOrCreateSoundChannel()` derives channel IDs deterministically from the content:// URI's numeric media ID (`extractMediaId()`), so the same sound always maps to the same channel. Old channels accumulate but are harmless.
 
-### expo-av Audio Mode Initialization
-expo-av 16.x requires `Audio.setAudioModeAsync()` to complete before `playAsync()` can acquire audio focus. SoundPickerModal uses `ensureAudioMode()` as the single awaited path for audio configuration — no fire-and-forget `setAudioModeAsync` in useEffect. The `audioModeReady` ref tracks whether setup has completed; `ensureAudioMode()` returns immediately if true, otherwise awaits a fresh `setAudioModeAsync` call. An `isActiveRef` guard prevents race conditions: if the modal closes during an async `createAsync`, the newly created sound is immediately unloaded. `handlePlay` checks `isActiveRef` at multiple async boundaries. This prevents both the "AudioFocusNotAcquiredException" and leaked audio resources.
+### Notifee-Based Sound Preview
+SoundPickerModal previews system sounds by firing a short Notifee notification on a dedicated low-importance channel. `previewSystemSound(soundUri, soundName)` in `notifications.ts` creates a `preview_{mediaId}` channel with `AndroidImportance.DEFAULT` (no DND bypass, no vibration) and displays a notification that auto-cancels after 3 seconds. `cancelSoundPreview()` handles cleanup on stop/close/unmount. Preview channels use a separate `preview_` prefix from `alarm_custom_` channels because Android channels are immutable — preview needs DEFAULT importance while actual alarm channels need HIGH + bypassDnd. An `isActiveRef` guard in SoundPickerModal prevents race conditions when the modal closes during an async preview request.
 
 ### Pending Alarm Bridge (`pendingAlarm.ts`)
 Background notification events fire in a headless JS context before the React tree is mounted. `pendingAlarm.ts` provides a module-level variable bridge: `setPendingAlarm()` stores alarm/timer data synchronously, `getPendingAlarm()` retrieves it, `clearPendingAlarm()` clears it. App.tsx reads this during initialization to set `initialState` for the NavigationContainer, ensuring AlarmFireScreen is the first screen shown on cold start — no flash of AlarmListScreen.
@@ -1172,7 +1173,6 @@ Both CreateAlarmScreen and CreateReminderScreen use the same auto-formatting tim
 
 ### Dependencies
 - `react-native-notification-sounds` — Lists system ringtones/alarm/notification sounds on Android. Returns `{ title, url, soundID }[]` where `url` is a `content://media/internal/audio/media/{id}` URI.
-- `expo-av` (~16.0.8) — Audio preview playback in SoundPickerModal. Deprecated in SDK 54 (replaced by `expo-audio`/`expo-video`) but functional.
 - `expo-keep-awake` — Keeps screen awake on AlarmFireScreen via `useKeepAwake()`.
 - `react-native-tab-view` (^4.2.2) — Tab view component with swipe gesture support; provides `TabView` with `lazy` rendering, custom `renderTabBar`, and `onIndexChange`. Used for horizontal swipe navigation between Alarms/Timers/Reminders tabs.
 - `react-native-pager-view` (6.9.1) — Native Android ViewPager2 backend for `react-native-tab-view`. Handles horizontal swipe page navigation at the native level. **Requires a new EAS build** (native module). Note: SwipeableRow swipe gestures on alarm/reminder cards conflicted with page swiping (same-axis), leading to their replacement with tap buttons.
@@ -1193,7 +1193,7 @@ Both CreateAlarmScreen and CreateReminderScreen use the same auto-formatting tim
 - Notification-level sound override via dynamic channels
 - Sound leak prevention in SoundPickerModal
 - Timer resume state with custom sound channels
-- expo-av AudioFocusNotAcquiredException fix
+- expo-av AudioFocusNotAcquiredException fix (expo-av later removed entirely — see Features Explored and Removed)
 
 **Audit 10: Trivia & Bug Fixes**
 - Trivia seen-question reset fires at 0 remaining (not < 10)
