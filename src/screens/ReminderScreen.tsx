@@ -14,6 +14,7 @@ import {
   getReminders,
   deleteReminder,
   toggleReminderComplete,
+  updateReminder,
   restoreReminder,
   permanentlyDeleteReminder,
 } from '../services/reminderStorage';
@@ -119,7 +120,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     } else if (!updated.completed && updated.dueTime) {
       const notifId = await scheduleReminderNotification(updated).catch(() => null);
       if (notifId) {
-        const { updateReminder } = await import('../services/reminderStorage');
         await updateReminder({ ...updated, notificationId: notifId });
       }
     }

@@ -8,7 +8,8 @@ export type TriviaCategory =
   | 'sports'
   | 'technology'
   | 'food'
-  | 'kids';
+  | 'kids'
+  | 'pop_culture';
 
 export interface TriviaQuestion {
   id: string;

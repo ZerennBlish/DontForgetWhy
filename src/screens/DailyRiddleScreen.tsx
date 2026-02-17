@@ -41,6 +41,7 @@ interface DailyRiddleStats {
   longestStreak: number;
   totalPlayed: number;
   totalCorrect: number;
+  lastPlayedCorrect: boolean;
   seenRiddleIds: number[];
 }
 
@@ -106,6 +107,7 @@ const DEFAULT_STATS: DailyRiddleStats = {
   longestStreak: 0,
   totalPlayed: 0,
   totalCorrect: 0,
+  lastPlayedCorrect: false,
   seenRiddleIds: [],
 };
 
@@ -169,7 +171,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           setAlreadyPlayedToday(true);
           setRevealed(true);
           setAnswered(true);
-          setGotIt(s.seenRiddleIds.includes(dailyRiddle.id) && s.totalCorrect > 0);
+          setGotIt(s.lastPlayedCorrect);
         } else {
           setAlreadyPlayedToday(false);
           setRevealed(false);
@@ -214,6 +216,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         longestStreak: Math.max(newStreak, prevLongest),
         totalPlayed: current.totalPlayed + 1,
         totalCorrect: current.totalCorrect + (correct ? 1 : 0),
+        lastPlayedCorrect: correct,
         seenRiddleIds: current.seenRiddleIds.includes(dailyRiddle.id)
           ? current.seenRiddleIds
           : [...current.seenRiddleIds, dailyRiddle.id],

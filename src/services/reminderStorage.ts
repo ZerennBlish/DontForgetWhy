@@ -143,6 +143,7 @@ export async function toggleReminderComplete(id: string): Promise<Reminder | nul
       ...reminder,
       completed: !reminder.completed,
       completedAt: !reminder.completed ? new Date().toISOString() : null,
+      notificationId: !reminder.completed ? null : reminder.notificationId,
     };
     reminders[index] = toggled;
     await saveReminders(reminders);

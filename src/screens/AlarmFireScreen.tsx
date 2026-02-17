@@ -206,7 +206,10 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       try {
         await updateSingleAlarm(alarm.id, (a) => ({
           ...a,
-          notificationIds: [...(a.notificationIds || []), snoozeNotifId],
+          notificationIds: [
+            ...(a.notificationIds || []).filter((id) => id !== notificationId),
+            snoozeNotifId,
+          ],
         }));
       } catch {}
       newCount = await incrementSnoozeCount(alarm.id);
