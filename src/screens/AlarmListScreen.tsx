@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -86,7 +86,6 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [deletedAlarmPinned, setDeletedAlarmPinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
   const [undoKey, setUndoKey] = useState(0);
-  const alertedRef = useRef<Set<string>>(new Set());
   const [reminderCount, setReminderCount] = useState(0);
   const [showSortFilter, setShowSortFilter] = useState(false);
 
@@ -374,11 +373,6 @@ export default function AlarmListScreen({ navigation }: Props) {
   // Load active timers on mount (picks up widget-started timers on cold start)
   useEffect(() => {
     loadActiveTimers().then((loaded) => {
-      loaded.forEach((t) => {
-        if (t.remainingSeconds <= 0 && !t.isRunning) {
-          alertedRef.current.add(t.id);
-        }
-      });
       const recalculated = recalculateTimers(loaded);
       setActiveTimers(recalculated);
       if (recalculated.some((t) => t.isRunning)) {
@@ -440,33 +434,6 @@ export default function AlarmListScreen({ navigation }: Props) {
     });
     return () => subscription.remove();
   }, []);
-
-  // Alert for completed timers (notification already scheduled via trigger)
-  useEffect(() => {
-    for (const timer of activeTimers) {
-      if (
-        timer.remainingSeconds <= 0 &&
-        !timer.isRunning &&
-        !alertedRef.current.has(timer.id)
-      ) {
-        alertedRef.current.add(timer.id);
-        cancelTimerCountdownNotification(timer.id).catch(
-          (e) => console.error('[completion] cancelTimerCountdownNotification failed:', e),
-        );
-        const notifId = timer.notificationId;
-        Alert.alert(
-          '\u23F0 Timer Done!',
-          `${timer.icon} ${timer.label} is done!`,
-          [{
-            text: 'Dismiss',
-            onPress: () => {
-              if (notifId) cancelTimerNotification(notifId);
-            },
-          }],
-        );
-      }
-    }
-  }, [activeTimers]);
 
   const handleToggle = async (id: string) => {
     const updated = await toggleAlarm(id);

@@ -7,6 +7,7 @@ import {
   Vibration,
   BackHandler,
   Animated,
+  ImageBackground,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,6 +17,7 @@ import notifee from '@notifee/react-native';
 import { formatTime } from '../utils/time';
 import {
   dismissAlarmNotification,
+  cancelTimerNotification,
   cancelTimerCountdownNotification,
   scheduleSnooze,
 } from '../services/notifications';
@@ -132,12 +134,17 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const cancelAllNotifications = useCallback(async () => {
     Vibration.cancel();
+    console.log('[AlarmFire] cancelAllNotifications — isTimer:', isTimer,
+      'timerNotificationId:', timerNotificationId, 'timerId:', timerId,
+      'notificationId:', notificationId);
     const promises: Promise<void>[] = [];
     if (isTimer) {
       if (timerNotificationId) {
-        promises.push(dismissAlarmNotification(timerNotificationId).catch(() => {}));
+        console.log('[AlarmFire] cancelling timer-done notification:', timerNotificationId);
+        promises.push(cancelTimerNotification(timerNotificationId).catch(() => {}));
       }
       if (timerId) {
+        console.log('[AlarmFire] cancelling timer countdown:', timerId);
         promises.push(cancelTimerCountdownNotification(timerId).catch(() => {}));
       }
     } else if (alarm) {
@@ -155,6 +162,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       promises.push(notifee.cancelNotification(notificationId).catch(() => {}));
     }
     await Promise.all(promises);
+    console.log('[AlarmFire] cancelAllNotifications — done');
   }, [alarm, isTimer, timerNotificationId, timerId, notificationId]);
 
   const exitToLockScreen = useCallback(() => {
@@ -163,6 +171,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   }, [navigation]);
 
   const handleDismiss = useCallback(async () => {
+    console.log('[AlarmFire] handleDismiss — isTimer:', isTimer, 'alarmId:', alarm?.id);
     try {
       await cancelAllNotifications();
       // Disable one-time alarms after firing
@@ -177,6 +186,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         await resetSnoozeCount(alarm.id);
       }
     } catch {}
+    console.log('[AlarmFire] handleDismiss — complete, exiting');
     exitToLockScreen();
   }, [cancelAllNotifications, exitToLockScreen, alarm, isTimer]);
 
@@ -307,7 +317,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     time: {
       fontSize: 64,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: '#FFFFFF',
       letterSpacing: -2,
     },
     emoji: {
@@ -409,58 +419,66 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   // Snooze shame overlay
   if (snoozeShameMessage) {
     return (
-      <View style={styles.container}>
-        <Animated.View style={[styles.shameOverlay, { opacity: snoozeShameOpacity }]}>
-          <Text style={styles.shameEmoji}>{'\u{1F634}'}</Text>
-          <Text style={styles.shameMessage}>{snoozeShameMessage}</Text>
-        </Animated.View>
-      </View>
+      <ImageBackground source={require('../../assets/lightbulb.png')} style={{ flex: 1 }} resizeMode="cover">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <View style={styles.container}>
+            <Animated.View style={[styles.shameOverlay, { opacity: snoozeShameOpacity }]}>
+              <Text style={styles.shameEmoji}>{'\u{1F634}'}</Text>
+              <Text style={styles.shameMessage}>{snoozeShameMessage}</Text>
+            </Animated.View>
+          </View>
+        </View>
+      </ImageBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.top}>
-        <Text style={styles.time}>{displayTime}</Text>
-        <Text style={styles.emoji}>{displayIcon}</Text>
-        <Text style={styles.label}>{displayLabel}</Text>
-        {displaySoundName && (
-          <Text style={styles.soundName}>{'\u266A'} {displaySoundName}</Text>
-        )}
-        {displayNote && (
-          <Text style={styles.noteText}>{displayNote}</Text>
-        )}
+    <ImageBackground source={require('../../assets/lightbulb.png')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <View style={styles.container}>
+          <View style={styles.top}>
+            <Text style={styles.time}>{displayTime}</Text>
+            <Text style={styles.emoji}>{displayIcon}</Text>
+            <Text style={styles.label}>{displayLabel}</Text>
+            {displaySoundName && (
+              <Text style={styles.soundName}>{'\u266A'} {displaySoundName}</Text>
+            )}
+            {displayNote && (
+              <Text style={styles.noteText}>{displayNote}</Text>
+            )}
+          </View>
+
+          <View style={styles.bottom}>
+            {showGuessWhy && (
+              <TouchableOpacity
+                style={styles.guessWhyBtn}
+                onPress={handleGuessWhy}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.guessWhyBtnText}>{'\u{1F9E0}'} Guess Why</Text>
+              </TouchableOpacity>
+            )}
+
+            {showSnooze && (
+              <TouchableOpacity
+                style={styles.snoozeBtn}
+                onPress={handleSnooze}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.snoozeBtnText}>Snooze 5 min</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.dismissBtn}
+              onPress={handleDismiss}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.dismissBtnText}>Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
-
-      <View style={styles.bottom}>
-        {showGuessWhy && (
-          <TouchableOpacity
-            style={styles.guessWhyBtn}
-            onPress={handleGuessWhy}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.guessWhyBtnText}>{'\u{1F9E0}'} Guess Why</Text>
-          </TouchableOpacity>
-        )}
-
-        {showSnooze && (
-          <TouchableOpacity
-            style={styles.snoozeBtn}
-            onPress={handleSnooze}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.snoozeBtnText}>Snooze 5 min</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={styles.dismissBtn}
-          onPress={handleDismiss}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.dismissBtnText}>Dismiss</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </ImageBackground>
   );
 }

@@ -39,7 +39,7 @@ export function clearPendingAlarm(): void {
 // gap between full-screen display and the user opening the app.
 
 const _handledNotifs = new Map<string, number>();
-const HANDLED_TTL = 30_000; // 30 seconds
+const HANDLED_TTL = 600_000; // 10 minutes
 
 export function markNotifHandled(notifId: string): void {
   _handledNotifs.set(notifId, Date.now());
