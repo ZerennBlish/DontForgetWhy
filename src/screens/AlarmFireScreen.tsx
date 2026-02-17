@@ -303,7 +303,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
       justifyContent: 'space-between',
       paddingTop: 80,
       paddingBottom: 40 + insets.bottom,
@@ -398,7 +398,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     },
     shameOverlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 32,
