@@ -66,7 +66,7 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 57. **Live subtitle counts** — Header subtitle dynamically shows "X alarms · Y timers · Z reminders" with live updates as items are added, removed, or toggled
 58. **Trivia game** — Category-based trivia with online (OpenTDB API) and offline (370+ built-in questions) modes; 10 categories: Science & Nature (🔬), History (🏛️), Music (🎵), Movies & TV (🎬), Geography (🌍), Sports (🏆), Technology (💻), Food & Drink (🍽️), General Knowledge (🧠), Kids (🧒); difficulty filter (Easy/Medium/Hard/All); timer speed (Relaxed 25s / Normal 15s / Blitz 8s); 2-column category grid with General Knowledge centered alone on bottom row; per-category stats tracking; guard for empty question array when category + difficulty yields no results; online mode disabled with "Coming soon" alert
 59. **Full-screen alarm wake** — Screen wakes and shows AlarmFireScreen over lock screen via custom Expo config plugin (`plugins/withAlarmWake.js`); injects `setShowWhenLocked(true)`, `setTurnScreenOn(true)`, `FLAG_KEEP_SCREEN_ON`, and `KeyguardManager.requestDismissKeyguard()`; works for both alarms and timers; Samsung requires Settings > Apps > Special app access > Full screen notifications enabled; runtime check via `canUseFullScreenIntent` in `fullScreenPermission.ts`; onboarding slide guides users through permission setup
-60. **AlarmFireScreen redesign** — Dedicated full-screen alarm UI with large touch targets for half-asleep use; shows time (or "Timer Complete"), icon emoji, and label (nickname or "Alarm"/"Timer"); optional sound name display for custom sounds; three action buttons: Dismiss (red, cancels everything + exits to lock screen), Snooze 5 min (cancels + reschedules + shows shame message overlay + exits), and Guess Why (cancels alarm sound/vibration, navigates to game in silence); Dismiss/Snooze return to lock screen via `BackHandler.exitApp()`; also handles timer completions with timer-specific display
+60. **AlarmFireScreen redesign** — Dedicated full-screen alarm UI with large touch targets for half-asleep use; shows time (or "Timer Complete"), icon emoji, and label (nickname or "Alarm"/"Timer"); optional sound name display for custom sounds; three action buttons: Dismiss (red, cancels everything + exits to lock screen), Snooze 5 min (cancels + reschedules + shows shame message overlay + exits), and Guess Why (cancels alarm sound/vibration, navigates to game in silence); Dismiss/Snooze return to lock screen via `BackHandler.exitApp()`; also handles timer completions with timer-specific display; lightbulb background image with 0.7 opacity dark overlay for readability; snooze notifications now use full fullScreenAction config matching original alarm (bypasses lock screen); snooze shame message displays for 3.5 seconds (was 2.5s) before exiting to lock screen
 61. **Single-field time input** — Replaced two-field hour:minute picker with single auto-formatting TextInput; type raw digits and colon is inserted automatically ("6" → "6", "63" → "6:3", "630" → "6:30", "0630" → "06:30"); `rawDigits` state stores just digits, `formatTimeDisplay()` adds colon for display, `parseRawDigits()` extracts hours/minutes for saving; AM/PM toggle preserved for 12h mode; applied to both CreateAlarmScreen and CreateReminderScreen
 62. **Swipe between tabs** — Horizontal swipe navigation between Alarms, Timers, and Reminders tabs using `react-native-tab-view` + `react-native-pager-view`; native Android ViewPager2 handles page swiping; custom pill tab bar remains in the header above TabView (`renderTabBar={() => null}` suppresses default); `lazy` rendering with `lazyPreloadDistance={0}` for deferred tab initialization; haptic feedback on both pill tap and swipe completion; pills stay synced with swipe index; timer countdown continues across tab switches since timer state lives in parent AlarmListScreen; requires new EAS build (native module)
 63. **Soft delete / Trash system** — Alarms and reminders are soft-deleted via a Delete button with confirmation Alert instead of permanently removed; `deletedAt` timestamp field marks soft-deleted items; "Deleted" filter in Sort & Filter shows trash items sorted newest-first with "X min/hours/days ago" labels via `formatDeletedAgo()`; restore and permanent delete available in trash view; notifications cancelled on soft-delete, rescheduled on restore; `loadAlarms(true)` and `getReminders(true)` load all items including soft-deleted for trash view; UndoToast triggers on soft-delete
@@ -80,9 +80,10 @@ A mobile alarm app that forces you to remember *why* you set each alarm — not 
 71. **Kids trivia category** — 45 age-appropriate trivia questions across easy/medium/hard difficulty; offline only (excluded from OpenTDB online mode); 🧒 emoji in category grid
 72. **Music and Movies & TV trivia categories** — Split from a former "Pop Culture" category; now 10 total trivia categories; old Pop Culture seen-question tracking cleared for a fresh start
 73. **Online mode disabled** — Trivia online mode shows "Coming soon" alert and button is dimmed (`opacity: 0.4`); Daily Riddle "Fresh Riddles" (online) tab is disabled with "Online riddles coming soon" text
-74. **Background images on game screens** — Eight screens use `ImageBackground` with dark overlays and semi-transparent glass-style cards: Games Hub (`brain.png`, 0.55 overlay), Settings (`gear.png`, 0.6 overlay), Trivia (`questionmark.png`, 0.55 overlay), Daily Riddle (`door.png`, 0.55 overlay), Memory Match (`oakbackground.png`, 0.6 overlay), Sudoku (`newspaper.png`, 0.65 overlay), Guess Why (`gameclock.png`, 0.55 overlay), Memory Score / Stats (`library.png`, dark overlay)
+74. **Background images on game screens** — Nine screens use `ImageBackground` with dark overlays and semi-transparent glass-style cards: Games Hub (`brain.png`, 0.55 overlay), Settings (`gear.png`, 0.6 overlay), Trivia (`questionmark.png`, 0.55 overlay), Daily Riddle (`door.png`, 0.55 overlay), Memory Match (`oakbackground.png`, 0.6 overlay), Sudoku (`newspaper.png`, 0.65 overlay), Guess Why (`gameclock.png`, 0.55 overlay), Memory Score / Stats (`library.png`, dark overlay), Alarm Fire (`lightbulb.png`, 0.7 overlay)
 75. **Semi-transparent cards** — Games Hub, Settings, Memory Score / Stats, and all game difficulty-select screens (Sudoku, Memory Match, Trivia) use glass-style cards with `backgroundColor: 'rgba(255,255,255,0.15)'` and `borderColor: 'rgba(255,255,255,0.2)'` on card elements, replacing opaque `colors.card` backgrounds; background images visible through cards on all game screens
 76. **App icon watermark** — Full-screen `fullscreenicon.png` watermark rendered as first child of the root container in AlarmListScreen, positioned absolutely to fill edge to edge (`position: absolute, top/left/right/bottom: 0, width/height: 100%`); `resizeMode="cover"`, `opacity: 0.07`, `pointerEvents="none"`; sits behind the header, tab pills, and all tab content (Alarms, Timers, Reminders) as a single shared watermark
+77. **Timer Notification Cleanup** — Removed old test popup overlay from timer completion (Alert.alert in AlarmListScreen). Fixed fire screen re-triggering on app reopen (increased notification dedupe TTL from 30s to 10 minutes). Fixed lingering timer notifications in notification bar after dismiss (cancelTimerNotification now calls both cancelTriggerNotification + cancelNotification)
 
 ## 2. Data Models
 
@@ -417,6 +418,7 @@ assets/
 ├── oakbackground.png          Memory Match background image
 ├── old.png                    Legacy asset
 ├── questionmark.png           Trivia background image
+├── lightbulb.png              AlarmFireScreen background (hanging light bulb with neon text)
 └── splash-icon.png            Splash screen icon
 
 src/
@@ -1105,7 +1107,7 @@ Daily riddle mini-game with `door.png` background image (`rgba(0,0,0,0.55)` over
 ## 14. Background Images & Visual Effects
 
 ### Game Screen Backgrounds
-Eight screens use `ImageBackground` with semi-transparent dark overlays:
+Nine screens use `ImageBackground` with semi-transparent dark overlays:
 
 | Screen | Asset | Overlay |
 |---|---|---|
@@ -1117,6 +1119,7 @@ Eight screens use `ImageBackground` with semi-transparent dark overlays:
 | Sudoku | `newspaper.png` | `rgba(0,0,0,0.65)` |
 | Guess Why | `gameclock.png` | `rgba(0,0,0,0.55)` |
 | Memory Score / Stats | `library.png` | dark overlay |
+| Alarm Fire | `lightbulb.png` | `rgba(0,0,0,0.7)` |
 
 ### Semi-Transparent Glass Cards
 Games Hub, Settings, Memory Score / Stats, and game difficulty-select screens (Sudoku, Memory Match, Trivia) use glass-style cards:
@@ -1162,6 +1165,12 @@ Sound plays FROM the notification via Notifee's `loopSound` setting. Cancelling 
 - `cancelAllNotifications()` in AlarmFireScreen handles all notification cleanup
 - GuessWhy button: cancels everything BEFORE navigating — game plays in silence
 - When returning from GuessWhy (`postGuessWhy: true`), only defensive `Vibration.cancel()` runs
+
+### Snooze Notification Config
+Snooze notifications must match original alarm fullScreenAction config for lock screen bypass. `scheduleSnooze()` in `notifications.ts` uses the same `fullScreenAction: { id: 'default', launchActivity: 'default' }`, importance HIGH, ongoing, autoCancel false, loopSound, vibrationPattern, lights, and AndroidCategory.ALARM as `scheduleAlarm()`. Missing any of these properties causes Android to treat the snooze as a regular notification that won't wake the screen over the lock screen.
+
+### AlarmFireScreen Background Transparency
+AlarmFireScreen inner containers use transparent backgrounds so ImageBackground shows through the overlay. The `container` and `shameOverlay` styles use `backgroundColor: 'transparent'` instead of `colors.background`. The semi-transparent overlay (`rgba(0,0,0,0.7)`) at the ImageBackground level handles darkening. Button backgrounds (`colors.card`, `colors.red`) remain opaque for readability.
 
 ### Single-Field Time Input Pattern
 Both CreateAlarmScreen and CreateReminderScreen use the same auto-formatting time input:
