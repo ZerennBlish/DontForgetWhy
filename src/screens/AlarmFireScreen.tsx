@@ -82,6 +82,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [snoozeShameMessage, setSnoozeShameMessage] = useState<string | null>(null);
+  const [isSnoozing, setIsSnoozing] = useState(false);
   const snoozeShameOpacity = useRef(new Animated.Value(0)).current;
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -200,6 +201,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   }, [handleDismiss]);
 
   const handleSnooze = useCallback(async () => {
+    setIsSnoozing(true);
     await cancelAllNotifications();
     if (!alarm) {
       exitToLockScreen();
@@ -217,7 +219,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         await updateSingleAlarm(alarm.id, (a) => ({
           ...a,
           notificationIds: [
-            ...(a.notificationIds || []).filter((id) => id !== notificationId),
+            ...(a.notificationIds || []),
             snoozeNotifId,
           ],
         }));
@@ -461,8 +463,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
             {showSnooze && (
               <TouchableOpacity
-                style={styles.snoozeBtn}
+                style={[styles.snoozeBtn, isSnoozing && { opacity: 0.5 }]}
                 onPress={handleSnooze}
+                disabled={isSnoozing}
                 activeOpacity={0.8}
               >
                 <Text style={styles.snoozeBtnText}>Snooze 5 min</Text>

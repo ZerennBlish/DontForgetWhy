@@ -373,7 +373,7 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
   } else if (alarm.private) {
     body = 'Snoozed \u2014 time to wake up!';
   } else {
-    body = alarm.nickname || alarm.note || 'Time to wake up!';
+    body = alarm.nickname || 'Time to wake up!';
   }
 
   let channelId = ALARM_CHANNEL_ID;

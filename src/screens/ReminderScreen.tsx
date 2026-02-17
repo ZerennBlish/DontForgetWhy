@@ -113,10 +113,12 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   const handleToggleComplete = async (id: string) => {
     hapticMedium();
+    const oldReminder = reminders.find(r => r.id === id);
+    const oldNotifId = oldReminder?.notificationId;
     const updated = await toggleReminderComplete(id);
     if (!updated) return;
-    if (updated.completed && updated.notificationId) {
-      await cancelReminderNotification(updated.notificationId).catch(() => {});
+    if (updated.completed && oldNotifId) {
+      await cancelReminderNotification(oldNotifId).catch(() => {});
     } else if (!updated.completed && updated.dueTime) {
       const notifId = await scheduleReminderNotification(updated).catch(() => null);
       if (notifId) {
