@@ -408,6 +408,7 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
         sound: customChannel ? undefined : 'default',
         loopSound: true,
         vibrationPattern: [300, 300, 300, 300],
+        lights: ['#FF0000', 300, 600] as [string, number, number],
         ongoing: true,
         autoCancel: false,
         pressAction: { id: 'default' },

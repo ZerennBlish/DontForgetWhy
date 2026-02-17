@@ -236,10 +236,10 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       useNativeDriver: true,
     }).start();
 
-    // Exit after showing shame message
+    // Exit after showing shame message (extra 1s so user can read the roast)
     exitTimerRef.current = setTimeout(() => {
       exitToLockScreen();
-    }, 2500);
+    }, 3500);
   }, [cancelAllNotifications, exitToLockScreen, alarm, snoozeShameOpacity]);
 
   const handleGuessWhy = useCallback(async () => {
