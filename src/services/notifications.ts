@@ -453,13 +453,14 @@ export async function scheduleTimerNotification(
     },
   };
 
-  // Use the same notification ID as the countdown chronometer so this
-  // REPLACES it in-place rather than appearing as a brand-new HIGH-importance
-  // notification (which Android shows as a heads-up popup on top of the
-  // full-screen activity).  Matching the alarm notification config exactly.
+  // Use a DIFFERENT notification ID than the countdown chronometer.
+  // Sharing an ID caused Android to treat the completion as an "update"
+  // to the silent countdown notification, suppressing the alarm sound.
+  // A distinct ID fires as a brand-new HIGH-importance notification
+  // with full-screen action and sound.
   return await notifee.createTriggerNotification(
     {
-      id: `countdown-${timerId}`,
+      id: `timer-done-${timerId}`,
       title: `${icon} Timer Complete`,
       body: `${label} is done!`,
       data: { timerId },

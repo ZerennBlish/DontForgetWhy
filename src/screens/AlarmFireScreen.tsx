@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticHeavy } from '../utils/haptics';
 import { getSnoozeMessage } from '../data/snoozeMessages';
 import { refreshTimerWidget } from '../widget/updateWidget';
+import { markNotifHandled } from '../services/pendingAlarm';
 import guessWhyIcons from '../data/guessWhyIcons';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -90,8 +91,15 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   // notification. Cancelling it kills the sound. Notifications are only
   // cancelled when the user taps Dismiss or Snooze (in cancelAllNotifications).
   // The heads-up popup auto-dismisses after a few seconds on most devices.
+  //
+  // Mark this notification as handled in the module-level dedupe Map so
+  // App.tsx won't navigate here a second time for the same notification
+  // (e.g., DELIVERED showed full-screen, then PRESS fires when user opens app).
   useEffect(() => {
     console.log('[AlarmFire] mounted — notificationId:', notificationId, 'timerId:', timerId, 'timerNotificationId:', timerNotificationId, 'fromNotification:', fromNotification, 'postGuessWhy:', postGuessWhy, 'alarmId:', alarm?.id);
+    if (notificationId) {
+      markNotifHandled(notificationId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

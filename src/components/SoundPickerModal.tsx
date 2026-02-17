@@ -130,12 +130,17 @@ export default function SoundPickerModal({
   };
 
   const handlePlay = async (item: SystemSound) => {
-    console.log('[SoundPicker] Playing sound:', item.title, item.url);
+    console.log('[SOUND] Attempting preview:', item.url);
+    console.log('[SOUND] Sound title:', item.title, 'soundID:', item.soundID);
 
     // Step 1: Bail out immediately if modal is no longer active
-    if (!isActiveRef.current) return;
+    if (!isActiveRef.current) {
+      console.log('[SOUND] Skipped — modal not active');
+      return;
+    }
 
     if (playingId === item.soundID) {
+      console.log('[SOUND] Toggling off — same sound tapped');
       await stopPreview();
       return;
     }
@@ -145,22 +150,27 @@ export default function SoundPickerModal({
     // Step 2: Await audio mode configuration
     const ready = await ensureAudioMode();
     if (!ready) {
-      console.error('[SoundPicker] Cannot play — audio mode not acquired');
+      console.log('[SOUND] Error: audio mode not acquired');
       return;
     }
 
     // Re-check after async gap
-    if (!isActiveRef.current) return;
+    if (!isActiveRef.current) {
+      console.log('[SOUND] Skipped — modal closed during audio mode setup');
+      return;
+    }
 
     try {
       // Step 3: Await sound creation
+      console.log('[SOUND] Creating sound from URI...');
       const { sound, status } = await Audio.Sound.createAsync(
         { uri: item.url },
       );
-      console.log('[SoundPicker] createAsync status:', JSON.stringify(status));
+      console.log('[SOUND] Sound loaded, status:', JSON.stringify(status));
 
       // Step 4: Check isActiveRef again — modal may have closed during createAsync
       if (!isActiveRef.current) {
+        console.log('[SOUND] Skipped — modal closed during sound load');
         try { await sound.unloadAsync(); } catch {}
         return;
       }
@@ -175,10 +185,11 @@ export default function SoundPickerModal({
         }
       });
 
+      console.log('[SOUND] Playing...');
       await sound.playAsync();
-      console.log('[SoundPicker] playAsync resolved');
+      console.log('[SOUND] Playing successfully');
     } catch (err) {
-      console.error('[SoundPicker] handlePlay error:', err);
+      console.log('[SOUND] Error:', err);
       // Clean up sound object if createAsync succeeded but playAsync failed
       if (soundRef.current) {
         try { await soundRef.current.unloadAsync(); } catch {}

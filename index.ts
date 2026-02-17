@@ -28,9 +28,9 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
     // Filter: only store pending data for alarm/timer COMPLETION notifications.
     // Skip reminders (have reminderId, no alarmId) and previews (no data).
     //
-    // Timer completion notifications reuse the countdown ID (countdown-{timerId})
-    // to replace the chronometer in-place. We distinguish them by data.timerId:
-    // the countdown chronometer has NO data field → timerId is undefined here;
+    // Timer completion uses ID timer-done-{timerId} (separate from the
+    // countdown chronometer countdown-{timerId}). We identify completions
+    // by data.timerId: the countdown has no data field → timerId is undefined;
     // the completion trigger has data: { timerId } → timerId is set.
     if (timerId && notifId) {
       const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';

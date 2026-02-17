@@ -27,7 +27,7 @@ import { setupNotificationChannel, cancelTimerCountdownNotification } from './sr
 import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
-import { getPendingAlarm, clearPendingAlarm } from './src/services/pendingAlarm';
+import { getPendingAlarm, clearPendingAlarm, markNotifHandled, wasNotifHandled } from './src/services/pendingAlarm';
 import type { PendingAlarmData } from './src/services/pendingAlarm';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
@@ -35,10 +35,6 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import type { RootStackParamList } from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-// Deduplicate navigation: prevent DELIVERED + PRESS from stacking duplicate AlarmFireScreens
-let _lastNavigatedNotifId: string | null = null;
-let _lastNavigatedAt = 0;
 
 function AppNavigator() {
   const { colors } = useTheme();
@@ -62,13 +58,14 @@ function AppNavigator() {
   ) => {
     if (!navigationRef.current || !isNavigationReady.current) return;
 
-    // Skip duplicate navigation for the same notification within 5 seconds
-    if (pending.notificationId && pending.notificationId === _lastNavigatedNotifId && Date.now() - _lastNavigatedAt < 5000) {
-      console.log('[NOTIF] navigateToAlarmFire — skipping duplicate for:', pending.notificationId);
+    // Skip if AlarmFireScreen already handled this notification
+    if (wasNotifHandled(pending.notificationId)) {
+      console.log('[NOTIF] navigateToAlarmFire — skipping already-handled:', pending.notificationId);
       return;
     }
-    _lastNavigatedNotifId = pending.notificationId || null;
-    _lastNavigatedAt = Date.now();
+    if (pending.notificationId) {
+      markNotifHandled(pending.notificationId);
+    }
 
     if (pending.timerId && pending.notificationId) {
       console.log('[NOTIF] navigateToAlarmFire — timer:', pending.timerId);
@@ -173,33 +170,39 @@ function AppNavigator() {
               const timerId = initial.notification.data?.timerId as string | undefined;
               console.log('[NOTIF] INIT — getInitialNotification found: notifId:', notifId, 'alarmId:', alarmId, 'timerId:', timerId);
 
-              if (timerId && notifId) {
-                const tIcon = initial.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-                const tLabel = initial.notification?.body?.replace(' is done!', '').trim() || 'Timer';
-                alarmFireParams = {
-                  isTimer: true,
-                  timerLabel: tLabel,
-                  timerIcon: tIcon,
-                  timerId,
-                  timerNotificationId: notifId,
-                  notificationId: notifId,
-                  fromNotification: true,
-                };
-              } else if (alarmId) {
-                try {
-                  const alarms = await loadAlarms();
-                  const alarm = alarms.find((a) => a.id === alarmId);
-                  if (alarm) {
-                    const settings = await loadSettings();
-                    alarmFireParams = {
-                      alarm,
-                      fromNotification: true,
-                      notificationId: notifId,
-                      guessWhyEnabled: settings.guessWhyEnabled,
-                    };
+              // Check if AlarmFireScreen already handled this notification
+              // (module-level Map — covers same-process dedupe within 30s)
+              if (wasNotifHandled(notifId)) {
+                console.log('[NOTIF] INIT — getInitialNotification already handled:', notifId);
+              } else {
+                if (timerId && notifId) {
+                  const tIcon = initial.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+                  const tLabel = initial.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+                  alarmFireParams = {
+                    isTimer: true,
+                    timerLabel: tLabel,
+                    timerIcon: tIcon,
+                    timerId,
+                    timerNotificationId: notifId,
+                    notificationId: notifId,
+                    fromNotification: true,
+                  };
+                } else if (alarmId) {
+                  try {
+                    const alarms = await loadAlarms();
+                    const alarm = alarms.find((a) => a.id === alarmId);
+                    if (alarm) {
+                      const settings = await loadSettings();
+                      alarmFireParams = {
+                        alarm,
+                        fromNotification: true,
+                        notificationId: notifId,
+                        guessWhyEnabled: settings.guessWhyEnabled,
+                      };
+                    }
+                  } catch (e) {
+                    console.error('[NOTIF] INIT — failed to load alarm from getInitialNotification:', e);
                   }
-                } catch (e) {
-                  console.error('[NOTIF] INIT — failed to load alarm from getInitialNotification:', e);
                 }
               }
             } else {
@@ -208,6 +211,14 @@ function AppNavigator() {
           } catch (e) {
             console.error('[NOTIF] INIT — getInitialNotification error:', e);
           }
+        }
+
+        // Mark this notification as handled so the foreground handler
+        // (which fires moments later for the same DELIVERED event)
+        // doesn't navigate to AlarmFireScreen a second time.
+        if (alarmFireParams?.notificationId) {
+          markNotifHandled(alarmFireParams.notificationId);
+          console.log('[NOTIF] INIT — set dedupe marker for:', alarmFireParams.notificationId);
         }
 
         console.log('[NOTIF] INIT — complete. alarmFireParams:', alarmFireParams ? 'SET' : 'null');
@@ -303,11 +314,10 @@ function AppNavigator() {
         // For DELIVERED, filter: only alarm/timer notifications that should
         // navigate to AlarmFireScreen. Skip reminders, sound previews, etc.
         //
-        // Timer completion notifications reuse the countdown ID
-        // (countdown-{timerId}) to replace the chronometer in-place. We
-        // distinguish them by data.timerId: the countdown chronometer has
-        // NO data field, so timerId is undefined; the completion trigger
-        // has data: { timerId }.
+        // Timer completion uses ID timer-done-{timerId} (separate from the
+        // countdown chronometer countdown-{timerId}). We distinguish them
+        // by data.timerId: the countdown has no data field, so timerId is
+        // undefined; the completion trigger has data: { timerId }.
         if (type === EventType.DELIVERED) {
           const isAlarmOrTimerCompletion = !!(alarmId || timerId);
           if (!isAlarmOrTimerCompletion) return;
@@ -318,16 +328,27 @@ function AppNavigator() {
           return;
         }
 
+        // If AlarmFireScreen is already the active route, don't stack another
+        const currentRoute = navigationRef.current?.getCurrentRoute?.()?.name;
+        if (currentRoute === 'AlarmFire') {
+          console.log('[NOTIF] FOREGROUND — already on AlarmFireScreen, skipping');
+          return;
+        }
+
         // Clear any pending data from background handler to prevent double navigation
         clearPendingAlarm();
 
-        // Skip duplicate navigation for the same notification within 5 seconds
-        if (notifId && notifId === _lastNavigatedNotifId && Date.now() - _lastNavigatedAt < 5000) {
-          console.log('[NOTIF] FOREGROUND — skipping duplicate navigation for:', notifId);
+        // Skip if AlarmFireScreen already handled this notification
+        if (wasNotifHandled(notifId)) {
+          console.log('[NOTIF] FOREGROUND — skipping already-handled:', notifId);
           return;
         }
-        _lastNavigatedNotifId = notifId || null;
-        _lastNavigatedAt = Date.now();
+
+        // DO NOT mark as handled here — each branch handles its own marking.
+        // Timer marks before direct navigation; alarm relies on
+        // navigateToAlarmFire's internal mark. Marking prematurely here
+        // would cause navigateToAlarmFire to see it as already handled
+        // and skip the alarm navigation entirely.
 
         // DO NOT cancel notifications here — the alarm sound plays FROM the
         // notification. Cancelling it kills the sound. AlarmFireScreen's
@@ -337,6 +358,7 @@ function AppNavigator() {
         // The countdown chronometer (same ID prefix) has NO data, so
         // timerId is undefined and this branch is skipped for it.
         if (timerId && notifId) {
+          markNotifHandled(notifId);
           const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
           const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
 
@@ -351,6 +373,7 @@ function AppNavigator() {
             fromNotification: true,
           });
         } else if (alarmId) {
+          // navigateToAlarmFire checks wasNotifHandled + marks internally
           console.log('[NOTIF] FOREGROUND — navigating to AlarmFire (alarm), notifId:', notifId);
           await navigateToAlarmFire({ alarmId, notificationId: notifId });
         }
