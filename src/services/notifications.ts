@@ -621,3 +621,57 @@ export async function previewAlarmSound(channelId: string, label: string): Promi
     _previewTimer = null;
   }, 3000);
 }
+
+/**
+ * Preview a system sound by firing a short Notifee notification on a
+ * dedicated low-importance channel for that sound URI.
+ */
+export async function previewSystemSound(
+  soundUri: string,
+  soundName: string,
+): Promise<void> {
+  await setupNotificationChannel();
+
+  // Cancel any existing preview first
+  await cancelSoundPreview();
+
+  // Create a preview-specific channel: DEFAULT importance, no DND bypass
+  const channelId = `preview_${extractMediaId(soundUri)}`;
+  await notifee.createChannel({
+    id: channelId,
+    name: `Preview: ${soundName}`,
+    importance: AndroidImportance.DEFAULT,
+    sound: soundUri,
+    vibration: false,
+    bypassDnd: false,
+  });
+
+  await notifee.displayNotification({
+    id: 'sound_preview',
+    title: `\u{1F50A} ${soundName}`,
+    body: 'Sound preview',
+    android: {
+      channelId,
+      importance: AndroidImportance.DEFAULT,
+      pressAction: { id: 'default' },
+    },
+  });
+
+  // Auto-cancel after 3 seconds
+  _previewTimer = setTimeout(async () => {
+    try {
+      await notifee.cancelNotification('sound_preview');
+    } catch {}
+    _previewTimer = null;
+  }, 3000);
+}
+
+export async function cancelSoundPreview(): Promise<void> {
+  if (_previewTimer) {
+    clearTimeout(_previewTimer);
+    _previewTimer = null;
+  }
+  try {
+    await notifee.cancelNotification('sound_preview');
+  } catch {}
+}

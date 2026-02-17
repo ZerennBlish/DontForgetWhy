@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { Audio } from 'expo-av';
+import { previewSystemSound, cancelSoundPreview } from '../services/notifications';
 import { useTheme } from '../theme/ThemeContext';
 
 // react-native-notification-sounds doesn't ship types
@@ -48,22 +48,14 @@ export default function SoundPickerModal({
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [playingId, setPlayingId] = useState<number | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const audioModeReady = useRef(false);
   const isActiveRef = useRef(false);
 
   const stopPreview = useCallback(async () => {
-    if (soundRef.current) {
-      try {
-        await soundRef.current.unloadAsync();
-      } catch {}
-      soundRef.current = null;
-    }
+    await cancelSoundPreview();
     setPlayingId(null);
   }, []);
 
-  // Load system sounds when modal opens (no fire-and-forget audio mode here —
-  // ensureAudioMode() in handlePlay is the sole path for configuring audio)
+  // Load system sounds when modal opens
   useEffect(() => {
     if (!visible) return;
 
@@ -94,107 +86,39 @@ export default function SoundPickerModal({
     if (!visible) {
       isActiveRef.current = false;
       stopPreview();
-      audioModeReady.current = false;
     }
   }, [visible, stopPreview]);
 
-  // Cleanup on unmount — unload any active sound regardless of modal state
+  // Cleanup on unmount — cancel any active preview notification
   useEffect(() => {
     return () => {
-      if (soundRef.current) {
-        try { soundRef.current.unloadAsync(); } catch {}
-        soundRef.current = null;
-      }
+      cancelSoundPreview();
     };
   }, []);
 
-  // Sole path for configuring audio mode — always awaited before playback.
-  // Guarded by isActiveRef to prevent AudioFocusNotAcquiredException when
-  // the modal has closed (app may be in background context).
-  const ensureAudioMode = async (): Promise<boolean> => {
-    if (audioModeReady.current) return true;
-    if (!isActiveRef.current) return false;
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-      });
-      audioModeReady.current = true;
-      console.log('[SoundPicker] Audio mode configured');
-      return true;
-    } catch (err) {
-      console.warn('[SoundPicker] ensureAudioMode failed (app may be backgrounded):', err);
-      return false;
-    }
-  };
-
   const handlePlay = async (item: SystemSound) => {
-    console.log('[SOUND] Attempting preview:', item.url);
-    console.log('[SOUND] Sound title:', item.title, 'soundID:', item.soundID);
-
-    // Step 1: Bail out immediately if modal is no longer active
-    if (!isActiveRef.current) {
-      console.log('[SOUND] Skipped — modal not active');
-      return;
-    }
+    if (!isActiveRef.current) return;
 
     if (playingId === item.soundID) {
-      console.log('[SOUND] Toggling off — same sound tapped');
       await stopPreview();
       return;
     }
 
     await stopPreview();
 
-    // Step 2: Await audio mode configuration
-    const ready = await ensureAudioMode();
-    if (!ready) {
-      console.log('[SOUND] Error: audio mode not acquired');
-      return;
-    }
-
     // Re-check after async gap
-    if (!isActiveRef.current) {
-      console.log('[SOUND] Skipped — modal closed during audio mode setup');
-      return;
-    }
+    if (!isActiveRef.current) return;
 
     try {
-      // Step 3: Await sound creation
-      console.log('[SOUND] Creating sound from URI...');
-      const { sound, status } = await Audio.Sound.createAsync(
-        { uri: item.url },
-      );
-      console.log('[SOUND] Sound loaded, status:', JSON.stringify(status));
-
-      // Step 4: Check isActiveRef again — modal may have closed during createAsync
-      if (!isActiveRef.current) {
-        console.log('[SOUND] Skipped — modal closed during sound load');
-        try { await sound.unloadAsync(); } catch {}
-        return;
-      }
-
-      // Step 5: Store and play
-      soundRef.current = sound;
       setPlayingId(item.soundID);
+      await previewSystemSound(item.url, item.title);
 
-      sound.setOnPlaybackStatusUpdate((s) => {
-        if (s.isLoaded && s.didJustFinish) {
-          stopPreview();
-        }
-      });
-
-      console.log('[SOUND] Playing...');
-      await sound.playAsync();
-      console.log('[SOUND] Playing successfully');
+      // Auto-clear playingId after 3s (matches notification auto-cancel)
+      setTimeout(() => {
+        setPlayingId((current) => (current === item.soundID ? null : current));
+      }, 3000);
     } catch (err) {
-      console.log('[SOUND] Error:', err);
-      // Clean up sound object if createAsync succeeded but playAsync failed
-      if (soundRef.current) {
-        try { await soundRef.current.unloadAsync(); } catch {}
-        soundRef.current = null;
-      }
+      console.warn('[SoundPicker] Preview failed:', err);
       setPlayingId(null);
     }
   };
