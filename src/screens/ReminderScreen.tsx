@@ -617,6 +617,8 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     );
   };
 
+  const nonDeletedReminderCount = reminders.filter(r => !r.deletedAt).length;
+
   return (
     <View style={styles.container}>
       <Text style={styles.quoteText} numberOfLines={2}>
@@ -675,10 +677,12 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       {sorted.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>
-            {reminders.length === 0 ? 'Nothing to remember' : 'No matches'}
+            {nonDeletedReminderCount === 0 && reminderFilter === 'active'
+              ? 'Nothing to remember' : 'No matches'}
           </Text>
           <Text style={styles.emptySubtext}>
-            {reminders.length === 0 ? 'Must be nice. Tap + to ruin that.' : 'Try a different filter.'}
+            {nonDeletedReminderCount === 0 && reminderFilter === 'active'
+              ? 'Must be nice. Tap + to ruin that.' : 'Try a different filter.'}
           </Text>
         </View>
       ) : (

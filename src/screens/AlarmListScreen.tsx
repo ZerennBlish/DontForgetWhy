@@ -344,17 +344,6 @@ export default function AlarmListScreen({ navigation }: Props) {
       fontSize: 13,
       fontWeight: '600',
     },
-    watermark: {
-      position: 'absolute' as const,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      width: '100%' as unknown as number,
-      height: '100%' as unknown as number,
-      opacity: 0.07,
-      zIndex: 0,
-    },
   }), [colors, insets.bottom]);
 
   useFocusEffect(
@@ -716,16 +705,18 @@ export default function AlarmListScreen({ navigation }: Props) {
     return list;
   }, [alarms, alarmSort, alarmFilter]);
 
+  const nonDeletedAlarmCount = alarms.filter(a => !a.deletedAt).length;
   const hasPlayed = stats && (stats.wins > 0 || stats.losses > 0 || stats.skips > 0);
 
   return (
     <View style={styles.container}>
-      <Image
-        source={require('../../assets/fullscreenicon.png')}
-        style={styles.watermark}
-        resizeMode="cover"
-        pointerEvents="none"
-      />
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <Image
+          source={require('../../assets/fullscreenicon.png')}
+          style={{ width: '100%', height: '100%', opacity: 0.07 }}
+          resizeMode="cover"
+        />
+      </View>
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Don't Forget Why</Text>
@@ -859,10 +850,12 @@ export default function AlarmListScreen({ navigation }: Props) {
                   {filteredAlarms.length === 0 ? (
                     <View style={styles.empty}>
                       <Text style={styles.emptyText}>
-                        {alarms.length === 0 ? 'No alarms yet' : 'No matches'}
+                        {nonDeletedAlarmCount === 0 && (alarmFilter === 'all' || alarmFilter === 'active')
+                          ? 'No alarms yet' : 'No matches'}
                       </Text>
                       <Text style={styles.emptySubtext}>
-                        {alarms.length === 0 ? 'Tap + to set one and immediately forget why.' : 'Try a different filter.'}
+                        {nonDeletedAlarmCount === 0 && (alarmFilter === 'all' || alarmFilter === 'active')
+                          ? 'Tap + to set one and immediately forget why.' : 'Try a different filter.'}
                       </Text>
                     </View>
                   ) : (

@@ -250,6 +250,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     ? (timerLabel || 'Timer')
     : (alarm?.nickname || 'Alarm');
   const displaySoundName = !isTimer && alarm?.soundName ? alarm.soundName : null;
+  const displayNote = !isTimer && alarm?.note ? alarm.note : null;
 
   // Button visibility
   const showSnooze = !isTimer && !postGuessWhy && !!alarm;
@@ -295,6 +296,15 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       color: colors.textTertiary,
       textAlign: 'center',
       marginTop: 8,
+    },
+    noteText: {
+      fontSize: 18,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 12,
+      paddingHorizontal: 16,
+      lineHeight: 26,
     },
     bottom: {
       gap: 12,
@@ -382,6 +392,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         <Text style={styles.label}>{displayLabel}</Text>
         {displaySoundName && (
           <Text style={styles.soundName}>{'\u266A'} {displaySoundName}</Text>
+        )}
+        {displayNote && (
+          <Text style={styles.noteText}>{displayNote}</Text>
         )}
       </View>
 

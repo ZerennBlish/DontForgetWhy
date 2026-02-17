@@ -190,9 +190,9 @@ export default function TimerScreen({
     },
     hint: {
       fontSize: 11,
-      color: colors.textTertiary,
-      textAlign: 'center',
-      marginTop: 12,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      marginBottom: 8,
     },
     modalOverlay: {
       flex: 1,
@@ -526,11 +526,11 @@ export default function TimerScreen({
         <Text style={styles.subsectionLabel}>
           {recentPresets.length > 0 ? 'All Timers' : 'Quick Start'}
         </Text>
+        <Text style={styles.hint}>Long press any preset to customize</Text>
         <View style={styles.presetGrid}>
           {restPresets.map(renderPresetCard)}
           {customPreset && renderPresetCard(customPreset)}
         </View>
-        <Text style={styles.hint}>Long-press a preset to set a custom duration</Text>
       </View>
 
       {/* Custom Duration Modal */}

@@ -732,9 +732,9 @@ export default function SudokuScreen({ navigation }: Props) {
                 const borderTop = row === 0 ? 2 : 0;
 
                 let bgColor = 'transparent';
-                if (isSelected) bgColor = 'rgba(255,255,255,0.15)';
-                else if (sameNum) bgColor = 'rgba(255,255,255,0.08)';
-                else if (highlighted) bgColor = 'rgba(255,255,255,0.05)';
+                if (isSelected) bgColor = 'rgba(74,144,217,0.25)';
+                else if (sameNum) bgColor = 'rgba(74,144,217,0.15)';
+                else if (highlighted) bgColor = 'rgba(0,0,0,0.06)';
 
                 const isWrong = !isGiven && value !== 0 && value !== solutionGrid[row]?.[col];
 
@@ -751,7 +751,7 @@ export default function SudokuScreen({ navigation }: Props) {
                         borderBottomWidth: borderBottom,
                         borderLeftWidth: borderLeft,
                         borderTopWidth: borderTop,
-                        borderColor: 'rgba(255,255,255,0.3)',
+                        borderColor: 'rgba(0,0,0,0.2)',
                       },
                     ]}
                   >
@@ -1078,10 +1078,10 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
     gridOuter: {
       width: cellSize * 9 + 4,
       borderWidth: 2,
-      borderColor: 'rgba(255,255,255,0.5)',
+      borderColor: 'rgba(0,0,0,0.3)',
       borderRadius: 2,
       overflow: 'hidden',
-      backgroundColor: 'transparent',
+      backgroundColor: 'rgba(255,255,245,0.85)',
     },
     gridRow: {
       flexDirection: 'row',

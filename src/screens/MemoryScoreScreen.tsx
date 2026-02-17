@@ -90,6 +90,7 @@ const defaultTriviaStats: TriviaStats = {
     sports: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
     technology: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
     food: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    kids: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
   },
 };
 
