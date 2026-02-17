@@ -154,12 +154,8 @@ export default function AboutScreen({ navigation }: Props) {
         </Text>
 
         <Text style={styles.sectionTitle}>Built By</Text>
-        <Text style={styles.primaryText}>Zerenn</Text>
+        <Text style={styles.primaryText}>Bald Guy & Company Games</Text>
         <Text style={styles.secondaryText}>Built with AI-assisted development</Text>
-
-        <Text style={styles.sectionTitle}>Powered By</Text>
-        <Text style={styles.secondaryText}>React Native + Expo</Text>
-        <Text style={[styles.secondaryText, { marginBottom: 0 }]}>Notifee</Text>
 
         {tapCount >= 5 && (
           <Text style={styles.easterEgg}>
