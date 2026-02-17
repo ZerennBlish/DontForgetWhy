@@ -775,7 +775,7 @@ function makeStyles(colors: any, insets: any) {
     topBarCategory: {
       fontSize: 15,
       fontWeight: '600',
-      color: colors.textSecondary,
+      color: 'rgba(255,255,255,0.8)',
     },
     topBarRight: {
       flexDirection: 'row',
@@ -785,7 +785,7 @@ function makeStyles(colors: any, insets: any) {
     topBarCounter: {
       fontSize: 16,
       fontWeight: '700',
-      color: colors.textPrimary,
+      color: '#EAEAFF',
     },
     topBarStreak: {
       fontSize: 15,
@@ -825,6 +825,9 @@ function makeStyles(colors: any, insets: any) {
       fontWeight: '700',
       textAlign: 'center',
       marginTop: 6,
+      textShadowColor: 'rgba(0, 0, 0, 0.8)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
 
     // Question
@@ -836,10 +839,13 @@ function makeStyles(colors: any, insets: any) {
     },
     questionText: {
       fontSize: 22,
-      fontWeight: '700',
-      color: colors.textPrimary,
+      fontWeight: 'bold',
+      color: '#FFFFFF',
       textAlign: 'center',
       lineHeight: 32,
+      textShadowColor: 'rgba(0, 0, 0, 0.8)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
 
     // Answer grids

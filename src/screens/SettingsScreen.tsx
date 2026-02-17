@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
+import notifee from '@notifee/react-native';
 import { loadSettings, saveSettings, getDefaultTimerSound, saveDefaultTimerSound } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight, refreshHapticsSetting } from '../utils/haptics';
@@ -39,6 +40,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [timerSoundPickerVisible, setTimerSoundPickerVisible] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedColorRef = useRef(customAccent || colors.accent);
+  const [hasPermissionIssues, setHasPermissionIssues] = useState(false);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -63,6 +65,33 @@ export default function SettingsScreen({ navigation }: Props) {
       fontSize: 28,
       fontWeight: '800',
       color: '#FFFFFF',
+    },
+    permissionBanner: {
+      marginHorizontal: 16,
+      marginBottom: 16,
+      backgroundColor: 'rgba(255, 107, 107, 0.15)',
+      borderRadius: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 107, 107, 0.3)',
+    },
+    permissionBannerIcon: {
+      fontSize: 20,
+      marginRight: 12,
+    },
+    permissionBannerText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.red,
+      flex: 1,
+    },
+    permissionBannerChevron: {
+      fontSize: 18,
+      color: colors.red,
+      marginLeft: 8,
     },
     card: {
       marginHorizontal: 16,
@@ -258,6 +287,48 @@ export default function SettingsScreen({ navigation }: Props) {
     })();
   }, []);
 
+  // Permission health check — runs on mount, doesn't block render.
+  // Only flags permissions we can DEFINITIVELY confirm are missing.
+  // Indeterminate checks (e.g. full-screen intent on API 34+ where
+  // we lack a native module to query) are skipped — no false alarms.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    (async () => {
+      try {
+        const apiLevel = Platform.Version as number;
+        let issues = false;
+
+        // Battery optimization: notifee returns true when optimization
+        // IS enabled (bad — Android may kill background alarms).
+        // This is a definitive check on all API levels.
+        let batteryOptEnabled = false;
+        try {
+          batteryOptEnabled = await notifee.isBatteryOptimizationEnabled();
+        } catch {
+          // Can't determine — don't flag
+        }
+        if (batteryOptEnabled) issues = true;
+
+        // Full-screen intent: on API < 34, USE_FULL_SCREEN_INTENT is
+        // auto-granted — no issue possible. On API 34+, we have no
+        // native module to call NotificationManager.canUseFullScreenIntent(),
+        // so the result is indeterminate — skip it rather than showing
+        // a false warning. The Onboarding flow already prompts users to
+        // verify this setting manually.
+        const fsiCheckable = apiLevel < 34;
+        const fsiGranted = fsiCheckable ? true : null; // null = indeterminate
+
+        console.log('[PERMISSIONS] API level:', apiLevel);
+        console.log('[PERMISSIONS] Battery optimization enabled:', batteryOptEnabled);
+        console.log('[PERMISSIONS] Full screen intent granted:', fsiGranted === null ? 'indeterminate (API 34+, skipped)' : fsiGranted);
+
+        setHasPermissionIssues(issues);
+      } catch {
+        // If checks fail entirely, don't show the banner
+      }
+    })();
+  }, []);
+
   const handleTimeFormatToggle = async (value: boolean) => {
     hapticLight();
     const newFormat = value ? '24h' : '12h';
@@ -313,6 +384,18 @@ export default function SettingsScreen({ navigation }: Props) {
         </TouchableOpacity>
         <Text style={styles.title}>Settings</Text>
       </View>
+
+      {hasPermissionIssues && (
+        <TouchableOpacity
+          style={styles.permissionBanner}
+          onPress={() => navigation.navigate('Onboarding', { startSlide: 2 })}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.permissionBannerIcon}>{'\u26A0\uFE0F'}</Text>
+          <Text style={styles.permissionBannerText}>Some permissions need attention</Text>
+          <Text style={styles.permissionBannerChevron}>{'\u203A'}</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.card}>
         <View style={styles.row}>

@@ -239,18 +239,41 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     return hasIcon || (alarm.note?.length ?? 0) >= 3;
   }, [isTimer, alarm, guessWhyEnabled, postGuessWhy]);
 
-  // Display values
+  // ── Display values ──────────────────────────────────────────────
+  //
+  // Privacy & Guess Why visibility rules:
+  //   private=F, GuessWhy=OFF → show icon + note immediately
+  //   private=F, GuessWhy=ON  → hide icon + note pre-game, reveal after
+  //   private=T, GuessWhy=OFF → hide icon + note always
+  //   private=T, GuessWhy=ON  → hide icon + note always (even post-game)
+  //
+  // Nickname is always safe — the user chose it as a non-revealing label.
+
   const displayTime = isTimer
     ? 'Timer Complete'
     : formatTime(alarm?.time || '', timeFormat);
+
+  const isPrivate = !isTimer && !!alarm?.private;
+  const isPreGame = !!guessWhyEnabled && !postGuessWhy;
+
+  // Icon: private alarms and pre-game always show generic bell.
+  // Non-private post-game or no-GuessWhy shows the real icon.
   const displayIcon = isTimer
     ? (timerIcon || '\u23F1\uFE0F')
-    : (alarm?.icon || '\u{1F514}');
+    : (isPrivate || isPreGame) ? '\u{1F514}' : (alarm?.icon || '\u{1F514}');
+
+  // Label: nickname is always safe to show; falls back to generic "Alarm"
   const displayLabel = isTimer
     ? (timerLabel || 'Timer')
     : (alarm?.nickname || 'Alarm');
+
   const displaySoundName = !isTimer && alarm?.soundName ? alarm.soundName : null;
-  const displayNote = !isTimer && alarm?.note ? alarm.note : null;
+
+  // Note: NEVER shown for private alarms. For non-private, only shown
+  // when Guess Why is off or the game has been played (postGuessWhy).
+  const displayNote = !isTimer && !isPrivate && alarm?.note
+    && (!guessWhyEnabled || postGuessWhy)
+    ? alarm.note : null;
 
   // Button visibility
   const showSnooze = !isTimer && !postGuessWhy && !!alarm;
