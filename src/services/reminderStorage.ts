@@ -162,3 +162,71 @@ export async function toggleReminderComplete(id: string): Promise<Reminder | nul
     return null;
   }
 }
+
+function _getDateStr(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Recurring reminder "complete": cancel current notifications, compute
+ * the next occurrence based on the recurring pattern, reschedule, and
+ * keep the reminder active (never set completed = true).
+ */
+export async function completeRecurringReminder(id: string): Promise<Reminder | null> {
+  try {
+    const reminders = await _loadAllReminders();
+    const index = reminders.findIndex((r) => r.id === id);
+    if (index < 0) return null;
+    const reminder = reminders[index];
+
+    // Cancel existing notifications
+    if (reminder.notificationIds?.length) {
+      await cancelReminderNotifications(reminder.notificationIds).catch(() => {});
+    } else if (reminder.notificationId) {
+      await cancelReminderNotification(reminder.notificationId).catch(() => {});
+    }
+
+    const days = reminder.days || [];
+    let nextDueDate = reminder.dueDate;
+
+    // Yearly recurring (date set, no specific days): bump to next future occurrence
+    if (reminder.dueDate && days.length === 0) {
+      const [, m, d] = reminder.dueDate.split('-').map(Number);
+      const now = new Date();
+      let nextDate = new Date(now.getFullYear(), m - 1, d);
+      if (nextDate.getTime() <= now.getTime()) {
+        nextDate = new Date(now.getFullYear() + 1, m - 1, d);
+      }
+      // Handle invalid date (e.g., Feb 29 on non-leap year rolls to Mar)
+      if (nextDate.getMonth() !== m - 1) {
+        nextDate.setDate(0); // last day of the intended month
+      }
+      nextDueDate = _getDateStr(nextDate);
+    }
+
+    // Daily and weekly: dueDate stays null — scheduleReminderNotification
+    // uses getNextAlarmTimestamp / getNextDayTimestamp to find the next
+    // occurrence automatically, so no dueDate change needed.
+
+    const updated: Reminder = {
+      ...reminder,
+      dueDate: nextDueDate,
+      notificationId: null,
+      notificationIds: [],
+    };
+
+    // Reschedule for next occurrence
+    if (updated.dueTime) {
+      const notifIds = await scheduleReminderNotification(updated).catch(() => [] as string[]);
+      updated.notificationId = notifIds[0] || null;
+      updated.notificationIds = notifIds;
+    }
+
+    reminders[index] = updated;
+    await saveReminders(reminders);
+    return updated;
+  } catch (e) {
+    console.error('[completeRecurringReminder]', e);
+    return null;
+  }
+}

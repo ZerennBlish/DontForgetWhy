@@ -14,6 +14,7 @@ import {
   getReminders,
   deleteReminder,
   toggleReminderComplete,
+  completeRecurringReminder,
   updateReminder,
   restoreReminder,
   permanentlyDeleteReminder,
@@ -113,15 +114,26 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   const handleToggleComplete = async (id: string) => {
     hapticMedium();
-    const oldReminder = reminders.find(r => r.id === id);
+    const reminder = reminders.find(r => r.id === id);
+    if (!reminder) return;
+
+    // Recurring: reschedule for next occurrence, keep active
+    if (reminder.recurring) {
+      await completeRecurringReminder(id);
+      await loadData();
+      refreshTimerWidget();
+      ToastAndroid.show('Rescheduled', ToastAndroid.SHORT);
+      return;
+    }
+
+    // One-time: toggle completed state
     const updated = await toggleReminderComplete(id);
     if (!updated) return;
     if (updated.completed) {
-      // Cancel all notifications
-      if (oldReminder?.notificationIds?.length) {
-        await cancelReminderNotifications(oldReminder.notificationIds).catch(() => {});
-      } else if (oldReminder?.notificationId) {
-        await cancelReminderNotification(oldReminder.notificationId).catch(() => {});
+      if (reminder.notificationIds?.length) {
+        await cancelReminderNotifications(reminder.notificationIds).catch(() => {});
+      } else if (reminder.notificationId) {
+        await cancelReminderNotification(reminder.notificationId).catch(() => {});
       }
     } else if (!updated.completed && updated.dueTime) {
       const notifIds = await scheduleReminderNotification(updated).catch(() => [] as string[]);

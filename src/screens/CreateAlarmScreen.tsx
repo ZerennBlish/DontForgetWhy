@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TextInput,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -13,7 +14,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 import type { AlarmCategory, AlarmDay } from '../types/alarm';
-import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
+import { WEEKDAYS, WEEKENDS } from '../types/alarm';
 import { addAlarm, updateAlarm } from '../services/storage';
 import { scheduleAlarm, requestPermissions } from '../services/notifications';
 import { loadSettings } from '../services/settings';
@@ -60,21 +61,6 @@ function formatDateDisplay(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatDateShort(dateStr: string): string {
-  const todayObj = new Date();
-  todayObj.setHours(0, 0, 0, 0);
-  const tomorrowObj = new Date(todayObj);
-  tomorrowObj.setDate(tomorrowObj.getDate() + 1);
-
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dateObj = new Date(y, m - 1, d);
-  dateObj.setHours(0, 0, 0, 0);
-
-  if (dateObj.getTime() === todayObj.getTime()) return 'Today';
-  if (dateObj.getTime() === tomorrowObj.getTime()) return 'Tomorrow';
-  return dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
@@ -238,12 +224,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     existingAlarm?.mode || 'one-time'
   );
   const [selectedDays, setSelectedDays] = useState<AlarmDay[]>(
-    existingAlarm?.days?.length ? existingAlarm.days as AlarmDay[] : [...ALL_DAYS]
+    existingAlarm?.days?.length ? existingAlarm.days as AlarmDay[] : []
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(
     existingAlarm?.date || null
   );
-  const [userPickedDate, setUserPickedDate] = useState(!!existingAlarm?.date);
   const [showCalendar, setShowCalendar] = useState(false);
   const [calMonth, setCalMonth] = useState(() => {
     if (existingAlarm?.date) {
@@ -260,27 +245,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     return new Date().getFullYear();
   });
 
-  const effectiveDate = useMemo(() => {
-    if (userPickedDate && selectedDate) return selectedDate;
-    const rawH = parseInt(hourText, 10) || 0;
-    const rawM = parseInt(minuteText, 10) || 0;
-    let h24: number;
-    if (timeFormat === '12h') {
-      const h12 = Math.min(12, Math.max(1, rawH || 12));
-      h24 = ampm === 'AM' ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12);
-    } else {
-      h24 = Math.min(23, Math.max(0, rawH));
-    }
-    const m = Math.min(59, Math.max(0, rawM));
-    const now = new Date();
-    const alarmToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h24, m, 0, 0);
-    if (alarmToday.getTime() <= now.getTime()) {
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return getDateStr(tomorrow);
-    }
-    return getDateStr(now);
-  }, [hourText, minuteText, ampm, timeFormat, userPickedDate, selectedDate]);
+  const cardBg = colors.card + 'BF';
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -308,7 +273,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontSize: 56,
       fontWeight: '700',
       color: colors.textPrimary,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 16,
       width: 90,
       textAlign: 'center',
@@ -326,7 +291,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontSize: 56,
       fontWeight: '700',
       color: colors.textPrimary,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 16,
       width: 90,
       textAlign: 'center',
@@ -341,7 +306,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       marginBottom: 10,
     },
     nicknameInput: {
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 12,
       padding: 16,
       fontSize: 16,
@@ -352,7 +317,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       marginBottom: 24,
     },
     noteInput: {
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 12,
       padding: 16,
       fontSize: 16,
@@ -378,7 +343,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
@@ -392,7 +357,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontSize: 22,
     },
     toggleCard: {
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
@@ -426,7 +391,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       paddingVertical: 8,
       paddingHorizontal: 14,
       borderRadius: 10,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderWidth: 1,
       borderColor: colors.border,
     },
@@ -444,7 +409,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     },
     modeContainer: {
       flexDirection: 'row',
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 12,
       padding: 2,
       marginBottom: 16,
@@ -475,7 +440,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
@@ -502,7 +467,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 10,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderWidth: 1,
       borderColor: colors.border,
     },
@@ -530,6 +495,13 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontSize: 11,
       color: colors.textTertiary,
       marginLeft: 2,
+    },
+    clearDateBtn: {
+      padding: 8,
+    },
+    clearDateText: {
+      fontSize: 16,
+      color: colors.textTertiary,
     },
     calHeader: {
       flexDirection: 'row',
@@ -617,7 +589,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
@@ -632,7 +604,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     soundPill: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.background,
+      backgroundColor: colors.background + 'BF',
       borderRadius: 10,
       paddingVertical: 8,
       paddingHorizontal: 14,
@@ -649,7 +621,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
@@ -671,7 +643,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontSize: 16,
       color: colors.textTertiary,
     },
-  }), [colors, insets.bottom]);
+  }), [colors, cardBg, insets.bottom]);
 
   const handleIconPress = (emoji: string) => {
     hapticLight();
@@ -679,20 +651,22 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   };
 
   const handleToggleDay = (day: AlarmDay) => {
-    setSelectedDays((prev) => {
-      if (prev.includes(day)) {
-        // Don't allow deselecting the last day
-        if (prev.length === 1) return prev;
-        return prev.filter((d) => d !== day);
-      }
-      return [...prev, day];
-    });
+    if (mode === 'one-time') {
+      setSelectedDays((prev) => prev.includes(day) ? [] : [day]);
+    } else {
+      setSelectedDate(null);
+      setSelectedDays((prev) => {
+        if (prev.includes(day)) return prev.filter((d) => d !== day);
+        return [...prev, day];
+      });
+    }
   };
 
   const handleQuickDays = (preset: AlarmDay[]) => {
+    setSelectedDate(null);
     setSelectedDays((prev) => {
       const same = prev.length === preset.length && preset.every((d) => prev.includes(d));
-      if (same) return [...ALL_DAYS];
+      if (same) return [];
       return [...preset];
     });
   };
@@ -745,7 +719,9 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     setSelectedDate(`${yyyy}-${mm}-${dd}`);
-    setUserPickedDate(true);
+    if (mode === 'recurring') {
+      setSelectedDays([]);
+    }
   };
 
   const handleSave = async () => {
@@ -753,11 +729,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     try {
       if (!note.trim() && !selectedIcon) {
         Alert.alert('Hold Up', "Hold up \u2014 give this alarm at least a note or an icon so you'll know what it's for.");
-        return;
-      }
-
-      if (mode === 'one-time' && !effectiveDate) {
-        Alert.alert('Pick a Date', 'Select a date for your one-time alarm.');
         return;
       }
 
@@ -777,12 +748,27 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       const m = Math.min(59, Math.max(0, rawM));
       const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 
-      if (mode === 'one-time' && effectiveDate) {
-        const [py, pm, pd] = effectiveDate.split('-').map(Number);
-        const alarmDateTime = new Date(py, pm - 1, pd, h, m, 0, 0);
-        if (alarmDateTime.getTime() <= Date.now()) {
-          Alert.alert('Time Passed', 'Selected time has already passed. Choose a future time or date.');
-          return;
+      let alarmDate: string | null = null;
+      if (mode === 'one-time') {
+        if (selectedDate) {
+          alarmDate = selectedDate;
+          const [py, pm, pd] = alarmDate.split('-').map(Number);
+          const alarmDateTime = new Date(py, pm - 1, pd, h, m, 0, 0);
+          if (alarmDateTime.getTime() <= Date.now()) {
+            Alert.alert('Time Passed', 'Selected time has already passed. Choose a future time or date.');
+            return;
+          }
+        } else {
+          const now = new Date();
+          const selectedMinutes = h * 60 + m;
+          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+          if (selectedMinutes > currentMinutes) {
+            alarmDate = getDateStr(now);
+          } else {
+            const tmrw = new Date(now);
+            tmrw.setDate(tmrw.getDate() + 1);
+            alarmDate = getDateStr(tmrw);
+          }
         }
       }
 
@@ -805,7 +791,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           private: selectedPrivate,
           mode,
           days: selectedDays,
-          date: mode === 'one-time' ? effectiveDate : null,
+          date: mode === 'one-time' ? alarmDate : null,
           soundId: undefined,
           soundUri: selectedSoundUri || undefined,
           soundName: selectedSoundName || undefined,
@@ -822,7 +808,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           enabled: true,
           mode,
           days: selectedDays,
-          date: mode === 'one-time' ? effectiveDate : null,
+          date: mode === 'one-time' ? alarmDate : null,
           category: categoryFromIcon(selectedIcon),
           icon: selectedIcon || undefined,
           private: selectedPrivate,
@@ -861,261 +847,303 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>{isEditing ? 'Edit Alarm' : 'New Alarm'}</Text>
-
-      <View style={styles.timeContainer}>
-        <TextInput
-          ref={hourRef}
-          style={styles.hourInput}
-          value={hourText}
-          onChangeText={handleHourChange}
-          keyboardType="number-pad"
-          maxLength={2}
-          selectTextOnFocus
-          placeholder={timeFormat === '12h' ? '12' : '0'}
-          placeholderTextColor={colors.textTertiary}
+    <View style={styles.container}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <Image
+          source={require('../../assets/fullscreenicon.png')}
+          style={{ width: '100%', height: '100%', opacity: 0.07 }}
+          resizeMode="cover"
         />
-        <Text style={styles.timeColon}>:</Text>
-        <TextInput
-          ref={minuteRef}
-          style={styles.minuteInput}
-          value={minuteText}
-          onChangeText={handleMinuteChange}
-          onKeyPress={handleMinuteKeyPress}
-          keyboardType="number-pad"
-          maxLength={2}
-          selectTextOnFocus
-          placeholder="00"
-          placeholderTextColor={colors.textTertiary}
-        />
-        {timeFormat === '12h' && (
-          <View style={styles.ampmContainer}>
-            <TouchableOpacity
-              style={[styles.ampmBtn, ampm === 'AM' && styles.ampmBtnActive]}
-              onPress={() => setAmpm('AM')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.ampmBtn, ampm === 'PM' && styles.ampmBtnActive]}
-              onPress={() => setAmpm('PM')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+        <Text style={styles.heading}>{isEditing ? 'Edit Alarm' : 'New Alarm'}</Text>
 
-      <Text style={styles.label}>Schedule</Text>
-      <View style={styles.scheduleSection}>
-        <View style={styles.modeContainer}>
-          <TouchableOpacity
-            style={[styles.modeBtn, mode === 'one-time' && styles.modeBtnActive]}
-            onPress={() => setMode('one-time')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.modeBtnText, mode === 'one-time' && styles.modeBtnTextActive]}>
-              One-time
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
-            onPress={() => setMode('recurring')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>
-              Recurring
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.timeContainer}>
+          <TextInput
+            ref={hourRef}
+            style={styles.hourInput}
+            value={hourText}
+            onChangeText={handleHourChange}
+            keyboardType="number-pad"
+            maxLength={2}
+            selectTextOnFocus
+            placeholder={timeFormat === '12h' ? '12' : '0'}
+            placeholderTextColor={colors.textTertiary}
+          />
+          <Text style={styles.timeColon}>:</Text>
+          <TextInput
+            ref={minuteRef}
+            style={styles.minuteInput}
+            value={minuteText}
+            onChangeText={handleMinuteChange}
+            onKeyPress={handleMinuteKeyPress}
+            keyboardType="number-pad"
+            maxLength={2}
+            selectTextOnFocus
+            placeholder="00"
+            placeholderTextColor={colors.textTertiary}
+          />
+          {timeFormat === '12h' && (
+            <View style={styles.ampmContainer}>
+              <TouchableOpacity
+                style={[styles.ampmBtn, ampm === 'AM' && styles.ampmBtnActive]}
+                onPress={() => setAmpm('AM')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ampmBtn, ampm === 'PM' && styles.ampmBtnActive]}
+                onPress={() => setAmpm('PM')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
-        <View style={styles.dayRow}>
-          {DAY_LABELS.map(({ key, short }) => (
+        <Text style={styles.label}>Schedule</Text>
+        <View style={styles.scheduleSection}>
+          <View style={styles.modeContainer}>
             <TouchableOpacity
-              key={key}
-              style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
-              onPress={() => handleToggleDay(key)}
+              style={[styles.modeBtn, mode === 'one-time' && styles.modeBtnActive]}
+              onPress={() => setMode('one-time')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
-                {short}
+              <Text style={[styles.modeBtnText, mode === 'one-time' && styles.modeBtnTextActive]}>
+                One-time
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
+              onPress={() => setMode('recurring')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>
+                Recurring
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.dayRow}>
+            {DAY_LABELS.map(({ key, short }) => (
+              <TouchableOpacity
+                key={key}
+                style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
+                onPress={() => handleToggleDay(key)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
+                  {short}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {mode === 'recurring' && (
+            <>
+              <View style={styles.quickDayRow}>
+                <TouchableOpacity
+                  style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
+                  onPress={() => handleQuickDays([...WEEKDAYS])}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickDayText}>Weekdays</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
+                  onPress={() => handleQuickDays([...WEEKENDS])}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickDayText}>Weekends</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickDayBtn, showCalendar && styles.quickDayBtnActive]}
+                  onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickDayText}>{'\u{1F4C5}'}</Text>
+                </TouchableOpacity>
+              </View>
+              {selectedDate && (
+                <View style={styles.setDateRow}>
+                  <Text style={styles.setDateText}>
+                    {'\u{1F4C5}'} {formatDateDisplay(selectedDate)}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => { hapticLight(); setSelectedDate(null); }}
+                    style={styles.clearDateBtn}
+                  >
+                    <Text style={styles.clearDateText}>{'\u2715'}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
+          )}
+
+          {mode === 'one-time' && (
+            <View style={styles.setDateRow}>
+              <TouchableOpacity
+                style={{ flex: 1 }}
+                onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+                activeOpacity={0.6}
+              >
+                <Text style={styles.setDateText}>
+                  {'\u{1F4C5}'} {selectedDate ? formatDateDisplay(selectedDate) : 'No date set'}
+                </Text>
+              </TouchableOpacity>
+              {selectedDate ? (
+                <TouchableOpacity
+                  onPress={() => { hapticLight(); setSelectedDate(null); }}
+                  style={styles.clearDateBtn}
+                >
+                  <Text style={styles.clearDateText}>{'\u2715'}</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.setDateChevron}>{showCalendar ? '\u25B4' : '\u25BE'}</Text>
+              )}
+            </View>
+          )}
+
+          {showCalendar && (
+            <>
+              <View style={styles.calHeader}>
+                <TouchableOpacity onPress={handleCalPrev} style={styles.calNav}>
+                  <Text style={styles.calNavText}>{'\u2039'}</Text>
+                </TouchableOpacity>
+                <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
+                <TouchableOpacity onPress={handleCalNext} style={styles.calNav}>
+                  <Text style={styles.calNavText}>{'\u203A'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.calWeekRow}>
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+                  <Text key={i} style={styles.calWeekDay}>{d}</Text>
+                ))}
+              </View>
+              <View style={styles.calGrid}>
+                {Array.from({ length: calFirstDay }).map((_, i) => (
+                  <View key={`empty-${i}`} style={styles.calCell} />
+                ))}
+                {Array.from({ length: calDays }).map((_, i) => {
+                  const day = i + 1;
+                  const dateObj = new Date(calYear, calMonth, day);
+                  dateObj.setHours(0, 0, 0, 0);
+                  const isPast = dateObj.getTime() < today.getTime();
+                  const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const isSelected = selectedDate === dateStr;
+                  return (
+                    <View key={day} style={styles.calCell}>
+                      <TouchableOpacity
+                        style={[styles.calDay, isSelected && styles.calDaySelected]}
+                        onPress={() => handleSelectDate(day)}
+                        disabled={isPast}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.calDayText,
+                          isPast && styles.calDayTextDisabled,
+                          isSelected && styles.calDayTextSelected,
+                        ]}>
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+              {selectedDate && (
+                <Text style={styles.selectedDateText}>{formatDateDisplay(selectedDate)}</Text>
+              )}
+            </>
+          )}
+        </View>
+
+        <Text style={styles.label}>Nickname (shows on lock screen)</Text>
+        <TextInput
+          style={styles.nicknameInput}
+          value={nickname}
+          onChangeText={setNickname}
+          placeholder="e.g. Pill O'Clock, Dog Time, Morning Stuff"
+          placeholderTextColor={colors.textTertiary}
+          maxLength={40}
+        />
+
+        <Text style={styles.label}>Why are you setting this alarm?</Text>
+        <TextInput
+          style={styles.noteInput}
+          value={note}
+          onChangeText={setNote}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textTertiary}
+          multiline
+          maxLength={200}
+          textAlignVertical="top"
+        />
+        <Text style={styles.charCount}>{note.length}/200</Text>
+
+        <Text style={styles.label}>What's it for?</Text>
+        <View style={styles.iconGrid}>
+          {guessWhyIcons.map((icon) => (
+            <TouchableOpacity
+              key={icon.id}
+              style={[
+                styles.iconCell,
+                selectedIcon === icon.emoji && styles.iconCellActive,
+              ]}
+              onPress={() => handleIconPress(icon.emoji)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.iconEmoji}>{icon.emoji}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        <View style={styles.quickDayRow}>
-          <TouchableOpacity
-            style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
-            onPress={() => handleQuickDays([...WEEKDAYS])}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.quickDayText}>Weekdays</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
-            onPress={() => handleQuickDays([...WEEKENDS])}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.quickDayText}>Weekends</Text>
-          </TouchableOpacity>
-        </View>
 
-        {mode === 'one-time' && (
-          <>
-            <TouchableOpacity
-              style={styles.setDateRow}
-              onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.setDateText}>
-                {'\u{1F4C5}'} {formatDateShort(effectiveDate)}
-              </Text>
-              <Text style={styles.setDateChevron}>{showCalendar ? '\u25B4' : '\u25BE'}</Text>
-            </TouchableOpacity>
-
-            {showCalendar && (
-              <>
-                <View style={styles.calHeader}>
-                  <TouchableOpacity onPress={handleCalPrev} style={styles.calNav}>
-                    <Text style={styles.calNavText}>{'\u2039'}</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
-                  <TouchableOpacity onPress={handleCalNext} style={styles.calNav}>
-                    <Text style={styles.calNavText}>{'\u203A'}</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.calWeekRow}>
-                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                    <Text key={i} style={styles.calWeekDay}>{d}</Text>
-                  ))}
-                </View>
-                <View style={styles.calGrid}>
-                  {Array.from({ length: calFirstDay }).map((_, i) => (
-                    <View key={`empty-${i}`} style={styles.calCell} />
-                  ))}
-                  {Array.from({ length: calDays }).map((_, i) => {
-                    const day = i + 1;
-                    const dateObj = new Date(calYear, calMonth, day);
-                    dateObj.setHours(0, 0, 0, 0);
-                    const isPast = dateObj.getTime() < today.getTime();
-                    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    const isSelected = effectiveDate === dateStr;
-                    return (
-                      <View key={day} style={styles.calCell}>
-                        <TouchableOpacity
-                          style={[styles.calDay, isSelected && styles.calDaySelected]}
-                          onPress={() => handleSelectDate(day)}
-                          disabled={isPast}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[
-                            styles.calDayText,
-                            isPast && styles.calDayTextDisabled,
-                            isSelected && styles.calDayTextSelected,
-                          ]}>
-                            {day}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </View>
-                {effectiveDate && (
-                  <Text style={styles.selectedDateText}>{formatDateDisplay(effectiveDate)}</Text>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </View>
-
-      <Text style={styles.label}>Nickname (shows on lock screen)</Text>
-      <TextInput
-        style={styles.nicknameInput}
-        value={nickname}
-        onChangeText={setNickname}
-        placeholder="e.g. Pill O'Clock, Dog Time, Morning Stuff"
-        placeholderTextColor={colors.textTertiary}
-        maxLength={40}
-      />
-
-      <Text style={styles.label}>Why are you setting this alarm?</Text>
-      <TextInput
-        style={styles.noteInput}
-        value={note}
-        onChangeText={setNote}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textTertiary}
-        multiline
-        maxLength={200}
-        textAlignVertical="top"
-      />
-      <Text style={styles.charCount}>{note.length}/200</Text>
-
-      <Text style={styles.label}>What's it for?</Text>
-      <View style={styles.iconGrid}>
-        {guessWhyIcons.map((icon) => (
-          <TouchableOpacity
-            key={icon.id}
-            style={[
-              styles.iconCell,
-              selectedIcon === icon.emoji && styles.iconCellActive,
-            ]}
-            onPress={() => handleIconPress(icon.emoji)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.iconEmoji}>{icon.emoji}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Alarm Sound</Text>
-      <TouchableOpacity
-        style={styles.systemSoundRow}
-        onPress={() => setSystemSoundPickerVisible(true)}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.soundLabel}>
-          {selectedSoundUri ? '\u{1F3B5}' : '\u{1F514}'} {selectedSoundName || 'Default'}
-        </Text>
-        <View style={styles.systemSoundValue}>
-          <Text style={styles.systemSoundValueText} numberOfLines={1}>
-            {selectedSoundUri ? 'System sound' : 'Tap to change'}
+        <Text style={styles.label}>Alarm Sound</Text>
+        <TouchableOpacity
+          style={styles.systemSoundRow}
+          onPress={() => setSystemSoundPickerVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.soundLabel}>
+            {selectedSoundUri ? '\u{1F3B5}' : '\u{1F514}'} {selectedSoundName || 'Default'}
           </Text>
-          <Text style={styles.systemSoundChevron}>{'\u203A'}</Text>
+          <View style={styles.systemSoundValue}>
+            <Text style={styles.systemSoundValueText} numberOfLines={1}>
+              {selectedSoundUri ? 'System sound' : 'Tap to change'}
+            </Text>
+            <Text style={styles.systemSoundChevron}>{'\u203A'}</Text>
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.toggleCard}>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Private Alarm</Text>
+            <Switch
+              value={selectedPrivate}
+              onValueChange={(v) => { hapticLight(); setSelectedPrivate(v); }}
+              trackColor={{ false: colors.border, true: colors.accent }}
+              thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
+            />
+          </View>
+          <Text style={styles.toggleDescription}>
+            Hides details on the alarm list. Tap the eye icon to peek.
+          </Text>
         </View>
-      </TouchableOpacity>
 
-      <View style={styles.toggleCard}>
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Private Alarm</Text>
-          <Switch
-            value={selectedPrivate}
-            onValueChange={(v) => { hapticLight(); setSelectedPrivate(v); }}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
-          />
-        </View>
-        <Text style={styles.toggleDescription}>
-          Hides details on the alarm list. Tap the eye icon to peek.
-        </Text>
-      </View>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
+          <Text style={styles.saveBtnText}>
+            {isEditing ? 'Update Alarm' : 'Save Alarm'}
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-        <Text style={styles.saveBtnText}>
-          {isEditing ? 'Update Alarm' : 'Save Alarm'}
-        </Text>
-      </TouchableOpacity>
-
-      <SoundPickerModal
-        visible={systemSoundPickerVisible}
-        onSelect={handleSystemSoundSelect}
-        onClose={() => setSystemSoundPickerVisible(false)}
-        currentSoundID={selectedSystemSoundID}
-      />
-    </ScrollView>
+        <SoundPickerModal
+          visible={systemSoundPickerVisible}
+          onSelect={handleSystemSoundSelect}
+          onClose={() => setSystemSoundPickerVisible(false)}
+          currentSoundID={selectedSystemSoundID}
+        />
+      </ScrollView>
+    </View>
   );
 }

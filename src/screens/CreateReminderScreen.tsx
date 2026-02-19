@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   TextInput,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -14,7 +15,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 import type { Reminder } from '../types/reminder';
 import type { AlarmDay } from '../types/alarm';
-import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
+import { WEEKDAYS, WEEKENDS } from '../types/alarm';
 import {
   getReminders,
   addReminder,
@@ -68,19 +69,6 @@ function formatDateDisplay(dateStr: string): string {
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatDateShort(dateStr: string): string {
-  const todayObj = new Date();
-  todayObj.setHours(0, 0, 0, 0);
-  const tomorrowObj = new Date(todayObj);
-  tomorrowObj.setDate(tomorrowObj.getDate() + 1);
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dateObj = new Date(y, m - 1, d);
-  dateObj.setHours(0, 0, 0, 0);
-  if (dateObj.getTime() === todayObj.getTime()) return 'Today';
-  if (dateObj.getTime() === tomorrowObj.getTime()) return 'Tomorrow';
-  return dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-}
-
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateReminder'>;
 
 export default function CreateReminderScreen({ route, navigation }: Props) {
@@ -88,29 +76,35 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const editId = route.params?.reminderId;
 
+  // Time-related state — mirrors CreateAlarmScreen order exactly
+  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [hourText, setHourText] = useState<string>(() => String(new Date().getHours()));
+  const [minuteText, setMinuteText] = useState<string>(
+    () => String(new Date().getMinutes()).padStart(2, '0')
+  );
+  const [ampm, setAmpm] = useState<'AM' | 'PM'>(
+    () => new Date().getHours() >= 12 ? 'PM' : 'AM'
+  );
+  const hourRef = useRef<TextInput>(null);
+  const minuteRef = useRef<TextInput>(null);
+
+  // Reminder-specific state
   const [existing, setExisting] = useState<Reminder | null>(null);
   const [text, setText] = useState('');
   const [nickname, setNickname] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<string>('\u{1F4DD}');
   const [selectedPrivate, setSelectedPrivate] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [userPickedDate, setUserPickedDate] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [hourText, setHourText] = useState(() => String(new Date().getHours()));
-  const [minuteText, setMinuteText] = useState(() => String(new Date().getMinutes()).padStart(2, '0'));
-  const [ampm, setAmpm] = useState<'AM' | 'PM'>(() => new Date().getHours() >= 12 ? 'PM' : 'AM');
-  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [selectedDays, setSelectedDays] = useState<AlarmDay[]>([]);
   const [mode, setMode] = useState<'one-time' | 'recurring'>('one-time');
   const [placeholder] = useState(getRandomPlaceholder);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
 
-  const hourRef = useRef<TextInput>(null);
-  const minuteRef = useRef<TextInput>(null);
-
-  const handleHourChange = (inputText: string) => {
-    const digits = inputText.replace(/[^0-9]/g, '');
+  // Time input handlers — identical to CreateAlarmScreen
+  const handleHourChange = useCallback((text: string) => {
+    const digits = text.replace(/[^0-9]/g, '');
     if (digits === '') { setHourText(''); return; }
     if (timeFormat === '12h') {
       if (digits.length === 1) {
@@ -145,10 +139,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         }
       }
     }
-  };
+  }, [timeFormat]);
 
-  const handleMinuteChange = (inputText: string) => {
-    const digits = inputText.replace(/[^0-9]/g, '');
+  const handleMinuteChange = useCallback((text: string) => {
+    const digits = text.replace(/[^0-9]/g, '');
     if (digits === '') { setMinuteText(''); return; }
     if (digits.length === 1) {
       if (parseInt(digits, 10) <= 5) {
@@ -160,13 +154,13 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         setMinuteText(digits.slice(0, 2));
       }
     }
-  };
+  }, []);
 
-  const handleMinuteKeyPress = ({ nativeEvent }: { nativeEvent: { key: string } }) => {
+  const handleMinuteKeyPress = useCallback(({ nativeEvent }: { nativeEvent: { key: string } }) => {
     if (nativeEvent.key === 'Backspace' && minuteText === '') {
       hourRef.current?.focus();
     }
-  };
+  }, [minuteText]);
 
   useEffect(() => {
     loadSettings().then((s) => {
@@ -193,7 +187,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       setSelectedPrivate(found.private);
       if (found.dueDate) {
         setSelectedDate(found.dueDate);
-        setUserPickedDate(true);
         const [yr, mo] = found.dueDate.split('-').map(Number);
         setCalMonth(mo - 1);
         setCalYear(yr);
@@ -218,28 +211,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     });
   }, [editId, timeFormat]);
 
-  const effectiveDate = useMemo(() => {
-    if (userPickedDate && selectedDate) return selectedDate;
-    const rawH = parseInt(hourText, 10) || 0;
-    const rawM = parseInt(minuteText, 10) || 0;
-    let h24: number;
-    if (timeFormat === '12h') {
-      const h12 = Math.min(12, Math.max(1, rawH || 12));
-      h24 = ampm === 'AM' ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12);
-    } else {
-      h24 = Math.min(23, Math.max(0, rawH));
-    }
-    const m = Math.min(59, Math.max(0, rawM));
-    const now = new Date();
-    const alarmToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h24, m, 0, 0);
-    if (alarmToday.getTime() <= now.getTime()) {
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return getDateStr(tomorrow);
-    }
-    return getDateStr(now);
-  }, [hourText, minuteText, ampm, timeFormat, userPickedDate, selectedDate]);
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -247,15 +218,19 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const calFirstDay = getFirstDayOfMonth(calYear, calMonth);
 
   const handleToggleDay = (day: AlarmDay) => {
-    setSelectedDays((prev) => {
-      if (prev.includes(day)) {
-        return prev.filter((d) => d !== day);
-      }
-      return [...prev, day];
-    });
+    if (mode === 'one-time') {
+      setSelectedDays((prev) => prev.includes(day) ? [] : [day]);
+    } else {
+      setSelectedDate(null);
+      setSelectedDays((prev) => {
+        if (prev.includes(day)) return prev.filter((d) => d !== day);
+        return [...prev, day];
+      });
+    }
   };
 
   const handleQuickDays = (preset: AlarmDay[]) => {
+    setSelectedDate(null);
     setSelectedDays((prev) => {
       const same = prev.length === preset.length && preset.every((d) => prev.includes(d));
       if (same) return [];
@@ -265,6 +240,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
   const isWeekdaysSelected = selectedDays.length === 5 && WEEKDAYS.every((d) => selectedDays.includes(d));
   const isWeekendsSelected = selectedDays.length === 2 && WEEKENDS.every((d) => selectedDays.includes(d));
+
+  const cardBg = colors.card + 'BF';
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -292,7 +269,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       fontSize: 56,
       fontWeight: '700',
       color: colors.textPrimary,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 16,
       width: 90,
       textAlign: 'center',
@@ -310,7 +287,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       fontSize: 56,
       fontWeight: '700',
       color: colors.textPrimary,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 16,
       width: 90,
       textAlign: 'center',
@@ -327,7 +304,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       paddingVertical: 8,
       paddingHorizontal: 14,
       borderRadius: 10,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderWidth: 1,
       borderColor: colors.border,
     },
@@ -354,7 +331,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     },
     modeContainer: {
       flexDirection: 'row',
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 12,
       padding: 2,
       marginBottom: 16,
@@ -385,7 +362,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
@@ -412,7 +389,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 10,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderWidth: 1,
       borderColor: colors.border,
     },
@@ -440,6 +417,13 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       fontSize: 11,
       color: colors.textTertiary,
       marginLeft: 2,
+    },
+    clearDateBtn: {
+      padding: 8,
+    },
+    clearDateText: {
+      fontSize: 16,
+      color: colors.textTertiary,
     },
     calHeader: {
       flexDirection: 'row',
@@ -510,7 +494,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       fontWeight: '600',
     },
     textInput: {
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 12,
       padding: 16,
       fontSize: 16,
@@ -536,7 +520,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
@@ -550,7 +534,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       fontSize: 22,
     },
     nicknameInput: {
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 12,
       padding: 16,
       fontSize: 16,
@@ -561,7 +545,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       marginBottom: 24,
     },
     toggleCard: {
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
@@ -597,7 +581,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       fontWeight: '700',
       color: colors.textPrimary,
     },
-  }), [colors, insets.bottom]);
+  }), [colors, cardBg, insets.bottom]);
 
   const handleCalPrev = () => {
     if (calMonth === 0) {
@@ -625,7 +609,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     setSelectedDate(`${yyyy}-${mm}-${dd}`);
-    setUserPickedDate(true);
+    if (mode === 'recurring') {
+      setSelectedDays([]);
+    }
   };
 
   const doSave = async (dueDate: string | null, dueTime: string | null) => {
@@ -735,7 +721,26 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       dueTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     }
 
-    const dueDate = mode === 'one-time' ? effectiveDate : selectedDate;
+    let dueDate: string | null = null;
+    if (mode === 'one-time') {
+      if (selectedDate) {
+        dueDate = selectedDate;
+      } else if (dueTime) {
+        const now = new Date();
+        const [ph, pmin] = dueTime.split(':').map(Number);
+        const selectedMinutes = ph * 60 + pmin;
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        if (selectedMinutes > currentMinutes) {
+          dueDate = getDateStr(now);
+        } else {
+          const tmrw = new Date(now);
+          tmrw.setDate(tmrw.getDate() + 1);
+          dueDate = getDateStr(tmrw);
+        }
+      }
+    } else if (mode === 'recurring') {
+      dueDate = selectedDate;
+    }
 
     if (dueTime && dueDate) {
       const [py, pm, pd] = dueDate.split('-').map(Number);
@@ -758,246 +763,281 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>
-        {existing ? 'Edit Reminder' : 'New Reminder'}
-      </Text>
-
-      {/* 1. Time input */}
-      <View style={styles.timeContainer}>
-        <TextInput
-          ref={hourRef}
-          style={styles.hourInput}
-          value={hourText}
-          onChangeText={handleHourChange}
-          keyboardType="number-pad"
-          maxLength={2}
-          selectTextOnFocus
-          placeholder={timeFormat === '12h' ? '12' : '0'}
-          placeholderTextColor={colors.textTertiary}
+    <View style={styles.container}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <Image
+          source={require('../../assets/fullscreenicon.png')}
+          style={{ width: '100%', height: '100%', opacity: 0.07 }}
+          resizeMode="cover"
         />
-        <Text style={styles.timeColon}>:</Text>
-        <TextInput
-          ref={minuteRef}
-          style={styles.minuteInput}
-          value={minuteText}
-          onChangeText={handleMinuteChange}
-          onKeyPress={handleMinuteKeyPress}
-          keyboardType="number-pad"
-          maxLength={2}
-          selectTextOnFocus
-          placeholder="00"
-          placeholderTextColor={colors.textTertiary}
-        />
-        {timeFormat === '12h' && (
-          <View style={styles.ampmContainer}>
-            <TouchableOpacity
-              style={[styles.ampmBtn, ampm === 'AM' && styles.ampmBtnActive]}
-              onPress={() => setAmpm('AM')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.ampmBtn, ampm === 'PM' && styles.ampmBtnActive]}
-              onPress={() => setAmpm('PM')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+        <Text style={styles.heading}>
+          {existing ? 'Edit Reminder' : 'New Reminder'}
+        </Text>
 
-      {/* 2. Schedule toggle + 3. Day circles + 4. Date row */}
-      <Text style={styles.label}>Schedule</Text>
-      <View style={styles.scheduleSection}>
-        <View style={styles.modeContainer}>
-          <TouchableOpacity
-            style={[styles.modeBtn, mode === 'one-time' && styles.modeBtnActive]}
-            onPress={() => setMode('one-time')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.modeBtnText, mode === 'one-time' && styles.modeBtnTextActive]}>
-              One-time
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
-            onPress={() => setMode('recurring')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>
-              Recurring
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.timeContainer}>
+          <TextInput
+            ref={hourRef}
+            style={styles.hourInput}
+            value={hourText}
+            onChangeText={handleHourChange}
+            keyboardType="number-pad"
+            maxLength={2}
+            selectTextOnFocus
+            placeholder={timeFormat === '12h' ? '12' : '0'}
+            placeholderTextColor={colors.textTertiary}
+          />
+          <Text style={styles.timeColon}>:</Text>
+          <TextInput
+            ref={minuteRef}
+            style={styles.minuteInput}
+            value={minuteText}
+            onChangeText={handleMinuteChange}
+            onKeyPress={handleMinuteKeyPress}
+            keyboardType="number-pad"
+            maxLength={2}
+            selectTextOnFocus
+            placeholder="00"
+            placeholderTextColor={colors.textTertiary}
+          />
+          {timeFormat === '12h' && (
+            <View style={styles.ampmContainer}>
+              <TouchableOpacity
+                style={[styles.ampmBtn, ampm === 'AM' && styles.ampmBtnActive]}
+                onPress={() => setAmpm('AM')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ampmBtn, ampm === 'PM' && styles.ampmBtnActive]}
+                onPress={() => setAmpm('PM')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
-        <View style={styles.dayRow}>
-          {DAY_LABELS.map(({ key, short }) => (
+        <Text style={styles.label}>Schedule</Text>
+        <View style={styles.scheduleSection}>
+          <View style={styles.modeContainer}>
             <TouchableOpacity
-              key={key}
-              style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
-              onPress={() => handleToggleDay(key)}
+              style={[styles.modeBtn, mode === 'one-time' && styles.modeBtnActive]}
+              onPress={() => setMode('one-time')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
-                {short}
+              <Text style={[styles.modeBtnText, mode === 'one-time' && styles.modeBtnTextActive]}>
+                One-time
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
+              onPress={() => setMode('recurring')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>
+                Recurring
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.dayRow}>
+            {DAY_LABELS.map(({ key, short }) => (
+              <TouchableOpacity
+                key={key}
+                style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
+                onPress={() => handleToggleDay(key)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
+                  {short}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {mode === 'recurring' && (
+            <>
+              <View style={styles.quickDayRow}>
+                <TouchableOpacity
+                  style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
+                  onPress={() => handleQuickDays([...WEEKDAYS])}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickDayText}>Weekdays</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
+                  onPress={() => handleQuickDays([...WEEKENDS])}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickDayText}>Weekends</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickDayBtn, showCalendar && styles.quickDayBtnActive]}
+                  onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickDayText}>{'\u{1F4C5}'}</Text>
+                </TouchableOpacity>
+              </View>
+              {selectedDate && (
+                <View style={styles.setDateRow}>
+                  <Text style={styles.setDateText}>
+                    {'\u{1F4C5}'} {formatDateDisplay(selectedDate)}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => { hapticLight(); setSelectedDate(null); }}
+                    style={styles.clearDateBtn}
+                  >
+                    <Text style={styles.clearDateText}>{'\u2715'}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
+          )}
+
+          {mode === 'one-time' && (
+            <View style={styles.setDateRow}>
+              <TouchableOpacity
+                style={{ flex: 1 }}
+                onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+                activeOpacity={0.6}
+              >
+                <Text style={styles.setDateText}>
+                  {'\u{1F4C5}'} {selectedDate ? formatDateDisplay(selectedDate) : 'No date set'}
+                </Text>
+              </TouchableOpacity>
+              {selectedDate ? (
+                <TouchableOpacity
+                  onPress={() => { hapticLight(); setSelectedDate(null); }}
+                  style={styles.clearDateBtn}
+                >
+                  <Text style={styles.clearDateText}>{'\u2715'}</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.setDateChevron}>{showCalendar ? '\u25B4' : '\u25BE'}</Text>
+              )}
+            </View>
+          )}
+
+          {showCalendar && (
+            <>
+              <View style={styles.calHeader}>
+                <TouchableOpacity onPress={handleCalPrev} style={styles.calNav}>
+                  <Text style={styles.calNavText}>{'\u2039'}</Text>
+                </TouchableOpacity>
+                <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
+                <TouchableOpacity onPress={handleCalNext} style={styles.calNav}>
+                  <Text style={styles.calNavText}>{'\u203A'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.calWeekRow}>
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+                  <Text key={i} style={styles.calWeekDay}>{d}</Text>
+                ))}
+              </View>
+              <View style={styles.calGrid}>
+                {Array.from({ length: calFirstDay }).map((_, i) => (
+                  <View key={`empty-${i}`} style={styles.calCell} />
+                ))}
+                {Array.from({ length: calDays }).map((_, i) => {
+                  const day = i + 1;
+                  const dateObj = new Date(calYear, calMonth, day);
+                  dateObj.setHours(0, 0, 0, 0);
+                  const isPast = dateObj.getTime() < today.getTime();
+                  const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const isSelected = selectedDate === dateStr;
+                  return (
+                    <View key={day} style={styles.calCell}>
+                      <TouchableOpacity
+                        style={[styles.calDay, isSelected && styles.calDaySelected]}
+                        onPress={() => handleSelectDate(day)}
+                        disabled={isPast}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.calDayText,
+                          isPast && styles.calDayTextDisabled,
+                          isSelected && styles.calDayTextSelected,
+                        ]}>
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+              {selectedDate && (
+                <Text style={styles.selectedDateText}>{formatDateDisplay(selectedDate)}</Text>
+              )}
+            </>
+          )}
+        </View>
+
+        <Text style={styles.label}>Nickname (optional, for privacy)</Text>
+        <TextInput
+          style={styles.nicknameInput}
+          value={nickname}
+          onChangeText={setNickname}
+          placeholder="e.g. Important thing, Weekly task"
+          placeholderTextColor={colors.textTertiary}
+          maxLength={40}
+        />
+
+        <Text style={styles.label}>What do you need to remember?</Text>
+        <TextInput
+          style={styles.textInput}
+          value={text}
+          onChangeText={setText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textTertiary}
+          multiline
+          maxLength={200}
+          textAlignVertical="top"
+        />
+        <Text style={styles.charCount}>{text.length}/200</Text>
+
+        <Text style={styles.label}>What's it for?</Text>
+        <View style={styles.iconGrid}>
+          {guessWhyIcons.map((icon) => (
+            <TouchableOpacity
+              key={icon.id}
+              style={[
+                styles.iconCell,
+                selectedIcon === icon.emoji && styles.iconCellActive,
+              ]}
+              onPress={() => { hapticLight(); setSelectedIcon(selectedIcon === icon.emoji ? '' : icon.emoji); }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.iconEmoji}>{icon.emoji}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        <View style={styles.quickDayRow}>
-          <TouchableOpacity
-            style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
-            onPress={() => handleQuickDays([...WEEKDAYS])}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.quickDayText}>Weekdays</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
-            onPress={() => handleQuickDays([...WEEKENDS])}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.quickDayText}>Weekends</Text>
-          </TouchableOpacity>
+
+        <View style={styles.toggleCard}>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Private</Text>
+            <Switch
+              value={selectedPrivate}
+              onValueChange={(v) => { hapticLight(); setSelectedPrivate(v); }}
+              trackColor={{ false: colors.border, true: colors.accent }}
+              thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
+            />
+          </View>
+          <Text style={styles.toggleDescription}>
+            Hides details on the reminder card and widget.
+          </Text>
         </View>
 
-        {mode === 'one-time' && (
-          <>
-            <TouchableOpacity
-              style={styles.setDateRow}
-              onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.setDateText}>
-                {'\u{1F4C5}'} {formatDateShort(effectiveDate)}
-              </Text>
-              <Text style={styles.setDateChevron}>{showCalendar ? '\u25B4' : '\u25BE'}</Text>
-            </TouchableOpacity>
-
-            {showCalendar && (
-              <>
-                <View style={styles.calHeader}>
-                  <TouchableOpacity onPress={handleCalPrev} style={styles.calNav}>
-                    <Text style={styles.calNavText}>{'\u2039'}</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
-                  <TouchableOpacity onPress={handleCalNext} style={styles.calNav}>
-                    <Text style={styles.calNavText}>{'\u203A'}</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.calWeekRow}>
-                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                    <Text key={i} style={styles.calWeekDay}>{d}</Text>
-                  ))}
-                </View>
-                <View style={styles.calGrid}>
-                  {Array.from({ length: calFirstDay }).map((_, i) => (
-                    <View key={`empty-${i}`} style={styles.calCell} />
-                  ))}
-                  {Array.from({ length: calDays }).map((_, i) => {
-                    const day = i + 1;
-                    const dateObj = new Date(calYear, calMonth, day);
-                    dateObj.setHours(0, 0, 0, 0);
-                    const isPast = dateObj.getTime() < today.getTime();
-                    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    const isSelected = effectiveDate === dateStr;
-                    return (
-                      <View key={day} style={styles.calCell}>
-                        <TouchableOpacity
-                          style={[styles.calDay, isSelected && styles.calDaySelected]}
-                          onPress={() => handleSelectDate(day)}
-                          disabled={isPast}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[
-                            styles.calDayText,
-                            isPast && styles.calDayTextDisabled,
-                            isSelected && styles.calDayTextSelected,
-                          ]}>
-                            {day}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </View>
-                {effectiveDate && (
-                  <Text style={styles.selectedDateText}>{formatDateDisplay(effectiveDate)}</Text>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </View>
-
-      {/* 5. Nickname field */}
-      <Text style={styles.label}>Nickname (optional, for privacy)</Text>
-      <TextInput
-        style={styles.nicknameInput}
-        value={nickname}
-        onChangeText={setNickname}
-        placeholder="e.g. Important thing, Weekly task"
-        placeholderTextColor={colors.textTertiary}
-        maxLength={40}
-      />
-
-      {/* 6. Note field */}
-      <Text style={styles.label}>What do you need to remember?</Text>
-      <TextInput
-        style={styles.textInput}
-        value={text}
-        onChangeText={setText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textTertiary}
-        multiline
-        maxLength={200}
-        textAlignVertical="top"
-      />
-      <Text style={styles.charCount}>{text.length}/200</Text>
-
-      {/* 7. Icon picker */}
-      <Text style={styles.label}>What's it for?</Text>
-      <View style={styles.iconGrid}>
-        {guessWhyIcons.map((icon) => (
-          <TouchableOpacity
-            key={icon.id}
-            style={[
-              styles.iconCell,
-              selectedIcon === icon.emoji && styles.iconCellActive,
-            ]}
-            onPress={() => { hapticLight(); setSelectedIcon(selectedIcon === icon.emoji ? '' : icon.emoji); }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.iconEmoji}>{icon.emoji}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* 8. Private toggle */}
-      <View style={styles.toggleCard}>
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Private</Text>
-          <Switch
-            value={selectedPrivate}
-            onValueChange={(v) => { hapticLight(); setSelectedPrivate(v); }}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
-          />
-        </View>
-        <Text style={styles.toggleDescription}>
-          Hides details on the reminder card and widget.
-        </Text>
-      </View>
-
-      {/* 9. Save button */}
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-        <Text style={styles.saveBtnText}>
-          {existing ? 'Update Reminder' : 'Save Reminder'}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
+          <Text style={styles.saveBtnText}>
+            {existing ? 'Update Reminder' : 'Save Reminder'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
