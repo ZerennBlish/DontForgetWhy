@@ -671,6 +671,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           notificationId: null,
           notificationIds: [],
           pinned: false,
+          completionHistory: [],
         };
 
         if (dueTime) {

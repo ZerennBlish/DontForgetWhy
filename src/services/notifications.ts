@@ -72,6 +72,14 @@ function getOneTimeTimestamp(time: string, dateStr: string): number {
   return ts;
 }
 
+function _isToday(ts: number): boolean {
+  const d = new Date(ts);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+}
+
 let _channelPromise: Promise<void> | null = null;
 
 export function setupNotificationChannel(): Promise<void> {
@@ -524,13 +532,21 @@ export async function cancelTimerCountdownNotification(timerId: string): Promise
 
 // --- Reminder notifications ---
 
-export async function scheduleReminderNotification(reminder: Reminder): Promise<string[]> {
+export interface ReminderScheduleOptions {
+  skipCurrentCycle?: boolean;
+}
+
+export async function scheduleReminderNotification(
+  reminder: Reminder,
+  options?: ReminderScheduleOptions,
+): Promise<string[]> {
   // No time set means no notification
   if (!reminder.dueTime) return [];
 
   await setupNotificationChannel();
 
   const [hours, minutes] = reminder.dueTime.split(':').map(Number);
+  const skip = options?.skipCurrentCycle === true;
 
   const title = reminder.private
     ? '\u{1F4DD} Reminder'
@@ -558,9 +574,14 @@ export async function scheduleReminderNotification(reminder: Reminder): Promise<
   if (isRecurring && days.length > 0 && days.length < 7) {
     const ids: string[] = [];
     for (const day of days) {
+      let timestamp = getNextDayTimestamp(reminder.dueTime, day as AlarmDay);
+      // Early completion: if the next occurrence is today, push to next week
+      if (skip && _isToday(timestamp)) {
+        timestamp += 7 * 24 * 60 * 60 * 1000;
+      }
       const trigger: TimestampTrigger = {
         type: TriggerType.TIMESTAMP,
-        timestamp: getNextDayTimestamp(reminder.dueTime, day as AlarmDay),
+        timestamp,
         alarmManager: { allowWhileIdle: true },
         repeatFrequency: RepeatFrequency.WEEKLY,
       };
@@ -572,9 +593,14 @@ export async function scheduleReminderNotification(reminder: Reminder): Promise<
 
   // Scenario 2: Recurring daily (no specific days, or all 7 days selected)
   if (isRecurring && !reminder.dueDate) {
+    let timestamp = getNextAlarmTimestamp(reminder.dueTime);
+    // Early completion: if the next occurrence is today, push to tomorrow
+    if (skip && _isToday(timestamp)) {
+      timestamp += 24 * 60 * 60 * 1000;
+    }
     const trigger: TimestampTrigger = {
       type: TriggerType.TIMESTAMP,
-      timestamp: getNextAlarmTimestamp(reminder.dueTime),
+      timestamp,
       alarmManager: { allowWhileIdle: true },
       repeatFrequency: RepeatFrequency.DAILY,
     };
@@ -585,6 +611,8 @@ export async function scheduleReminderNotification(reminder: Reminder): Promise<
   // Scenario 3: Recurring yearly (date set + recurring + no specific days)
   // Notifee has no YEARLY repeat — schedule one-time for the date.
   // App must reschedule on completion for true yearly recurrence.
+  // Note: completeRecurringReminder already bumps dueDate to next year,
+  // so skipCurrentCycle is not needed here.
   if (isRecurring && reminder.dueDate && days.length === 0) {
     const [year, month, day] = reminder.dueDate.split('-').map(Number);
     const timestamp = new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();

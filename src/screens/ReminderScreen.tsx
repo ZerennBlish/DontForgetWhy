@@ -10,11 +10,15 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Reminder } from '../types/reminder';
+import type { CompletionEntry } from '../types/reminder';
 import {
   getReminders,
   deleteReminder,
   toggleReminderComplete,
   completeRecurringReminder,
+  getCurrentCycleTimestamp,
+  hasCompletedToday,
+  clearCompletionHistory,
   updateReminder,
   restoreReminder,
   permanentlyDeleteReminder,
@@ -40,6 +44,8 @@ interface ReminderScreenProps {
   onNavigateCreate: (reminderId?: string) => void;
   onReminderCountChange?: (count: number) => void;
 }
+
+const SIX_HOURS = 6 * 60 * 60 * 1000;
 
 function formatDeletedAgo(deletedAt: string): string {
   const ms = Date.now() - new Date(deletedAt).getTime();
@@ -70,6 +76,38 @@ function formatDueDate(dateStr: string): string {
   if (isToday) return 'Today';
   if (isTomorrow) return 'Tomorrow';
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function isDoneEnabled(reminder: Reminder): boolean {
+  if (!reminder.recurring) return true;
+  if (!reminder.dueTime) return true;
+  if (hasCompletedToday(reminder)) return false;
+  const cycleTs = getCurrentCycleTimestamp(reminder);
+  if (cycleTs === null) return true;
+  return Date.now() >= cycleTs - SIX_HOURS;
+}
+
+function getAvailableAtTime(reminder: Reminder, timeFormat: '12h' | '24h'): string | null {
+  if (!reminder.recurring || !reminder.dueTime) return null;
+  if (hasCompletedToday(reminder)) return null;
+  const cycleTs = getCurrentCycleTimestamp(reminder);
+  if (cycleTs === null) return null;
+  const availableAt = new Date(cycleTs - SIX_HOURS);
+  const hh = availableAt.getHours().toString().padStart(2, '0');
+  const mm = availableAt.getMinutes().toString().padStart(2, '0');
+  return formatTime(`${hh}:${mm}`, timeFormat);
+}
+
+function formatCompletionDates(history: CompletionEntry[]): string {
+  if (!history || history.length === 0) return '';
+  return history
+    .map((entry) => {
+      const d = new Date(entry.completedAt);
+      const month = d.toLocaleDateString('en-US', { month: 'short' });
+      const day = d.getDate();
+      return `\u2705 ${month} ${day}`;
+    })
+    .join(', ');
 }
 
 export default function ReminderScreen({ onNavigateCreate, onReminderCountChange }: ReminderScreenProps) {
@@ -119,6 +157,10 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
     // Recurring: reschedule for next occurrence, keep active
     if (reminder.recurring) {
+      if (hasCompletedToday(reminder)) {
+        ToastAndroid.show('Already completed today', ToastAndroid.SHORT);
+        return;
+      }
       await completeRecurringReminder(id);
       await loadData();
       refreshTimerWidget();
@@ -158,6 +200,13 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     refreshTimerWidget();
     setUndoKey((k) => k + 1);
     setShowUndo(true);
+  };
+
+  const handleClearHistory = async (id: string) => {
+    hapticMedium();
+    await clearCompletionHistory(id);
+    await loadData();
+    ToastAndroid.show('History cleared', ToastAndroid.SHORT);
   };
 
   const handleUndoDelete = async () => {
@@ -220,7 +269,9 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
     // Filter
     if (reminderFilter === 'active') list = list.filter((r) => !r.completed);
-    else if (reminderFilter === 'completed') list = list.filter((r) => r.completed);
+    else if (reminderFilter === 'completed') list = list.filter((r) =>
+      r.completed || (r.recurring && r.completionHistory && r.completionHistory.length > 0)
+    );
     else if (reminderFilter === 'has-date') list = list.filter((r) => r.dueDate !== null);
 
     // Sort
@@ -503,6 +554,20 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       fontSize: 12,
       color: colors.accent,
     },
+    doneTextDisabled: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      opacity: 0.4,
+    },
+    doneTodayText: {
+      fontSize: 10,
+      color: colors.accent,
+      opacity: 0.6,
+    },
+    availableAtText: {
+      fontSize: 10,
+      color: colors.textTertiary,
+    },
     deleteBtn: {
       paddingHorizontal: 6,
       paddingVertical: 4,
@@ -511,6 +576,15 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       fontSize: 12,
       color: colors.red,
     },
+    clearHistoryText: {
+      fontSize: 12,
+      color: colors.textTertiary,
+    },
+    historyText: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
   }), [colors, insets.bottom]);
 
   const isOverdue = (dateStr: string): boolean => {
@@ -518,6 +592,55 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     const due = new Date(y, m - 1, d);
     due.setHours(23, 59, 59, 999);
     return due.getTime() < Date.now();
+  };
+
+  const renderDoneButton = (item: Reminder) => {
+    // One-time completed: no Done button
+    if (item.completed && !item.recurring) return null;
+
+    // Recurring: always show Done button, but check 6h window + daily limit
+    if (item.recurring) {
+      const completedToday = hasCompletedToday(item);
+      if (completedToday) {
+        return (
+          <View style={styles.doneBtn}>
+            <Text style={styles.doneTextDisabled}>Done</Text>
+            <Text style={styles.doneTodayText}>{'\u2713'} today</Text>
+          </View>
+        );
+      }
+      const enabled = isDoneEnabled(item);
+      if (enabled) {
+        return (
+          <TouchableOpacity
+            onPress={() => handleToggleComplete(item.id)}
+            style={styles.doneBtn}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.doneText}>Done</Text>
+          </TouchableOpacity>
+        );
+      }
+      // Disabled state — outside 6h window
+      const availableAt = getAvailableAtTime(item, timeFormat);
+      return (
+        <View style={styles.doneBtn}>
+          <Text style={styles.doneTextDisabled}>Done</Text>
+          {availableAt && <Text style={styles.availableAtText}>at {availableAt}</Text>}
+        </View>
+      );
+    }
+
+    // One-time not completed: show Done button
+    return (
+      <TouchableOpacity
+        onPress={() => handleToggleComplete(item.id)}
+        style={styles.doneBtn}
+        activeOpacity={0.6}
+      >
+        <Text style={styles.doneText}>Done</Text>
+      </TouchableOpacity>
+    );
   };
 
   const renderItem = ({ item }: { item: Reminder }) => {
@@ -553,6 +676,24 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     const displayText = item.private
       ? (item.nickname || '\u{1F512} Private')
       : item.text ? `${item.icon} ${item.text}` : item.icon;
+
+    // In Completed filter, recurring reminders show differently
+    const isRecurringInCompleted = reminderFilter === 'completed' && item.recurring && !item.completed;
+
+    const handleDeletePress = () => {
+      if (isRecurringInCompleted) {
+        // Recurring in Completed filter: clear history only, keep reminder active
+        Alert.alert('Clear completion history?', 'The reminder stays active.', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Clear', style: 'destructive', onPress: () => handleClearHistory(item.id) },
+        ]);
+      } else {
+        Alert.alert('Delete this reminder?', '', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item.id) },
+        ]);
+      }
+    };
 
     return (
         <View style={[styles.card, item.completed && styles.cardCompleted]}>
@@ -599,7 +740,12 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
                 {pinned && <Text style={styles.pinIcon}>{'\u{1F4CC}'}</Text>}
               </View>
             )}
-            {(item.completed || (!item.dueDate && !item.dueTime)) && pinned && (
+            {isRecurringInCompleted && item.completionHistory && item.completionHistory.length > 0 && (
+              <Text style={styles.historyText} numberOfLines={2}>
+                {formatCompletionDates(item.completionHistory)}
+              </Text>
+            )}
+            {(item.completed || (!item.dueDate && !item.dueTime && !isRecurringInCompleted)) && pinned && (
               <View style={styles.dueRow}>
                 <Text style={styles.pinIcon}>{'\u{1F4CC}'}</Text>
               </View>
@@ -618,24 +764,15 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
                 </Text>
               </TouchableOpacity>
             </View>
-            {!item.completed && (
-              <TouchableOpacity
-                onPress={() => handleToggleComplete(item.id)}
-                style={styles.doneBtn}
-                activeOpacity={0.6}
-              >
-                <Text style={styles.doneText}>Done</Text>
-              </TouchableOpacity>
-            )}
+            {renderDoneButton(item)}
             <TouchableOpacity
-              onPress={() => Alert.alert('Delete this reminder?', '', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item.id) },
-              ])}
+              onPress={handleDeletePress}
               style={styles.deleteBtn}
               activeOpacity={0.6}
             >
-              <Text style={styles.deleteText}>Delete</Text>
+              <Text style={isRecurringInCompleted ? styles.clearHistoryText : styles.deleteText}>
+                {isRecurringInCompleted ? 'Clear' : 'Delete'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

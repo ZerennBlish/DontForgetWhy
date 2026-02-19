@@ -1,3 +1,8 @@
+export interface CompletionEntry {
+  completedAt: string;
+  scheduledFor?: string;
+}
+
 export interface Reminder {
   id: string;
   icon: string;
@@ -15,4 +20,5 @@ export interface Reminder {
   days?: string[];
   recurring?: boolean;
   notificationIds?: string[];
+  completionHistory?: CompletionEntry[];
 }
