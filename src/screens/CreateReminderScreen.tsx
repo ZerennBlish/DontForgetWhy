@@ -933,7 +933,18 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         )}
       </View>
 
-      {/* 5. Name/note field */}
+      {/* 5. Nickname field */}
+      <Text style={styles.label}>Nickname (optional, for privacy)</Text>
+      <TextInput
+        style={styles.nicknameInput}
+        value={nickname}
+        onChangeText={setNickname}
+        placeholder="e.g. Important thing, Weekly task"
+        placeholderTextColor={colors.textTertiary}
+        maxLength={40}
+      />
+
+      {/* 6. Note field */}
       <Text style={styles.label}>What do you need to remember?</Text>
       <TextInput
         style={styles.textInput}
@@ -947,7 +958,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       />
       <Text style={styles.charCount}>{text.length}/200</Text>
 
-      {/* 6. Icon picker */}
+      {/* 7. Icon picker */}
       <Text style={styles.label}>What's it for?</Text>
       <View style={styles.iconGrid}>
         {guessWhyIcons.map((icon) => (
@@ -964,17 +975,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         ))}
       </View>
-
-      {/* 7. Nickname field */}
-      <Text style={styles.label}>Nickname (optional, for privacy)</Text>
-      <TextInput
-        style={styles.nicknameInput}
-        value={nickname}
-        onChangeText={setNickname}
-        placeholder="e.g. Important thing, Weekly task"
-        placeholderTextColor={colors.textTertiary}
-        maxLength={40}
-      />
 
       {/* 8. Private toggle */}
       <View style={styles.toggleCard}>

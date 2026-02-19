@@ -402,42 +402,42 @@ export default function TriviaScreen({ navigation }: Props) {
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Difficulty pills */}
-        <Text style={styles.pillSectionLabel}>Difficulty</Text>
-        <View style={styles.pillRow}>
-          {(['all', 'easy', 'medium', 'hard'] as const).map((d) => (
-            <TouchableOpacity
-              key={d}
-              style={[styles.pill, difficultyFilter === d && styles.pillActive]}
-              onPress={() => { hapticLight(); setDifficultyFilter(d); }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.pillText, difficultyFilter === d && styles.pillTextActive]}>
-                {d === 'all' ? 'All' : d.charAt(0).toUpperCase() + d.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      </ScrollView>
+      <View style={styles.bottomPanel}>
+        <View style={styles.panelRow}>
+          <Text style={styles.panelLabel}>Difficulty</Text>
+          <View style={styles.panelPills}>
+            {(['all', 'easy', 'medium', 'hard'] as const).map((d) => (
+              <TouchableOpacity
+                key={d}
+                style={[styles.pill, difficultyFilter === d && styles.pillActive]}
+                onPress={() => { hapticLight(); setDifficultyFilter(d); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.pillText, difficultyFilter === d && styles.pillTextActive]}>
+                  {d === 'all' ? 'All' : d.charAt(0).toUpperCase() + d.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-
-        {/* Speed pills */}
-        <Text style={styles.pillSectionLabel}>Speed</Text>
-        <View style={styles.pillRow}>
-          {(['relaxed', 'normal', 'blitz'] as const).map((s) => (
-            <TouchableOpacity
-              key={s}
-              style={[styles.pill, speedOption === s && styles.pillActive]}
-              onPress={() => { hapticLight(); setSpeedOption(s); }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.pillText, speedOption === s && styles.pillTextActive]}>
-                {s === 'relaxed' ? 'Relaxed (25s)' : s === 'normal' ? 'Normal (15s)' : 'Blitz (8s)'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.panelRow}>
+          <Text style={styles.panelLabel}>Speed</Text>
+          <View style={styles.panelPills}>
+            {(['relaxed', 'normal', 'blitz'] as const).map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[styles.pill, speedOption === s && styles.pillActive]}
+                onPress={() => { hapticLight(); setSpeedOption(s); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.pillText, speedOption === s && styles.pillTextActive]}>
+                  {s === 'relaxed' ? 'Relaxed' : s === 'normal' ? 'Normal' : 'Blitz'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-
-        {/* Start button */}
         <TouchableOpacity
           style={styles.startBtn}
           onPress={() => startRound(selectedCategory)}
@@ -447,7 +447,7 @@ export default function TriviaScreen({ navigation }: Props) {
             {CATEGORY_EMOJIS[selectedCategory]} Start Round
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
       </View>
       </ImageBackground>
     );
@@ -460,6 +460,11 @@ export default function TriviaScreen({ navigation }: Props) {
       <ImageBackground source={require('../../assets/questionmark.png')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
+            <Text style={styles.backBtn}>{'<'} Back</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsTitle}>Round Complete</Text>
 
@@ -509,14 +514,6 @@ export default function TriviaScreen({ navigation }: Props) {
             activeOpacity={0.7}
           >
             <Text style={styles.secondaryBtnText}>Change Category</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.secondaryBtnText}>Back to Games</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -629,7 +626,7 @@ function makeStyles(colors: any, insets: any) {
       backgroundColor: 'transparent',
     },
     scrollContent: {
-      paddingBottom: 40 + insets.bottom,
+      paddingBottom: 16,
     },
     header: {
       paddingTop: 60,
@@ -712,25 +709,37 @@ function makeStyles(colors: any, insets: any) {
     categoryLabelActive: {
       color: colors.accent,
     },
-    // Pill selectors
-    pillSectionLabel: {
-      fontSize: 13,
+    // Fixed bottom panel
+    bottomPanel: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: insets.bottom + 12,
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255,255,255,0.2)',
+      gap: 8,
+    },
+    panelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    panelLabel: {
+      fontSize: 12,
       fontWeight: '700',
       color: colors.textTertiary,
-      marginHorizontal: 20,
-      marginTop: 20,
-      marginBottom: 8,
+      width: 62,
     },
-    pillRow: {
+    panelPills: {
       flexDirection: 'row',
-      paddingHorizontal: 16,
-      gap: 8,
+      gap: 6,
       flexWrap: 'wrap',
+      flex: 1,
     },
     pill: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 20,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
       backgroundColor: 'rgba(255,255,255,0.15)',
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.2)',
@@ -748,11 +757,10 @@ function makeStyles(colors: any, insets: any) {
       color: colors.textPrimary,
     },
     startBtn: {
-      marginHorizontal: 16,
-      marginTop: 24,
+      marginTop: 4,
       backgroundColor: colors.accent,
-      borderRadius: 16,
-      paddingVertical: 18,
+      borderRadius: 14,
+      paddingVertical: 14,
       alignItems: 'center',
     },
     startBtnText: {
@@ -760,7 +768,6 @@ function makeStyles(colors: any, insets: any) {
       fontWeight: '700',
       color: colors.textPrimary,
     },
-
     // Top bar
     topBar: {
       flexDirection: 'row',
@@ -915,7 +922,6 @@ function makeStyles(colors: any, insets: any) {
     // Results
     resultsContainer: {
       alignItems: 'center',
-      paddingTop: 80,
       paddingHorizontal: 24,
     },
     resultsTitle: {

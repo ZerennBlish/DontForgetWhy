@@ -482,20 +482,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           fontWeight: '600',
           color: colors.accent,
         },
-        backToGamesBtn: {
-          marginHorizontal: 16,
-          marginTop: 12,
-          backgroundColor: 'transparent',
-          borderRadius: 16,
-          paddingVertical: 16,
-          alignItems: 'center',
-        },
-        backToGamesBtnText: {
-          fontSize: 16,
-          fontWeight: '600',
-          color: colors.textSecondary,
-        },
-
         // Browse mode
         modeToggle: {
           flexDirection: 'row',
@@ -884,15 +870,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
 
-        {(answered || alreadyPlayedToday) && (
-          <TouchableOpacity
-            style={styles.backToGamesBtn}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.backToGamesBtnText}>Back to Games</Text>
-          </TouchableOpacity>
-        )}
       </>
     );
   };

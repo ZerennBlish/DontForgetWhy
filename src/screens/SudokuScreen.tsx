@@ -618,6 +618,11 @@ export default function SudokuScreen({ navigation }: Props) {
       <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
+        <View style={styles.winHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
+            <Text style={styles.backBtn}>{'<'} Back</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
         <Text style={styles.winTitle}>Puzzle Complete!</Text>
 
@@ -675,14 +680,6 @@ export default function SudokuScreen({ navigation }: Props) {
           activeOpacity={0.7}
         >
           <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.backToGamesBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.backToGamesBtnText}>Back to Games</Text>
         </TouchableOpacity>
       </ScrollView>
       </View>
@@ -948,11 +945,14 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
 
     // Win
     winContent: {
-      flexGrow: 1,
-      justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 24,
       paddingBottom: 60 + bottomInset,
+    },
+    winHeader: {
+      alignSelf: 'stretch',
+      paddingTop: 60,
+      paddingBottom: 16,
     },
     winEmoji: {
       fontSize: 64,
@@ -1038,20 +1038,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       fontSize: 16,
       fontWeight: '600',
       color: colors.accent,
-    },
-    backToGamesBtn: {
-      backgroundColor: 'transparent',
-      borderRadius: 12,
-      paddingVertical: 16,
-      paddingHorizontal: 48,
-      width: '100%',
-      alignItems: 'center',
-      marginTop: 4,
-    },
-    backToGamesBtnText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textSecondary,
     },
 
     // Game Header
