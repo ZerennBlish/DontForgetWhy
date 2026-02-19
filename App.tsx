@@ -27,7 +27,7 @@ import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleRem
 import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
-import { getPendingAlarm, clearPendingAlarm, markNotifHandled, wasNotifHandled } from './src/services/pendingAlarm';
+import { getPendingAlarm, setPendingAlarm, clearPendingAlarm, markNotifHandled, wasNotifHandled } from './src/services/pendingAlarm';
 import type { PendingAlarmData } from './src/services/pendingAlarm';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
@@ -156,13 +156,52 @@ function AppNavigator() {
 
   // Consume pending alarm data from background handler and navigate.
   // Returns true if pending data was found and navigation was attempted.
+  //
+  // Fallback: if no pending data exists, check for displayed alarm
+  // notifications. This catches edge cases where event handlers didn't
+  // store pending data (e.g., DELIVERED went to foreground handler during
+  // a background→foreground transition and was lost).
   const consumePendingAlarm = useCallback(async (): Promise<boolean> => {
     const pending = getPendingAlarm();
-    if (!pending) return false;
-    clearPendingAlarm();
-    console.log('[NOTIF] consumePendingAlarm — found:', JSON.stringify(pending));
-    await navigateToAlarmFire(pending);
-    return true;
+    if (pending) {
+      clearPendingAlarm();
+      console.log('[NOTIF] consumePendingAlarm — found:', JSON.stringify(pending));
+      await navigateToAlarmFire(pending);
+      return true;
+    }
+
+    // Fallback: check displayed notifications for an active alarm/timer
+    // that hasn't been handled yet. Alarm notifications are ongoing and
+    // only cancelled by Dismiss/Snooze, so a displayed one means an
+    // active alarm that needs the fire screen.
+    try {
+      const currentRoute = navigationRef.current?.getCurrentRoute?.()?.name;
+      if (currentRoute === 'AlarmFire') return false;
+
+      const displayed = await notifee.getDisplayedNotifications();
+      for (const d of displayed) {
+        const dAlarmId = d.notification?.data?.alarmId as string | undefined;
+        const dTimerId = d.notification?.data?.timerId as string | undefined;
+        const dNotifId = d.notification?.id;
+
+        if (dAlarmId && dNotifId && !wasNotifHandled(dNotifId)) {
+          console.log('[NOTIF] consumePendingAlarm fallback — found displayed alarm:', dAlarmId);
+          await navigateToAlarmFire({ alarmId: dAlarmId, notificationId: dNotifId });
+          return true;
+        }
+        if (dTimerId && dNotifId && !wasNotifHandled(dNotifId)) {
+          const tIcon = d.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+          const tLabel = d.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+          console.log('[NOTIF] consumePendingAlarm fallback — found displayed timer:', dTimerId);
+          await navigateToAlarmFire({ timerId: dTimerId, notificationId: dNotifId, timerLabel: tLabel, timerIcon: tIcon });
+          return true;
+        }
+      }
+    } catch (e) {
+      console.error('[NOTIF] consumePendingAlarm fallback error:', e);
+    }
+
+    return false;
   }, [navigateToAlarmFire]);
 
   // ── Init phase ────────────────────────────────────────────────────
@@ -376,7 +415,17 @@ function AppNavigator() {
         }
 
         if (!navigationRef.current || !isNavigationReady.current) {
-          console.log('[NOTIF] FOREGROUND — navigation not ready, deferring to onNavigationReady');
+          // Navigation isn't ready yet — store alarm/timer data as pending
+          // so onNavigationReady or AppState handler can consume it.
+          // Without this, the event is lost and AlarmFireScreen never shows.
+          if (timerId && notifId) {
+            const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+            const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+            setPendingAlarm({ timerId, notificationId: notifId, timerLabel: tLabel, timerIcon: tIcon });
+          } else if (alarmId) {
+            setPendingAlarm({ alarmId, notificationId: notifId });
+          }
+          console.log('[NOTIF] FOREGROUND — navigation not ready, stored as pending for onNavigationReady');
           return;
         }
 
