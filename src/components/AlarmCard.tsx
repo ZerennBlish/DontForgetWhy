@@ -69,7 +69,7 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
-      backgroundColor: colors.card,
+      backgroundColor: colors.card + 'BF',
       borderRadius: 16,
       padding: 16,
       marginBottom: 12,

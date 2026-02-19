@@ -18,7 +18,7 @@ import {
   restoreReminder,
   permanentlyDeleteReminder,
 } from '../services/reminderStorage';
-import { cancelReminderNotification, scheduleReminderNotification } from '../services/notifications';
+import { cancelReminderNotification, cancelReminderNotifications, scheduleReminderNotification } from '../services/notifications';
 import {
   getPinnedReminders,
   togglePinReminder,
@@ -114,15 +114,19 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   const handleToggleComplete = async (id: string) => {
     hapticMedium();
     const oldReminder = reminders.find(r => r.id === id);
-    const oldNotifId = oldReminder?.notificationId;
     const updated = await toggleReminderComplete(id);
     if (!updated) return;
-    if (updated.completed && oldNotifId) {
-      await cancelReminderNotification(oldNotifId).catch(() => {});
+    if (updated.completed) {
+      // Cancel all notifications
+      if (oldReminder?.notificationIds?.length) {
+        await cancelReminderNotifications(oldReminder.notificationIds).catch(() => {});
+      } else if (oldReminder?.notificationId) {
+        await cancelReminderNotification(oldReminder.notificationId).catch(() => {});
+      }
     } else if (!updated.completed && updated.dueTime) {
-      const notifId = await scheduleReminderNotification(updated).catch(() => null);
-      if (notifId) {
-        await updateReminder({ ...updated, notificationId: notifId });
+      const notifIds = await scheduleReminderNotification(updated).catch(() => [] as string[]);
+      if (notifIds.length > 0) {
+        await updateReminder({ ...updated, notificationId: notifIds[0] || null, notificationIds: notifIds });
       }
     }
     await loadData();
@@ -284,7 +288,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       marginBottom: 4,
     },
     card: {
-      backgroundColor: colors.card,
+      backgroundColor: colors.card + 'BF',
       borderRadius: 16,
       padding: 16,
       flexDirection: 'row',
@@ -572,6 +576,13 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
                   {item.dueDate ? formatDueDate(item.dueDate) : ''}
                   {item.dueDate && item.dueTime ? ' at ' : ''}
                   {item.dueTime ? formatTime(item.dueTime, timeFormat) : ''}
+                  {item.recurring ? (
+                    item.days && item.days.length > 0 && item.days.length < 7
+                      ? ` \u2022 Weekly`
+                      : item.dueDate && (!item.days || item.days.length === 0)
+                        ? ` \u2022 Yearly`
+                        : ` \u2022 Daily`
+                  ) : ''}
                 </Text>
                 {pinned && <Text style={styles.pinIcon}>{'\u{1F4CC}'}</Text>}
               </View>

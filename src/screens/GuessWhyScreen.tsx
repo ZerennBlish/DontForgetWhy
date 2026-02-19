@@ -82,6 +82,12 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       paddingHorizontal: 24,
       justifyContent: 'space-between',
     },
+    backBtn: {
+      fontSize: 16,
+      color: colors.accent,
+      fontWeight: '600',
+      marginBottom: 16,
+    },
     top: {
       alignItems: 'center',
       marginTop: 20,
@@ -382,6 +388,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       {/* Top section */}
       <View style={styles.top}>
+        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={{ alignSelf: 'flex-start' }}>
+          <Text style={styles.backBtn}>{'<'} Back</Text>
+        </TouchableOpacity>
         <Text style={styles.emoji}>{displayEmoji}</Text>
         <Text style={styles.time}>{formatTime(alarm.time, timeFormat)}</Text>
         <Text style={styles.categoryLabel}>{alarm.category.toUpperCase()}</Text>

@@ -524,33 +524,13 @@ export async function cancelTimerCountdownNotification(timerId: string): Promise
 
 // --- Reminder notifications ---
 
-export async function scheduleReminderNotification(reminder: Reminder): Promise<string | null> {
+export async function scheduleReminderNotification(reminder: Reminder): Promise<string[]> {
   // No time set means no notification
-  if (!reminder.dueTime) return null;
+  if (!reminder.dueTime) return [];
 
   await setupNotificationChannel();
 
   const [hours, minutes] = reminder.dueTime.split(':').map(Number);
-  let timestamp: number;
-
-  if (reminder.dueDate) {
-    // Both date and time: schedule for exact date+time
-    const [year, month, day] = reminder.dueDate.split('-').map(Number);
-    timestamp = new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
-  } else {
-    // Time only, no date: schedule for today; if passed, schedule for tomorrow
-    const now = new Date();
-    const target = new Date(
-      now.getFullYear(), now.getMonth(), now.getDate(),
-      hours, minutes, 0, 0,
-    );
-    if (target.getTime() <= now.getTime()) {
-      target.setDate(target.getDate() + 1);
-    }
-    timestamp = target.getTime();
-  }
-
-  if (timestamp <= Date.now()) return null;
 
   const title = reminder.private
     ? '\u{1F4DD} Reminder'
@@ -559,31 +539,110 @@ export async function scheduleReminderNotification(reminder: Reminder): Promise<
     ? 'You had something to remember...'
     : "Don't forget!";
 
+  const notificationPayload = {
+    title,
+    body,
+    data: { reminderId: reminder.id },
+    android: {
+      channelId: REMINDER_CHANNEL_ID,
+      importance: AndroidImportance.DEFAULT,
+      sound: 'default' as const,
+      pressAction: { id: 'default' },
+    },
+  };
+
+  const days = reminder.days || [];
+  const isRecurring = reminder.recurring === true;
+
+  // Scenario 1: Recurring weekly on specific days
+  if (isRecurring && days.length > 0 && days.length < 7) {
+    const ids: string[] = [];
+    for (const day of days) {
+      const trigger: TimestampTrigger = {
+        type: TriggerType.TIMESTAMP,
+        timestamp: getNextDayTimestamp(reminder.dueTime, day as AlarmDay),
+        alarmManager: { allowWhileIdle: true },
+        repeatFrequency: RepeatFrequency.WEEKLY,
+      };
+      const id = await notifee.createTriggerNotification(notificationPayload, trigger);
+      ids.push(id);
+    }
+    return ids;
+  }
+
+  // Scenario 2: Recurring daily (no specific days, or all 7 days selected)
+  if (isRecurring && !reminder.dueDate) {
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp: getNextAlarmTimestamp(reminder.dueTime),
+      alarmManager: { allowWhileIdle: true },
+      repeatFrequency: RepeatFrequency.DAILY,
+    };
+    const id = await notifee.createTriggerNotification(notificationPayload, trigger);
+    return [id];
+  }
+
+  // Scenario 3: Recurring yearly (date set + recurring + no specific days)
+  // Notifee has no YEARLY repeat — schedule one-time for the date.
+  // App must reschedule on completion for true yearly recurrence.
+  if (isRecurring && reminder.dueDate && days.length === 0) {
+    const [year, month, day] = reminder.dueDate.split('-').map(Number);
+    const timestamp = new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
+    if (timestamp <= Date.now()) return [];
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp,
+      alarmManager: { allowWhileIdle: true },
+    };
+    const id = await notifee.createTriggerNotification(notificationPayload, trigger);
+    return [id];
+  }
+
+  // Scenario 4: One-time with date
+  if (reminder.dueDate) {
+    const [year, month, day] = reminder.dueDate.split('-').map(Number);
+    const timestamp = new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
+    if (timestamp <= Date.now()) return [];
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp,
+      alarmManager: { allowWhileIdle: true },
+    };
+    const id = await notifee.createTriggerNotification(notificationPayload, trigger);
+    return [id];
+  }
+
+  // Scenario 5: Time only, no date, not recurring — next occurrence
+  const now = new Date();
+  const target = new Date(
+    now.getFullYear(), now.getMonth(), now.getDate(),
+    hours, minutes, 0, 0,
+  );
+  if (target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+  const timestamp = target.getTime();
+  if (timestamp <= Date.now()) return [];
+
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
     timestamp,
     alarmManager: { allowWhileIdle: true },
   };
-
-  return await notifee.createTriggerNotification(
-    {
-      title,
-      body,
-      data: { reminderId: reminder.id },
-      android: {
-        channelId: REMINDER_CHANNEL_ID,
-        importance: AndroidImportance.DEFAULT,
-        sound: 'default',
-        pressAction: { id: 'default' },
-      },
-    },
-    trigger,
-  );
+  const id = await notifee.createTriggerNotification(notificationPayload, trigger);
+  return [id];
 }
 
 export async function cancelReminderNotification(notificationId: string): Promise<void> {
   await notifee.cancelTriggerNotification(notificationId);
   await notifee.cancelNotification(notificationId);
+}
+
+export async function cancelReminderNotifications(ids: string[]): Promise<void> {
+  for (const id of ids) {
+    await notifee.cancelTriggerNotification(id);
+    await notifee.cancelNotification(id);
+  }
 }
 
 // --- Sound preview ---

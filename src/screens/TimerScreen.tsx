@@ -95,7 +95,7 @@ export default function TimerScreen({
       marginBottom: 8,
     },
     activeCard: {
-      backgroundColor: colors.card,
+      backgroundColor: colors.card + 'BF',
       borderRadius: 12,
       padding: 14,
       marginBottom: 10,
@@ -161,7 +161,7 @@ export default function TimerScreen({
     },
     presetCard: {
       width: PRESET_CARD_WIDTH,
-      backgroundColor: colors.card,
+      backgroundColor: colors.card + 'BF',
       borderRadius: 10,
       padding: 10,
       alignItems: 'center',

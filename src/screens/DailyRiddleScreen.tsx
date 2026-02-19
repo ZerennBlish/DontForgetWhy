@@ -326,15 +326,11 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           color: colors.textTertiary,
         },
 
-        // Daily riddle card
+        // Daily riddle area (no card box — question floats over background)
         riddleCard: {
           marginHorizontal: 16,
           marginTop: 12,
-          backgroundColor: colors.card,
-          borderRadius: 16,
           padding: 24,
-          borderWidth: 1,
-          borderColor: colors.border,
         },
         badgeRow: {
           flexDirection: 'row',
@@ -365,11 +361,14 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         questionText: {
           fontSize: 22,
           fontWeight: '600',
-          color: colors.textPrimary,
+          color: '#FFFFFF',
           fontStyle: 'italic',
           lineHeight: 32,
           textAlign: 'center',
           marginVertical: 8,
+          textShadowColor: 'rgba(0, 0, 0, 0.8)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 3,
         },
         hintBtn: {
           alignSelf: 'center',
@@ -482,6 +481,19 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           fontSize: 16,
           fontWeight: '600',
           color: colors.accent,
+        },
+        backToGamesBtn: {
+          marginHorizontal: 16,
+          marginTop: 12,
+          backgroundColor: 'transparent',
+          borderRadius: 16,
+          paddingVertical: 16,
+          alignItems: 'center',
+        },
+        backToGamesBtnText: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: colors.textSecondary,
         },
 
         // Browse mode
@@ -871,6 +883,16 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             {'\u{1F4DA}'} Browse All Riddles
           </Text>
         </TouchableOpacity>
+
+        {(answered || alreadyPlayedToday) && (
+          <TouchableOpacity
+            style={styles.backToGamesBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backToGamesBtnText}>Back to Games</Text>
+          </TouchableOpacity>
+        )}
       </>
     );
   };

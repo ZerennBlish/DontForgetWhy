@@ -12,4 +12,7 @@ export interface Reminder {
   notificationId: string | null;
   pinned: boolean;
   deletedAt?: string | null;
+  days?: string[];
+  recurring?: boolean;
+  notificationIds?: string[];
 }

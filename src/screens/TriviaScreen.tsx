@@ -338,6 +338,13 @@ export default function TriviaScreen({ navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, questions, questionStartTime, selectedAnswer]);
 
+  const handleBackFromGame = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerWidth.stopAnimation();
+    answerLocked.current = true;
+    setPhase('category');
+  }, [timerWidth]);
+
   const getStarRating = (s: number): number => {
     if (s >= 9) return 3;
     if (s >= 6) return 2;
@@ -530,10 +537,9 @@ export default function TriviaScreen({ navigation }: Props) {
       {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
-          <Text style={styles.topBarEmoji}>{CATEGORY_EMOJIS[selectedCategory]}</Text>
-          <Text style={styles.topBarCategory}>
-            {TRIVIA_CATEGORIES.find((c) => c.id === selectedCategory)?.label}
-          </Text>
+          <TouchableOpacity onPress={handleBackFromGame} activeOpacity={0.7}>
+            <Text style={[styles.backBtn, { marginBottom: 0 }]}>{'<'} Back</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.topBarRight}>
           <Text style={styles.topBarCounter}>{currentIndex + 1}/{questions.length}</Text>

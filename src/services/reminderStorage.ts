@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Reminder } from '../types/reminder';
-import { scheduleReminderNotification, cancelReminderNotification } from './notifications';
+import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './notifications';
 
 const STORAGE_KEY = 'reminders';
 
@@ -64,11 +64,15 @@ export async function deleteReminder(id: string): Promise<void> {
   try {
     const reminders = await _loadAllReminders();
     const reminder = reminders.find((r) => r.id === id);
-    if (reminder?.notificationId) {
-      await cancelReminderNotification(reminder.notificationId).catch(() => {});
+    if (reminder) {
+      if (reminder.notificationIds?.length) {
+        await cancelReminderNotifications(reminder.notificationIds).catch(() => {});
+      } else if (reminder.notificationId) {
+        await cancelReminderNotification(reminder.notificationId).catch(() => {});
+      }
     }
     const updated = reminders.map((r) =>
-      r.id === id ? { ...r, deletedAt: new Date().toISOString(), notificationId: null } : r
+      r.id === id ? { ...r, deletedAt: new Date().toISOString(), notificationId: null, notificationIds: [] } : r
     );
     await saveReminders(updated);
   } catch (e) {
@@ -88,8 +92,8 @@ export async function restoreReminder(id: string): Promise<void> {
       const restored: Reminder = { ...r, deletedAt: null };
       if (!restored.completed && restored.dueTime) {
         try {
-          const notifId = await scheduleReminderNotification(restored);
-          updated.push({ ...restored, notificationId: notifId });
+          const notifIds = await scheduleReminderNotification(restored);
+          updated.push({ ...restored, notificationId: notifIds[0] || null, notificationIds: notifIds });
         } catch {
           updated.push(restored);
         }
@@ -107,8 +111,12 @@ export async function permanentlyDeleteReminder(id: string): Promise<void> {
   try {
     const reminders = await _loadAllReminders();
     const reminder = reminders.find((r) => r.id === id);
-    if (reminder?.notificationId) {
-      await cancelReminderNotification(reminder.notificationId).catch(() => {});
+    if (reminder) {
+      if (reminder.notificationIds?.length) {
+        await cancelReminderNotifications(reminder.notificationIds).catch(() => {});
+      } else if (reminder.notificationId) {
+        await cancelReminderNotification(reminder.notificationId).catch(() => {});
+      }
     }
     const filtered = reminders.filter((r) => r.id !== id);
     await saveReminders(filtered);
@@ -144,6 +152,7 @@ export async function toggleReminderComplete(id: string): Promise<Reminder | nul
       completed: !reminder.completed,
       completedAt: !reminder.completed ? new Date().toISOString() : null,
       notificationId: !reminder.completed ? null : reminder.notificationId,
+      notificationIds: !reminder.completed ? [] : reminder.notificationIds,
     };
     reminders[index] = toggled;
     await saveReminders(reminders);

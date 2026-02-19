@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 import type { Reminder } from '../types/reminder';
+import type { AlarmDay } from '../types/alarm';
+import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
 import {
   getReminders,
   addReminder,
@@ -21,6 +23,7 @@ import {
 import {
   scheduleReminderNotification,
   cancelReminderNotification,
+  cancelReminderNotifications,
   requestPermissions,
 } from '../services/notifications';
 import { loadSettings } from '../services/settings';
@@ -31,6 +34,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
+
+const DAY_LABELS: { key: AlarmDay; short: string }[] = [
+  { key: 'Sun', short: 'S' },
+  { key: 'Mon', short: 'M' },
+  { key: 'Tue', short: 'T' },
+  { key: 'Wed', short: 'W' },
+  { key: 'Thu', short: 'T' },
+  { key: 'Fri', short: 'F' },
+  { key: 'Sat', short: 'S' },
+];
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -45,10 +58,27 @@ function getFirstDayOfMonth(year: number, month: number): number {
   return (new Date(year, month, 1).getDay() + 6) % 7;
 }
 
+function getDateStr(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function formatDateDisplay(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateShort(dateStr: string): string {
+  const todayObj = new Date();
+  todayObj.setHours(0, 0, 0, 0);
+  const tomorrowObj = new Date(todayObj);
+  tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  dateObj.setHours(0, 0, 0, 0);
+  if (dateObj.getTime() === todayObj.getTime()) return 'Today';
+  if (dateObj.getTime() === tomorrowObj.getTime()) return 'Tomorrow';
+  return dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateReminder'>;
@@ -63,92 +93,89 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const [nickname, setNickname] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<string>('\u{1F4DD}');
   const [selectedPrivate, setSelectedPrivate] = useState(false);
-  const [hasDueDate, setHasDueDate] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [hasDueTime, setHasDueTime] = useState(false);
-  const [rawDigits, setRawDigits] = useState('0900');
-  const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM');
+  const [userPickedDate, setUserPickedDate] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [hourText, setHourText] = useState(() => String(new Date().getHours()));
+  const [minuteText, setMinuteText] = useState(() => String(new Date().getMinutes()).padStart(2, '0'));
+  const [ampm, setAmpm] = useState<'AM' | 'PM'>(() => new Date().getHours() >= 12 ? 'PM' : 'AM');
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [selectedDays, setSelectedDays] = useState<AlarmDay[]>([]);
+  const [mode, setMode] = useState<'one-time' | 'recurring'>('one-time');
   const [placeholder] = useState(getRandomPlaceholder);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
 
-  // Format raw digits into display string with colon
-  // 0 digits: ""      → ""     (show placeholder)
-  // 1 digit:  "6"     → "6:00" (H:00)
-  // 2 digits: "63"    → "6:30" (H:M0 — second digit is tens of minutes)
-  // 3 digits: "630"   → "6:30" (H:MM)
-  // 4 digits: "0630"  → "06:30" (HH:MM)
-  const formatTimeDisplay = (digits: string): string => {
-    if (digits.length === 0) return '';
-    if (digits.length === 1) return `${digits}:00`;
-    if (digits.length === 2) return `${digits[0]}:${digits[1]}0`;
-    if (digits.length === 3) return `${digits[0]}:${digits.slice(1)}`;
-    return `${digits.slice(0, 2)}:${digits.slice(2)}`;
-  };
+  const hourRef = useRef<TextInput>(null);
+  const minuteRef = useRef<TextInput>(null);
 
-  // Parse rawDigits into { hours, minutes } — must match formatTimeDisplay
-  const parseRawDigits = (digits: string): { hours: number; minutes: number } => {
-    if (digits.length <= 1) {
-      return { hours: parseInt(digits, 10) || 0, minutes: 0 };
-    }
-    if (digits.length === 2) {
-      return {
-        hours: parseInt(digits[0], 10) || 0,
-        minutes: (parseInt(digits[1], 10) || 0) * 10,
-      };
-    }
-    if (digits.length === 3) {
-      return {
-        hours: parseInt(digits[0], 10) || 0,
-        minutes: parseInt(digits.slice(1), 10) || 0,
-      };
-    }
-    return {
-      hours: parseInt(digits.slice(0, 2), 10) || 0,
-      minutes: parseInt(digits.slice(2), 10) || 0,
-    };
-  };
-
-  const handleTimeInput = (inputText: string) => {
-    const currentDisplay = formatTimeDisplay(rawDigits);
-    const currentDisplayDigits = currentDisplay.replace(/[^0-9]/g, '');
-    const newDigits = inputText.replace(/[^0-9]/g, '');
-
-    if (newDigits.length < currentDisplayDigits.length) {
-      // Fewer digits than display had — backspace or select-all replacement
-      if (currentDisplay.length - inputText.length > 1 && newDigits.length > 0) {
-        // Big jump with content → select-all replacement (e.g. selectTextOnFocus)
-        setRawDigits(newDigits.slice(0, 4));
+  const handleHourChange = (inputText: string) => {
+    const digits = inputText.replace(/[^0-9]/g, '');
+    if (digits === '') { setHourText(''); return; }
+    if (timeFormat === '12h') {
+      if (digits.length === 1) {
+        const d = parseInt(digits, 10);
+        if (d >= 2 && d <= 9) {
+          setHourText(digits);
+          minuteRef.current?.focus();
+        } else if (d <= 1) {
+          setHourText(digits);
+        }
       } else {
-        // Normal backspace — remove last raw digit
-        setRawDigits((prev) => prev.slice(0, -1));
-      }
-    } else if (newDigits.length > currentDisplayDigits.length) {
-      // More digits → user typed new digit(s)
-      // Identify which digits are genuinely new (not formatting artifacts)
-      let newRaw = rawDigits;
-      let di = 0;
-      for (let i = 0; i < newDigits.length && newRaw.length < 4; i++) {
-        if (di < currentDisplayDigits.length && newDigits[i] === currentDisplayDigits[di]) {
-          di++;
-        } else {
-          newRaw += newDigits[i];
+        const val = parseInt(digits.slice(0, 2), 10);
+        if (val >= 1 && val <= 12) {
+          setHourText(digits.slice(0, 2));
+          minuteRef.current?.focus();
         }
       }
-      setRawDigits(newRaw);
+    } else {
+      if (digits.length === 1) {
+        const d = parseInt(digits, 10);
+        if (d >= 3) {
+          setHourText(digits);
+          minuteRef.current?.focus();
+        } else {
+          setHourText(digits);
+        }
+      } else {
+        const val = parseInt(digits.slice(0, 2), 10);
+        if (val <= 23) {
+          setHourText(digits.slice(0, 2));
+          minuteRef.current?.focus();
+        }
+      }
     }
-    // Same digit count → no real change (cursor move, colon deleted/re-added)
+  };
+
+  const handleMinuteChange = (inputText: string) => {
+    const digits = inputText.replace(/[^0-9]/g, '');
+    if (digits === '') { setMinuteText(''); return; }
+    if (digits.length === 1) {
+      if (parseInt(digits, 10) <= 5) {
+        setMinuteText(digits);
+      }
+    } else {
+      const val = parseInt(digits.slice(0, 2), 10);
+      if (val <= 59) {
+        setMinuteText(digits.slice(0, 2));
+      }
+    }
+  };
+
+  const handleMinuteKeyPress = ({ nativeEvent }: { nativeEvent: { key: string } }) => {
+    if (nativeEvent.key === 'Backspace' && minuteText === '') {
+      hourRef.current?.focus();
+    }
   };
 
   useEffect(() => {
     loadSettings().then((s) => {
       setTimeFormat(s.timeFormat);
       if (s.timeFormat === '12h') {
-        setRawDigits((prev) => {
-          const { hours: h24, minutes: m } = parseRawDigits(prev);
+        setHourText((prev) => {
+          const h24 = parseInt(prev, 10) || 0;
           const h12 = h24 % 12 || 12;
-          return `${h12}${m.toString().padStart(2, '0')}`;
+          return String(h12);
         });
       }
     });
@@ -165,32 +192,79 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       setSelectedIcon(found.icon);
       setSelectedPrivate(found.private);
       if (found.dueDate) {
-        setHasDueDate(true);
         setSelectedDate(found.dueDate);
-        const [, mo] = found.dueDate.split('-').map(Number);
-        const [yr] = found.dueDate.split('-').map(Number);
+        setUserPickedDate(true);
+        const [yr, mo] = found.dueDate.split('-').map(Number);
         setCalMonth(mo - 1);
         setCalYear(yr);
       }
       if (found.dueTime) {
-        setHasDueTime(true);
         const [h, m] = found.dueTime.split(':').map(Number);
         if (timeFormat === '12h') {
           setAmpm(h >= 12 ? 'PM' : 'AM');
           const h12 = h % 12 || 12;
-          setRawDigits(`${h12}${m.toString().padStart(2, '0')}`);
+          setHourText(String(h12));
         } else {
-          setRawDigits(`${h}${m.toString().padStart(2, '0')}`);
+          setHourText(String(h));
         }
+        setMinuteText(m.toString().padStart(2, '0'));
+      }
+      if (found.days && found.days.length > 0) {
+        setSelectedDays(found.days as AlarmDay[]);
+      }
+      if (found.recurring) {
+        setMode('recurring');
       }
     });
   }, [editId, timeFormat]);
+
+  const effectiveDate = useMemo(() => {
+    if (userPickedDate && selectedDate) return selectedDate;
+    const rawH = parseInt(hourText, 10) || 0;
+    const rawM = parseInt(minuteText, 10) || 0;
+    let h24: number;
+    if (timeFormat === '12h') {
+      const h12 = Math.min(12, Math.max(1, rawH || 12));
+      h24 = ampm === 'AM' ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12);
+    } else {
+      h24 = Math.min(23, Math.max(0, rawH));
+    }
+    const m = Math.min(59, Math.max(0, rawM));
+    const now = new Date();
+    const alarmToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h24, m, 0, 0);
+    if (alarmToday.getTime() <= now.getTime()) {
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return getDateStr(tomorrow);
+    }
+    return getDateStr(now);
+  }, [hourText, minuteText, ampm, timeFormat, userPickedDate, selectedDate]);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const calDays = getDaysInMonth(calYear, calMonth);
   const calFirstDay = getFirstDayOfMonth(calYear, calMonth);
+
+  const handleToggleDay = (day: AlarmDay) => {
+    setSelectedDays((prev) => {
+      if (prev.includes(day)) {
+        return prev.filter((d) => d !== day);
+      }
+      return [...prev, day];
+    });
+  };
+
+  const handleQuickDays = (preset: AlarmDay[]) => {
+    setSelectedDays((prev) => {
+      const same = prev.length === preset.length && preset.every((d) => prev.includes(d));
+      if (same) return [];
+      return [...preset];
+    });
+  };
+
+  const isWeekdaysSelected = selectedDays.length === 5 && WEEKDAYS.every((d) => selectedDays.includes(d));
+  const isWeekendsSelected = selectedDays.length === 2 && WEEKENDS.every((d) => selectedDays.includes(d));
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -208,88 +282,164 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       color: colors.textPrimary,
       marginBottom: 32,
     },
+    timeContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 32,
+    },
+    hourInput: {
+      fontSize: 56,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      width: 90,
+      textAlign: 'center',
+      paddingVertical: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    timeColon: {
+      fontSize: 56,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginHorizontal: 4,
+    },
+    minuteInput: {
+      fontSize: 56,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      width: 90,
+      textAlign: 'center',
+      paddingVertical: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    ampmContainer: {
+      flexDirection: 'column',
+      marginLeft: 12,
+      gap: 4,
+    },
+    ampmBtn: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    ampmBtnActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    ampmText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    ampmTextActive: {
+      color: colors.textPrimary,
+    },
     label: {
       fontSize: 16,
       fontWeight: '600',
       color: colors.textSecondary,
       marginBottom: 10,
     },
-    textInput: {
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      padding: 16,
-      fontSize: 16,
-      color: colors.textPrimary,
-      minHeight: 80,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    charCount: {
-      fontSize: 12,
-      color: colors.textTertiary,
-      textAlign: 'right',
-      marginTop: 4,
+    scheduleSection: {
       marginBottom: 24,
     },
-    nicknameInput: {
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      padding: 16,
-      fontSize: 16,
-      color: colors.textPrimary,
-      minHeight: 48,
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginBottom: 24,
-    },
-    iconGrid: {
+    modeContainer: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-      marginBottom: 24,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 2,
+      marginBottom: 16,
     },
-    iconCell: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+    modeBtn: {
+      flex: 1,
+      borderRadius: 10,
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    modeBtnActive: {
+      backgroundColor: colors.accent,
+    },
+    modeBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    modeBtnTextActive: {
+      color: colors.textPrimary,
+    },
+    dayRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    dayBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: colors.card,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.border,
     },
-    iconCellActive: {
+    dayBtnActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    dayBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textTertiary,
+    },
+    dayBtnTextActive: {
+      color: colors.textPrimary,
+    },
+    quickDayRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 24,
+    },
+    quickDayBtn: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    quickDayBtnActive: {
       backgroundColor: colors.activeBackground,
       borderColor: colors.accent,
     },
-    iconEmoji: {
-      fontSize: 22,
-    },
-    toggleCard: {
-      backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 20,
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginBottom: 24,
-    },
-    toggleRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    toggleLabel: {
-      fontSize: 16,
+    quickDayText: {
+      fontSize: 13,
       fontWeight: '600',
-      color: colors.textPrimary,
-      flex: 1,
-      marginRight: 12,
+      color: colors.textSecondary,
     },
-    toggleDescription: {
+    setDateRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 6,
+      marginBottom: 16,
+      gap: 6,
+    },
+    setDateText: {
       fontSize: 14,
       color: colors.textTertiary,
-      marginTop: 12,
-      lineHeight: 20,
+    },
+    setDateChevron: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginLeft: 2,
     },
     calHeader: {
       flexDirection: 'row',
@@ -356,52 +506,85 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       fontSize: 14,
       color: colors.accent,
       textAlign: 'center',
-      marginTop: 8,
-      marginBottom: 16,
+      marginBottom: 24,
       fontWeight: '600',
     },
-    timeContainer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 24,
-    },
-    timeInput: {
-      fontSize: 40,
-      fontWeight: '700',
-      color: colors.textPrimary,
+    textInput: {
       backgroundColor: colors.card,
       borderRadius: 12,
-      width: 160,
-      textAlign: 'center',
-      paddingVertical: 10,
+      padding: 16,
+      fontSize: 16,
+      color: colors.textPrimary,
+      minHeight: 100,
       borderWidth: 1,
       borderColor: colors.border,
     },
-    ampmContainer: {
-      flexDirection: 'column',
-      marginLeft: 12,
-      gap: 4,
+    charCount: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      textAlign: 'right',
+      marginTop: 4,
+      marginBottom: 24,
     },
-    ampmBtn: {
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 10,
+    iconGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginBottom: 24,
+    },
+    iconCell: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
       backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.border,
     },
-    ampmBtnActive: {
-      backgroundColor: colors.accent,
+    iconCellActive: {
+      backgroundColor: colors.activeBackground,
       borderColor: colors.accent,
     },
-    ampmText: {
+    iconEmoji: {
+      fontSize: 22,
+    },
+    nicknameInput: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: colors.textPrimary,
+      minHeight: 48,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 24,
+    },
+    toggleCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 24,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    toggleLabel: {
       fontSize: 16,
       fontWeight: '600',
-      color: colors.textTertiary,
-    },
-    ampmTextActive: {
       color: colors.textPrimary,
+      flex: 1,
+      marginRight: 12,
+    },
+    toggleDescription: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 12,
+      lineHeight: 20,
     },
     saveBtn: {
       backgroundColor: colors.accent,
@@ -442,11 +625,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     setSelectedDate(`${yyyy}-${mm}-${dd}`);
+    setUserPickedDate(true);
   };
 
   const doSave = async (dueDate: string | null, dueTime: string | null) => {
     try {
-      // Only need notification permissions if a time is set (time triggers notifications)
       if (dueTime) {
         const granted = await requestPermissions();
         if (!granted) {
@@ -455,9 +638,12 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         }
       }
 
+      const recurring = mode === 'recurring';
+
       if (existing) {
-        // Cancel old notification
-        if (existing.notificationId) {
+        if (existing.notificationIds?.length) {
+          await cancelReminderNotifications(existing.notificationIds).catch(() => {});
+        } else if (existing.notificationId) {
           await cancelReminderNotification(existing.notificationId).catch(() => {});
         }
 
@@ -469,13 +655,16 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           private: selectedPrivate,
           dueDate,
           dueTime,
+          days: selectedDays,
+          recurring,
           notificationId: null,
+          notificationIds: [],
         };
 
-        // Schedule new notification if applicable
         if (dueTime && !updated.completed) {
-          const notifId = await scheduleReminderNotification(updated).catch(() => null);
-          updated.notificationId = notifId;
+          const notifIds = await scheduleReminderNotification(updated).catch(() => [] as string[]);
+          updated.notificationId = notifIds[0] || null;
+          updated.notificationIds = notifIds;
         }
 
         await updateReminder(updated);
@@ -491,14 +680,17 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           completedAt: null,
           dueDate,
           dueTime,
+          days: selectedDays,
+          recurring,
           notificationId: null,
+          notificationIds: [],
           pinned: false,
         };
 
-        // Schedule notification if time is set (time drives notifications)
         if (dueTime) {
-          const notifId = await scheduleReminderNotification(reminder).catch(() => null);
-          reminder.notificationId = notifId;
+          const notifIds = await scheduleReminderNotification(reminder).catch(() => [] as string[]);
+          reminder.notificationId = notifIds[0] || null;
+          reminder.notificationIds = notifIds;
         }
 
         await addReminder(reminder);
@@ -523,10 +715,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       return;
     }
 
-    // Build 24h time string (independent of date)
+    const rawH = parseInt(hourText, 10);
+    const rawM = parseInt(minuteText, 10);
     let dueTime: string | null = null;
-    if (hasDueTime) {
-      const { hours: rawH, minutes: rawM } = parseRawDigits(rawDigits);
+
+    if (!isNaN(rawH) && (rawH > 0 || rawM > 0 || hourText !== '')) {
       let h: number;
       if (timeFormat === '12h') {
         let h12 = Math.min(12, Math.max(1, rawH || 12));
@@ -536,15 +729,14 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           h = h12 === 12 ? 12 : h12 + 12;
         }
       } else {
-        h = Math.min(23, Math.max(0, rawH));
+        h = Math.min(23, Math.max(0, rawH || 0));
       }
-      const m = Math.min(59, Math.max(0, rawM));
+      const m = Math.min(59, Math.max(0, rawM || 0));
       dueTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     }
 
-    const dueDate = hasDueDate ? selectedDate : null;
+    const dueDate = mode === 'one-time' ? effectiveDate : selectedDate;
 
-    // Warn if combined date+time is in the past
     if (dueTime && dueDate) {
       const [py, pm, pd] = dueDate.split('-').map(Number);
       const [ph, pmin] = dueTime.split(':').map(Number);
@@ -571,6 +763,177 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         {existing ? 'Edit Reminder' : 'New Reminder'}
       </Text>
 
+      {/* 1. Time input */}
+      <View style={styles.timeContainer}>
+        <TextInput
+          ref={hourRef}
+          style={styles.hourInput}
+          value={hourText}
+          onChangeText={handleHourChange}
+          keyboardType="number-pad"
+          maxLength={2}
+          selectTextOnFocus
+          placeholder={timeFormat === '12h' ? '12' : '0'}
+          placeholderTextColor={colors.textTertiary}
+        />
+        <Text style={styles.timeColon}>:</Text>
+        <TextInput
+          ref={minuteRef}
+          style={styles.minuteInput}
+          value={minuteText}
+          onChangeText={handleMinuteChange}
+          onKeyPress={handleMinuteKeyPress}
+          keyboardType="number-pad"
+          maxLength={2}
+          selectTextOnFocus
+          placeholder="00"
+          placeholderTextColor={colors.textTertiary}
+        />
+        {timeFormat === '12h' && (
+          <View style={styles.ampmContainer}>
+            <TouchableOpacity
+              style={[styles.ampmBtn, ampm === 'AM' && styles.ampmBtnActive]}
+              onPress={() => setAmpm('AM')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.ampmBtn, ampm === 'PM' && styles.ampmBtnActive]}
+              onPress={() => setAmpm('PM')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* 2. Schedule toggle + 3. Day circles + 4. Date row */}
+      <Text style={styles.label}>Schedule</Text>
+      <View style={styles.scheduleSection}>
+        <View style={styles.modeContainer}>
+          <TouchableOpacity
+            style={[styles.modeBtn, mode === 'one-time' && styles.modeBtnActive]}
+            onPress={() => setMode('one-time')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.modeBtnText, mode === 'one-time' && styles.modeBtnTextActive]}>
+              One-time
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
+            onPress={() => setMode('recurring')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>
+              Recurring
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.dayRow}>
+          {DAY_LABELS.map(({ key, short }) => (
+            <TouchableOpacity
+              key={key}
+              style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
+              onPress={() => handleToggleDay(key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
+                {short}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.quickDayRow}>
+          <TouchableOpacity
+            style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
+            onPress={() => handleQuickDays([...WEEKDAYS])}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.quickDayText}>Weekdays</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
+            onPress={() => handleQuickDays([...WEEKENDS])}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.quickDayText}>Weekends</Text>
+          </TouchableOpacity>
+        </View>
+
+        {mode === 'one-time' && (
+          <>
+            <TouchableOpacity
+              style={styles.setDateRow}
+              onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.setDateText}>
+                {'\u{1F4C5}'} {formatDateShort(effectiveDate)}
+              </Text>
+              <Text style={styles.setDateChevron}>{showCalendar ? '\u25B4' : '\u25BE'}</Text>
+            </TouchableOpacity>
+
+            {showCalendar && (
+              <>
+                <View style={styles.calHeader}>
+                  <TouchableOpacity onPress={handleCalPrev} style={styles.calNav}>
+                    <Text style={styles.calNavText}>{'\u2039'}</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
+                  <TouchableOpacity onPress={handleCalNext} style={styles.calNav}>
+                    <Text style={styles.calNavText}>{'\u203A'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.calWeekRow}>
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+                    <Text key={i} style={styles.calWeekDay}>{d}</Text>
+                  ))}
+                </View>
+                <View style={styles.calGrid}>
+                  {Array.from({ length: calFirstDay }).map((_, i) => (
+                    <View key={`empty-${i}`} style={styles.calCell} />
+                  ))}
+                  {Array.from({ length: calDays }).map((_, i) => {
+                    const day = i + 1;
+                    const dateObj = new Date(calYear, calMonth, day);
+                    dateObj.setHours(0, 0, 0, 0);
+                    const isPast = dateObj.getTime() < today.getTime();
+                    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const isSelected = effectiveDate === dateStr;
+                    return (
+                      <View key={day} style={styles.calCell}>
+                        <TouchableOpacity
+                          style={[styles.calDay, isSelected && styles.calDaySelected]}
+                          onPress={() => handleSelectDate(day)}
+                          disabled={isPast}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[
+                            styles.calDayText,
+                            isPast && styles.calDayTextDisabled,
+                            isSelected && styles.calDayTextSelected,
+                          ]}>
+                            {day}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+                {effectiveDate && (
+                  <Text style={styles.selectedDateText}>{formatDateDisplay(effectiveDate)}</Text>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </View>
+
+      {/* 5. Name/note field */}
       <Text style={styles.label}>What do you need to remember?</Text>
       <TextInput
         style={styles.textInput}
@@ -584,16 +947,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       />
       <Text style={styles.charCount}>{text.length}/200</Text>
 
-      <Text style={styles.label}>Nickname (optional, for privacy)</Text>
-      <TextInput
-        style={styles.nicknameInput}
-        value={nickname}
-        onChangeText={setNickname}
-        placeholder="e.g. Important thing, Weekly task"
-        placeholderTextColor={colors.textTertiary}
-        maxLength={40}
-      />
-
+      {/* 6. Icon picker */}
       <Text style={styles.label}>What's it for?</Text>
       <View style={styles.iconGrid}>
         {guessWhyIcons.map((icon) => (
@@ -611,6 +965,18 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         ))}
       </View>
 
+      {/* 7. Nickname field */}
+      <Text style={styles.label}>Nickname (optional, for privacy)</Text>
+      <TextInput
+        style={styles.nicknameInput}
+        value={nickname}
+        onChangeText={setNickname}
+        placeholder="e.g. Important thing, Weekly task"
+        placeholderTextColor={colors.textTertiary}
+        maxLength={40}
+      />
+
+      {/* 8. Private toggle */}
       <View style={styles.toggleCard}>
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Private</Text>
@@ -626,128 +992,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         </Text>
       </View>
 
-      <View style={styles.toggleCard}>
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Due Time</Text>
-          <Switch
-            value={hasDueTime}
-            onValueChange={(v) => { hapticLight(); setHasDueTime(v); }}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={hasDueTime ? colors.textPrimary : colors.textTertiary}
-          />
-        </View>
-        <Text style={styles.toggleDescription}>
-          {hasDueTime
-            ? 'You\'ll get a notification at this time.'
-            : 'No time set \u2014 no notification.'}
-        </Text>
-      </View>
-
-      {hasDueTime && (
-        <View style={styles.timeContainer}>
-          <TextInput
-            style={styles.timeInput}
-            value={formatTimeDisplay(rawDigits)}
-            onChangeText={handleTimeInput}
-            keyboardType="number-pad"
-            maxLength={6}
-            selectTextOnFocus
-            placeholder="0:00"
-            placeholderTextColor={colors.textTertiary}
-          />
-          {timeFormat === '12h' && (
-            <View style={styles.ampmContainer}>
-              <TouchableOpacity
-                style={[styles.ampmBtn, ampm === 'AM' && styles.ampmBtnActive]}
-                onPress={() => setAmpm('AM')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.ampmBtn, ampm === 'PM' && styles.ampmBtnActive]}
-                onPress={() => setAmpm('PM')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      )}
-
-      <View style={styles.toggleCard}>
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Due Date</Text>
-          <Switch
-            value={hasDueDate}
-            onValueChange={(v) => {
-              hapticLight();
-              setHasDueDate(v);
-              if (!v) setSelectedDate(null);
-            }}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={hasDueDate ? colors.textPrimary : colors.textTertiary}
-          />
-        </View>
-        <Text style={styles.toggleDescription}>
-          Set a date for this reminder.
-        </Text>
-      </View>
-
-      {hasDueDate && (
-        <>
-          <View style={styles.calHeader}>
-            <TouchableOpacity onPress={handleCalPrev} style={styles.calNav}>
-              <Text style={styles.calNavText}>{'\u2039'}</Text>
-            </TouchableOpacity>
-            <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
-            <TouchableOpacity onPress={handleCalNext} style={styles.calNav}>
-              <Text style={styles.calNavText}>{'\u203A'}</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.calWeekRow}>
-            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-              <Text key={i} style={styles.calWeekDay}>{d}</Text>
-            ))}
-          </View>
-          <View style={styles.calGrid}>
-            {Array.from({ length: calFirstDay }).map((_, i) => (
-              <View key={`empty-${i}`} style={styles.calCell} />
-            ))}
-            {Array.from({ length: calDays }).map((_, i) => {
-              const day = i + 1;
-              const dateObj = new Date(calYear, calMonth, day);
-              dateObj.setHours(0, 0, 0, 0);
-              const isPast = dateObj.getTime() < today.getTime();
-              const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              const isSelected = selectedDate === dateStr;
-              return (
-                <View key={day} style={styles.calCell}>
-                  <TouchableOpacity
-                    style={[styles.calDay, isSelected && styles.calDaySelected]}
-                    onPress={() => handleSelectDate(day)}
-                    disabled={isPast}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[
-                      styles.calDayText,
-                      isPast && styles.calDayTextDisabled,
-                      isSelected && styles.calDayTextSelected,
-                    ]}>
-                      {day}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </View>
-          {selectedDate && (
-            <Text style={styles.selectedDateText}>{formatDateDisplay(selectedDate)}</Text>
-          )}
-        </>
-      )}
-
+      {/* 9. Save button */}
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
         <Text style={styles.saveBtnText}>
           {existing ? 'Update Reminder' : 'Save Reminder'}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,13 +29,13 @@ import { hapticLight, hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
 const DAY_LABELS: { key: AlarmDay; short: string }[] = [
+  { key: 'Sun', short: 'S' },
   { key: 'Mon', short: 'M' },
   { key: 'Tue', short: 'T' },
   { key: 'Wed', short: 'W' },
   { key: 'Thu', short: 'T' },
   { key: 'Fri', short: 'F' },
   { key: 'Sat', short: 'S' },
-  { key: 'Sun', short: 'S' },
 ];
 
 const MONTH_NAMES = [
@@ -52,10 +52,29 @@ function getFirstDayOfMonth(year: number, month: number): number {
   return (new Date(year, month, 1).getDay() + 6) % 7;
 }
 
+function getDateStr(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function formatDateDisplay(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateShort(dateStr: string): string {
+  const todayObj = new Date();
+  todayObj.setHours(0, 0, 0, 0);
+  const tomorrowObj = new Date(todayObj);
+  tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  dateObj.setHours(0, 0, 0, 0);
+
+  if (dateObj.getTime() === todayObj.getTime()) return 'Today';
+  if (dateObj.getTime() === tomorrowObj.getTime()) return 'Tomorrow';
+  return dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
@@ -101,19 +120,28 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const isEditing = !!existingAlarm;
 
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
-  const [rawDigits, setRawDigits] = useState<string>(() => {
+  const [hourText, setHourText] = useState<string>(() => {
     if (existingAlarm) {
-      const [h, m] = existingAlarm.time.split(':');
-      const h24 = parseInt(h, 10);
-      return `${h24}${m}`;
+      const h24 = parseInt(existingAlarm.time.split(':')[0], 10);
+      return String(h24);
     }
-    return '0800';
+    return String(new Date().getHours());
+  });
+  const [minuteText, setMinuteText] = useState<string>(() => {
+    if (existingAlarm) {
+      return existingAlarm.time.split(':')[1];
+    }
+    return String(new Date().getMinutes()).padStart(2, '0');
   });
   const [ampm, setAmpm] = useState<'AM' | 'PM'>(() => {
-    if (!existingAlarm) return 'AM';
-    const h = parseInt(existingAlarm.time.split(':')[0], 10);
-    return h >= 12 ? 'PM' : 'AM';
+    if (existingAlarm) {
+      const h = parseInt(existingAlarm.time.split(':')[0], 10);
+      return h >= 12 ? 'PM' : 'AM';
+    }
+    return new Date().getHours() >= 12 ? 'PM' : 'AM';
   });
+  const hourRef = useRef<TextInput>(null);
+  const minuteRef = useRef<TextInput>(null);
   const [nickname, setNickname] = useState(existingAlarm?.nickname || '');
 
   const [systemSoundPickerVisible, setSystemSoundPickerVisible] = useState(false);
@@ -127,82 +155,73 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     existingAlarm?.soundID ?? null
   );
 
-  // Format raw digits into display string with colon
-  // 0 digits: ""      → ""     (show placeholder)
-  // 1 digit:  "6"     → "6:00" (H:00)
-  // 2 digits: "63"    → "6:30" (H:M0 — second digit is tens of minutes)
-  // 3 digits: "630"   → "6:30" (H:MM)
-  // 4 digits: "0630"  → "06:30" (HH:MM)
-  const formatTimeDisplay = (digits: string): string => {
-    if (digits.length === 0) return '';
-    if (digits.length === 1) return `${digits}:00`;
-    if (digits.length === 2) return `${digits[0]}:${digits[1]}0`;
-    if (digits.length === 3) return `${digits[0]}:${digits.slice(1)}`;
-    return `${digits.slice(0, 2)}:${digits.slice(2)}`;
-  };
-
-  // Parse rawDigits into { hours, minutes } — must match formatTimeDisplay
-  const parseRawDigits = (digits: string): { hours: number; minutes: number } => {
-    if (digits.length <= 1) {
-      return { hours: parseInt(digits, 10) || 0, minutes: 0 };
-    }
-    if (digits.length === 2) {
-      return {
-        hours: parseInt(digits[0], 10) || 0,
-        minutes: (parseInt(digits[1], 10) || 0) * 10,
-      };
-    }
-    if (digits.length === 3) {
-      return {
-        hours: parseInt(digits[0], 10) || 0,
-        minutes: parseInt(digits.slice(1), 10) || 0,
-      };
-    }
-    return {
-      hours: parseInt(digits.slice(0, 2), 10) || 0,
-      minutes: parseInt(digits.slice(2), 10) || 0,
-    };
-  };
-
-  const handleTimeInput = (text: string) => {
-    const currentDisplay = formatTimeDisplay(rawDigits);
-    const currentDisplayDigits = currentDisplay.replace(/[^0-9]/g, '');
-    const newDigits = text.replace(/[^0-9]/g, '');
-
-    if (newDigits.length < currentDisplayDigits.length) {
-      // Fewer digits than display had — backspace or select-all replacement
-      if (currentDisplay.length - text.length > 1 && newDigits.length > 0) {
-        // Big jump with content → select-all replacement (e.g. selectTextOnFocus)
-        setRawDigits(newDigits.slice(0, 4));
+  const handleHourChange = (text: string) => {
+    const digits = text.replace(/[^0-9]/g, '');
+    if (digits === '') { setHourText(''); return; }
+    if (timeFormat === '12h') {
+      if (digits.length === 1) {
+        const d = parseInt(digits, 10);
+        if (d >= 2 && d <= 9) {
+          setHourText(digits);
+          minuteRef.current?.focus();
+        } else if (d <= 1) {
+          setHourText(digits);
+        }
       } else {
-        // Normal backspace — remove last raw digit
-        setRawDigits((prev) => prev.slice(0, -1));
-      }
-    } else if (newDigits.length > currentDisplayDigits.length) {
-      // More digits → user typed new digit(s)
-      // Identify which digits are genuinely new (not formatting artifacts)
-      let newRaw = rawDigits;
-      let di = 0;
-      for (let i = 0; i < newDigits.length && newRaw.length < 4; i++) {
-        if (di < currentDisplayDigits.length && newDigits[i] === currentDisplayDigits[di]) {
-          di++;
-        } else {
-          newRaw += newDigits[i];
+        const val = parseInt(digits.slice(0, 2), 10);
+        if (val >= 1 && val <= 12) {
+          setHourText(digits.slice(0, 2));
+          minuteRef.current?.focus();
         }
       }
-      setRawDigits(newRaw);
+    } else {
+      if (digits.length === 1) {
+        const d = parseInt(digits, 10);
+        if (d >= 3) {
+          setHourText(digits);
+          minuteRef.current?.focus();
+        } else {
+          setHourText(digits);
+        }
+      } else {
+        const val = parseInt(digits.slice(0, 2), 10);
+        if (val <= 23) {
+          setHourText(digits.slice(0, 2));
+          minuteRef.current?.focus();
+        }
+      }
     }
-    // Same digit count → no real change (cursor move, colon deleted/re-added)
+  };
+
+  const handleMinuteChange = (text: string) => {
+    const digits = text.replace(/[^0-9]/g, '');
+    if (digits === '') { setMinuteText(''); return; }
+    if (digits.length === 1) {
+      if (parseInt(digits, 10) <= 5) {
+        setMinuteText(digits);
+      }
+    } else {
+      const val = parseInt(digits.slice(0, 2), 10);
+      if (val <= 59) {
+        setMinuteText(digits.slice(0, 2));
+      }
+    }
+  };
+
+  const handleMinuteKeyPress = ({ nativeEvent }: { nativeEvent: { key: string } }) => {
+    if (nativeEvent.key === 'Backspace' && minuteText === '') {
+      hourRef.current?.focus();
+    }
   };
 
   useEffect(() => {
     loadSettings().then((s) => {
       setTimeFormat(s.timeFormat);
       if (s.timeFormat === '12h') {
-        setRawDigits((prev) => {
-          const { hours: h24, minutes: m } = parseRawDigits(prev);
+        setHourText((prev) => {
+          const h24 = parseInt(prev, 10) || 0;
           const h12 = h24 % 12 || 12;
-          return `${h12}${m.toString().padStart(2, '0')}`;
+          return String(h12);
         });
       }
     });
@@ -216,7 +235,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     existingAlarm?.private || false
   );
   const [mode, setMode] = useState<'recurring' | 'one-time'>(
-    existingAlarm?.mode || 'recurring'
+    existingAlarm?.mode || 'one-time'
   );
   const [selectedDays, setSelectedDays] = useState<AlarmDay[]>(
     existingAlarm?.days?.length ? existingAlarm.days as AlarmDay[] : [...ALL_DAYS]
@@ -224,6 +243,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const [selectedDate, setSelectedDate] = useState<string | null>(
     existingAlarm?.date || null
   );
+  const [userPickedDate, setUserPickedDate] = useState(!!existingAlarm?.date);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [calMonth, setCalMonth] = useState(() => {
     if (existingAlarm?.date) {
       const [, mo] = existingAlarm.date.split('-').map(Number);
@@ -238,6 +259,28 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     }
     return new Date().getFullYear();
   });
+
+  const effectiveDate = useMemo(() => {
+    if (userPickedDate && selectedDate) return selectedDate;
+    const rawH = parseInt(hourText, 10) || 0;
+    const rawM = parseInt(minuteText, 10) || 0;
+    let h24: number;
+    if (timeFormat === '12h') {
+      const h12 = Math.min(12, Math.max(1, rawH || 12));
+      h24 = ampm === 'AM' ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12);
+    } else {
+      h24 = Math.min(23, Math.max(0, rawH));
+    }
+    const m = Math.min(59, Math.max(0, rawM));
+    const now = new Date();
+    const alarmToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h24, m, 0, 0);
+    if (alarmToday.getTime() <= now.getTime()) {
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return getDateStr(tomorrow);
+    }
+    return getDateStr(now);
+  }, [hourText, minuteText, ampm, timeFormat, userPickedDate, selectedDate]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -261,13 +304,31 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       alignItems: 'center',
       marginBottom: 32,
     },
-    timeInput: {
+    hourInput: {
       fontSize: 56,
       fontWeight: '700',
       color: colors.textPrimary,
       backgroundColor: colors.card,
       borderRadius: 16,
-      width: 200,
+      width: 90,
+      textAlign: 'center',
+      paddingVertical: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    timeColon: {
+      fontSize: 56,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginHorizontal: 4,
+    },
+    minuteInput: {
+      fontSize: 56,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      width: 90,
       textAlign: 'center',
       paddingVertical: 16,
       borderWidth: 1,
@@ -453,6 +514,22 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontSize: 13,
       fontWeight: '600',
       color: colors.textSecondary,
+    },
+    setDateRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 6,
+      marginBottom: 16,
+      gap: 6,
+    },
+    setDateText: {
+      fontSize: 14,
+      color: colors.textTertiary,
+    },
+    setDateChevron: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginLeft: 2,
     },
     calHeader: {
       flexDirection: 'row',
@@ -668,6 +745,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     setSelectedDate(`${yyyy}-${mm}-${dd}`);
+    setUserPickedDate(true);
   };
 
   const handleSave = async () => {
@@ -678,12 +756,13 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         return;
       }
 
-      if (mode === 'one-time' && !selectedDate) {
+      if (mode === 'one-time' && !effectiveDate) {
         Alert.alert('Pick a Date', 'Select a date for your one-time alarm.');
         return;
       }
 
-      const { hours: rawH, minutes: rawM } = parseRawDigits(rawDigits);
+      const rawH = parseInt(hourText, 10) || 0;
+      const rawM = parseInt(minuteText, 10) || 0;
       let h: number;
       if (timeFormat === '12h') {
         let h12 = Math.min(12, Math.max(1, rawH || 12));
@@ -698,8 +777,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       const m = Math.min(59, Math.max(0, rawM));
       const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 
-      if (mode === 'one-time' && selectedDate) {
-        const [py, pm, pd] = selectedDate.split('-').map(Number);
+      if (mode === 'one-time' && effectiveDate) {
+        const [py, pm, pd] = effectiveDate.split('-').map(Number);
         const alarmDateTime = new Date(py, pm - 1, pd, h, m, 0, 0);
         if (alarmDateTime.getTime() <= Date.now()) {
           Alert.alert('Time Passed', 'Selected time has already passed. Choose a future time or date.');
@@ -725,8 +804,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           icon: selectedIcon || undefined,
           private: selectedPrivate,
           mode,
-          days: mode === 'recurring' ? selectedDays : [...ALL_DAYS],
-          date: mode === 'one-time' ? selectedDate : null,
+          days: selectedDays,
+          date: mode === 'one-time' ? effectiveDate : null,
           soundId: undefined,
           soundUri: selectedSoundUri || undefined,
           soundName: selectedSoundName || undefined,
@@ -742,8 +821,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           quote: getRandomQuote(),
           enabled: true,
           mode,
-          days: mode === 'recurring' ? selectedDays : [...ALL_DAYS],
-          date: mode === 'one-time' ? selectedDate : null,
+          days: selectedDays,
+          date: mode === 'one-time' ? effectiveDate : null,
           category: categoryFromIcon(selectedIcon),
           icon: selectedIcon || undefined,
           private: selectedPrivate,
@@ -787,13 +866,27 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
 
       <View style={styles.timeContainer}>
         <TextInput
-          style={styles.timeInput}
-          value={formatTimeDisplay(rawDigits)}
-          onChangeText={handleTimeInput}
+          ref={hourRef}
+          style={styles.hourInput}
+          value={hourText}
+          onChangeText={handleHourChange}
           keyboardType="number-pad"
-          maxLength={6}
+          maxLength={2}
           selectTextOnFocus
-          placeholder="0:00"
+          placeholder={timeFormat === '12h' ? '12' : '0'}
+          placeholderTextColor={colors.textTertiary}
+        />
+        <Text style={styles.timeColon}>:</Text>
+        <TextInput
+          ref={minuteRef}
+          style={styles.minuteInput}
+          value={minuteText}
+          onChangeText={handleMinuteChange}
+          onKeyPress={handleMinuteKeyPress}
+          keyboardType="number-pad"
+          maxLength={2}
+          selectTextOnFocus
+          placeholder="00"
           placeholderTextColor={colors.textTertiary}
         />
         {timeFormat === '12h' && (
@@ -820,15 +913,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       <View style={styles.scheduleSection}>
         <View style={styles.modeContainer}>
           <TouchableOpacity
-            style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
-            onPress={() => setMode('recurring')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>
-              Recurring
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={[styles.modeBtn, mode === 'one-time' && styles.modeBtnActive]}
             onPress={() => setMode('one-time')}
             activeOpacity={0.7}
@@ -837,92 +921,112 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               One-time
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
+            onPress={() => setMode('recurring')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>
+              Recurring
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {mode === 'recurring' && (
-          <>
-            <View style={styles.dayRow}>
-              {DAY_LABELS.map(({ key, short }) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
-                  onPress={() => handleToggleDay(key)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
-                    {short}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.quickDayRow}>
-              <TouchableOpacity
-                style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
-                onPress={() => handleQuickDays([...WEEKDAYS])}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.quickDayText}>Weekdays</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
-                onPress={() => handleQuickDays([...WEEKENDS])}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.quickDayText}>Weekends</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+        <View style={styles.dayRow}>
+          {DAY_LABELS.map(({ key, short }) => (
+            <TouchableOpacity
+              key={key}
+              style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
+              onPress={() => handleToggleDay(key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
+                {short}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.quickDayRow}>
+          <TouchableOpacity
+            style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
+            onPress={() => handleQuickDays([...WEEKDAYS])}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.quickDayText}>Weekdays</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
+            onPress={() => handleQuickDays([...WEEKENDS])}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.quickDayText}>Weekends</Text>
+          </TouchableOpacity>
+        </View>
 
         {mode === 'one-time' && (
           <>
-            <View style={styles.calHeader}>
-              <TouchableOpacity onPress={handleCalPrev} style={styles.calNav}>
-                <Text style={styles.calNavText}>{'\u2039'}</Text>
-              </TouchableOpacity>
-              <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
-              <TouchableOpacity onPress={handleCalNext} style={styles.calNav}>
-                <Text style={styles.calNavText}>{'\u203A'}</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.calWeekRow}>
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                <Text key={i} style={styles.calWeekDay}>{d}</Text>
-              ))}
-            </View>
-            <View style={styles.calGrid}>
-              {Array.from({ length: calFirstDay }).map((_, i) => (
-                <View key={`empty-${i}`} style={styles.calCell} />
-              ))}
-              {Array.from({ length: calDays }).map((_, i) => {
-                const day = i + 1;
-                const dateObj = new Date(calYear, calMonth, day);
-                dateObj.setHours(0, 0, 0, 0);
-                const isPast = dateObj.getTime() < today.getTime();
-                const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const isSelected = selectedDate === dateStr;
-                return (
-                  <View key={day} style={styles.calCell}>
-                    <TouchableOpacity
-                      style={[styles.calDay, isSelected && styles.calDaySelected]}
-                      onPress={() => handleSelectDate(day)}
-                      disabled={isPast}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[
-                        styles.calDayText,
-                        isPast && styles.calDayTextDisabled,
-                        isSelected && styles.calDayTextSelected,
-                      ]}>
-                        {day}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </View>
-            {selectedDate && (
-              <Text style={styles.selectedDateText}>{formatDateDisplay(selectedDate)}</Text>
+            <TouchableOpacity
+              style={styles.setDateRow}
+              onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.setDateText}>
+                {'\u{1F4C5}'} {formatDateShort(effectiveDate)}
+              </Text>
+              <Text style={styles.setDateChevron}>{showCalendar ? '\u25B4' : '\u25BE'}</Text>
+            </TouchableOpacity>
+
+            {showCalendar && (
+              <>
+                <View style={styles.calHeader}>
+                  <TouchableOpacity onPress={handleCalPrev} style={styles.calNav}>
+                    <Text style={styles.calNavText}>{'\u2039'}</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
+                  <TouchableOpacity onPress={handleCalNext} style={styles.calNav}>
+                    <Text style={styles.calNavText}>{'\u203A'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.calWeekRow}>
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+                    <Text key={i} style={styles.calWeekDay}>{d}</Text>
+                  ))}
+                </View>
+                <View style={styles.calGrid}>
+                  {Array.from({ length: calFirstDay }).map((_, i) => (
+                    <View key={`empty-${i}`} style={styles.calCell} />
+                  ))}
+                  {Array.from({ length: calDays }).map((_, i) => {
+                    const day = i + 1;
+                    const dateObj = new Date(calYear, calMonth, day);
+                    dateObj.setHours(0, 0, 0, 0);
+                    const isPast = dateObj.getTime() < today.getTime();
+                    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const isSelected = effectiveDate === dateStr;
+                    return (
+                      <View key={day} style={styles.calCell}>
+                        <TouchableOpacity
+                          style={[styles.calDay, isSelected && styles.calDaySelected]}
+                          onPress={() => handleSelectDate(day)}
+                          disabled={isPast}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[
+                            styles.calDayText,
+                            isPast && styles.calDayTextDisabled,
+                            isSelected && styles.calDayTextSelected,
+                          ]}>
+                            {day}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+                {effectiveDate && (
+                  <Text style={styles.selectedDateText}>{formatDateDisplay(effectiveDate)}</Text>
+                )}
+              </>
             )}
           </>
         )}

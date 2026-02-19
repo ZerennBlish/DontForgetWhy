@@ -20,7 +20,6 @@ const ALL_CATEGORIES: TriviaCategory[] = [
   'technology',
   'food',
   'kids',
-  'pop_culture',
 ];
 
 function defaultCategoryStats(): TriviaCategoryStats {

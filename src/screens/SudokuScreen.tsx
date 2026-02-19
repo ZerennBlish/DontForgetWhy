@@ -676,6 +676,14 @@ export default function SudokuScreen({ navigation }: Props) {
         >
           <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.backToGamesBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.backToGamesBtnText}>Back to Games</Text>
+        </TouchableOpacity>
       </ScrollView>
       </View>
       </ImageBackground>
@@ -736,8 +744,6 @@ export default function SudokuScreen({ navigation }: Props) {
                 else if (sameNum) bgColor = 'rgba(74,144,217,0.15)';
                 else if (highlighted) bgColor = 'rgba(0,0,0,0.06)';
 
-                const isWrong = !isGiven && value !== 0 && value !== solutionGrid[row]?.[col];
-
                 return (
                   <TouchableOpacity
                     key={col}
@@ -760,7 +766,7 @@ export default function SudokuScreen({ navigation }: Props) {
                         style={[
                           styles.cellText,
                           {
-                            color: isWrong ? '#C0392B' : isGiven ? '#000000' : '#1A1A44',
+                            color: isGiven ? '#000000' : '#1A1A44',
                             fontWeight: isGiven ? '700' : '500',
                           },
                         ]}
@@ -1033,6 +1039,20 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       fontWeight: '600',
       color: colors.accent,
     },
+    backToGamesBtn: {
+      backgroundColor: 'transparent',
+      borderRadius: 12,
+      paddingVertical: 16,
+      paddingHorizontal: 48,
+      width: '100%',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    backToGamesBtnText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
 
     // Game Header
     gameHeader: {
@@ -1081,7 +1101,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       borderColor: 'rgba(0,0,0,0.3)',
       borderRadius: 2,
       overflow: 'hidden',
-      backgroundColor: 'rgba(255,255,245,0.85)',
+      backgroundColor: 'rgba(255,255,245,0.35)',
     },
     gridRow: {
       flexDirection: 'row',

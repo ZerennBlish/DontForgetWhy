@@ -11,7 +11,6 @@ export const TRIVIA_CATEGORIES: { id: TriviaCategory; label: string; icon: strin
   { id: 'food', label: 'Food & Drink', icon: 'utensils' },
   { id: 'general', label: 'General Knowledge', icon: 'brain' },
   { id: 'kids', label: 'Kids', icon: 'child' },
-  { id: 'pop_culture', label: 'Pop Culture', icon: 'star' },
 ];
 
 // 320 questions across 9 categories
@@ -703,44 +702,44 @@ export const TRIVIA_QUESTIONS: TriviaQuestion[] = [
   { id: 'b1_mov_h_011', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'In the MCU, what is the real name of the first Captain America?', correctAnswer: 'Steve Rogers', incorrectAnswers: ['Bucky Barnes', 'Sam Wilson', 'Tony Stark'] },
   { id: 'b1_mov_h_012', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'Which Alfred Hitchcock film features the iconic shower scene?', correctAnswer: 'Psycho', incorrectAnswers: ['Vertigo', 'The Birds', 'Rear Window'] },
 
-  // ── Pop Culture (Batch 1) ──────────────────────────────────────────
+  // ── Movies & TV extras (formerly Pop Culture, Batch 1) ────────────
 
   // Easy
-  { id: 'b1_pop_e_001', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What social media app is known for disappearing messages?', correctAnswer: 'Snapchat', incorrectAnswers: ['Instagram', 'Facebook', 'Twitter'] },
-  { id: 'b1_pop_e_002', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'Which superhero is from Krypton?', correctAnswer: 'Superman', incorrectAnswers: ['Batman', 'Spider-Man', 'Iron Man'] },
-  { id: 'b1_pop_e_003', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What is the name of Harry Potter\'s pet owl?', correctAnswer: 'Hedwig', incorrectAnswers: ['Errol', 'Pigwidgeon', 'Scabbers'] },
-  { id: 'b1_pop_e_004', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What board game involves buying properties?', correctAnswer: 'Monopoly', incorrectAnswers: ['Clue', 'Risk', 'Life'] },
-  { id: 'b1_pop_e_005', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'Which Disney princess has a glass slipper?', correctAnswer: 'Cinderella', incorrectAnswers: ['Snow White', 'Aurora', 'Ariel'] },
-  { id: 'b1_pop_e_006', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What card game has a Draw 4 card?', correctAnswer: 'Uno', incorrectAnswers: ['Go Fish', 'Poker', 'Rummy'] },
-  { id: 'b1_pop_e_007', category: 'pop_culture', type: 'boolean', difficulty: 'easy', question: 'Mario\'s brother is named Luigi.', correctAnswer: 'True', incorrectAnswers: ['False'] },
-  { id: 'b1_pop_e_008', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What does the "E" in E-sports stand for?', correctAnswer: 'Electronic', incorrectAnswers: ['Extreme', 'Elite', 'Entertainment'] },
-  { id: 'b1_pop_e_009', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'Which character says "To infinity and beyond"?', correctAnswer: 'Buzz Lightyear', incorrectAnswers: ['Woody', 'Rex', 'Forky'] },
-  { id: 'b1_pop_e_010', category: 'pop_culture', type: 'multiple', difficulty: 'easy', question: 'What is the name of Batman\'s butler?', correctAnswer: 'Alfred', incorrectAnswers: ['Jarvis', 'Watson', 'Jeeves'] },
+  { id: 'b1_pop_e_001', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What social media app is known for disappearing messages?', correctAnswer: 'Snapchat', incorrectAnswers: ['Instagram', 'Facebook', 'Twitter'] },
+  { id: 'b1_pop_e_002', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'Which superhero is from Krypton?', correctAnswer: 'Superman', incorrectAnswers: ['Batman', 'Spider-Man', 'Iron Man'] },
+  { id: 'b1_pop_e_003', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What is the name of Harry Potter\'s pet owl?', correctAnswer: 'Hedwig', incorrectAnswers: ['Errol', 'Pigwidgeon', 'Scabbers'] },
+  { id: 'b1_pop_e_004', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What board game involves buying properties?', correctAnswer: 'Monopoly', incorrectAnswers: ['Clue', 'Risk', 'Life'] },
+  { id: 'b1_pop_e_005', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'Which Disney princess has a glass slipper?', correctAnswer: 'Cinderella', incorrectAnswers: ['Snow White', 'Aurora', 'Ariel'] },
+  { id: 'b1_pop_e_006', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What card game has a Draw 4 card?', correctAnswer: 'Uno', incorrectAnswers: ['Go Fish', 'Poker', 'Rummy'] },
+  { id: 'b1_pop_e_007', category: 'movies_tv', type: 'boolean', difficulty: 'easy', question: 'Mario\'s brother is named Luigi.', correctAnswer: 'True', incorrectAnswers: ['False'] },
+  { id: 'b1_pop_e_008', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What does the "E" in E-sports stand for?', correctAnswer: 'Electronic', incorrectAnswers: ['Extreme', 'Elite', 'Entertainment'] },
+  { id: 'b1_pop_e_009', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'Which character says "To infinity and beyond"?', correctAnswer: 'Buzz Lightyear', incorrectAnswers: ['Woody', 'Rex', 'Forky'] },
+  { id: 'b1_pop_e_010', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What is the name of Batman\'s butler?', correctAnswer: 'Alfred', incorrectAnswers: ['Jarvis', 'Watson', 'Jeeves'] },
 
   // Medium
-  { id: 'b1_pop_m_001', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What year was the first "Star Wars" movie released?', correctAnswer: '1977', incorrectAnswers: ['1975', '1980', '1973'] },
-  { id: 'b1_pop_m_002', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'Who is the author of the "Harry Potter" series?', correctAnswer: 'J.K. Rowling', incorrectAnswers: ['J.R.R. Tolkien', 'C.S. Lewis', 'Roald Dahl'] },
-  { id: 'b1_pop_m_003', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What video game franchise features Master Chief?', correctAnswer: 'Halo', incorrectAnswers: ['Call of Duty', 'Gears of War', 'Destiny'] },
-  { id: 'b1_pop_m_004', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'Which fictional city is Batman\'s home?', correctAnswer: 'Gotham City', incorrectAnswers: ['Metropolis', 'Star City', 'Central City'] },
-  { id: 'b1_pop_m_005', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What is the highest-selling video game of all time?', correctAnswer: 'Minecraft', incorrectAnswers: ['Tetris', 'GTA V', 'Wii Sports'] },
-  { id: 'b1_pop_m_006', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'Who created Mickey Mouse?', correctAnswer: 'Walt Disney', incorrectAnswers: ['Hanna-Barbera', 'Warner Bros', 'Chuck Jones'] },
-  { id: 'b1_pop_m_007', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'In "The Simpsons," what instrument does Lisa play?', correctAnswer: 'Saxophone', incorrectAnswers: ['Trumpet', 'Violin', 'Clarinet'] },
-  { id: 'b1_pop_m_008', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What Netflix series is set in the 1980s and involves a parallel dimension?', correctAnswer: 'Stranger Things', incorrectAnswers: ['Dark', 'The OA', 'Altered Carbon'] },
-  { id: 'b1_pop_m_009', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'Which comic book publisher created Spider-Man?', correctAnswer: 'Marvel', incorrectAnswers: ['DC', 'Image', 'Dark Horse'] },
-  { id: 'b1_pop_m_010', category: 'pop_culture', type: 'multiple', difficulty: 'medium', question: 'What is the name of the fictional metal in the Marvel universe?', correctAnswer: 'Vibranium', incorrectAnswers: ['Adamantium', 'Unobtainium', 'Kryptonite'] },
+  { id: 'b1_pop_m_001', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'What year was the first "Star Wars" movie released?', correctAnswer: '1977', incorrectAnswers: ['1975', '1980', '1973'] },
+  { id: 'b1_pop_m_002', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'Who is the author of the "Harry Potter" series?', correctAnswer: 'J.K. Rowling', incorrectAnswers: ['J.R.R. Tolkien', 'C.S. Lewis', 'Roald Dahl'] },
+  { id: 'b1_pop_m_003', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'What video game franchise features Master Chief?', correctAnswer: 'Halo', incorrectAnswers: ['Call of Duty', 'Gears of War', 'Destiny'] },
+  { id: 'b1_pop_m_004', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'Which fictional city is Batman\'s home?', correctAnswer: 'Gotham City', incorrectAnswers: ['Metropolis', 'Star City', 'Central City'] },
+  { id: 'b1_pop_m_005', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'What is the highest-selling video game of all time?', correctAnswer: 'Minecraft', incorrectAnswers: ['Tetris', 'GTA V', 'Wii Sports'] },
+  { id: 'b1_pop_m_006', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'Who created Mickey Mouse?', correctAnswer: 'Walt Disney', incorrectAnswers: ['Hanna-Barbera', 'Warner Bros', 'Chuck Jones'] },
+  { id: 'b1_pop_m_007', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'In "The Simpsons," what instrument does Lisa play?', correctAnswer: 'Saxophone', incorrectAnswers: ['Trumpet', 'Violin', 'Clarinet'] },
+  { id: 'b1_pop_m_008', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'What Netflix series is set in the 1980s and involves a parallel dimension?', correctAnswer: 'Stranger Things', incorrectAnswers: ['Dark', 'The OA', 'Altered Carbon'] },
+  { id: 'b1_pop_m_009', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'Which comic book publisher created Spider-Man?', correctAnswer: 'Marvel', incorrectAnswers: ['DC', 'Image', 'Dark Horse'] },
+  { id: 'b1_pop_m_010', category: 'movies_tv', type: 'multiple', difficulty: 'medium', question: 'What is the name of the fictional metal in the Marvel universe?', correctAnswer: 'Vibranium', incorrectAnswers: ['Adamantium', 'Unobtainium', 'Kryptonite'] },
 
   // Hard
-  { id: 'b1_pop_h_001', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What was the first video game to be played in space?', correctAnswer: 'Tetris', incorrectAnswers: ['Pong', 'Space Invaders', 'Pac-Man'] },
-  { id: 'b1_pop_h_002', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'Which manga has sold the most copies worldwide?', correctAnswer: 'One Piece', incorrectAnswers: ['Dragon Ball', 'Naruto', 'Demon Slayer'] },
-  { id: 'b1_pop_h_003', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What year was the first Comic-Con held?', correctAnswer: '1970', incorrectAnswers: ['1965', '1975', '1980'] },
-  { id: 'b1_pop_h_004', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'In the original "Dungeons & Dragons," how many character classes were there?', correctAnswer: '3', incorrectAnswers: ['4', '6', '8'] },
-  { id: 'b1_pop_h_005', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What was the first anime to be broadcast on American television?', correctAnswer: 'Astro Boy', incorrectAnswers: ['Speed Racer', 'Voltron', 'Robotech'] },
-  { id: 'b1_pop_h_006', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'Which video game character has appeared in the most games?', correctAnswer: 'Mario', incorrectAnswers: ['Pac-Man', 'Link', 'Pikachu'] },
-  { id: 'b1_pop_h_007', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What is the name of the first commercially successful arcade video game?', correctAnswer: 'Pong', incorrectAnswers: ['Space Invaders', 'Pac-Man', 'Asteroids'] },
-  { id: 'b1_pop_h_008', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'Who voiced the Genie in the original "Aladdin"?', correctAnswer: 'Robin Williams', incorrectAnswers: ['Eddie Murphy', 'Jim Carrey', 'Will Smith'] },
-  { id: 'b1_pop_h_009', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What board game was invented during the Great Depression?', correctAnswer: 'Monopoly', incorrectAnswers: ['Scrabble', 'Clue', 'Risk'] },
-  { id: 'b1_pop_h_010', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What is the longest-running animated TV show in the US?', correctAnswer: 'The Simpsons', incorrectAnswers: ['South Park', 'Family Guy', 'SpongeBob SquarePants'] },
-  { id: 'b1_pop_h_011', category: 'pop_culture', type: 'multiple', difficulty: 'hard', question: 'What was the first fully computer-animated feature film?', correctAnswer: 'Toy Story', incorrectAnswers: ['Tron', 'Jurassic Park', 'A Bug\'s Life'] },
+  { id: 'b1_pop_h_001', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'What was the first video game to be played in space?', correctAnswer: 'Tetris', incorrectAnswers: ['Pong', 'Space Invaders', 'Pac-Man'] },
+  { id: 'b1_pop_h_002', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'Which manga has sold the most copies worldwide?', correctAnswer: 'One Piece', incorrectAnswers: ['Dragon Ball', 'Naruto', 'Demon Slayer'] },
+  { id: 'b1_pop_h_003', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'What year was the first Comic-Con held?', correctAnswer: '1970', incorrectAnswers: ['1965', '1975', '1980'] },
+  { id: 'b1_pop_h_004', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'In the original "Dungeons & Dragons," how many character classes were there?', correctAnswer: '3', incorrectAnswers: ['4', '6', '8'] },
+  { id: 'b1_pop_h_005', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'What was the first anime to be broadcast on American television?', correctAnswer: 'Astro Boy', incorrectAnswers: ['Speed Racer', 'Voltron', 'Robotech'] },
+  { id: 'b1_pop_h_006', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'Which video game character has appeared in the most games?', correctAnswer: 'Mario', incorrectAnswers: ['Pac-Man', 'Link', 'Pikachu'] },
+  { id: 'b1_pop_h_007', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'What is the name of the first commercially successful arcade video game?', correctAnswer: 'Pong', incorrectAnswers: ['Space Invaders', 'Pac-Man', 'Asteroids'] },
+  { id: 'b1_pop_h_008', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'Who voiced the Genie in the original "Aladdin"?', correctAnswer: 'Robin Williams', incorrectAnswers: ['Eddie Murphy', 'Jim Carrey', 'Will Smith'] },
+  { id: 'b1_pop_h_009', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'What board game was invented during the Great Depression?', correctAnswer: 'Monopoly', incorrectAnswers: ['Scrabble', 'Clue', 'Risk'] },
+  { id: 'b1_pop_h_010', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'What is the longest-running animated TV show in the US?', correctAnswer: 'The Simpsons', incorrectAnswers: ['South Park', 'Family Guy', 'SpongeBob SquarePants'] },
+  { id: 'b1_pop_h_011', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'What was the first fully computer-animated feature film?', correctAnswer: 'Toy Story', incorrectAnswers: ['Tron', 'Jurassic Park', 'A Bug\'s Life'] },
 
   // ═══════════════════════════════════════════════════════════════════
   // BATCH 2

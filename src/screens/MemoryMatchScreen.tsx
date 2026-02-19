@@ -570,6 +570,20 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           fontWeight: '600',
           color: colors.accent,
         },
+        backToGamesBtn: {
+          backgroundColor: 'transparent',
+          borderRadius: 12,
+          paddingVertical: 16,
+          paddingHorizontal: 48,
+          width: '100%',
+          alignItems: 'center',
+          marginTop: 4,
+        },
+        backToGamesBtnText: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: colors.textSecondary,
+        },
       }),
     [colors, insets.bottom],
   );
@@ -678,6 +692,14 @@ export default function MemoryMatchScreen({ navigation }: Props) {
               activeOpacity={0.7}
             >
               <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.backToGamesBtn}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.backToGamesBtnText}>Back to Games</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
