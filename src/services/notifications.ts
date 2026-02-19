@@ -575,9 +575,23 @@ export async function scheduleReminderNotification(
     const ids: string[] = [];
     for (const day of days) {
       let timestamp = getNextDayTimestamp(reminder.dueTime, day as AlarmDay);
-      // Early completion: if the next occurrence is today, push to next week
+      // Early completion: if the next occurrence is today, advance to the
+      // NEXT scheduled day in the reminder.days array (not a flat +7 days).
       if (skip && _isToday(timestamp)) {
-        timestamp += 7 * 24 * 60 * 60 * 1000;
+        const todayDow = new Date().getDay();
+        const dayIndices = days
+          .map((d) => DAY_INDEX[d as AlarmDay])
+          .filter((n): n is number => n !== undefined)
+          .sort((a, b) => a - b);
+        const nextDow = dayIndices.find((d) => d > todayDow);
+        let daysUntilNext: number;
+        if (nextDow !== undefined) {
+          daysUntilNext = nextDow - todayDow;
+        } else {
+          // Wrap to first day next week
+          daysUntilNext = (dayIndices[0] - todayDow + 7) % 7 || 7;
+        }
+        timestamp += daysUntilNext * 24 * 60 * 60 * 1000;
       }
       const trigger: TimestampTrigger = {
         type: TriggerType.TIMESTAMP,

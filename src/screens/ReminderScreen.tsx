@@ -16,7 +16,7 @@ import {
   deleteReminder,
   toggleReminderComplete,
   completeRecurringReminder,
-  getCurrentCycleTimestamp,
+  getNextCycleTimestamp,
   hasCompletedToday,
   clearCompletionHistory,
   updateReminder,
@@ -80,9 +80,22 @@ function formatDueDate(dateStr: string): string {
 
 function isDoneEnabled(reminder: Reminder): boolean {
   if (!reminder.recurring) return true;
-  if (!reminder.dueTime) return true;
+  if (!reminder.dueTime) {
+    // Date-only yearly: only completable on due date or the day before
+    if (reminder.dueDate && (!reminder.days || reminder.days.length === 0)) {
+      const [y, mo, d] = reminder.dueDate.split('-').map(Number);
+      const dueDay = new Date(y, mo - 1, d);
+      dueDay.setHours(0, 0, 0, 0);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const diffMs = dueDay.getTime() - now.getTime();
+      const diffDays = diffMs / (24 * 60 * 60 * 1000);
+      return diffDays >= 0 && diffDays <= 1;
+    }
+    return true;
+  }
   if (hasCompletedToday(reminder)) return false;
-  const cycleTs = getCurrentCycleTimestamp(reminder);
+  const cycleTs = getNextCycleTimestamp(reminder);
   if (cycleTs === null) return true;
   return Date.now() >= cycleTs - SIX_HOURS;
 }
@@ -90,12 +103,23 @@ function isDoneEnabled(reminder: Reminder): boolean {
 function getAvailableAtTime(reminder: Reminder, timeFormat: '12h' | '24h'): string | null {
   if (!reminder.recurring || !reminder.dueTime) return null;
   if (hasCompletedToday(reminder)) return null;
-  const cycleTs = getCurrentCycleTimestamp(reminder);
+  const cycleTs = getNextCycleTimestamp(reminder);
   if (cycleTs === null) return null;
   const availableAt = new Date(cycleTs - SIX_HOURS);
   const hh = availableAt.getHours().toString().padStart(2, '0');
   const mm = availableAt.getMinutes().toString().padStart(2, '0');
   return formatTime(`${hh}:${mm}`, timeFormat);
+}
+
+function getAvailableAtDate(reminder: Reminder): string | null {
+  if (!reminder.recurring || reminder.dueTime) return null;
+  if (!reminder.dueDate || (reminder.days && reminder.days.length > 0)) return null;
+  if (hasCompletedToday(reminder)) return null;
+  const [y, mo, d] = reminder.dueDate.split('-').map(Number);
+  const dueDate = new Date(y, mo - 1, d);
+  const dayBefore = new Date(dueDate);
+  dayBefore.setDate(dayBefore.getDate() - 1);
+  return dayBefore.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function formatCompletionDates(history: CompletionEntry[]): string {
@@ -159,6 +183,10 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     if (reminder.recurring) {
       if (hasCompletedToday(reminder)) {
         ToastAndroid.show('Already completed today', ToastAndroid.SHORT);
+        return;
+      }
+      if (!isDoneEnabled(reminder)) {
+        ToastAndroid.show('Not available yet', ToastAndroid.SHORT);
         return;
       }
       await completeRecurringReminder(id);
@@ -621,12 +649,14 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
           </TouchableOpacity>
         );
       }
-      // Disabled state — outside 6h window
+      // Disabled state — outside 6h window or date-only outside date window
       const availableAt = getAvailableAtTime(item, timeFormat);
+      const availableDate = getAvailableAtDate(item);
       return (
         <View style={styles.doneBtn}>
           <Text style={styles.doneTextDisabled}>Done</Text>
           {availableAt && <Text style={styles.availableAtText}>at {availableAt}</Text>}
+          {!availableAt && availableDate && <Text style={styles.availableAtText}>on {availableDate}</Text>}
         </View>
       );
     }
@@ -790,7 +820,13 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       <View style={styles.sortFilterToggleRow}>
         <TouchableOpacity
           style={styles.sortFilterToggleBtn}
-          onPress={() => { hapticLight(); setShowSortFilter((prev) => !prev); }}
+          onPress={() => {
+            hapticLight();
+            setShowSortFilter((prev) => {
+              if (prev) { setReminderFilter('active'); }
+              return !prev;
+            });
+          }}
           activeOpacity={0.7}
         >
           {(reminderSort !== 'due' || reminderFilter !== 'active') && <View style={styles.sortFilterDot} />}

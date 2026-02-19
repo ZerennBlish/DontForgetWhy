@@ -262,6 +262,62 @@ export function getCurrentCycleTimestamp(reminder: Reminder): number | null {
 }
 
 /**
+ * Get the timestamp of the NEXT upcoming cycle for a recurring reminder.
+ * Used by isDoneEnabled / getAvailableAtTime in ReminderScreen to
+ * determine if the user is within the 6-hour early completion window.
+ *
+ * Unlike getCurrentCycleTimestamp (which looks backward), this always
+ * returns the NEXT future occurrence:
+ *   - Daily: next occurrence of dueTime (today if not yet passed, else tomorrow)
+ *   - Weekly: earliest upcoming day in reminder.days at dueTime
+ *   - Yearly: dueDate at dueTime (may be in the future by design)
+ *
+ * Returns null if no dueTime is set.
+ */
+export function getNextCycleTimestamp(reminder: Reminder): number | null {
+  if (!reminder.dueTime) return null;
+  const [h, m] = reminder.dueTime.split(':').map(Number);
+  const days = reminder.days || [];
+
+  // Yearly: dueDate set, no specific days
+  if (reminder.dueDate && days.length === 0) {
+    const [y, mo, d] = reminder.dueDate.split('-').map(Number);
+    return new Date(y, mo - 1, d, h, m, 0, 0).getTime();
+  }
+
+  // Weekly: specific days (1-6 days selected)
+  if (days.length > 0 && days.length < 7) {
+    const now = new Date();
+    const todayDow = now.getDay();
+    let bestTs = Infinity;
+
+    for (const day of days) {
+      const target = DAY_INDEX[day];
+      if (target === undefined) continue;
+      const daysUntil = (target - todayDow + 7) % 7;
+      const d = new Date(now);
+      d.setDate(d.getDate() + daysUntil);
+      d.setHours(h, m, 0, 0);
+      // If same day but time already passed, skip to next week for this day
+      if (d.getTime() <= now.getTime()) {
+        d.setDate(d.getDate() + 7);
+      }
+      if (d.getTime() < bestTs) bestTs = d.getTime();
+    }
+
+    return bestTs < Infinity ? bestTs : null;
+  }
+
+  // Daily (no days, all 7 days, or fallback): next occurrence of dueTime
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  if (d.getTime() <= Date.now()) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d.getTime();
+}
+
+/**
  * Clear all completion history for a recurring reminder without
  * deleting or deactivating it. Used when "deleting" a recurring
  * reminder from the Completed filter — removes it from that view

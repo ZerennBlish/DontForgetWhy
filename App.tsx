@@ -21,9 +21,9 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
 import { loadAlarms, disableAlarm, purgeDeletedAlarms } from './src/services/storage';
-import { purgeDeletedReminders } from './src/services/reminderStorage';
+import { getReminders, updateReminder, purgeDeletedReminders } from './src/services/reminderStorage';
 import { loadSettings, getOnboardingComplete } from './src/services/settings';
-import { setupNotificationChannel, cancelTimerCountdownNotification } from './src/services/notifications';
+import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
@@ -35,6 +35,58 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import type { RootStackParamList } from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// ── Yearly reminder reschedule helper ──────────────────────────────
+// Yearly recurring reminders use a one-time trigger (notifee has no
+// YEARLY repeat). When the notification fires and the user doesn't
+// tap Done in-app, we must reschedule for next year automatically.
+async function rescheduleYearlyReminder(reminderId: string): Promise<void> {
+  try {
+    const reminders = await getReminders();
+    const reminder = reminders.find((r) => r.id === reminderId);
+    if (!reminder) return;
+    // Only reschedule yearly pattern: recurring + dueDate + no specific days
+    if (!reminder.recurring || !reminder.dueDate || (reminder.days && reminder.days.length > 0)) return;
+
+    // Cancel old notifications
+    if (reminder.notificationIds?.length) {
+      await cancelReminderNotifications(reminder.notificationIds).catch(() => {});
+    } else if (reminder.notificationId) {
+      await cancelReminderNotification(reminder.notificationId).catch(() => {});
+    }
+
+    // Bump dueDate to next year (same month/day, year+1)
+    const [, mo, d] = reminder.dueDate.split('-').map(Number);
+    const now = new Date();
+    let nextDate = new Date(now.getFullYear(), mo - 1, d);
+    if (nextDate.getTime() <= now.getTime()) {
+      nextDate = new Date(now.getFullYear() + 1, mo - 1, d);
+    }
+    // Handle invalid date (e.g. Feb 29 on non-leap year rolls to Mar)
+    if (nextDate.getMonth() !== mo - 1) {
+      nextDate.setDate(0); // last day of the intended month
+    }
+    const nextDueDate = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+
+    const updated = {
+      ...reminder,
+      dueDate: nextDueDate,
+      notificationId: null as string | null,
+      notificationIds: [] as string[],
+    };
+
+    if (updated.dueTime) {
+      const notifIds = await scheduleReminderNotification(updated).catch(() => [] as string[]);
+      updated.notificationId = notifIds[0] || null;
+      updated.notificationIds = notifIds;
+    }
+
+    await updateReminder(updated);
+    console.log('[NOTIF] rescheduleYearlyReminder — bumped to', nextDueDate, 'for reminder:', reminderId);
+  } catch (e) {
+    console.error('[NOTIF] rescheduleYearlyReminder error:', e);
+  }
+}
 
 function AppNavigator() {
   const { colors } = useTheme();
@@ -391,6 +443,16 @@ function AppNavigator() {
             }
           } catch {}
         }
+      }
+
+      // Yearly reminder auto-reschedule: when a reminder notification
+      // fires (DELIVERED) or is dismissed, reschedule yearly recurring
+      // reminders for next year. This catches the case where the user
+      // doesn't tap Done in-app — the one-time trigger is consumed and
+      // we must schedule the next occurrence automatically.
+      const reminderId = detail.notification?.data?.reminderId as string | undefined;
+      if (reminderId && (type === EventType.DELIVERED || type === EventType.DISMISSED)) {
+        rescheduleYearlyReminder(reminderId).catch(() => {});
       }
     });
     return unsubscribe;

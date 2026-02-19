@@ -5,8 +5,59 @@ import notifee, { EventType } from '@notifee/react-native';
 import App from './App';
 import { widgetTaskHandler } from './src/widget/widgetTaskHandler';
 import { loadAlarms, disableAlarm } from './src/services/storage';
+import { getReminders, updateReminder } from './src/services/reminderStorage';
+import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { setPendingAlarm } from './src/services/pendingAlarm';
+
+// ── Yearly reminder reschedule helper ──────────────────────────────
+// Yearly recurring reminders use a one-time trigger (notifee has no
+// YEARLY repeat). When the notification fires and the user doesn't
+// tap Done in-app, we must reschedule for next year automatically.
+// This runs in the headless background handler for killed-app scenarios.
+async function rescheduleYearlyReminder(reminderId: string): Promise<void> {
+  try {
+    const reminders = await getReminders();
+    const reminder = reminders.find((r) => r.id === reminderId);
+    if (!reminder) return;
+    if (!reminder.recurring || !reminder.dueDate || (reminder.days && reminder.days.length > 0)) return;
+
+    if (reminder.notificationIds?.length) {
+      await cancelReminderNotifications(reminder.notificationIds).catch(() => {});
+    } else if (reminder.notificationId) {
+      await cancelReminderNotification(reminder.notificationId).catch(() => {});
+    }
+
+    const [, mo, d] = reminder.dueDate.split('-').map(Number);
+    const now = new Date();
+    let nextDate = new Date(now.getFullYear(), mo - 1, d);
+    if (nextDate.getTime() <= now.getTime()) {
+      nextDate = new Date(now.getFullYear() + 1, mo - 1, d);
+    }
+    if (nextDate.getMonth() !== mo - 1) {
+      nextDate.setDate(0);
+    }
+    const nextDueDate = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+
+    const updated: typeof reminder = {
+      ...reminder,
+      dueDate: nextDueDate,
+      notificationId: null,
+      notificationIds: [],
+    };
+
+    if (updated.dueTime) {
+      const notifIds = await scheduleReminderNotification(updated).catch(() => [] as string[]);
+      updated.notificationId = notifIds[0] || null;
+      updated.notificationIds = notifIds;
+    }
+
+    await updateReminder(updated);
+    console.log('[NOTIF] BACKGROUND rescheduleYearlyReminder — bumped to', nextDueDate, 'for reminder:', reminderId);
+  } catch (e) {
+    console.error('[NOTIF] BACKGROUND rescheduleYearlyReminder error:', e);
+  }
+}
 
 // notifee requires a background event handler registered before the app component.
 //
@@ -63,6 +114,14 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
         }
       } catch {}
     }
+  }
+
+  // Yearly reminder auto-reschedule: when a reminder notification
+  // fires (DELIVERED) or is dismissed in the background/killed state,
+  // reschedule yearly recurring reminders for next year.
+  const reminderId = detail.notification?.data?.reminderId as string | undefined;
+  if (reminderId && (type === EventType.DELIVERED || type === EventType.DISMISSED)) {
+    await rescheduleYearlyReminder(reminderId);
   }
 });
 

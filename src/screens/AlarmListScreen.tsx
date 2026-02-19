@@ -768,7 +768,13 @@ export default function AlarmListScreen({ navigation }: Props) {
                   <View style={styles.sortFilterToggleRow}>
                     <TouchableOpacity
                       style={styles.sortFilterToggleBtn}
-                      onPress={() => { hapticLight(); setShowSortFilter((prev) => !prev); }}
+                      onPress={() => {
+                        hapticLight();
+                        setShowSortFilter((prev) => {
+                          if (prev) { setAlarmFilter('all'); }
+                          return !prev;
+                        });
+                      }}
                       activeOpacity={0.7}
                     >
                       {hasNonDefaultSortFilter && <View style={styles.sortFilterDot} />}

@@ -702,7 +702,7 @@ export const TRIVIA_QUESTIONS: TriviaQuestion[] = [
   { id: 'b1_mov_h_011', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'In the MCU, what is the real name of the first Captain America?', correctAnswer: 'Steve Rogers', incorrectAnswers: ['Bucky Barnes', 'Sam Wilson', 'Tony Stark'] },
   { id: 'b1_mov_h_012', category: 'movies_tv', type: 'multiple', difficulty: 'hard', question: 'Which Alfred Hitchcock film features the iconic shower scene?', correctAnswer: 'Psycho', incorrectAnswers: ['Vertigo', 'The Birds', 'Rear Window'] },
 
-  // ── Movies & TV extras (formerly Pop Culture, Batch 1) ────────────
+  // ── Movies & TV extras (Batch 1) ────────────
 
   // Easy
   { id: 'b1_pop_e_001', category: 'movies_tv', type: 'multiple', difficulty: 'easy', question: 'What social media app is known for disappearing messages?', correctAnswer: 'Snapchat', incorrectAnswers: ['Instagram', 'Facebook', 'Twitter'] },

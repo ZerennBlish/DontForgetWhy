@@ -12,6 +12,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
@@ -557,8 +558,10 @@ export default function SettingsScreen({ navigation }: Props) {
             || (Constants as any).manifest?.version
             || (Constants as any).manifest2?.extra?.expoClient?.version
             || 'unknown';
-          const device = `${Platform.OS} ${Platform.Version}`;
-          const body = encodeURIComponent(`\n\n---\nApp Version: ${version}\nDevice: ${device}`);
+          const model = Device.modelName || 'Unknown';
+          const osVersion = Device.osVersion || 'Unknown';
+          const apiLevel = Device.platformApiLevel ?? 'Unknown';
+          const body = encodeURIComponent(`\n\n---\nApp Version: ${version}\nDevice: ${model}\nAndroid Version: ${osVersion}\nAPI Level: ${apiLevel}\n---`);
           const subject = encodeURIComponent("Don't Forget Why \u2014 Feedback");
           Linking.openURL(`mailto:baldguyandcompanygames@gmail.com?subject=${subject}&body=${body}`);
         }}
