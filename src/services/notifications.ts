@@ -297,7 +297,7 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
   };
 
   const mode = alarm.mode || 'recurring';
-  const days = alarm.days || ALL_DAYS;
+  const days = alarm.days && alarm.days.length > 0 ? alarm.days : ALL_DAYS;
 
   if (mode === 'one-time' && alarm.date) {
     // One-time: single trigger, no repeat

@@ -26,7 +26,7 @@ function migrateAlarm(item: Record<string, unknown>): Alarm {
 
   // Migrate days: convert numeric arrays to string arrays
   let days: AlarmDay[];
-  if (!Array.isArray(raw.days) || raw.days.length === 0) {
+  if (!Array.isArray(raw.days)) {
     days = [...ALL_DAYS];
   } else if (typeof raw.days[0] === 'number') {
     days = (raw.days as unknown as number[])
