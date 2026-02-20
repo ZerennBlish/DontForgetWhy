@@ -90,7 +90,7 @@ function isDoneEnabled(reminder: Reminder): boolean {
       now.setHours(0, 0, 0, 0);
       const diffMs = dueDay.getTime() - now.getTime();
       const diffDays = diffMs / (24 * 60 * 60 * 1000);
-      return diffDays >= 0 && diffDays <= 1;
+      return Math.abs(diffDays) <= 1;
     }
     return true;
   }

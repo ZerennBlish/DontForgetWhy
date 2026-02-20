@@ -20,7 +20,7 @@ import CreateReminderScreen from './src/screens/CreateReminderScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
-import { loadAlarms, disableAlarm, purgeDeletedAlarms } from './src/services/storage';
+import { loadAlarms, disableAlarm, deleteAlarm, purgeDeletedAlarms } from './src/services/storage';
 import { getReminders, updateReminder, purgeDeletedReminders } from './src/services/reminderStorage';
 import { loadSettings, getOnboardingComplete } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
@@ -487,7 +487,7 @@ function AppNavigator() {
             const alarms = await loadAlarms();
             const alarm = alarms.find((a) => a.id === alarmId);
             if (alarm?.mode === 'one-time') {
-              await disableAlarm(alarmId);
+              await deleteAlarm(alarmId);
               refreshTimerWidget();
             }
           } catch {}

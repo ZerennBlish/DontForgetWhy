@@ -1319,3 +1319,17 @@ Both CreateAlarmScreen and CreateReminderScreen use split hour and minute fields
 - One-time alarms no longer ghost on the active list after dismissal — they fully disappear and only appear in deleted view
 - Sudoku difficulty tabs: removed incorrect clue count display, now shows only difficulty name and games played count
 - Sudoku stats now properly track and persist game completions across sessions
+
+**Audit 19 Fixes (February 20):**
+- CRITICAL: Weekly multi-day early completion no longer creates duplicate triggers — now reschedules same day +7 instead of shifting to next day
+- IMPORTANT: One-time alarms fully soft-deleted on notification swipe dismiss (was only disabling, causing ghost)
+- IMPORTANT: Alarm Sort & Filter collapse now resets to Active (was resetting to All, inconsistent with reminders)
+- MINOR: Date-only recurring completion window expanded to ± 1 day (was early-only)
+- MINOR: CreateAlarmScreen now clears selectedDate on One-time → Recurring switch (was already fixed on reminder screen)
+
+**Audit 19 Verified Clean:**
+- Sudoku stats persistence ✅
+- Feedback email device info ✅
+- Pop Culture removal complete ✅
+- Yearly reminder reschedule ✅
+- Recurring alarms not affected by one-time ghost fix ✅

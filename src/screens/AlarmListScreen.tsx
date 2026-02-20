@@ -81,7 +81,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const [pinnedAlarmIds, setPinnedAlarmIds] = useState<string[]>([]);
   const [alarmSort, setAlarmSort] = useState<'time' | 'created' | 'name'>('time');
-  const [alarmFilter, setAlarmFilter] = useState<'all' | 'active' | 'one-time' | 'recurring' | 'deleted'>('all');
+  const [alarmFilter, setAlarmFilter] = useState<'all' | 'active' | 'one-time' | 'recurring' | 'deleted'>('active');
   const [deletedAlarm, setDeletedAlarm] = useState<Alarm | null>(null);
   const [deletedAlarmPinned, setDeletedAlarmPinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
@@ -89,7 +89,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [reminderCount, setReminderCount] = useState(0);
   const [showSortFilter, setShowSortFilter] = useState(false);
 
-  const hasNonDefaultSortFilter = alarmSort !== 'time' || alarmFilter !== 'all';
+  const hasNonDefaultSortFilter = alarmSort !== 'time' || alarmFilter !== 'active';
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -771,7 +771,7 @@ export default function AlarmListScreen({ navigation }: Props) {
                       onPress={() => {
                         hapticLight();
                         setShowSortFilter((prev) => {
-                          if (prev) { setAlarmFilter('all'); }
+                          if (prev) { setAlarmFilter('active'); }
                           return !prev;
                         });
                       }}

@@ -917,7 +917,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
-              onPress={() => setMode('recurring')}
+              onPress={() => { setMode('recurring'); setSelectedDate(null); }}
               activeOpacity={0.7}
             >
               <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>

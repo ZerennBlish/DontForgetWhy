@@ -4,7 +4,7 @@ import notifee, { EventType } from '@notifee/react-native';
 
 import App from './App';
 import { widgetTaskHandler } from './src/widget/widgetTaskHandler';
-import { loadAlarms, disableAlarm } from './src/services/storage';
+import { loadAlarms, deleteAlarm } from './src/services/storage';
 import { getReminders, updateReminder } from './src/services/reminderStorage';
 import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshTimerWidget } from './src/widget/updateWidget';
@@ -109,7 +109,7 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
         const alarms = await loadAlarms();
         const alarm = alarms.find((a) => a.id === alarmId);
         if (alarm?.mode === 'one-time') {
-          await disableAlarm(alarmId);
+          await deleteAlarm(alarmId);
           await refreshTimerWidget();
         }
       } catch {}
