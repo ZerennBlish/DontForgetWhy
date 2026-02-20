@@ -21,7 +21,7 @@ import {
   cancelTimerCountdownNotification,
   scheduleSnooze,
 } from '../services/notifications';
-import { disableAlarm, updateSingleAlarm } from '../services/storage';
+import { deleteAlarm, updateSingleAlarm } from '../services/storage';
 import { loadSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -175,10 +175,11 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     console.log('[AlarmFire] handleDismiss — isTimer:', isTimer, 'alarmId:', alarm?.id);
     try {
       await cancelAllNotifications();
-      // Disable one-time alarms after firing
+      // Soft-delete one-time alarms after firing so they disappear from
+      // the active list and move to the deleted/history view.
       if (!isTimer && alarm?.mode === 'one-time') {
         try {
-          await disableAlarm(alarm.id);
+          await deleteAlarm(alarm.id);
           refreshTimerWidget();
         } catch {}
       }

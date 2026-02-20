@@ -90,9 +90,9 @@ function countSolutions(grid: Grid, limit: number): number {
 }
 
 const REMOVAL_COUNT: Record<Difficulty, [number, number]> = {
-  easy: [30, 35],
-  medium: [40, 45],
-  hard: [50, 55],
+  easy: [36, 45],
+  medium: [46, 54],
+  hard: [55, 62],
 };
 
 export function generatePuzzle(difficulty: Difficulty): Puzzle {

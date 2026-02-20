@@ -1314,3 +1314,8 @@ Both CreateAlarmScreen and CreateReminderScreen use split hour and minute fields
 - Sort & Filter panel defaults back to Active filter on collapse
 - Pop Culture trivia category fully removed (remaining references cleaned from types, data, screens, storage)
 - Yearly reminder reschedule handler in App.tsx
+
+**Bug Fixes (February 20)**
+- One-time alarms no longer ghost on the active list after dismissal — they fully disappear and only appear in deleted view
+- Sudoku difficulty tabs: removed incorrect clue count display, now shows only difficulty name and games played count
+- Sudoku stats now properly track and persist game completions across sessions

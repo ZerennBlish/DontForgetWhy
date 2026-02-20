@@ -42,6 +42,7 @@ interface DifficultyBest {
   bestTime: number;
   bestMistakes: number;
   bestHints?: number;
+  gamesPlayed?: number;
 }
 
 interface BestScores {
@@ -53,10 +54,10 @@ interface BestScores {
 const GAME_KEY = 'sudokuCurrentGame';
 const SCORES_KEY = 'sudokuBestScores';
 
-const DIFFICULTY_CONFIG: Record<Difficulty, { label: string; clues: string }> = {
-  easy: { label: 'Easy', clues: '46\u201351 clues' },
-  medium: { label: 'Medium', clues: '36\u201341 clues' },
-  hard: { label: 'Hard', clues: '26\u201331 clues' },
+const DIFFICULTY_CONFIG: Record<Difficulty, { label: string }> = {
+  easy: { label: 'Easy' },
+  medium: { label: 'Medium' },
+  hard: { label: 'Hard' },
 };
 
 const WIN_MESSAGES = [
@@ -136,10 +137,13 @@ export default function SudokuScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       AsyncStorage.getItem(SCORES_KEY).then((data) => {
+        console.log('[Sudoku] loaded scores from storage:', data);
         if (data) {
-          try { setBestScores(JSON.parse(data)); } catch {}
+          try { setBestScores(JSON.parse(data)); } catch (e) {
+            console.error('[Sudoku] parse scores failed:', e);
+          }
         }
-      });
+      }).catch((e) => console.error('[Sudoku] load scores failed:', e));
       AsyncStorage.getItem(GAME_KEY).then((data) => {
         setHasSavedGame(!!data);
       });
@@ -333,19 +337,27 @@ export default function SudokuScreen({ navigation }: Props) {
       setWinMessage(WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)]);
       clearSavedGame();
 
+      const diff = difficultyRef.current;
+      console.log('[Sudoku] game won — saving stats for', diff);
       AsyncStorage.getItem(SCORES_KEY).then((data) => {
+        console.log('[Sudoku] existing scores raw:', data);
         const scores: BestScores = data ? JSON.parse(data) : {};
-        const diff = difficultyRef.current;
         const current = scores[diff];
+        const gamesPlayed = (current?.gamesPlayed ?? 0) + 1;
         const isBetter = !current
           || time < current.bestTime
           || (time === current.bestTime && mist < current.bestMistakes);
         if (isBetter) {
-          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints };
-          AsyncStorage.setItem(SCORES_KEY, JSON.stringify(scores));
-          setBestScores({ ...scores });
+          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints, gamesPlayed };
+        } else {
+          scores[diff] = { ...current!, gamesPlayed };
         }
-      }).catch(() => {});
+        console.log('[Sudoku] writing scores:', JSON.stringify(scores));
+        AsyncStorage.setItem(SCORES_KEY, JSON.stringify(scores)).catch((e) =>
+          console.error('[Sudoku] setItem failed:', e),
+        );
+        setBestScores({ ...scores });
+      }).catch((e) => console.error('[Sudoku] getItem failed:', e));
 
       setTimeout(() => setGamePhase('won'), 400);
       return;
@@ -420,19 +432,27 @@ export default function SudokuScreen({ navigation }: Props) {
       setWinMessage(WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)]);
       clearSavedGame();
 
+      const diff = difficultyRef.current;
+      console.log('[Sudoku] game won via hint — saving stats for', diff);
       AsyncStorage.getItem(SCORES_KEY).then((data) => {
+        console.log('[Sudoku] existing scores raw:', data);
         const scores: BestScores = data ? JSON.parse(data) : {};
-        const diff = difficultyRef.current;
         const current = scores[diff];
+        const gamesPlayed = (current?.gamesPlayed ?? 0) + 1;
         const isBetter = !current
           || time < current.bestTime
           || (time === current.bestTime && mist < current.bestMistakes);
         if (isBetter) {
-          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints };
-          AsyncStorage.setItem(SCORES_KEY, JSON.stringify(scores));
-          setBestScores({ ...scores });
+          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints, gamesPlayed };
+        } else {
+          scores[diff] = { ...current!, gamesPlayed };
         }
-      }).catch(() => {});
+        console.log('[Sudoku] writing scores:', JSON.stringify(scores));
+        AsyncStorage.setItem(SCORES_KEY, JSON.stringify(scores)).catch((e) =>
+          console.error('[Sudoku] setItem failed:', e),
+        );
+        setBestScores({ ...scores });
+      }).catch((e) => console.error('[Sudoku] getItem failed:', e));
 
       setTimeout(() => setGamePhase('won'), 400);
       return;
@@ -564,14 +584,13 @@ export default function SudokuScreen({ navigation }: Props) {
               activeOpacity={0.7}
             >
               <Text style={styles.difficultyLabel}>{config.label}</Text>
-              <Text style={styles.difficultyInfo}>{config.clues}</Text>
-              {best ? (
-                <Text style={styles.bestScoreText}>
-                  {'\u{1F3C6}'} Best: {formatTime(best.bestTime)} ({best.bestMistakes} mistake{best.bestMistakes !== 1 ? 's' : ''})
+              {best?.gamesPlayed ? (
+                <Text style={styles.difficultyInfo}>
+                  {best.gamesPlayed} game{best.gamesPlayed !== 1 ? 's' : ''} played
                 </Text>
               ) : (
-                <Text style={[styles.bestScoreText, { color: colors.textTertiary }]}>
-                  No games played yet
+                <Text style={[styles.difficultyInfo, { color: colors.textTertiary }]}>
+                  No games played
                 </Text>
               )}
             </TouchableOpacity>
@@ -899,12 +918,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       fontSize: 14,
       color: colors.textTertiary,
       marginTop: 4,
-    },
-    bestScoreText: {
-      fontSize: 13,
-      color: colors.accent,
-      fontWeight: '600',
-      marginTop: 8,
     },
 
     // Paused
