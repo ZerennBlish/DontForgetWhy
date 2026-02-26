@@ -6,17 +6,16 @@ import notifee, {
   AuthorizationStatus,
 } from '@notifee/react-native';
 import type { TimestampTrigger } from '@notifee/react-native';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import { loadSettings } from './settings';
 
 // Android notification channels are immutable after creation. Changing sound
-// on an existing channel has no effect. We use 'alarms_v2' with the system
-// alarm sound; the old 'alarms' channel is still created for backwards
-// compatibility but no new notifications are scheduled to it.
-const LEGACY_ALARM_CHANNEL_ID = 'alarms';
-const ALARM_CHANNEL_ID = 'alarms_v2';
+// or audioAttributes on an existing channel has no effect. We use 'alarms_v4'
+// with ALARM audio stream so sound plays regardless of ringer/silent mode.
+// Old channels are deleted on startup to migrate existing installs.
+const ALARM_CHANNEL_ID = 'alarms_v5';
 const TIMER_PROGRESS_CHANNEL_ID = 'timer-progress';
 const REMINDER_CHANNEL_ID = 'reminders';
 
@@ -91,25 +90,43 @@ export function setupNotificationChannel(): Promise<void> {
 async function _createChannels(): Promise<void> {
   if (Platform.OS !== 'android') return;
 
-  // Legacy channel — kept so existing notifications are still visible
-  await notifee.createChannel({
-    id: LEGACY_ALARM_CHANNEL_ID,
-    name: 'Alarms (Legacy)',
-    importance: AndroidImportance.HIGH,
-    sound: 'default',
-    vibration: true,
-    vibrationPattern: [300, 300, 300, 300],
-    lights: true,
-    lightColor: '#FF0000',
-    bypassDnd: true,
-  });
+  console.log('[Channels] Creating channels... AlarmChannelModule =', NativeModules.AlarmChannelModule ?? 'NOT REGISTERED');
 
-  // Default alarm channel with system alarm sound
+  // Delete ALL old channels so existing installs migrate to new silent ones.
+  // Sound is now played via MediaPlayer, not notification channels.
+  // Safe to call even if channels don't exist (fresh installs).
+  await notifee.deleteChannel('alarms');
+  await notifee.deleteChannel('alarms_v2');
+  await notifee.deleteChannel('alarms_v3');
+  await notifee.deleteChannel('alarms_v4');
+  await notifee.deleteChannel('alarms_gentle');
+  await notifee.deleteChannel('alarms_gentle_v2');
+  await notifee.deleteChannel('alarms_gentle_v3');
+  await notifee.deleteChannel('alarms_urgent');
+  await notifee.deleteChannel('alarms_urgent_v2');
+  await notifee.deleteChannel('alarms_urgent_v3');
+  await notifee.deleteChannel('alarms_classic');
+  await notifee.deleteChannel('alarms_classic_v2');
+  await notifee.deleteChannel('alarms_classic_v3');
+  await notifee.deleteChannel('alarms_digital');
+  await notifee.deleteChannel('alarms_digital_v2');
+  await notifee.deleteChannel('alarms_digital_v3');
+  await notifee.deleteChannel('alarms_silent');
+  await notifee.deleteChannel('alarms_silent_v2');
+  await notifee.deleteChannel('alarms_silent_v3');
+
+  // Preset alarm channels are created natively in MainApplication.onCreate()
+  // via AlarmChannelHelper. All channels are SILENT (no sound) — MediaPlayer
+  // handles audio through USAGE_ALARM stream. These notifee calls are no-ops
+  // when the native channels already exist, but serve as fallback.
+
+  console.log('[Channels] Old channels deleted, creating preset channels...');
+
+  // Default alarm channel (silent — MediaPlayer handles sound)
   await notifee.createChannel({
     id: ALARM_CHANNEL_ID,
     name: 'Alarms',
     importance: AndroidImportance.HIGH,
-    sound: 'alarm',
     vibration: true,
     vibrationPattern: [300, 300],
     lights: true,
@@ -119,10 +136,9 @@ async function _createChannels(): Promise<void> {
 
   // Gentle — lower importance for softer delivery
   await notifee.createChannel({
-    id: 'alarms_gentle',
+    id: 'alarms_gentle_v4',
     name: 'Alarms (Gentle)',
     importance: AndroidImportance.DEFAULT,
-    sound: 'default',
     vibration: true,
     vibrationPattern: [100, 200],
     lights: true,
@@ -132,10 +148,9 @@ async function _createChannels(): Promise<void> {
 
   // Urgent — aggressive vibration pattern
   await notifee.createChannel({
-    id: 'alarms_urgent',
+    id: 'alarms_urgent_v4',
     name: 'Alarms (Urgent)',
     importance: AndroidImportance.HIGH,
-    sound: 'default',
     vibration: true,
     vibrationPattern: [250, 250, 250, 250, 250, 250],
     lights: true,
@@ -145,10 +160,9 @@ async function _createChannels(): Promise<void> {
 
   // Classic — standard vibration, high importance
   await notifee.createChannel({
-    id: 'alarms_classic',
+    id: 'alarms_classic_v4',
     name: 'Alarms (Classic)',
     importance: AndroidImportance.HIGH,
-    sound: 'default',
     vibration: true,
     vibrationPattern: [300, 300, 300, 300],
     lights: true,
@@ -158,10 +172,9 @@ async function _createChannels(): Promise<void> {
 
   // Digital — short staccato vibration
   await notifee.createChannel({
-    id: 'alarms_digital',
+    id: 'alarms_digital_v4',
     name: 'Alarms (Digital)',
     importance: AndroidImportance.HIGH,
-    sound: 'default',
     vibration: true,
     vibrationPattern: [100, 100, 100, 100],
     lights: true,
@@ -171,7 +184,7 @@ async function _createChannels(): Promise<void> {
 
   // Silent — vibration only, no sound
   await notifee.createChannel({
-    id: 'alarms_silent',
+    id: 'alarms_silent_v4',
     name: 'Alarms (Silent)',
     importance: AndroidImportance.LOW,
     vibration: true,
@@ -180,6 +193,8 @@ async function _createChannels(): Promise<void> {
     lightColor: '#808080',
     bypassDnd: true,
   });
+
+  console.log('[Channels] Preset channels created:', ALARM_CHANNEL_ID, 'alarms_gentle_v4', 'alarms_urgent_v4', 'alarms_classic_v4', 'alarms_digital_v4', 'alarms_silent_v4');
 
   await notifee.createChannel({
     id: TIMER_PROGRESS_CHANNEL_ID,
@@ -214,10 +229,32 @@ function extractMediaId(uri: string): string {
 export async function getOrCreateSoundChannel(
   soundUri: string,
   soundName: string,
-  channelPrefix = 'alarm_custom_',
+  channelPrefix = 'alarm_v2_custom_',
 ): Promise<string> {
   const channelId = `${channelPrefix}${extractMediaId(soundUri)}`;
   const typeLabel = channelPrefix.startsWith('timer') ? 'Timer' : 'Alarm';
+
+  // Create channel natively first so it gets AudioAttributes.USAGE_ALARM.
+  // The subsequent notifee.createChannel is a no-op (channel already exists)
+  // but kept as fallback in case the native module isn't available.
+  if (Platform.OS === 'android' && NativeModules.AlarmChannelModule) {
+    try {
+      console.log('[Channels] Native createSoundChannel:', channelId, soundUri);
+      await NativeModules.AlarmChannelModule.createSoundChannel(
+        channelId,
+        `${typeLabel}: ${soundName}`,
+        soundUri,
+      );
+      console.log('[Channels] Native channel created successfully:', channelId);
+    } catch (e) {
+      console.warn('[Channels] Native createSoundChannel failed:', e);
+      // Fall through to notifee.createChannel below
+    }
+  } else {
+    console.log('[Channels] AlarmChannelModule not available, using notifee only');
+  }
+
+  // Channel is silent — MediaPlayer handles audio via USAGE_ALARM stream.
   await notifee.createChannel({
     id: channelId,
     name: `${typeLabel}: ${soundName}`,
@@ -225,7 +262,6 @@ export async function getOrCreateSoundChannel(
     bypassDnd: true,
     vibration: true,
     vibrationPattern: [300, 300, 300, 300],
-    sound: soundUri,
   });
   return channelId;
 }
@@ -258,7 +294,7 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
   }
 
   // Resolve which channel to use:
-  // Custom system sound (soundUri) → dynamic channel, otherwise default alarms_v2
+  // Custom system sound (soundUri) → dynamic channel, otherwise default alarms_v4
   let channelId: string;
   let customChannel = false;
 
@@ -277,9 +313,9 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
     channelId = ALARM_CHANNEL_ID;
   }
 
-  // When using a custom sound channel, omit notification-level sound so
-  // Android uses the channel's sound.  For the default channel, keep
-  // sound: 'default' which lets the channel's own sound play normally.
+  // Do NOT set sound in the notification payload — let the channel control it.
+  // Setting sound here can cause Android to route audio through the notification
+  // stream instead of the channel's ALARM audio stream.
   const notificationPayload = {
     title,
     body,
@@ -291,7 +327,6 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
         launchActivity: 'default',
       },
       importance: AndroidImportance.HIGH,
-      sound: customChannel ? undefined : 'default',
       loopSound: true,
       vibrationPattern: [300, 300, 300, 300],
       lights: ['#FF0000', 300, 600] as [string, number, number],
@@ -413,7 +448,6 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
         channelId,
         fullScreenAction: { id: 'default', launchActivity: 'default' },
         importance: AndroidImportance.HIGH,
-        sound: customChannel ? undefined : 'default',
         loopSound: true,
         vibrationPattern: [300, 300, 300, 300],
         lights: ['#FF0000', 300, 600] as [string, number, number],
@@ -444,7 +478,7 @@ export async function scheduleTimerNotification(
       channelId = await getOrCreateSoundChannel(
         soundUri,
         soundName || 'Custom',
-        'timer_custom_',
+        'timer_v2_custom_',
       );
       customChannel = true;
       console.log('[Timer] Using custom channel:', channelId, 'sound:', soundUri);
@@ -480,7 +514,6 @@ export async function scheduleTimerNotification(
           launchActivity: 'default',
         },
         importance: AndroidImportance.HIGH,
-        sound: customChannel ? undefined : 'default',
         loopSound: true,
         vibrationPattern: [300, 300, 300, 300],
         lights: ['#FF0000', 300, 600] as [string, number, number],

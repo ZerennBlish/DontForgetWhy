@@ -44,7 +44,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(grep -rl \"audioAttributes\\\\|AudioAttributes\\\\|USAGE_ALARM\\\\|setSound\" /tmp/notifee_inspect/classes_dir --include=\"*.class\" -l 2>/dev/null | head -10; echo \"---\"; strings /tmp/notifee_inspect/classes_dir/n/o/t/i/f/e/e/*.class 2>/dev/null | grep -i \"audio\\\\|sound\\\\|channel\\\\|setSound\" | sort -u | head -30)",
+      "Bash(npx expo prebuild --clean --platform android 2>&1)"
     ]
   }
 }

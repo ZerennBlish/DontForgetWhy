@@ -41,6 +41,7 @@
     "plugins": [
       "./plugins/withNotifee",
       "./plugins/withAlarmWake",
+      "./plugins/withAlarmChannel",
       ["react-native-android-widget", {
         "widgets": [
           {
