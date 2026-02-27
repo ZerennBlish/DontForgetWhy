@@ -28,6 +28,7 @@ import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
 import { getPendingAlarm, setPendingAlarm, clearPendingAlarm, markNotifHandled, wasNotifHandled } from './src/services/pendingAlarm';
+import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
 import type { PendingAlarmData } from './src/services/pendingAlarm';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
@@ -412,6 +413,9 @@ function AppNavigator() {
         if (type === EventType.DELIVERED) {
           const isAlarmOrTimerCompletion = !!(alarmId || timerId);
           if (!isAlarmOrTimerCompletion) return;
+          // Play alarm sound immediately on DELIVERED so it starts the
+          // instant the notification fires, regardless of screen state.
+          playAlarmSoundForNotification(alarmId, timerId).catch(() => {});
         }
 
         if (!navigationRef.current || !isNavigationReady.current) {
@@ -451,9 +455,8 @@ function AppNavigator() {
         // would cause navigateToAlarmFire to see it as already handled
         // and skip the alarm navigation entirely.
 
-        // DO NOT cancel notifications here — the alarm sound plays FROM the
-        // notification. Cancelling it kills the sound. AlarmFireScreen's
-        // Dismiss/Snooze handlers cancel notifications when the user acts.
+        // DO NOT cancel notifications here — AlarmFireScreen's Dismiss/Snooze
+        // handlers cancel notifications and stop alarm sound when the user acts.
 
         // Timer completion notifications have data.timerId set.
         // The countdown chronometer (same ID prefix) has NO data, so
@@ -481,7 +484,10 @@ function AppNavigator() {
       }
 
       if (type === EventType.DISMISSED) {
-        console.log('[NOTIF] FOREGROUND DISMISSED — alarmId:', alarmId);
+        console.log('[NOTIF] FOREGROUND DISMISSED — alarmId:', alarmId, 'timerId:', timerId);
+        if (alarmId || timerId) {
+          stopAlarmSound();
+        }
         if (alarmId) {
           try {
             const alarms = await loadAlarms();

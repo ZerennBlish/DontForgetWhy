@@ -29,7 +29,7 @@ import { hapticHeavy } from '../utils/haptics';
 import { getSnoozeMessage } from '../data/snoozeMessages';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { markNotifHandled } from '../services/pendingAlarm';
-import { playAlarmSound, stopAlarmSound } from '../services/alarmSound';
+import { playAlarmSound, stopAlarmSound, isAlarmSoundPlaying } from '../services/alarmSound';
 import { getDefaultTimerSound } from '../services/settings';
 import guessWhyIcons from '../data/guessWhyIcons';
 import type { RootStackParamList } from '../navigation/types';
@@ -108,24 +108,25 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Play alarm sound via MediaPlayer (USAGE_ALARM — works on silent/vibrate)
+  // Fallback: play alarm sound if event handlers didn't start it
+  // (e.g., cold start where background JS context is separate).
+  // Sound is normally started on DELIVERED in index.ts / App.tsx.
   useEffect(() => {
     if (!fromNotification || postGuessWhy) return;
-
-    // "silent" preset → no sound (vibration only)
     if (!isTimer && alarm?.soundId === 'silent') return;
+
+    // Skip if sound is already playing (started by event handler)
+    if (isAlarmSoundPlaying()) return;
 
     let cancelled = false;
     (async () => {
       let soundUri: string | null = null;
       if (isTimer) {
-        // Timer: load sound from settings (not passed via navigation)
         try {
           const timerSound = await getDefaultTimerSound();
           soundUri = timerSound.uri;
         } catch {}
       } else {
-        // Alarm: use custom soundUri if set, else null (default alarm sound)
         soundUri = alarm?.soundUri ?? null;
       }
       if (cancelled) return;

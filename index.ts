@@ -9,6 +9,7 @@ import { getReminders, updateReminder } from './src/services/reminderStorage';
 import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { setPendingAlarm } from './src/services/pendingAlarm';
+import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
 
 // ── Yearly reminder reschedule helper ──────────────────────────────
 // Yearly recurring reminders use a one-time trigger (notifee has no
@@ -76,6 +77,12 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
   console.log('[NOTIF] onBackgroundEvent type:', type, 'notifId:', notifId, 'alarmId:', alarmId, 'timerId:', timerId);
 
   if (type === EventType.PRESS || type === EventType.DELIVERED) {
+    // Play alarm sound immediately on DELIVERED so it starts the instant
+    // the notification fires, regardless of screen state.
+    if (type === EventType.DELIVERED && (alarmId || timerId)) {
+      playAlarmSoundForNotification(alarmId, timerId).catch(() => {});
+    }
+
     // Filter: only store pending data for alarm/timer COMPLETION notifications.
     // Skip reminders (have reminderId, no alarmId) and previews (no data).
     //
@@ -103,7 +110,10 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
   }
 
   if (type === EventType.DISMISSED) {
-    console.log('[NOTIF] BACKGROUND DISMISSED — alarmId:', alarmId);
+    console.log('[NOTIF] BACKGROUND DISMISSED — alarmId:', alarmId, 'timerId:', timerId);
+    if (alarmId || timerId) {
+      stopAlarmSound();
+    }
     if (alarmId) {
       try {
         const alarms = await loadAlarms();
