@@ -19,11 +19,21 @@ export function isAlarmSoundPlaying(): boolean {
 
 export async function playAlarmSound(soundUri: string | null): Promise<void> {
   if (Platform.OS !== 'android') return;
+  _playing = true;
   try {
     await NativeModules.AlarmChannelModule.playAlarmSound(soundUri);
-    _playing = true;
   } catch (e) {
     console.warn('[AlarmSound] playAlarmSound failed:', e);
+    // Retry with default system alarm if a custom URI failed
+    if (soundUri !== null) {
+      try {
+        await NativeModules.AlarmChannelModule.playAlarmSound(null);
+        return;
+      } catch (e2) {
+        console.warn('[AlarmSound] playAlarmSound default fallback failed:', e2);
+      }
+    }
+    _playing = false;
   }
 }
 

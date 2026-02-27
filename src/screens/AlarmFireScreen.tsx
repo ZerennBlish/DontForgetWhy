@@ -105,6 +105,11 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     if (notificationId) {
       markNotifHandled(notificationId);
     }
+    // Clean up any stale snoozing flag from a previous session that
+    // was never consumed by a DISMISSED handler (e.g., app was killed).
+    if (alarm?.id) {
+      AsyncStorage.removeItem(`snoozing_${alarm.id}`).catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -115,8 +120,13 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     if (!fromNotification || postGuessWhy) return;
     if (!isTimer && alarm?.soundId === 'silent') return;
 
-    // Skip if sound is already playing (started by event handler)
-    if (isAlarmSoundPlaying()) return;
+    // If sound is already playing (started by DELIVERED event handler),
+    // just register cleanup — don't start a second playback.
+    if (isAlarmSoundPlaying()) {
+      return () => {
+        stopAlarmSound();
+      };
+    }
 
     let cancelled = false;
     (async () => {
@@ -237,13 +247,31 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const handleSnooze = useCallback(async () => {
     setIsSnoozing(true);
-    await cancelAllNotifications();
     if (!alarm) {
+      await cancelAllNotifications();
       exitToLockScreen();
       return;
     }
 
+    // Set snoozing flag BEFORE cancelling notifications.
+    // DISMISSED fires immediately on cancel; without the flag it would
+    // delete the one-time alarm before the snooze is scheduled.
+    // If the flag fails to set, bail out — a failed snooze is better
+    // than a deleted alarm.
     let newCount = 1;
+    try {
+      await AsyncStorage.setItem(`snoozing_${alarm.id}`, '1');
+    } catch (e) {
+      console.error('[AlarmFire] snooze flag failed, aborting snooze:', e);
+      setIsSnoozing(false);
+      return;
+    }
+    try {
+      newCount = await incrementSnoozeCount(alarm.id);
+    } catch {}
+
+    await cancelAllNotifications();
+
     try {
       const snoozeNotifId = await scheduleSnooze(alarm);
       // Persist the snooze notification ID so it can be cancelled if the
@@ -259,7 +287,6 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
           ],
         }));
       } catch {}
-      newCount = await incrementSnoozeCount(alarm.id);
     } catch (e) {
       console.error('[AlarmFire] snooze failed:', e);
     }

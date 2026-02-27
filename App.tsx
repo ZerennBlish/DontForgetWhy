@@ -33,6 +33,7 @@ import type { PendingAlarmData } from './src/services/pendingAlarm';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RootStackParamList } from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -191,8 +192,8 @@ function AppNavigator() {
           return true;
         }
         if (dTimerId && dNotifId && !wasNotifHandled(dNotifId)) {
-          const tIcon = d.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-          const tLabel = d.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+          const tIcon = (d.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+          const tLabel = (d.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
           console.log('[NOTIF] consumePendingAlarm fallback — found displayed timer:', dTimerId);
           await navigateToAlarmFire({ timerId: dTimerId, notificationId: dNotifId, timerLabel: tLabel, timerIcon: tIcon });
           return true;
@@ -268,8 +269,8 @@ function AppNavigator() {
                 console.log('[NOTIF] INIT — getInitialNotification already handled:', notifId);
               } else {
                 if (timerId && notifId) {
-                  const tIcon = initial.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-                  const tLabel = initial.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+                  const tIcon = (initial.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+                  const tLabel = (initial.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
                   alarmFireParams = {
                     isTimer: true,
                     timerLabel: tLabel,
@@ -412,7 +413,12 @@ function AppNavigator() {
         // undefined; the completion trigger has data: { timerId }.
         if (type === EventType.DELIVERED) {
           const isAlarmOrTimerCompletion = !!(alarmId || timerId);
-          if (!isAlarmOrTimerCompletion) return;
+          if (!isAlarmOrTimerCompletion) {
+            // Still handle yearly reminder reschedule for non-alarm DELIVERED
+            const rid = detail.notification?.data?.reminderId as string | undefined;
+            if (rid) rescheduleYearlyReminder(rid).catch(() => {});
+            return;
+          }
           // Play alarm sound immediately on DELIVERED so it starts the
           // instant the notification fires, regardless of screen state.
           playAlarmSoundForNotification(alarmId, timerId).catch(() => {});
@@ -423,8 +429,8 @@ function AppNavigator() {
           // so onNavigationReady or AppState handler can consume it.
           // Without this, the event is lost and AlarmFireScreen never shows.
           if (timerId && notifId) {
-            const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-            const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+            const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+            const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
             setPendingAlarm({ timerId, notificationId: notifId, timerLabel: tLabel, timerIcon: tIcon });
           } else if (alarmId) {
             setPendingAlarm({ alarmId, notificationId: notifId });
@@ -463,8 +469,8 @@ function AppNavigator() {
         // timerId is undefined and this branch is skipped for it.
         if (timerId && notifId) {
           markNotifHandled(notifId);
-          const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-          const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+          const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+          const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
 
           console.log('[NOTIF] FOREGROUND — navigating to AlarmFire (timer)');
           navigationRef.current.navigate('AlarmFire', {
@@ -493,8 +499,15 @@ function AppNavigator() {
             const alarms = await loadAlarms();
             const alarm = alarms.find((a) => a.id === alarmId);
             if (alarm?.mode === 'one-time') {
-              await deleteAlarm(alarmId);
-              refreshTimerWidget();
+              // Check if this DISMISSED was triggered by a snooze cancellation.
+              // The snoozing flag is set atomically before cancel in AlarmFireScreen.
+              const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+              if (snoozingFlag) {
+                await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+              } else {
+                await deleteAlarm(alarmId);
+                refreshTimerWidget();
+              }
             }
           } catch {}
         }

@@ -9,6 +9,7 @@ import { getReminders, updateReminder } from './src/services/reminderStorage';
 import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { setPendingAlarm } from './src/services/pendingAlarm';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
 
 // ── Yearly reminder reschedule helper ──────────────────────────────
@@ -91,8 +92,8 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
     // by data.timerId: the countdown has no data field → timerId is undefined;
     // the completion trigger has data: { timerId } → timerId is set.
     if (timerId && notifId) {
-      const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-      const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+      const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+      const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
       setPendingAlarm({
         timerId,
         notificationId: notifId,
@@ -119,8 +120,15 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
         const alarms = await loadAlarms();
         const alarm = alarms.find((a) => a.id === alarmId);
         if (alarm?.mode === 'one-time') {
-          await deleteAlarm(alarmId);
-          await refreshTimerWidget();
+          // Check if this DISMISSED was triggered by a snooze cancellation.
+          // The snoozing flag is set atomically before cancel in AlarmFireScreen.
+          const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+          if (snoozingFlag) {
+            await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+          } else {
+            await deleteAlarm(alarmId);
+            await refreshTimerWidget();
+          }
         }
       } catch {}
     }
