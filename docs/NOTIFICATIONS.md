@@ -603,6 +603,8 @@ Conservative approach: always returns `false` on API 34+ to prompt the user duri
 
 **SettingsScreen.tsx** also checks full-screen intent status and shows a permission banner if not granted.
 
+**Fresh install resets permission**: On Samsung devices, installing a new build (including EAS development builds) resets the full-screen intent permission. This is a dev/testing concern only — Play Store updates preserve the permission. During development, re-enable after every new build install: Settings → Apps → Don't Forget Why → Notifications → Allow full-screen intents.
+
 ---
 
 ## 13. Legacy Channel Migration
