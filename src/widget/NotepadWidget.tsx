@@ -59,7 +59,7 @@ function NoteCell({ note, accent }: { note: WidgetNote; accent: string }) {
         style={{
           flex: 1,
           flexDirection: 'column',
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
         }}
       >
         <TextWidget
