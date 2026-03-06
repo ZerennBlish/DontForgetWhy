@@ -54,6 +54,7 @@ import type { RootStackParamList } from '../navigation/types';
 
 const MAX_NOTE_LENGTH = 500;
 const MAX_NOTE_PINS = 4;
+let welcomeNoteCreating = false;
 
 const EDITOR_PLACEHOLDERS = [
   'Type something before you forget... again.',
@@ -212,17 +213,35 @@ export default function NotepadScreen({ navigation, route }: Props) {
         AsyncStorage.getItem(CUSTOM_FONT_COLOR_KEY),
       ]);
       const validHex = /^#[0-9A-Fa-f]{6}$/;
-      if (bg && validHex.test(bg)) { setCustomBgColor(bg); pickedBgRef.current = bg; }
-      if (fc && validHex.test(fc)) { setCustomFontColor(fc); pickedFontRef.current = fc; }
+      // Migrate old keys if new keys are empty
+      let resolvedBg = bg;
+      let resolvedFc = fc;
+      if (!bg) {
+        const oldBg = await AsyncStorage.getItem('noteCustomBgColor');
+        if (oldBg && validHex.test(oldBg)) {
+          resolvedBg = oldBg;
+          AsyncStorage.setItem(CUSTOM_BG_COLOR_KEY, oldBg);
+        }
+      }
+      if (!fc) {
+        const oldFc = await AsyncStorage.getItem('noteCustomFontColor');
+        if (oldFc && validHex.test(oldFc)) {
+          resolvedFc = oldFc;
+          AsyncStorage.setItem(CUSTOM_FONT_COLOR_KEY, oldFc);
+        }
+      }
+      if (resolvedBg && validHex.test(resolvedBg)) { setCustomBgColor(resolvedBg); pickedBgRef.current = resolvedBg; }
+      if (resolvedFc && validHex.test(resolvedFc)) { setCustomFontColor(resolvedFc); pickedFontRef.current = resolvedFc; }
     })();
   }, []);
 
   const loadData = useCallback(async () => {
     let loaded = await getAllNotes(true);
 
-    // First-launch welcome note
+    // First-launch welcome note — in-memory guard + persisted flag prevent duplicates
     const onboarded = await AsyncStorage.getItem('notepadOnboarded');
-    if (!onboarded && loaded.filter((n) => !n.deletedAt).length === 0) {
+    if (!onboarded && !welcomeNoteCreating && loaded.filter((n) => !n.deletedAt).length === 0) {
+      welcomeNoteCreating = true;
       await AsyncStorage.setItem('notepadOnboarded', 'true');
       const now = new Date().toISOString();
       const welcomeNote: Note = {
@@ -1224,6 +1243,15 @@ export default function NotepadScreen({ navigation, route }: Props) {
                 >
                   <Text style={{ fontSize: 16 }}>{'\u270F\uFE0F'}</Text>
                 </TouchableOpacity>
+                {editingNote && (
+                  <TouchableOpacity
+                    style={[styles.editorTrashBtn, { backgroundColor: noteTextColor + '15', borderColor: colors.red + '40' }]}
+                    onPress={handleDeleteFromEditor}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.editorTrashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
+                  </TouchableOpacity>
+                )}
               </>
             ) : (
               <>

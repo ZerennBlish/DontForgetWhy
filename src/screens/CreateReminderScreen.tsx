@@ -101,6 +101,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const [selectedDays, setSelectedDays] = useState<AlarmDay[]>([]);
   const [mode, setMode] = useState<'one-time' | 'recurring'>('one-time');
   const [placeholder] = useState(getRandomPlaceholder);
+  const [editReady, setEditReady] = useState(!editId);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
 
@@ -210,6 +211,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       if (found.recurring) {
         setMode('recurring');
       }
+      setEditReady(true);
     });
   }, [editId, timeFormat]);
 
@@ -852,7 +854,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           {existing ? 'Edit Reminder' : 'New Reminder'}
         </Text>
         <View style={styles.headerSave}>
-          <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
+          <TouchableOpacity style={[styles.saveBtn, !editReady && { opacity: 0.4 }]} onPress={editReady ? handleSave : undefined} activeOpacity={0.8} disabled={!editReady}>
             <Text style={styles.saveBtnText}>{existing ? 'Update' : 'Save'}</Text>
           </TouchableOpacity>
         </View>

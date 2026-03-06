@@ -29,7 +29,7 @@ async function _loadAllNotes(): Promise<Note[]> {
         text: item.text as string,
         createdAt: item.createdAt as string,
         color: typeof item.color === 'string' ? item.color : '#FFFFFF',
-        icon: typeof item.icon === 'string' ? item.icon : '\u{1F4DD}',
+        icon: typeof item.icon === 'string' ? item.icon : '',
         updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : (item.createdAt as string),
         pinned: typeof item.pinned === 'boolean' ? item.pinned : false,
         fontColor: typeof item.fontColor === 'string' ? item.fontColor : null,

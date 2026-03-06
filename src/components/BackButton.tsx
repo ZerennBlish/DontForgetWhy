@@ -15,6 +15,8 @@ export default function BackButton({ onPress }: BackButtonProps) {
       style={[styles.circle, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={() => { hapticLight(); onPress(); }}
       activeOpacity={0.7}
+      accessibilityLabel="Go back"
+      accessibilityRole="button"
     >
       <Text style={[styles.arrow, { color: colors.textPrimary }]}>{'\u2039'}</Text>
     </TouchableOpacity>

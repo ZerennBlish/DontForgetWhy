@@ -126,7 +126,7 @@ const sunshine: ThemeColors = {
   textPrimary: '#1A1400',
   textSecondary: '#6B5A20',
   textTertiary: '#998755',
-  border: '#EFE0A0',
+  border: '#D4C878',
   red: '#D32F2F',
   orange: '#E67E22',
   activeBackground: '#FFEEAA',
