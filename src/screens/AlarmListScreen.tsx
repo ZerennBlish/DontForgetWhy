@@ -27,6 +27,7 @@ import {
 import { getPinnedAlarms, togglePinAlarm, isAlarmPinned, unpinAlarm, pruneAlarmPins } from '../services/widgetPins';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { getReminders } from '../services/reminderStorage';
+import { getNotes } from '../services/noteStorage';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import UndoToast from '../components/UndoToast';
@@ -87,6 +88,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [showUndo, setShowUndo] = useState(false);
   const [undoKey, setUndoKey] = useState(0);
   const [reminderCount, setReminderCount] = useState(0);
+  const [noteCount, setNoteCount] = useState(0);
   const [showSortFilter, setShowSortFilter] = useState(false);
 
   const hasNonDefaultSortFilter = alarmSort !== 'time' || alarmFilter !== 'active';
@@ -360,6 +362,7 @@ export default function AlarmListScreen({ navigation }: Props) {
       getReminders().then((loaded) => {
         setReminderCount(loaded.filter((r) => !r.completed).length);
       });
+      getNotes().then((loaded) => setNoteCount(loaded.length));
     }, [])
   );
 
@@ -704,6 +707,23 @@ export default function AlarmListScreen({ navigation }: Props) {
                 <Text style={styles.headerBtnIcon}>{'\u{1F3C6}'}</Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Notepad')}
+              activeOpacity={0.7}
+              style={[styles.headerBtn, { position: 'relative' as const }]}
+            >
+              <Text style={styles.headerBtnIcon}>{'\u{1F4DD}'}</Text>
+              {noteCount > 0 && (
+                <View style={{
+                  position: 'absolute', top: -4, right: -6,
+                  backgroundColor: colors.accent, borderRadius: 8,
+                  minWidth: 16, height: 16, alignItems: 'center' as const, justifyContent: 'center' as const,
+                  paddingHorizontal: 4,
+                }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>{noteCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('Settings')}
               activeOpacity={0.7}

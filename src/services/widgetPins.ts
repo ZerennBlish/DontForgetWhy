@@ -143,3 +143,57 @@ export async function pruneReminderPins(validIds: string[]): Promise<string[]> {
   }
   return pruned;
 }
+
+// --- Note pins ---
+
+const NOTE_PINNED_KEY = 'widgetPinnedNotes';
+const MAX_NOTE_PINS = 4;
+
+export async function getPinnedNotes(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(NOTE_PINNED_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((id): id is string => typeof id === 'string').slice(0, MAX_NOTE_PINS);
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function togglePinNote(id: string): Promise<string[]> {
+  const current = await getPinnedNotes();
+  const index = current.indexOf(id);
+  if (index >= 0) {
+    current.splice(index, 1);
+  } else {
+    if (current.length >= MAX_NOTE_PINS) return current;
+    current.push(id);
+  }
+  await AsyncStorage.setItem(NOTE_PINNED_KEY, JSON.stringify(current));
+  return current;
+}
+
+export async function unpinNote(id: string): Promise<void> {
+  const current = await getPinnedNotes();
+  const filtered = current.filter((pinId) => pinId !== id);
+  if (filtered.length !== current.length) {
+    await AsyncStorage.setItem(NOTE_PINNED_KEY, JSON.stringify(filtered));
+  }
+}
+
+export async function pruneNotePins(activeIds: string[]): Promise<string[]> {
+  const current = await getPinnedNotes();
+  const validSet = new Set(activeIds);
+  const pruned = current.filter((id) => validSet.has(id));
+  if (pruned.length !== current.length) {
+    await AsyncStorage.setItem(NOTE_PINNED_KEY, JSON.stringify(pruned));
+  }
+  return pruned;
+}
+
+export function isNotePinned(id: string, pinnedIds: string[]): boolean {
+  return pinnedIds.includes(id);
+}

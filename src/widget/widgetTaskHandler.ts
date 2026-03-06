@@ -25,6 +25,13 @@ import { TimerWidget } from './TimerWidget';
 import type { WidgetPreset, WidgetAlarm } from './TimerWidget';
 import { DetailedWidget } from './DetailedWidget';
 import type { DetailedAlarm, DetailedPreset, DetailedReminder } from './DetailedWidget';
+import { NotepadWidget } from './NotepadWidget';
+import { NotepadWidgetCompact } from './NotepadWidgetCompact';
+import type { WidgetNote } from './NotepadWidget';
+import { generateCustomTheme } from '../theme/colors';
+import { getNotes } from '../services/noteStorage';
+import { getPinnedNotes } from '../services/widgetPins';
+import { setPendingNoteAction } from '../services/noteStorage';
 
 const RECENT_KEY = 'recentPresets';
 const ALARMS_KEY = 'alarms';
@@ -513,6 +520,70 @@ export async function getDetailedReminders(): Promise<DetailedReminder[]> {
   return result;
 }
 
+// ── Widget theme ──
+
+export async function getWidgetTheme(): Promise<{ background: string; text: string; border: string }> {
+  const themeBackgrounds: Record<string, { background: string; text: string; border: string }> = {
+    midnight: { background: '#121220', text: '#EAEAFF', border: '#2A2A3E' },
+    obsidian: { background: '#1A1A1E', text: '#E5E5EA', border: '#3A3A40' },
+    forest: { background: '#0E1A12', text: '#E0F0E2', border: '#2A3E2D' },
+    royal: { background: '#14101E', text: '#EDE0FF', border: '#322642' },
+    bubblegum: { background: '#FFF0F5', text: '#2A0A18', border: '#F0C0D5' },
+    sunshine: { background: '#FFFDE7', text: '#1A1400', border: '#EFE0A0' },
+    ocean: { background: '#F0F7FF', text: '#0A1520', border: '#B8D4F0' },
+    mint: { background: '#F0FFF4', text: '#0A1A10', border: '#B8E0C8' },
+  };
+  try {
+    const themeName = await AsyncStorage.getItem('appTheme');
+    const key = themeName || 'midnight';
+    if (key === 'custom') {
+      const customRaw = await AsyncStorage.getItem('customTheme');
+      if (customRaw) {
+        const parsed = JSON.parse(customRaw) as { accent: string };
+        const generated = generateCustomTheme(parsed.accent);
+        return { background: generated.background, text: generated.textPrimary, border: generated.border };
+      }
+    }
+    return themeBackgrounds[key] || themeBackgrounds.midnight;
+  } catch {
+    return themeBackgrounds.midnight;
+  }
+}
+
+// ── Notepad widget data ──
+
+export async function getWidgetNotes(): Promise<WidgetNote[]> {
+  const result: WidgetNote[] = [];
+  const allNotes = await getNotes();
+
+  try {
+    const pinnedIds = await getPinnedNotes();
+    for (const id of pinnedIds) {
+      if (result.length >= 4) break;
+      const note = allNotes.find((n) => n.id === id);
+      if (note) {
+        result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor });
+      }
+    }
+  } catch {
+    // fall through
+  }
+
+  // Fill remaining slots with most recent notes
+  if (result.length < 4) {
+    const addedIds = new Set(result.map((n) => n.id));
+    const sorted = allNotes
+      .filter((n) => !addedIds.has(n.id))
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    for (const note of sorted) {
+      if (result.length >= 4) break;
+      result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor });
+    }
+  }
+
+  return result;
+}
+
 // ── Rendering ──
 
 async function renderCompactWidget(props: WidgetTaskHandlerProps) {
@@ -526,6 +597,18 @@ async function renderDetailedWidget(props: WidgetTaskHandlerProps) {
   const presets = await getDetailedPresets();
   const reminders = await getDetailedReminders();
   props.renderWidget(React.createElement(DetailedWidget, { alarms, presets, reminders }));
+}
+
+async function renderNotepadWidget(props: WidgetTaskHandlerProps): Promise<void> {
+  const notes = await getWidgetNotes();
+  const theme = await getWidgetTheme();
+  props.renderWidget(React.createElement(NotepadWidget, { notes, theme }));
+}
+
+async function renderNotepadWidgetCompact(props: WidgetTaskHandlerProps): Promise<void> {
+  const notes = await getWidgetNotes();
+  const theme = await getWidgetTheme();
+  props.renderWidget(React.createElement(NotepadWidgetCompact, { notes, theme }));
 }
 
 // ── Refresh both widgets (called after timer start from widget) ──
@@ -556,6 +639,30 @@ async function refreshAllWidgets(): Promise<void> {
   } catch {
     // detailed widget may not be placed
   }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'NotepadWidget',
+      renderWidget: async () => {
+        const notes = await getWidgetNotes();
+        const theme = await getWidgetTheme();
+        return React.createElement(NotepadWidget, { notes, theme });
+      },
+    });
+  } catch {
+    // notepad widget may not be placed
+  }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'NotepadWidgetCompact',
+      renderWidget: async () => {
+        const notes = await getWidgetNotes();
+        const theme = await getWidgetTheme();
+        return React.createElement(NotepadWidgetCompact, { notes, theme });
+      },
+    });
+  } catch {
+    // notepad compact widget may not be placed
+  }
 }
 
 // ── Task handler ──
@@ -571,6 +678,10 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         await renderCompactWidget(props);
       } else if (widgetInfo.widgetName === 'DetailedWidget') {
         await renderDetailedWidget(props);
+      } else if (widgetInfo.widgetName === 'NotepadWidget') {
+        await renderNotepadWidget(props);
+      } else if (widgetInfo.widgetName === 'NotepadWidgetCompact') {
+        await renderNotepadWidgetCompact(props);
       }
       break;
     case 'WIDGET_CLICK': {
@@ -582,6 +693,25 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         } catch {
           // Silently ignore if scheme not available
         }
+        break;
+      }
+
+      if (action === 'ADD_NOTE') {
+        await setPendingNoteAction({ type: 'new' });
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'OPEN_NOTES') {
+        await setPendingNoteAction({ type: 'open' });
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action?.startsWith('OPEN_NOTE__')) {
+        const noteId = action.replace('OPEN_NOTE__', '');
+        await setPendingNoteAction({ type: 'edit', noteId });
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
 

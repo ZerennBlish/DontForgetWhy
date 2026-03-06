@@ -27,4 +27,5 @@ export type RootStackParamList = {
   ForgetLog: undefined;
   About: undefined;
   Trivia: undefined;
+  Notepad: { noteId?: string; newNote?: boolean } | undefined;
 };

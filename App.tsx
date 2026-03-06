@@ -20,8 +20,10 @@ import CreateReminderScreen from './src/screens/CreateReminderScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
+import NotepadScreen from './src/screens/NotepadScreen';
 import { loadAlarms, disableAlarm, deleteAlarm, purgeDeletedAlarms } from './src/services/storage';
 import { getReminders, updateReminder, purgeDeletedReminders } from './src/services/reminderStorage';
+import { purgeDeletedNotes, getPendingNoteAction } from './src/services/noteStorage';
 import { loadSettings, getOnboardingComplete } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshHapticsSetting } from './src/utils/haptics';
@@ -94,10 +96,11 @@ function AppNavigator() {
   const { colors } = useTheme();
 
   // Single init state: null = loading, non-null = ready to render.
-  // Combines onboarding check + cold-start alarm resolution.
+  // Combines onboarding check + cold-start alarm/note resolution.
   const [initState, setInitState] = useState<{
     onboardingDone: boolean;
     alarmFireParams: RootStackParamList['AlarmFire'] | null;
+    notepadParams: RootStackParamList['Notepad'] | null;
   } | null>(null);
 
   const navigationRef = useRef<any>(null);
@@ -314,11 +317,28 @@ function AppNavigator() {
           console.log('[NOTIF] INIT — set dedupe marker for:', alarmFireParams.notificationId);
         }
 
+        // 3. Check for pending note action from widget deep-link
+        let notepadParams: RootStackParamList['Notepad'] | null = null;
+        if (!alarmFireParams) {
+          try {
+            const pendingNote = await getPendingNoteAction();
+            if (pendingNote) {
+              if (pendingNote.type === 'new') {
+                notepadParams = { newNote: true };
+              } else if (pendingNote.noteId) {
+                notepadParams = { noteId: pendingNote.noteId };
+              } else {
+                notepadParams = {};
+              }
+            }
+          } catch {}
+        }
+
         console.log('[NOTIF] INIT — complete. alarmFireParams:', alarmFireParams ? 'SET' : 'null');
-        setInitState({ onboardingDone, alarmFireParams });
+        setInitState({ onboardingDone, alarmFireParams, notepadParams });
       } catch (e) {
         console.error('[NOTIF] INIT — fatal error:', e);
-        setInitState({ onboardingDone: true, alarmFireParams: null });
+        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null });
       }
     })();
   }, []);
@@ -332,6 +352,7 @@ function AppNavigator() {
       try {
         await purgeDeletedAlarms();
         await purgeDeletedReminders();
+        await purgeDeletedNotes();
       } catch {}
     })();
   }, []);
@@ -543,6 +564,19 @@ function AppNavigator() {
       // Use navigateToAlarmFire (async) — navigation is ready at this point
       navigateToAlarmFire(pending);
     }
+
+    // Check for pending note action from widget
+    getPendingNoteAction().then((noteAction) => {
+      if (noteAction && navigationRef.current) {
+        if (noteAction.type === 'edit' && noteAction.noteId) {
+          navigationRef.current.navigate('Notepad', { noteId: noteAction.noteId });
+        } else if (noteAction.type === 'new') {
+          navigationRef.current.navigate('Notepad', { newNote: true });
+        } else {
+          navigationRef.current.navigate('Notepad');
+        }
+      }
+    }).catch(() => {});
   }, [navigateToAlarmFire]);
 
   // ── AppState fallback ────────────────────────────────────────────
@@ -555,6 +589,18 @@ function AppNavigator() {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active' && isNavigationReady.current && navigationRef.current) {
         consumePendingAlarm();
+        // Check for pending note action from widget
+        getPendingNoteAction().then((noteAction) => {
+          if (noteAction && navigationRef.current) {
+            if (noteAction.type === 'edit' && noteAction.noteId) {
+              navigationRef.current.navigate('Notepad', { noteId: noteAction.noteId });
+            } else if (noteAction.type === 'new') {
+              navigationRef.current.navigate('Notepad', { newNote: true });
+            } else {
+              navigationRef.current.navigate('Notepad');
+            }
+          }
+        }).catch(() => {});
       }
     });
     return () => subscription.remove();
@@ -566,15 +612,21 @@ function AppNavigator() {
   // This prevents any flash of the wrong screen.
   if (!initState) return null;
 
-  const { onboardingDone, alarmFireParams } = initState;
+  const { onboardingDone, alarmFireParams, notepadParams } = initState;
 
   // For TRUE cold start: set initialState so the navigator renders
-  // AlarmFireScreen on the very first frame. AlarmList is kept at
-  // index 0 so the nav stack is clean after dismiss.
+  // AlarmFireScreen or NotepadScreen on the very first frame. AlarmList
+  // is kept at index 0 so the nav stack is clean after dismiss.
   const initialNavState = alarmFireParams ? {
     routes: [
       { name: 'AlarmList' as const },
       { name: 'AlarmFire' as const, params: alarmFireParams },
+    ],
+    index: 1,
+  } : notepadParams ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'Notepad' as const, params: notepadParams },
     ],
     index: 1,
   } : undefined;
@@ -660,6 +712,11 @@ function AppNavigator() {
           <Stack.Screen
             name="Trivia"
             component={TriviaScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="Notepad"
+            component={NotepadScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen

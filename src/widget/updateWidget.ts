@@ -2,7 +2,9 @@ import React from 'react';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import { TimerWidget } from './TimerWidget';
 import { DetailedWidget } from './DetailedWidget';
-import { getWidgetAlarms, getWidgetPresets, getDetailedAlarms, getDetailedPresets, getDetailedReminders } from './widgetTaskHandler';
+import { NotepadWidget } from './NotepadWidget';
+import { NotepadWidgetCompact } from './NotepadWidgetCompact';
+import { getWidgetAlarms, getWidgetPresets, getDetailedAlarms, getDetailedPresets, getDetailedReminders, getWidgetNotes, getWidgetTheme } from './widgetTaskHandler';
 
 export async function refreshTimerWidget(): Promise<void> {
   try {
@@ -31,5 +33,29 @@ export async function refreshTimerWidget(): Promise<void> {
   } catch (error) {
     // Widget may not be placed on home screen — silently ignore
     console.warn('[refreshDetailedWidget]', error);
+  }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'NotepadWidget',
+      renderWidget: async () => {
+        const notes = await getWidgetNotes();
+        const theme = await getWidgetTheme();
+        return React.createElement(NotepadWidget, { notes, theme });
+      },
+    });
+  } catch (error) {
+    console.warn('[refreshNotepadWidget]', error);
+  }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'NotepadWidgetCompact',
+      renderWidget: async () => {
+        const notes = await getWidgetNotes();
+        const theme = await getWidgetTheme();
+        return React.createElement(NotepadWidgetCompact, { notes, theme });
+      },
+    });
+  } catch (error) {
+    console.warn('[refreshNotepadWidgetCompact]', error);
   }
 }

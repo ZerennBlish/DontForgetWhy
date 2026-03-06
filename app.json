@@ -61,6 +61,24 @@
             "resizeMode": "horizontal|vertical",
             "description": "Timer presets with durations and alarm schedules",
             "updatePeriodMillis": 1800000
+          },
+          {
+            "name": "NotepadWidget",
+            "label": "DFW Notes",
+            "minWidth": "180dp",
+            "minHeight": "200dp",
+            "resizeMode": "horizontal|vertical",
+            "description": "Quick notes at a glance",
+            "updatePeriodMillis": 1800000
+          },
+          {
+            "name": "NotepadWidgetCompact",
+            "label": "DFW Notes Compact",
+            "minWidth": "180dp",
+            "minHeight": "110dp",
+            "resizeMode": "horizontal|vertical",
+            "description": "Quick note previews",
+            "updatePeriodMillis": 1800000
           }
         ]
       }]
