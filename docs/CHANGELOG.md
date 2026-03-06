@@ -2,6 +2,49 @@
 
 All notable changes to Don't Forget Why, organized by date.
 
+## March 6, 2026
+
+### New Feature: Notepad + Home Screen Widgets
+
+**Notepad Screen:**
+- Quick-capture notes accessible via 📝 header icon from main screen
+- Sticky-note editor: note's color IS the background, auto text color via luminance detection
+- 10 preset background colors + custom color picker (reanimated-color-picker)
+- True base font colors (white, black, red, blue, green, orange, purple, pink) + custom font color picker
+- Last-used custom color saved to a reusable slot for one-tap access
+- 24 emoji icons across 4 categories (Ideas & Work, Daily Life, Health & People, Fun & Other)
+- 500-character limit with color-changing counter (normal → orange at 450 → red at 490)
+- Hyperlink detection: phone numbers, emails, URLs tappable in note cards (opens dialer/mail/browser)
+- Long-press note card to copy text to clipboard
+- Soft delete with UndoToast, deleted notes filter with restore/permanent delete
+- Unsaved changes warning with on-brand copy ("You've got unsaved changes. Walk away and they're gone forever. Just like your memory.")
+- Sassy save toasts ("Got it. Try not to forget this one too.", "Stored safely. Unlike your car keys.", etc.)
+- Witty editor placeholders ("Type something before you forget... again.", "Your brain called. It wants backup.", etc.)
+- Default pinned welcome note on first launch (yellow, 👋 icon)
+- Note count badge on 📝 header icon
+
+**Home Screen Widgets:**
+- NotepadWidget (full): up to 4 notes as colored sticky-note cards, text expands with widget resize
+- NotepadWidgetCompact: up to 3 notes as single-line previews
+- Both widgets follow user's theme for background, note color as card background
+- Auto text color (luminance detection) + custom font color support
+- Witty rotating messages when empty ("Your memory isn't THAT good. Add a note.", "Even goldfish write things down.", etc.)
+- Widget tap actions: tap note → opens that note's editor, tap + → blank editor, tap title → note list
+
+**Widget Deep-Link:**
+- Widget stores pending action in AsyncStorage, app reads on foreground/navigation ready
+- Three actions: open note list, open specific note editor, open blank editor
+
+**Integration:**
+- purgeDeletedNotes() runs on app startup (30-day cycle, same as alarms/reminders)
+- Note pins: max 4, managed via widgetPins.ts
+- refreshTimerWidget() updated to also refresh both notepad widgets
+
+### Production Resubmission Plan
+- First production application rejected: "More testing required" — only 5/14 testers downloaded
+- New strategy: notepad feature for daily engagement + paid tester service for 14-day requirement
+- 25 verified testers via PrimeTestLab + organic Reddit recruitment
+
 ## February 20, 2026
 
 ### Bug Fixes

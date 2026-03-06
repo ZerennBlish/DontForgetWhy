@@ -7,8 +7,6 @@ interface Props {
   theme: WidgetTheme;
 }
 
-const ACCENT = '#4A90D9';
-
 const EMPTY_MESSAGES = [
   'Nothing here yet.',
   'Tap + to jot something.',
@@ -25,10 +23,10 @@ function getTextColor(bgHex: string): string {
   return brightness > 150 ? '#1A1A2E' : '#FFFFFF';
 }
 
-function CompactNoteRow({ note }: { note: WidgetNote }) {
+function CompactNoteRow({ note, accent }: { note: WidgetNote; accent: string }) {
   const flat = note.text.replace(/\n/g, ' ');
   const label = note.icon ? `${note.icon} ${flat}` : flat;
-  const cardBg = note.color || ACCENT;
+  const cardBg = note.color || accent;
   const textColor = note.fontColor || getTextColor(cardBg);
 
   return (
@@ -128,7 +126,7 @@ export function NotepadWidgetCompact({ notes, theme }: Props) {
         <FlexWidget
           clickAction="ADD_NOTE"
           style={{
-            backgroundColor: ACCENT,
+            backgroundColor: theme.accent as `#${string}`,
             borderRadius: 10,
             paddingHorizontal: 8,
             paddingVertical: 2,
@@ -163,7 +161,7 @@ export function NotepadWidgetCompact({ notes, theme }: Props) {
                 marginBottom: i < 2 ? 2 : 0,
               }}
             >
-              {notes[i] ? <CompactNoteRow note={notes[i]} /> : <EmptyCompactRow theme={theme} />}
+              {notes[i] ? <CompactNoteRow note={notes[i]} accent={theme.accent} /> : <EmptyCompactRow theme={theme} />}
             </FlexWidget>
           ))}
         </FlexWidget>

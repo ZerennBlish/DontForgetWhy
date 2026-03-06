@@ -522,16 +522,16 @@ export async function getDetailedReminders(): Promise<DetailedReminder[]> {
 
 // ── Widget theme ──
 
-export async function getWidgetTheme(): Promise<{ background: string; text: string; border: string }> {
-  const themeBackgrounds: Record<string, { background: string; text: string; border: string }> = {
-    midnight: { background: '#121220', text: '#EAEAFF', border: '#2A2A3E' },
-    obsidian: { background: '#1A1A1E', text: '#E5E5EA', border: '#3A3A40' },
-    forest: { background: '#0E1A12', text: '#E0F0E2', border: '#2A3E2D' },
-    royal: { background: '#14101E', text: '#EDE0FF', border: '#322642' },
-    bubblegum: { background: '#FFF0F5', text: '#2A0A18', border: '#F0C0D5' },
-    sunshine: { background: '#FFFDE7', text: '#1A1400', border: '#EFE0A0' },
-    ocean: { background: '#F0F7FF', text: '#0A1520', border: '#B8D4F0' },
-    mint: { background: '#F0FFF4', text: '#0A1A10', border: '#B8E0C8' },
+export async function getWidgetTheme(): Promise<{ background: string; text: string; border: string; accent: string }> {
+  const themeBackgrounds: Record<string, { background: string; text: string; border: string; accent: string }> = {
+    midnight: { background: '#121220', text: '#EAEAFF', border: '#2A2A3E', accent: '#4A90D9' },
+    obsidian: { background: '#1A1A1E', text: '#E5E5EA', border: '#3A3A40', accent: '#A0A0B0' },
+    forest: { background: '#0E1A12', text: '#E0F0E2', border: '#2A3E2D', accent: '#4CAF50' },
+    royal: { background: '#14101E', text: '#EDE0FF', border: '#322642', accent: '#9C6ADE' },
+    bubblegum: { background: '#FFF0F5', text: '#2A0A18', border: '#F0C0D5', accent: '#E0389A' },
+    sunshine: { background: '#FFFDE7', text: '#1A1400', border: '#EFE0A0', accent: '#E6A817' },
+    ocean: { background: '#F0F7FF', text: '#0A1520', border: '#B8D4F0', accent: '#0077CC' },
+    mint: { background: '#F0FFF4', text: '#0A1A10', border: '#B8E0C8', accent: '#10B981' },
   };
   try {
     const themeName = await AsyncStorage.getItem('appTheme');
@@ -541,7 +541,7 @@ export async function getWidgetTheme(): Promise<{ background: string; text: stri
       if (customRaw) {
         const parsed = JSON.parse(customRaw) as { accent: string };
         const generated = generateCustomTheme(parsed.accent);
-        return { background: generated.background, text: generated.textPrimary, border: generated.border };
+        return { background: generated.background, text: generated.textPrimary, border: generated.border, accent: generated.accent };
       }
     }
     return themeBackgrounds[key] || themeBackgrounds.midnight;

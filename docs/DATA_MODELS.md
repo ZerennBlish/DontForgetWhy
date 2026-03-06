@@ -71,6 +71,35 @@ interface Reminder {
 }
 ```
 
+### Note (`src/types/note.ts`)
+```typescript
+interface Note {
+  id: string;                    // UUID
+  text: string;                  // Note content (500 char max)
+  color: string;                 // Background color hex
+  icon: string;                  // Emoji string (empty string if none)
+  fontColor?: string | null;     // Custom text color hex — null = auto-detect from background
+  pinned: boolean;               // Pinned to widget (max 4)
+  createdAt: string;             // ISO timestamp
+  updatedAt: string;             // ISO timestamp
+  deletedAt?: string | null;     // ISO timestamp for soft delete (30-day purge)
+}
+```
+
+**Constants:**
+- `NOTE_COLORS: string[]` = `['#FFFFFF', '#1A1A2E', '#4A90D9', '#FF6B6B', '#FF9F43', '#FECA57', '#48DBFB', '#A29BFE', '#55EFC4', '#FD79A8', 'custom']`
+- `NOTE_FONT_COLORS: string[]` = `['auto', '#FFFFFF', '#000000', '#FF0000', '#0000FF', '#00AA00', '#FF8C00', '#8B00FF', '#FF1493', 'custom']`
+- `CUSTOM_BG_COLOR_KEY` = `'noteCustomBgColor'`
+- `CUSTOM_FONT_COLOR_KEY` = `'noteCustomFontColor'`
+
+### Pending Note Action (`src/services/noteStorage.ts`)
+```typescript
+interface PendingNoteAction {
+  type: 'open' | 'edit' | 'new';
+  noteId?: string;
+}
+```
+
 ### Timer (`src/types/timer.ts`)
 
 ```typescript
@@ -207,6 +236,7 @@ type RootStackParamList = {
   ForgetLog: undefined;
   About: undefined;
   Trivia: undefined;
+  Notepad: { noteId?: string; newNote?: boolean } | undefined;
 };
 ```
 
@@ -318,6 +348,7 @@ interface TimerSoundSetting {
 | `'alarms'` | `Alarm[]` | `storage.ts` | `[]` | All alarms including soft-deleted |
 | `'reminders'` | `Reminder[]` | `reminderStorage.ts` | `[]` | All reminders including soft-deleted |
 | `'activeTimers'` | `ActiveTimer[]` | `timerStorage.ts` | `[]` | Currently running/paused timers |
+| `'notes'` | `Note[]` | `noteStorage.ts` | `[]` | All notes including soft-deleted |
 
 ### Settings
 
@@ -355,6 +386,15 @@ interface TimerSoundSetting {
 | `'timerPresets'` | `Record<presetId, seconds>` | `timerStorage.ts` | `{}` | Custom durations for presets |
 | `'recentPresets'` | `{presetId, timestamp}[]` | `timerStorage.ts` | `[]` | Recently used presets (max 20) |
 
+### Notes
+
+| Key | Type | Stored By | Default | Description |
+|-----|------|-----------|---------|-------------|
+| `'notepadOnboarded'` | `string` | `NotepadScreen.tsx` | `undefined` | `'true'` after welcome note created |
+| `'pendingNoteAction'` | `PendingNoteAction` | `noteStorage.ts` | `undefined` | Widget deep-link action (cleared after read) |
+| `'noteCustomBgColor'` | `string` | `NotepadScreen.tsx` | `undefined` | Last-used custom background color hex |
+| `'noteCustomFontColor'` | `string` | `NotepadScreen.tsx` | `undefined` | Last-used custom font color hex |
+
 ### Widget Pins
 
 | Key | Type | Stored By | Default | Description |
@@ -362,6 +402,7 @@ interface TimerSoundSetting {
 | `'widgetPinnedPresets'` | `string[]` | `widgetPins.ts` | `[]` | Pinned timer preset IDs (max 3) |
 | `'widgetPinnedAlarms'` | `string[]` | `widgetPins.ts` | `[]` | Pinned alarm IDs (max 3) |
 | `'widgetPinnedReminders'` | `string[]` | `widgetPins.ts` | `[]` | Pinned reminder IDs (max 3) |
+| `'widgetPinnedNotes'` | `string[]` | `widgetPins.ts` | `[]` | Pinned note IDs (max 4) |
 
 ### Per-Alarm Dynamic Keys
 

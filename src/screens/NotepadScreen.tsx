@@ -15,7 +15,9 @@ import {
   Image,
   Alert,
   Linking,
+  AppState,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { v4 as uuidv4 } from 'uuid';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -96,6 +98,7 @@ function formatDeletedAgo(deletedAt: string): string {
 }
 
 function getTextColor(bgHex: string): string {
+  if (!/^#[0-9A-Fa-f]{6}$/.test(bgHex)) return '#FFFFFF';
   const hex = bgHex.replace('#', '');
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
@@ -104,7 +107,7 @@ function getTextColor(bgHex: string): string {
   return brightness > 150 ? '#1A1A2E' : '#FFFFFF';
 }
 
-const LINK_REGEX = /(https?:\/\/[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
+const LINK_REGEX = /(https?:\/\/[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((\+?\d{1,3}[-.\s]?)?(\(\d{3}\)[-.\s]?\d{3}[-.\s]?\d{4}|\d{3}[-.\s]\d{3}[-.\s]\d{4}))/g;
 
 function renderLinkedText(
   text: string,
@@ -125,9 +128,15 @@ function renderLinkedText(
       );
     }
 
-    const matched = match[0];
+    let matched = match[0];
     let url: string;
     if (match[1]) {
+      // Strip trailing punctuation greedily captured in URLs
+      const trimmed = matched.replace(/[.,!?)\]]+$/, '');
+      if (trimmed.length < matched.length) {
+        regex.lastIndex -= matched.length - trimmed.length;
+        matched = trimmed;
+      }
       url = matched;
     } else if (match[2]) {
       url = `mailto:${matched}`;
@@ -201,8 +210,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
         AsyncStorage.getItem(CUSTOM_BG_COLOR_KEY),
         AsyncStorage.getItem(CUSTOM_FONT_COLOR_KEY),
       ]);
-      if (bg) { setCustomBgColor(bg); pickedBgRef.current = bg; }
-      if (fc) { setCustomFontColor(fc); pickedFontRef.current = fc; }
+      const validHex = /^#[0-9A-Fa-f]{6}$/;
+      if (bg && validHex.test(bg)) { setCustomBgColor(bg); pickedBgRef.current = bg; }
+      if (fc && validHex.test(fc)) { setCustomFontColor(fc); pickedFontRef.current = fc; }
     })();
   }, []);
 
@@ -212,6 +222,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     // First-launch welcome note
     const onboarded = await AsyncStorage.getItem('notepadOnboarded');
     if (!onboarded && loaded.filter((n) => !n.deletedAt).length === 0) {
+      await AsyncStorage.setItem('notepadOnboarded', 'true');
       const now = new Date().toISOString();
       const welcomeNote: Note = {
         id: uuidv4(),
@@ -224,7 +235,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
       };
       await addNote(welcomeNote);
       await togglePinNote(welcomeNote.id);
-      await AsyncStorage.setItem('notepadOnboarded', 'true');
       refreshTimerWidget();
       loaded = await getAllNotes(true);
     }
@@ -287,6 +297,32 @@ export default function NotepadScreen({ navigation, route }: Props) {
     handle();
   }, [route.params]);
 
+  // BUG A fix: check pending widget actions when app foregrounds while already mounted
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (state) => {
+      if (state !== 'active') return;
+      const action = await getPendingNoteAction();
+      if (!action) return;
+      const actionKey =
+        action.type === 'new'
+          ? 'new'
+          : action.type === 'edit' || action.type === 'open'
+            ? `edit:${action.noteId}`
+            : '';
+      if (actionKey && actionKey === handledActionRef.current) return;
+      if (action.type === 'new') {
+        handledActionRef.current = 'new';
+        openNewEditor();
+      } else if ((action.type === 'edit' || action.type === 'open') && action.noteId) {
+        handledActionRef.current = `edit:${action.noteId}`;
+        const all = await getNotes();
+        const found = all.find((n) => n.id === action.noteId);
+        if (found) openEditorWithNote(found);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const openNewEditor = () => {
     setEditingNote(null);
     setEditorText('');
@@ -317,6 +353,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     setEditingNote(null);
     setShowColorPicker(false);
     setShowEmojiPicker(false);
+    handledActionRef.current = '';
   };
 
   const hasUnsavedChanges = (): boolean => {
@@ -1028,14 +1065,14 @@ export default function NotepadScreen({ navigation, route }: Props) {
       <TouchableOpacity
         style={styles.card}
         onPress={() => openEditorWithNote(item)}
-        onLongPress={() => {
+        onLongPress={async () => {
           hapticMedium();
           try {
-            // Clipboard removed in RN 0.72+; install expo-clipboard for newer versions
-            const Clipboard = (require('react-native') as any).Clipboard;
-            Clipboard.setString(item.text);
-          } catch {}
-          ToastAndroid.show('Copied to clipboard', ToastAndroid.SHORT);
+            await Clipboard.setStringAsync(item.text);
+            ToastAndroid.show('Copied to clipboard', ToastAndroid.SHORT);
+          } catch {
+            ToastAndroid.show("Couldn't copy", ToastAndroid.SHORT);
+          }
         }}
         activeOpacity={0.7}
       >

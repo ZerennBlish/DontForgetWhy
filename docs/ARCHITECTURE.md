@@ -56,6 +56,7 @@ DontForgetWhy/
     │   ├── guessWhyIcons.ts         45 emoji icons grouped by category
     │   ├── guessWhyMessages.ts      Win/lose/skip/prompt message arrays
     │   ├── memoryRanks.ts           9-tier rank system (0-100 score → title + emoji)
+    │   ├── noteIcons.ts             24 emoji icons for notes in 4 categories
     │   ├── placeholders.ts          29 placeholder texts for alarm note input
     │   ├── reminderQuotes.ts        16 quotes for reminder screen
     │   ├── riddles.ts               145 riddles across 5 categories, 3 difficulties
@@ -76,6 +77,7 @@ DontForgetWhy/
     │   ├── GuessWhyScreen.tsx       Guess Why game: icon grid or text input
     │   ├── MemoryMatchScreen.tsx    Card matching game (easy/medium/hard)
     │   ├── MemoryScoreScreen.tsx    Composite score across all 5 games
+    │   ├── NotepadScreen.tsx        Note list, sticky-note editor, color/font pickers
     │   ├── OnboardingScreen.tsx     Permission setup flow (6 permission slides)
     │   ├── ReminderScreen.tsx       Reminder list with completion tracking
     │   ├── SettingsScreen.tsx       Settings: time format, haptics, theme, sounds
@@ -87,6 +89,7 @@ DontForgetWhy/
     │   ├── forgetLog.ts             Forget log CRUD (AsyncStorage: 'forgetLog')
     │   ├── guessWhyStats.ts         Guess Why stats: wins/losses/skips/streak
     │   ├── memoryScore.ts           Composite score calculation (5 games × 20 pts)
+    │   ├── noteStorage.ts           Note CRUD, soft delete, purge, pending widget action
     │   ├── notifications.ts         All notification scheduling, channels, cancellation
     │   ├── pendingAlarm.ts          Module-level data bridge + notification dedupe
     │   ├── quotes.ts                12 motivational quotes for alarms
@@ -103,6 +106,7 @@ DontForgetWhy/
     │   └── colors.ts                8 preset themes + custom theme generator
     ├── types/
     │   ├── alarm.ts                 Alarm, AlarmDay, AlarmCategory interfaces
+    │   ├── note.ts                  Note interface, color constants, font color constants
     │   ├── reminder.ts              Reminder, CompletionEntry interfaces
     │   ├── timer.ts                 TimerPreset, ActiveTimer interfaces
     │   └── trivia.ts                TriviaQuestion, TriviaStats, etc.
@@ -114,6 +118,8 @@ DontForgetWhy/
     │   └── time.ts                  formatTime (12h/24h) and getCurrentTime
     └── widget/
         ├── DetailedWidget.tsx       Large widget: alarms, timers, reminders
+        ├── NotepadWidget.tsx        Full notepad widget: up to 4 sticky-note cards
+        ├── NotepadWidgetCompact.tsx  Compact notepad widget: up to 3 note previews
         ├── TimerWidget.tsx          Compact widget: timer presets + alarm cards
         ├── updateWidget.ts          refreshTimerWidget() — updates both widgets
         └── widgetTaskHandler.ts     Background widget handler: render, click, timer start
@@ -210,6 +216,7 @@ Stack.Navigator (initialRouteName = 'AlarmList' or 'Onboarding')
 ├── CreateReminder   slide_from_bottom
 ├── ForgetLog        slide_from_right
 ├── Trivia           slide_from_right
+├── Notepad           slide_from_right
 └── About            slide_from_right
 ```
 
@@ -252,6 +259,12 @@ Notifee has no YEARLY repeat frequency. Yearly reminders use a one-time trigger.
 - Single `notificationId` → array `notificationIds`
 - Boolean `recurring` → mode enum ('recurring' | 'one-time')
 - Missing `soundId` → default 'default'
+
+### Widget Theme Support
+NotepadWidget and NotepadWidgetCompact load the user's theme from AsyncStorage (`appTheme`) to set the widget background color. Note cards use the note's own color as the card background with auto-detected text color (luminance-based: dark text on light backgrounds, light text on dark backgrounds). Custom font colors override the auto-detection when set.
+
+### Hyperlink Detection
+NotepadScreen renders note text with tappable hyperlinks using regex pattern matching for URLs, emails, and phone numbers. Links open via `Linking.openURL()`. Detection is read-only (card view only, not in the editor TextInput).
 
 ---
 
@@ -347,10 +360,12 @@ Two Android home screen widgets registered in `app.json`:
 |--------|------|---------|
 | Compact | `TimerWidget` | 3 timer presets + 3 upcoming alarms |
 | Detailed | `DetailedWidget` | Timer presets with durations, alarms with schedules, reminders |
+| Full Notes | `NotepadWidget` | Up to 4 pinned notes as sticky-note cards |
+| Compact Notes | `NotepadWidgetCompact` | Up to 3 note previews |
 
 Both rendered via `react-native-android-widget`. Widget clicks can open the app (`OPEN_APP` action) or start a timer directly (`START_TIMER__{presetId}` action) without opening the app UI.
 
-Pin limits: max 3 pinned items each for presets, alarms, and reminders. Unpinned slots filled by recent usage (timers) or soonest fire time (alarms).
+Pin limits: max 3 pinned items each for presets, alarms, and reminders; max 4 pinned notes. Unpinned slots filled by recent usage (timers) or soonest fire time (alarms).
 
 ---
 

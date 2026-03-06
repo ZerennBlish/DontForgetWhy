@@ -13,14 +13,13 @@ export interface WidgetTheme {
   background: string;
   text: string;
   border: string;
+  accent: string;
 }
 
 interface NotepadWidgetProps {
   notes: WidgetNote[];
   theme: WidgetTheme;
 }
-
-const ACCENT = '#4A90D9';
 
 const EMPTY_MESSAGES = [
   'Your brain is suspiciously empty.',
@@ -40,9 +39,9 @@ function getTextColor(bgHex: string): string {
   return brightness > 150 ? '#1A1A2E' : '#FFFFFF';
 }
 
-function NoteCell({ note }: { note: WidgetNote }) {
+function NoteCell({ note, accent }: { note: WidgetNote; accent: string }) {
   const label = note.icon ? `${note.icon} ${note.text}` : note.text;
-  const cardBg = note.color || ACCENT;
+  const cardBg = note.color || accent;
   const textColor = note.fontColor || getTextColor(cardBg);
 
   return (
@@ -116,7 +115,7 @@ export function NotepadWidget({ notes, theme }: NotepadWidgetProps) {
         <FlexWidget
           clickAction="ADD_NOTE"
           style={{
-            backgroundColor: ACCENT,
+            backgroundColor: theme.accent as `#${string}`,
             borderRadius: 12,
             paddingHorizontal: 10,
             paddingVertical: 4,
@@ -151,7 +150,7 @@ export function NotepadWidget({ notes, theme }: NotepadWidgetProps) {
                 marginBottom: i < Math.min(notes.length, 4) - 1 ? 4 : 0,
               }}
             >
-              <NoteCell note={note} />
+              <NoteCell note={note} accent={theme.accent} />
             </FlexWidget>
           ))}
         </FlexWidget>

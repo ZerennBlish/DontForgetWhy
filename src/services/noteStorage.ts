@@ -15,14 +15,26 @@ async function _loadAllNotes(): Promise<Note[]> {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item: unknown): item is Note =>
-        item !== null &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).text === 'string' &&
-        typeof (item as Record<string, unknown>).createdAt === 'string',
-    );
+    return parsed
+      .filter(
+        (item: unknown): item is Record<string, unknown> =>
+          item !== null &&
+          typeof item === 'object' &&
+          typeof (item as Record<string, unknown>).id === 'string' &&
+          typeof (item as Record<string, unknown>).text === 'string' &&
+          typeof (item as Record<string, unknown>).createdAt === 'string',
+      )
+      .map((item): Note => ({
+        id: item.id as string,
+        text: item.text as string,
+        createdAt: item.createdAt as string,
+        color: typeof item.color === 'string' ? item.color : '#FFFFFF',
+        icon: typeof item.icon === 'string' ? item.icon : '\u{1F4DD}',
+        updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : (item.createdAt as string),
+        pinned: typeof item.pinned === 'boolean' ? item.pinned : false,
+        fontColor: typeof item.fontColor === 'string' ? item.fontColor : null,
+        deletedAt: typeof item.deletedAt === 'string' ? item.deletedAt : null,
+      }));
   } catch {
     return [];
   }
