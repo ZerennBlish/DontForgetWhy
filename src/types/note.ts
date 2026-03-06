@@ -12,14 +12,22 @@ export interface Note {
 
 export const NOTE_FONT_COLORS: string[] = [
   'auto',
-  '#FFFFFF',
-  '#1A1A2E',
-  '#000000',
-  '#FF6B6B',
-  '#4A90D9',
-  '#FF9F43',
-  '#55EFC4',
-  '#A29BFE',
+  '#F0F0F0', // Off-white
+  '#B0B0B0', // Light gray
+  '#0D0D1A', // Near-black
+  '#3D3D50', // Dark gray
+  '#FF9E9E', // Light red
+  '#CC3333', // Dark red
+  '#7BB8F0', // Light blue
+  '#2A5F9E', // Dark blue
+  '#7EEDC4', // Light green
+  '#2D9B72', // Dark green
+  '#FFC285', // Light orange
+  '#CC7A1F', // Dark orange
+  '#C4BBFF', // Light purple
+  '#6C5CE7', // Dark purple
+  '#FFB0CE', // Light pink
+  '#D63384', // Dark pink
   'custom',
 ];
 

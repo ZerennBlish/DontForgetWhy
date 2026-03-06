@@ -488,7 +488,7 @@ export default function TimerScreen({
                 <View style={styles.activeActions}>
                   {timer.remainingSeconds > 0 && (
                     <TouchableOpacity
-                      onPress={() => onTogglePause(timer.id)}
+                      onPress={() => { hapticLight(); onTogglePause(timer.id); }}
                       style={styles.actionBtn}
                       activeOpacity={0.7}
                     >
@@ -543,7 +543,7 @@ export default function TimerScreen({
               </Text>
               {customModal && customModal.id !== 'custom' && (
                 <TouchableOpacity
-                  onPress={() => handlePinToggle(customModal)}
+                  onPress={() => { hapticLight(); handlePinToggle(customModal); }}
                   style={[
                     styles.modalPinBtn,
                     modalPresetPinned && { backgroundColor: colors.accent },
@@ -603,7 +603,7 @@ export default function TimerScreen({
             </View>
             <View style={styles.modalBtns}>
               <TouchableOpacity
-                onPress={() => setCustomModal(null)}
+                onPress={() => { hapticLight(); setCustomModal(null); }}
                 style={styles.modalCancelBtn}
                 activeOpacity={0.7}
               >

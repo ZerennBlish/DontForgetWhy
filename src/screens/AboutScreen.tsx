@@ -4,6 +4,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BackButton from '../components/BackButton';
+import { hapticLight } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'About'>;
@@ -27,11 +29,6 @@ export default function AboutScreen({ navigation }: Props) {
       paddingTop: 60,
       paddingHorizontal: 20,
       paddingBottom: 16,
-    },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
     },
     content: {
       flex: 1,
@@ -117,15 +114,14 @@ export default function AboutScreen({ navigation }: Props) {
   const [iconError, setIconError] = useState(false);
 
   const handleIconTap = () => {
+    hapticLight();
     setTapCount((prev) => prev + 1);
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
       </View>
 
       <View style={styles.content}>

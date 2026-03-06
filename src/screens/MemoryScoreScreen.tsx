@@ -15,7 +15,8 @@ import {
 } from '../services/memoryScore';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticHeavy } from '../utils/haptics';
+import { hapticLight, hapticHeavy } from '../utils/haptics';
+import BackButton from '../components/BackButton';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import type { TriviaStats, TriviaCategory } from '../types/trivia';
@@ -208,9 +209,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{'\u{1F3C6}'} Brain Training Stats</Text>
       </View>
 
@@ -313,7 +312,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={styles.sectionBtn}
-          onPress={() => navigation.navigate('ForgetLog')}
+          onPress={() => { hapticLight(); navigation.navigate('ForgetLog'); }}
           activeOpacity={0.7}
         >
           <Text style={styles.sectionBtnText}>{'\u{1F4DC}'} What Did I Forget?</Text>
@@ -510,7 +509,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
       {/* Reset All Scores */}
       <TouchableOpacity
         style={styles.resetAllBtn}
-        onPress={handleResetAll}
+        onPress={() => { hapticLight(); handleResetAll(); }}
         activeOpacity={0.7}
       >
         <Text style={styles.resetAllBtnText}>Reset All Scores</Text>
@@ -534,12 +533,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
       paddingTop: 60,
       paddingHorizontal: 20,
       paddingBottom: 20,
-    },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
-      marginBottom: 16,
     },
     title: {
       fontSize: 28,

@@ -6,6 +6,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { loadSettings, saveSettings } from '../services/settings';
+import BackButton from '../components/BackButton';
+import { hapticLight } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Games'>;
@@ -35,6 +37,7 @@ export default function GamesScreen({ navigation }: Props) {
   );
 
   const handleGuessWhyToggle = async (value: boolean) => {
+    hapticLight();
     setGuessWhyEnabled(value);
     await saveSettings({ guessWhyEnabled: value });
   };
@@ -53,12 +56,6 @@ export default function GamesScreen({ navigation }: Props) {
           paddingTop: 60,
           paddingHorizontal: 20,
           paddingBottom: 24,
-        },
-        backBtn: {
-          fontSize: 16,
-          color: colors.accent,
-          fontWeight: '600',
-          marginBottom: 16,
         },
         title: {
           fontSize: 28,
@@ -149,9 +146,7 @@ export default function GamesScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{'\u{1F3AE}'} Brain Games</Text>
         <Text style={styles.subtitle}>Exercise that forgetful brain of yours</Text>
       </View>
@@ -159,7 +154,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Daily Riddle */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => navigation.navigate('DailyRiddle')}
+        onPress={() => { hapticLight(); navigation.navigate('DailyRiddle'); }}
         activeOpacity={0.7}
       >
         <Text style={styles.gameEmoji}>{'\u{1F4A1}'}</Text>
@@ -180,7 +175,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Memory Match */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => navigation.navigate('MemoryMatch')}
+        onPress={() => { hapticLight(); navigation.navigate('MemoryMatch'); }}
         activeOpacity={0.7}
       >
         <Text style={styles.gameEmoji}>{'\u{1F9E9}'}</Text>
@@ -194,7 +189,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Trivia */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => navigation.navigate('Trivia')}
+        onPress={() => { hapticLight(); navigation.navigate('Trivia'); }}
         activeOpacity={0.7}
       >
         <Text style={styles.gameEmoji}>{'\u{1F9E0}'}</Text>
@@ -210,7 +205,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Sudoku */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => navigation.navigate('Sudoku')}
+        onPress={() => { hapticLight(); navigation.navigate('Sudoku'); }}
         activeOpacity={0.7}
       >
         <Text style={styles.gameEmoji}>{'\u{1F522}'}</Text>
@@ -246,7 +241,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Stats */}
       <TouchableOpacity
         style={styles.statsCard}
-        onPress={() => navigation.navigate('MemoryScore')}
+        onPress={() => { hapticLight(); navigation.navigate('MemoryScore'); }}
         activeOpacity={0.7}
       >
         <Text style={styles.gameEmoji}>{'\u{1F4CA}'}</Text>

@@ -21,8 +21,9 @@ import {
 import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
 import { addForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
+import BackButton from '../components/BackButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticMedium } from '../utils/haptics';
+import { hapticLight, hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GuessWhy'>;
@@ -81,12 +82,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       paddingBottom: 60 + insets.bottom,
       paddingHorizontal: 24,
       justifyContent: 'space-between',
-    },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
-      marginBottom: 16,
     },
     top: {
       alignItems: 'center',
@@ -355,6 +350,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
   const handleSkip = async () => {
     if (result || resolvedRef.current) return;
+    hapticLight();
     resolvedRef.current = true;
     setResult({ type: 'skip', message: getRandomSkipMessage() });
     try { await recordSkip(); } catch {}
@@ -362,6 +358,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   };
 
   const handleContinue = () => {
+    hapticLight();
     // Navigate to AlarmFire with postGuessWhy — it will cancel notifications + vibration
     navigation.replace('AlarmFire', { alarm, postGuessWhy: true, fromNotification: false, notificationId });
   };
@@ -388,9 +385,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       {/* Top section */}
       <View style={styles.top}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={{ alignSelf: 'flex-start' }}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.emoji}>{displayEmoji}</Text>
         <Text style={styles.time}>{formatTime(alarm.time, timeFormat)}</Text>
         <Text style={styles.categoryLabel}>{alarm.category.toUpperCase()}</Text>
@@ -402,7 +397,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
         <View style={styles.modeToggle}>
           <TouchableOpacity
             style={[styles.modeBtn, mode === 'icons' && styles.modeBtnActive, !hasIcon && styles.modeBtnDisabled]}
-            onPress={() => hasIcon && setMode('icons')}
+            onPress={() => { if (hasIcon) { hapticLight(); setMode('icons'); } }}
             activeOpacity={hasIcon ? 0.7 : 1}
           >
             <Text style={[styles.modeBtnText, mode === 'icons' && styles.modeBtnTextActive]}>
@@ -411,7 +406,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modeBtn, mode === 'type' && styles.modeBtnActive]}
-            onPress={() => setMode('type')}
+            onPress={() => { hapticLight(); setMode('type'); }}
             activeOpacity={0.7}
           >
             <Text style={[styles.modeBtnText, mode === 'type' && styles.modeBtnTextActive]}>

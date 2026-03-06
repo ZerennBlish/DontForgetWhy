@@ -66,7 +66,7 @@ function NoteCell({ note, accent }: { note: WidgetNote; accent: string }) {
           text={label}
           maxLines={10}
           style={{
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: '600',
             color: textColor as `#${string}`,
           }}

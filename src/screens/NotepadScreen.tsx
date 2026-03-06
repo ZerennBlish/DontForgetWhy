@@ -44,6 +44,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import UndoToast from '../components/UndoToast';
+import BackButton from '../components/BackButton';
 import { NOTE_COLORS, NOTE_FONT_COLORS, CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
 import type { Note } from '../types/note';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
@@ -107,7 +108,7 @@ function getTextColor(bgHex: string): string {
   return brightness > 150 ? '#1A1A2E' : '#FFFFFF';
 }
 
-const LINK_REGEX = /(https?:\/\/[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((\+?\d{1,3}[-.\s]?)?(\(\d{3}\)[-.\s]?\d{3}[-.\s]?\d{4}|\d{3}[-.\s]\d{3}[-.\s]\d{4}))/g;
+const LINK_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
 
 function renderLinkedText(
   text: string,
@@ -137,7 +138,7 @@ function renderLinkedText(
         regex.lastIndex -= matched.length - trimmed.length;
         matched = trimmed;
       }
-      url = matched;
+      url = /^https?:\/\//i.test(matched) ? matched : `https://${matched}`;
     } else if (match[2]) {
       url = `mailto:${matched}`;
     } else {
@@ -187,6 +188,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const [editorFontColor, setEditorFontColor] = useState<string | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
   const [editorPlaceholder, setEditorPlaceholder] = useState(EDITOR_PLACEHOLDERS[0]);
   const [showBgPicker, setShowBgPicker] = useState(false);
   const [showFontPicker, setShowFontPicker] = useState(false);
@@ -203,7 +205,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
 
   const textInputRef = useRef<TextInput>(null);
   const handledActionRef = useRef('');
-
   useEffect(() => {
     (async () => {
       const [bg, fc] = await Promise.all([
@@ -326,12 +327,13 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const openNewEditor = () => {
     setEditingNote(null);
     setEditorText('');
-    setEditorColor(NOTE_COLORS[0]);
+    setEditorColor(colors.background);
     setEditorIcon('');
     setEditorFontColor(null);
     setShowColorPicker(false);
     setShowEmojiPicker(false);
     setEditorPlaceholder(EDITOR_PLACEHOLDERS[Math.floor(Math.random() * EDITOR_PLACEHOLDERS.length)]);
+    setIsViewMode(false);
     setEditorVisible(true);
   };
 
@@ -344,6 +346,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     setShowColorPicker(false);
     setShowEmojiPicker(false);
     setEditorPlaceholder(EDITOR_PLACEHOLDERS[Math.floor(Math.random() * EDITOR_PLACEHOLDERS.length)]);
+    setIsViewMode(true);
     setEditorVisible(true);
   };
 
@@ -476,12 +479,14 @@ export default function NotepadScreen({ navigation, route }: Props) {
   };
 
   const handleRestore = async (id: string) => {
+    hapticLight();
     await restoreNote(id);
     await loadData();
     refreshTimerWidget();
   };
 
   const handlePermanentDelete = async (id: string) => {
+    hapticHeavy();
     await permanentlyDeleteNote(id);
     await loadData();
     refreshTimerWidget();
@@ -536,15 +541,17 @@ export default function NotepadScreen({ navigation, route }: Props) {
       flex: 1,
     },
     header: {
-      paddingTop: 60,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: insets.top + 10,
       paddingHorizontal: 20,
-      paddingBottom: 16,
+      paddingBottom: 2,
     },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
-      marginBottom: 16,
+    headerBack: {
+      position: 'absolute',
+      left: 20,
+      top: insets.top + 10,
     },
     title: {
       fontSize: 28,
@@ -555,8 +562,8 @@ export default function NotepadScreen({ navigation, route }: Props) {
       flexDirection: 'row',
       justifyContent: 'flex-end',
       paddingHorizontal: 16,
-      paddingTop: 2,
-      paddingBottom: 2,
+      paddingTop: 0,
+      paddingBottom: 0,
     },
     filterToggleBtn: {
       flexDirection: 'row',
@@ -783,14 +790,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
       paddingBottom: 8,
       gap: 10,
     },
-    editorBackBtn: {
-      paddingHorizontal: 8,
-      paddingVertical: 6,
-    },
-    editorBackText: {
-      fontSize: 22,
-      color: colors.textSecondary,
-    },
     editorTopSpacer: {
       flex: 1,
     },
@@ -939,39 +938,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
     iconEmoji: {
       fontSize: 20,
     },
-    editorActions: {
-      flexDirection: 'row',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      paddingBottom: 12 + insets.bottom,
-      gap: 10,
-    },
-    editorCancelBtn: {
-      flex: 1,
-      backgroundColor: colors.card,
-      borderRadius: 14,
-      paddingVertical: 14,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    editorCancelBtnText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.textTertiary,
-    },
-    editorSaveBtn: {
-      flex: 1,
-      backgroundColor: colors.accent,
-      borderRadius: 14,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    editorSaveBtnText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
     cpOverlay: {
       flex: 1,
       backgroundColor: colors.modalOverlay,
@@ -1064,7 +1030,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     return (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => openEditorWithNote(item)}
+        onPress={() => { hapticLight(); openEditorWithNote(item); }}
         onLongPress={async () => {
           hapticMedium();
           try {
@@ -1161,9 +1127,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
 
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backBtn}>{'<'} Back</Text>
-          </TouchableOpacity>
+          <View style={styles.headerBack}>
+            <BackButton onPress={() => navigation.goBack()} />
+          </View>
           <Text style={styles.title}>Notes</Text>
         </View>
 
@@ -1243,75 +1209,105 @@ export default function NotepadScreen({ navigation, route }: Props) {
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-        <View style={[styles.editorContainer, { backgroundColor: editorColor }]}>
+        <ScrollView style={[styles.editorContainer, { backgroundColor: editorColor }]} contentContainerStyle={{ flex: 1 }} keyboardShouldPersistTaps="handled" scrollEnabled={false}>
 
           {/* Top bar: back, spacer, emoji btn, color btn, trash btn */}
           <View style={styles.editorTopBar}>
-            <TouchableOpacity style={styles.editorBackBtn} onPress={confirmClose} activeOpacity={0.7}>
-              <Text style={[styles.editorBackText, { color: noteTextColor }]}>{'\u2039'}</Text>
-            </TouchableOpacity>
-            <View style={styles.editorTopSpacer} />
-            <TouchableOpacity
-              style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }, showEmojiPicker && styles.editorTopBtnActive]}
-              onPress={() => {
-                hapticLight();
-                Keyboard.dismiss();
-                setShowColorPicker(false);
-                setShowEmojiPicker((v) => !v);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.editorTopBtnEmoji}>{editorIcon || '\u{1F600}'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }, showColorPicker && styles.editorTopBtnActive]}
-              onPress={() => {
-                hapticLight();
-                Keyboard.dismiss();
-                setShowEmojiPicker(false);
-                setShowColorPicker((v) => !v);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.editorColorIndicator, { backgroundColor: editorColor, borderWidth: 2, borderColor: noteTextColor + '40' }]} />
-            </TouchableOpacity>
-            {editingNote && (
-              <TouchableOpacity
-                style={[styles.editorTrashBtn, { backgroundColor: noteTextColor + '15', borderColor: colors.red + '40' }]}
-                onPress={handleDeleteFromEditor}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.editorTrashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
-              </TouchableOpacity>
+            <BackButton onPress={confirmClose} />
+            {isViewMode ? (
+              <>
+                <View style={styles.editorTopSpacer} />
+                <TouchableOpacity
+                  style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }]}
+                  onPress={() => { hapticLight(); setIsViewMode(false); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 16 }}>{'\u270F\uFE0F'}</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: colors.accent, borderRadius: 14, height: 28, alignItems: 'center', justifyContent: 'center' }}
+                  onPress={handleSave}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: getTextColor(colors.accent) }}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }, showEmojiPicker && styles.editorTopBtnActive]}
+                  onPress={() => {
+                    hapticLight();
+                    Keyboard.dismiss();
+                    setShowColorPicker(false);
+                    setShowEmojiPicker((v) => !v);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.editorTopBtnEmoji}>{editorIcon || '\u{1F600}'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }, showColorPicker && styles.editorTopBtnActive]}
+                  onPress={() => {
+                    hapticLight();
+                    Keyboard.dismiss();
+                    setShowEmojiPicker(false);
+                    setShowColorPicker((v) => !v);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.editorColorIndicator, { backgroundColor: editorColor, borderWidth: 2, borderColor: noteTextColor + '40' }]} />
+                </TouchableOpacity>
+                {editingNote && (
+                  <TouchableOpacity
+                    style={[styles.editorTrashBtn, { backgroundColor: noteTextColor + '15', borderColor: colors.red + '40' }]}
+                    onPress={handleDeleteFromEditor}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.editorTrashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
           </View>
 
           {/* Hero text area */}
-          <View style={styles.editorInputArea}>
-            <TextInput
-              ref={textInputRef}
-              style={[styles.editorInput, { color: resolvedFontColor }]}
-              value={editorText}
-              onChangeText={setEditorText}
-              placeholder={editorPlaceholder}
-              placeholderTextColor={resolvedFontColor + '80'}
-              multiline
-              maxLength={MAX_NOTE_LENGTH}
-              textAlignVertical="top"
-              autoFocus={!editingNote}
-              onFocus={() => {
-                setShowColorPicker(false);
-                setShowEmojiPicker(false);
-              }}
-            />
-          </View>
+          {isViewMode ? (
+            <ScrollView style={styles.editorInputArea} contentContainerStyle={{ paddingBottom: 20 }}>
+              {editorIcon ? <Text style={{ fontSize: 28, marginBottom: 8 }}>{editorIcon}</Text> : null}
+              <Text style={[styles.editorInput, { color: resolvedFontColor }]}>
+                {renderLinkedText(editorText, [styles.editorInput, { color: resolvedFontColor }], getTextColor(editorColor) === '#FFFFFF' ? '#48DBFB' : '#0066CC')}
+              </Text>
+            </ScrollView>
+          ) : (
+            <View style={styles.editorInputArea}>
+              <TextInput
+                ref={textInputRef}
+                style={[styles.editorInput, { color: resolvedFontColor }]}
+                value={editorText}
+                onChangeText={setEditorText}
+                placeholder={editorPlaceholder}
+                placeholderTextColor={resolvedFontColor + '80'}
+                multiline
+                maxLength={MAX_NOTE_LENGTH}
+                textAlignVertical="top"
+                autoFocus={!editingNote}
+                onFocus={() => {
+                  setShowColorPicker(false);
+                  setShowEmojiPicker(false);
+                }}
+              />
+            </View>
+          )}
 
-          <Text style={[
-            styles.charCount,
-            { color: resolvedFontColor + '99' },
-            editorText.length >= 490 ? { color: colors.red } :
-            editorText.length >= 450 ? { color: colors.orange } : undefined,
-          ]}>{editorText.length}/{MAX_NOTE_LENGTH}</Text>
+          {!isViewMode && (
+            <Text style={[
+              styles.charCount,
+              { color: resolvedFontColor + '99' },
+              editorText.length >= 490 ? { color: colors.red } :
+              editorText.length >= 450 ? { color: colors.orange } : undefined,
+            ]}>{editorText.length}/{MAX_NOTE_LENGTH}</Text>
+          )}
 
           {/* Color picker overlay */}
           {showColorPicker && (
@@ -1480,26 +1476,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
             </ScrollView>
           )}
 
-          {/* Bottom actions (only when pickers are closed) */}
-          {!showColorPicker && !showEmojiPicker && (
-            <View style={styles.editorActions}>
-              <TouchableOpacity
-                style={[styles.editorCancelBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }]}
-                onPress={confirmClose}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.editorCancelBtnText, { color: noteTextColor + 'B3' }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.editorSaveBtn}
-                onPress={handleSave}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.editorSaveBtnText, { color: getTextColor(colors.accent) }]}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+        </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -1520,7 +1497,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
             </ColorPicker>
             <View style={styles.cpBtns}>
               <TouchableOpacity
-                onPress={() => setShowBgPicker(false)}
+                onPress={() => { hapticLight(); setShowBgPicker(false); }}
                 style={styles.cpCancelBtn}
                 activeOpacity={0.7}
               >
@@ -1528,6 +1505,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
+                  hapticMedium();
                   const hex = pickedBgRef.current;
                   setCustomBgColor(hex);
                   setEditorColor(hex);
@@ -1561,7 +1539,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
             </ColorPicker>
             <View style={styles.cpBtns}>
               <TouchableOpacity
-                onPress={() => setShowFontPicker(false)}
+                onPress={() => { hapticLight(); setShowFontPicker(false); }}
                 style={styles.cpCancelBtn}
                 activeOpacity={0.7}
               >
@@ -1569,6 +1547,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
+                  hapticMedium();
                   const hex = pickedFontRef.current;
                   setCustomFontColor(hex);
                   setEditorFontColor(hex);

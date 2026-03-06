@@ -105,7 +105,7 @@ export default function AlarmListScreen({ navigation }: Props) {
     },
     headerRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'center',
       alignItems: 'center',
     },
     title: {
@@ -113,38 +113,74 @@ export default function AlarmListScreen({ navigation }: Props) {
       fontWeight: '800',
       color: colors.textPrimary,
     },
-    headerIcons: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    gamesPill: {
-      backgroundColor: colors.activeBackground,
-      borderRadius: 14,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      marginRight: 2,
-    },
-    gamesPillIcon: {
-      fontSize: 22,
-    },
-    headerBtn: {
+    headerGear: {
+      position: 'absolute',
+      right: 0,
       padding: 4,
     },
-    headerBtnIcon: {
+    headerGearIcon: {
       fontSize: 24,
     },
-    subtitle: {
-      fontSize: 14,
+    navCardRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 14,
+    },
+    navCard: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.accent + '26',
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      gap: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.accent,
+    },
+    navCardIcon: {
+      fontSize: 26,
+    },
+    navCardText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    navBadge: {
+      backgroundColor: colors.accent,
+      borderRadius: 8,
+      minWidth: 16,
+      height: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    navBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    subtitleRow: {
+      flexDirection: 'row',
+      marginTop: 12,
+      paddingHorizontal: 2,
+    },
+    subtitleItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    subtitleText: {
+      fontSize: 13,
       color: colors.textTertiary,
-      marginTop: 4,
     },
     tabContainer: {
       flexDirection: 'row',
       backgroundColor: colors.card,
       borderRadius: 20,
       padding: 2,
-      marginTop: 12,
+      marginTop: 4,
     },
     tab: {
       flex: 1,
@@ -690,57 +726,56 @@ export default function AlarmListScreen({ navigation }: Props) {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Don't Forget Why</Text>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Games')}
-              activeOpacity={0.7}
-              style={styles.gamesPill}
-            >
-              <Text style={styles.gamesPillIcon}>{'\u{1F3AE}'}</Text>
-            </TouchableOpacity>
-            {hasPlayed && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('MemoryScore')}
-                activeOpacity={0.7}
-                style={styles.headerBtn}
-              >
-                <Text style={styles.headerBtnIcon}>{'\u{1F3C6}'}</Text>
-              </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => { hapticLight(); navigation.navigate('Settings'); }}
+            activeOpacity={0.7}
+            style={styles.headerGear}
+          >
+            <Text style={styles.headerGearIcon}>{'\u2699\uFE0F'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.navCardRow}>
+          <TouchableOpacity
+            onPress={() => { hapticLight(); navigation.navigate('Notepad'); }}
+            activeOpacity={0.7}
+            style={styles.navCard}
+          >
+            <Text style={styles.navCardIcon}>{'\u{1F4DD}'}</Text>
+            <Text style={styles.navCardText}>Notes</Text>
+            {noteCount > 0 && (
+              <View style={styles.navBadge}>
+                <Text style={styles.navBadgeText}>{noteCount}</Text>
+              </View>
             )}
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Notepad')}
-              activeOpacity={0.7}
-              style={[styles.headerBtn, { position: 'relative' as const }]}
-            >
-              <Text style={styles.headerBtnIcon}>{'\u{1F4DD}'}</Text>
-              {noteCount > 0 && (
-                <View style={{
-                  position: 'absolute', top: -4, right: -6,
-                  backgroundColor: colors.accent, borderRadius: 8,
-                  minWidth: 16, height: 16, alignItems: 'center' as const, justifyContent: 'center' as const,
-                  paddingHorizontal: 4,
-                }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>{noteCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Settings')}
-              activeOpacity={0.7}
-              style={styles.headerBtn}
-            >
-              <Text style={styles.headerBtnIcon}>{'\u2699\uFE0F'}</Text>
-            </TouchableOpacity>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => { hapticLight(); navigation.navigate('Games'); }}
+            activeOpacity={0.7}
+            style={styles.navCard}
+          >
+            <Text style={styles.navCardIcon}>{'\u{1F3AE}'}</Text>
+            <Text style={styles.navCardText}>Games</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.subtitleRow}>
+          <View style={styles.subtitleItem}>
+            <Text style={styles.subtitleText}>
+              {(() => { const c = alarms.filter(a => a.enabled && !a.deletedAt).length; return `${c} alarm${c !== 1 ? 's' : ''}`; })()}
+            </Text>
+          </View>
+          <View style={styles.subtitleItem}>
+            <Text style={styles.subtitleText}>
+              {(() => { const c = activeTimers.filter(t => t.isRunning).length; return `${c} timer${c !== 1 ? 's' : ''}`; })()}
+            </Text>
+          </View>
+          <View style={styles.subtitleItem}>
+            <Text style={styles.subtitleText}>
+              {`${reminderCount} reminder${reminderCount !== 1 ? 's' : ''}`}
+            </Text>
           </View>
         </View>
-        <Text style={styles.subtitle}>
-          {(() => {
-            const ac = alarms.filter(a => a.enabled && !a.deletedAt).length;
-            const tc = activeTimers.filter(t => t.isRunning).length;
-            const rc = reminderCount;
-            return `${ac} alarm${ac !== 1 ? 's' : ''} \u00B7 ${tc} timer${tc !== 1 ? 's' : ''} \u00B7 ${rc} reminder${rc !== 1 ? 's' : ''}`;
-          })()}
-        </Text>
 
         <View style={styles.tabContainer}>
           {routes.map((route, i) => (
@@ -781,10 +816,6 @@ export default function AlarmListScreen({ navigation }: Props) {
             case 'alarms':
               return (
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.quoteText} numberOfLines={2}>
-                    {appQuote}
-                  </Text>
-
                   <View style={styles.sortFilterToggleRow}>
                     <TouchableOpacity
                       style={styles.sortFilterToggleBtn}
@@ -842,6 +873,11 @@ export default function AlarmListScreen({ navigation }: Props) {
 
                   {filteredAlarms.length === 0 ? (
                     <View style={styles.empty}>
+                      {nonDeletedAlarmCount === 0 && (alarmFilter === 'all' || alarmFilter === 'active') && (
+                        <Text style={styles.quoteText} numberOfLines={2}>
+                          {appQuote}
+                        </Text>
+                      )}
                       <Text style={styles.emptyText}>
                         {nonDeletedAlarmCount === 0 && (alarmFilter === 'all' || alarmFilter === 'active')
                           ? 'No alarms yet' : 'No matches'}
@@ -871,10 +907,10 @@ export default function AlarmListScreen({ navigation }: Props) {
                                 </Text>
                               </View>
                               <View style={styles.deletedRight}>
-                                <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
+                                <TouchableOpacity onPress={() => { hapticLight(); handleRestore(item.id); }} style={styles.restoreBtn} activeOpacity={0.7}>
                                   <Text style={styles.restoreText}>Restore</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
+                                <TouchableOpacity onPress={() => { hapticHeavy(); handlePermanentDelete(item.id); }} style={styles.foreverBtn} activeOpacity={0.7}>
                                   <Text style={styles.foreverText}>Forever</Text>
                                 </TouchableOpacity>
                               </View>
@@ -901,7 +937,7 @@ export default function AlarmListScreen({ navigation }: Props) {
 
                   <TouchableOpacity
                     style={styles.fab}
-                    onPress={() => navigation.navigate('CreateAlarm')}
+                    onPress={() => { hapticLight(); navigation.navigate('CreateAlarm'); }}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.fabText}>+</Text>

@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import SoundPickerModal from '../components/SoundPickerModal';
 import type { SystemSound } from '../components/SoundPickerModal';
+import BackButton from '../components/BackButton';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -55,12 +56,6 @@ export default function SettingsScreen({ navigation }: Props) {
       paddingTop: 60,
       paddingHorizontal: 20,
       paddingBottom: 24,
-    },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
-      marginBottom: 16,
     },
     title: {
       fontSize: 28,
@@ -369,6 +364,7 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   const handleConfirmCustom = () => {
+    hapticLight();
     setPickerVisible(false);
     setCustomTheme(pickedColorRef.current);
   };
@@ -380,16 +376,14 @@ export default function SettingsScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>Settings</Text>
       </View>
 
       {hasPermissionIssues && (
         <TouchableOpacity
           style={styles.permissionBanner}
-          onPress={() => navigation.navigate('Onboarding', { startSlide: 2 })}
+          onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
           activeOpacity={0.7}
         >
           <Text style={styles.permissionBannerIcon}>{'\u26A0\uFE0F'}</Text>
@@ -455,7 +449,7 @@ export default function SettingsScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={name}
                 style={styles.themeItem}
-                onPress={() => setTheme(name)}
+                onPress={() => { hapticLight(); setTheme(name); }}
                 activeOpacity={0.7}
               >
                 <View
@@ -484,6 +478,7 @@ export default function SettingsScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.themeItem}
             onPress={() => {
+              hapticLight();
               pickedColorRef.current = customAccent || colors.accent;
               setPickerVisible(true);
             }}
@@ -540,7 +535,7 @@ export default function SettingsScreen({ navigation }: Props) {
         <Text style={styles.sectionLabel}>Permissions</Text>
         <TouchableOpacity
           style={styles.setupGuideBtn}
-          onPress={() => navigation.navigate('Onboarding', { startSlide: 2 })}
+          onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
           activeOpacity={0.7}
         >
           <Text style={styles.setupGuideText}>Setup Guide</Text>
@@ -553,6 +548,7 @@ export default function SettingsScreen({ navigation }: Props) {
       <TouchableOpacity
         style={[styles.card, { marginTop: 16 }]}
         onPress={() => {
+          hapticLight();
           const version =
             Constants.expoConfig?.version
             || (Constants as any).manifest?.version
@@ -578,7 +574,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
       <TouchableOpacity
         style={[styles.card, { marginTop: 16 }]}
-        onPress={() => navigation.navigate('About')}
+        onPress={() => { hapticLight(); navigation.navigate('About'); }}
         activeOpacity={0.7}
       >
         <View style={styles.aboutRow}>
@@ -607,7 +603,7 @@ export default function SettingsScreen({ navigation }: Props) {
             </ColorPicker>
             <View style={styles.modalBtns}>
               <TouchableOpacity
-                onPress={() => setPickerVisible(false)}
+                onPress={() => { hapticLight(); setPickerVisible(false); }}
                 style={styles.modalCancelBtn}
                 activeOpacity={0.7}
               >

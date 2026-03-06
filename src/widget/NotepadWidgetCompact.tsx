@@ -46,7 +46,7 @@ function CompactNoteRow({ note, accent }: { note: WidgetNote; accent: string }) 
         text={label}
         maxLines={1}
         style={{
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: '500',
           color: textColor as `#${string}`,
         }}

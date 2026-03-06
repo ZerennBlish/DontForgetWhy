@@ -14,7 +14,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticMedium } from '../utils/haptics';
+import { hapticLight, hapticMedium } from '../utils/haptics';
+import BackButton from '../components/BackButton';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 
@@ -408,12 +409,6 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           paddingHorizontal: 20,
           paddingBottom: 24,
         },
-        backBtn: {
-          fontSize: 16,
-          color: colors.accent,
-          fontWeight: '600',
-          marginBottom: 16,
-        },
         title: {
           fontSize: 28,
           fontWeight: '800',
@@ -586,9 +581,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                <Text style={styles.backBtn}>{'<'} Back</Text>
-              </TouchableOpacity>
+              <BackButton onPress={() => navigation.goBack()} />
               <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
               <Text style={styles.selectSubtitle}>Find all the matching pairs!</Text>
             </View>
@@ -600,7 +593,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
                 <TouchableOpacity
                   key={diff}
                   style={styles.difficultyBtn}
-                  onPress={() => startGame(diff)}
+                  onPress={() => { hapticLight(); startGame(diff); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.difficultyLabel}>{config.label}</Text>
@@ -639,9 +632,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             contentContainerStyle={styles.winContent}
           >
             <View style={styles.winHeader}>
-              <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                <Text style={styles.backBtn}>{'<'} Back</Text>
-              </TouchableOpacity>
+              <BackButton onPress={() => navigation.goBack()} />
             </View>
             <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
             <Text style={styles.winTitle}>Congratulations!</Text>
@@ -675,7 +666,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
             <TouchableOpacity
               style={styles.playAgainBtn}
-              onPress={() => startGame(difficulty)}
+              onPress={() => { hapticLight(); startGame(difficulty); }}
               activeOpacity={0.7}
             >
               <Text style={styles.playAgainText}>Play Again</Text>
@@ -683,7 +674,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
             <TouchableOpacity
               style={styles.changeDifficultyBtn}
-              onPress={() => setGamePhase('select')}
+              onPress={() => { hapticLight(); setGamePhase('select'); }}
               activeOpacity={0.7}
             >
               <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
@@ -711,9 +702,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         <View style={styles.container}>
           <View style={styles.gameHeader}>
             <View style={styles.gameHeaderRow}>
-              <TouchableOpacity onPress={handleBackFromGame} activeOpacity={0.7}>
-                <Text style={styles.backBtn}>{'<'} Back</Text>
-              </TouchableOpacity>
+              <BackButton onPress={handleBackFromGame} />
               <Text style={styles.gameDifficulty}>{config.label}</Text>
             </View>
             <View style={styles.statsRow}>

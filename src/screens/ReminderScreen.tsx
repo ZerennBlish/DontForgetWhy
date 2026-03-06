@@ -255,17 +255,20 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   };
 
   const handleRestore = async (id: string) => {
+    hapticLight();
     await restoreReminder(id);
     await loadData();
     refreshTimerWidget();
   };
 
   const handlePermanentDelete = async (id: string) => {
+    hapticHeavy();
     await permanentlyDeleteReminder(id);
     await loadData();
   };
 
   const handleTogglePin = async (id: string) => {
+    hapticLight();
     const currentlyPinned = isReminderPinned(id, pinnedIds);
     if (!currentlyPinned && pinnedIds.length >= 3) {
       ToastAndroid.show('Widget full \u2014 unpin one first', ToastAndroid.SHORT);
@@ -737,7 +740,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
           <TouchableOpacity
             style={styles.middle}
-            onPress={() => onNavigateCreate(item.id)}
+            onPress={() => { hapticLight(); onNavigateCreate(item.id); }}
             activeOpacity={0.7}
           >
             <Text
@@ -895,7 +898,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => onNavigateCreate()}
+        onPress={() => { hapticLight(); onNavigateCreate(); }}
         activeOpacity={0.8}
       >
         <Text style={styles.fabText}>+</Text>

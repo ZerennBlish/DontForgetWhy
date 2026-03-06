@@ -14,9 +14,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticMedium } from '../utils/haptics';
+import { hapticLight, hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
+import BackButton from '../components/BackButton';
 import {
   generatePuzzle,
   checkComplete,
@@ -542,9 +543,7 @@ export default function SudokuScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backBtn}>{'<'} Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
           <Text style={styles.selectSubtitle}>Classic number puzzle. No forgetting allowed.</Text>
         </View>
@@ -552,7 +551,7 @@ export default function SudokuScreen({ navigation }: Props) {
         {hasSavedGame && (
           <TouchableOpacity
             style={[styles.difficultyBtn, { borderColor: colors.accent, borderWidth: 2 }]}
-            onPress={resumeGame}
+            onPress={() => { hapticLight(); resumeGame(); }}
             activeOpacity={0.7}
           >
             <Text style={styles.difficultyLabel}>{'\u25B6\uFE0F'} Continue Game</Text>
@@ -568,6 +567,7 @@ export default function SudokuScreen({ navigation }: Props) {
               key={diff}
               style={styles.difficultyBtn}
               onPress={() => {
+                hapticLight();
                 if (hasSavedGame) {
                   Alert.alert(
                     'New Game',
@@ -612,12 +612,12 @@ export default function SudokuScreen({ navigation }: Props) {
         <Text style={styles.pauseEmoji}>{'\u23F8\uFE0F'}</Text>
         <Text style={styles.pauseTitle}>Paused</Text>
         <Text style={styles.pauseSubtitle}>{formatTime(elapsed)}</Text>
-        <TouchableOpacity style={styles.resumeBtn} onPress={handleResume} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.resumeBtn} onPress={() => { hapticLight(); handleResume(); }} activeOpacity={0.7}>
           <Text style={styles.resumeBtnText}>Resume</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.changeDifficultyBtn}
-          onPress={() => { clearSavedGame(); setGamePhase('select'); }}
+          onPress={() => { hapticLight(); clearSavedGame(); setGamePhase('select'); }}
           activeOpacity={0.7}
         >
           <Text style={styles.changeDifficultyText}>Quit Game</Text>
@@ -638,9 +638,7 @@ export default function SudokuScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
         <View style={styles.winHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backBtn}>{'<'} Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
         </View>
         <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
         <Text style={styles.winTitle}>Puzzle Complete!</Text>
@@ -688,14 +686,14 @@ export default function SudokuScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={styles.playAgainBtn}
-          onPress={() => startNewGame(difficulty)}
+          onPress={() => { hapticLight(); startNewGame(difficulty); }}
           activeOpacity={0.7}
         >
           <Text style={styles.playAgainText}>Play Again</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.changeDifficultyBtn}
-          onPress={() => setGamePhase('select')}
+          onPress={() => { hapticLight(); setGamePhase('select'); }}
           activeOpacity={0.7}
         >
           <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
@@ -715,9 +713,7 @@ export default function SudokuScreen({ navigation }: Props) {
       {/* Header */}
       <View style={styles.gameHeader}>
         <View style={styles.gameHeaderRow}>
-          <TouchableOpacity onPress={handleBackFromGame} activeOpacity={0.7}>
-            <Text style={styles.backBtn}>{'<'} Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={handleBackFromGame} />
           <Text style={styles.gameDifficulty}>{DIFFICULTY_CONFIG[difficulty].label}</Text>
         </View>
         <View style={styles.statsRow}>
@@ -728,10 +724,10 @@ export default function SudokuScreen({ navigation }: Props) {
           ) : (
             <View style={styles.statPlaceholder} />
           )}
-          <TouchableOpacity onPress={handlePause} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => { hapticLight(); handlePause(); }} activeOpacity={0.7}>
             <Text style={styles.timerText}>{'\u23F1\uFE0F'} {formatTime(elapsed)}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleNewGameConfirm} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => { hapticLight(); handleNewGameConfirm(); }} activeOpacity={0.7}>
             <Text style={[styles.statText, { color: colors.accent }]}>{'\u{1F504}'} New</Text>
           </TouchableOpacity>
         </View>
@@ -763,7 +759,7 @@ export default function SudokuScreen({ navigation }: Props) {
                 return (
                   <TouchableOpacity
                     key={col}
-                    onPress={() => setSelectedCell([row, col])}
+                    onPress={() => { hapticLight(); setSelectedCell([row, col]); }}
                     activeOpacity={0.8}
                     style={[
                       styles.cell,
@@ -840,14 +836,14 @@ export default function SudokuScreen({ navigation }: Props) {
         <View style={styles.toolRow}>
           <TouchableOpacity
             style={[styles.toolBtn, notesMode && { backgroundColor: colors.accent }]}
-            onPress={() => setNotesMode(!notesMode)}
+            onPress={() => { hapticLight(); setNotesMode(!notesMode); }}
             activeOpacity={0.7}
           >
             <Text style={[styles.toolBtnText, notesMode && { color: colors.overlayText }]}>
               {'\u270F\uFE0F'} Notes {notesMode ? 'ON' : 'OFF'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.toolBtn} onPress={handleErase} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.toolBtn} onPress={() => { hapticLight(); handleErase(); }} activeOpacity={0.7}>
             <Text style={styles.toolBtnText}>{'\u232B'} Erase</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -883,12 +879,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       paddingTop: 60,
       paddingHorizontal: 20,
       paddingBottom: 24,
-    },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
-      marginBottom: 16,
     },
     title: {
       fontSize: 28,
