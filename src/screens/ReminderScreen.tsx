@@ -816,10 +816,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   return (
     <View style={styles.container}>
-      <Text style={styles.quoteText} numberOfLines={2}>
-        {appQuote}
-      </Text>
-
       <View style={styles.sortFilterToggleRow}>
         <TouchableOpacity
           style={styles.sortFilterToggleBtn}
@@ -877,6 +873,11 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
       {sorted.length === 0 ? (
         <View style={styles.empty}>
+          {nonDeletedReminderCount === 0 && reminderFilter === 'active' && (
+            <Text style={styles.quoteText} numberOfLines={2}>
+              {appQuote}
+            </Text>
+          )}
           <Text style={styles.emptyText}>
             {nonDeletedReminderCount === 0 && reminderFilter === 'active'
               ? 'Nothing to remember' : 'No matches'}
