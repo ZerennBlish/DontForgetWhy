@@ -16,8 +16,10 @@ import {
   Alert,
   Linking,
   AppState,
+  Share,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as Print from 'expo-print';
 import { v4 as uuidv4 } from 'uuid';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -1242,6 +1244,33 @@ export default function NotepadScreen({ navigation, route }: Props) {
                   activeOpacity={0.7}
                 >
                   <Text style={{ fontSize: 16 }}>{'\u270F\uFE0F'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }]}
+                  onPress={() => {
+                    hapticLight();
+                    Alert.alert('Share Note', '', [
+                      {
+                        text: 'Share',
+                        onPress: () => {
+                          const content = editorIcon ? `${editorIcon} ${editorText}` : editorText;
+                          Share.share({ message: content });
+                        },
+                      },
+                      {
+                        text: 'Print',
+                        onPress: () => {
+                          const iconHtml = editorIcon ? `<div style="font-size:48px;margin-bottom:16px;">${editorIcon}</div>` : '';
+                          const html = `<html><body style="background:${editorColor};color:${noteTextColor};font-family:system-ui;padding:40px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:${noteTextColor};margin:0;">${editorText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre><div style="margin-top:40px;font-size:11px;color:${noteTextColor}80;text-align:center;">Don't Forget Why &mdash; Bald Guy &amp; Company Games</div></body></html>`;
+                          Print.printAsync({ html });
+                        },
+                      },
+                      { text: 'Cancel', style: 'cancel' },
+                    ]);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 16 }}>{'\u{1F4E4}'}</Text>
                 </TouchableOpacity>
                 {editingNote && (
                   <TouchableOpacity
