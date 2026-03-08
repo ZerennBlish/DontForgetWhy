@@ -30,7 +30,7 @@ const PIN_BORDER = '#4A90D9';
 function AlarmCell({ alarm }: { alarm: WidgetAlarm }) {
   return (
     <FlexWidget
-      clickAction="OPEN_APP"
+      clickAction={`OPEN_ALARM__${alarm.id}`}
       style={{
         width: 'match_parent',
         backgroundColor: CELL_BG,
@@ -79,12 +79,14 @@ function AlarmCell({ alarm }: { alarm: WidgetAlarm }) {
 function EmptyAlarmCell() {
   return (
     <FlexWidget
+      clickAction="CREATE_ALARM"
       style={{
         width: 'match_parent',
         backgroundColor: CELL_BG,
         borderRadius: 12,
         borderColor: BORDER,
         borderWidth: 1,
+        borderStyle: 'dashed',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 8,
@@ -92,10 +94,10 @@ function EmptyAlarmCell() {
       }}
     >
       <TextWidget
-        text={'\u2014'}
+        text={'\uFF0B Set Alarm'}
         style={{
-          fontSize: 14,
-          color: BORDER,
+          fontSize: 11,
+          color: TEXT_SEC,
         }}
       />
     </FlexWidget>
@@ -141,6 +143,7 @@ function TimerCell({ preset }: { preset: WidgetPreset }) {
 function EmptyTimerCell() {
   return (
     <FlexWidget
+      clickAction="OPEN_TIMERS"
       style={{
         width: 'match_parent',
         backgroundColor: CELL_BG,
@@ -255,7 +258,7 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
               style={{
                 width: 'match_parent',
                 flex: 1,
-                marginBottom: i < 2 ? 4 : 0,
+                marginBottom: 4,
               }}
             >
               {alarms[i] ? (
@@ -265,6 +268,15 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
               )}
             </FlexWidget>
           ))}
+          <FlexWidget
+            key="alarm-add"
+            style={{
+              width: 'match_parent',
+              flex: 1,
+            }}
+          >
+            <EmptyAlarmCell />
+          </FlexWidget>
         </FlexWidget>
       </FlexWidget>
     </FlexWidget>

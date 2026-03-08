@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,14 +18,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import notifee from '@notifee/react-native';
-import { loadSettings, saveSettings, getDefaultTimerSound, saveDefaultTimerSound } from '../services/settings';
+import { loadSettings, saveSettings, getDefaultTimerSound, saveDefaultTimerSound, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
-import { hapticLight, refreshHapticsSetting } from '../utils/haptics';
+import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import SoundPickerModal from '../components/SoundPickerModal';
 import type { SystemSound } from '../components/SoundPickerModal';
 import BackButton from '../components/BackButton';
+import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -43,6 +44,12 @@ export default function SettingsScreen({ navigation }: Props) {
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedColorRef = useRef(customAccent || colors.accent);
   const [hasPermissionIssues, setHasPermissionIssues] = useState(false);
+  const [silenceAll, setSilenceAllState] = useState(false);
+  const [silenceRemaining, setSilenceRemaining] = useState<string | null>(null);
+  const silenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [silencePickerVisible, setSilencePickerVisible] = useState(false);
+  const [pickerHours, setPickerHours] = useState(1);
+  const [pickerMinutes, setPickerMinutes] = useState(0);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -325,6 +332,78 @@ export default function SettingsScreen({ navigation }: Props) {
     })();
   }, []);
 
+  // --- Silence All: load state + countdown timer ---
+  const refreshSilenceStatus = useCallback(async () => {
+    const on = await getSilenceAll();
+    setSilenceAllState(on);
+    if (on) {
+      const mins = await getSilenceExpiry();
+      if (mins !== null) {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        setSilenceRemaining(h > 0 ? `Sound resumes in ${h}h ${m}m` : `Sound resumes in ${m}m`);
+      } else {
+        setSilenceRemaining(null);
+      }
+    } else {
+      setSilenceRemaining(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSilenceStatus();
+  }, [refreshSilenceStatus]);
+
+  useEffect(() => {
+    if (silenceAll) {
+      silenceIntervalRef.current = setInterval(refreshSilenceStatus, 60000);
+    }
+    return () => {
+      if (silenceIntervalRef.current) {
+        clearInterval(silenceIntervalRef.current);
+        silenceIntervalRef.current = null;
+      }
+    };
+  }, [silenceAll, refreshSilenceStatus]);
+
+  const handleSilenceToggle = async (value: boolean) => {
+    if (value) {
+      hapticMedium();
+      setPickerHours(1);
+      setPickerMinutes(0);
+      setSilencePickerVisible(true);
+    } else {
+      hapticLight();
+      await setSilenceAll(false);
+      setSilenceAllState(false);
+      setSilenceRemaining(null);
+    }
+  };
+
+  const handleSilencePickerCancel = () => {
+    hapticLight();
+    setSilencePickerVisible(false);
+  };
+
+  const handleSilencePickerSet = async () => {
+    hapticMedium();
+    let totalMinutes = pickerHours * 60 + pickerMinutes;
+    if (totalMinutes === 0) totalMinutes = 1;
+    setSilencePickerVisible(false);
+    await applySilence(totalMinutes);
+  };
+
+  const handleSilencePickerIndefinite = async () => {
+    hapticMedium();
+    setSilencePickerVisible(false);
+    await applySilence(null);
+  };
+
+  const applySilence = async (minutes: number | null) => {
+    await setSilenceAll(true, minutes);
+    await refreshSilenceStatus();
+  };
+
   const handleTimeFormatToggle = async (value: boolean) => {
     hapticLight();
     const newFormat = value ? '24h' : '12h';
@@ -436,6 +515,26 @@ export default function SettingsScreen({ navigation }: Props) {
         </TouchableOpacity>
         <Text style={styles.description}>
           Sound played when a timer completes.
+        </Text>
+      </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={styles.row}>
+          <Text style={styles.label}>Silence All Alarms</Text>
+          <Switch
+            value={silenceAll}
+            onValueChange={handleSilenceToggle}
+            trackColor={{ false: colors.border, true: '#FFA500' }}
+            thumbColor={silenceAll ? '#FFFFFF' : colors.textTertiary}
+          />
+        </View>
+        {silenceAll && (
+          <Text style={{ fontSize: 14, color: '#FFA500', fontWeight: '600', marginTop: 10 }}>
+            {silenceRemaining || 'Silenced until you turn it off'}
+          </Text>
+        )}
+        <Text style={styles.description}>
+          Mute all alarm sounds and vibrations. Alarms still fire and show notifications.
         </Text>
       </View>
 
@@ -628,6 +727,61 @@ export default function SettingsScreen({ navigation }: Props) {
         onSelect={handleTimerSoundSelect}
         onClose={() => setTimerSoundPickerVisible(false)}
       />
+
+      {/* Silence duration picker modal */}
+      <Modal transparent visible={silencePickerVisible} animationType="slide" onRequestClose={handleSilencePickerCancel}>
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
+          <View style={{
+            backgroundColor: colors.card,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            padding: 20,
+            paddingBottom: 20 + insets.bottom,
+            borderWidth: 1,
+            borderBottomWidth: 0,
+            borderColor: colors.border,
+          }}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimary }}>Silence Duration</Text>
+              <TouchableOpacity
+                onPress={handleSilencePickerCancel}
+                style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 16, color: colors.textTertiary, fontWeight: '600' }}>{'\u2715'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {silencePickerVisible && (
+              <TimePicker
+                hours={pickerHours}
+                minutes={pickerMinutes}
+                onHoursChange={setPickerHours}
+                onMinutesChange={setPickerMinutes}
+              />
+            )}
+
+            {/* Buttons */}
+            <View style={{ marginTop: 20, gap: 10 }}>
+              <TouchableOpacity
+                style={{ backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+                onPress={handleSilencePickerSet}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>Set Timer</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ backgroundColor: 'transparent', borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.accent }}
+                onPress={handleSilencePickerIndefinite}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.accent }}>Until I Turn It Off</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
     </View>
     </ImageBackground>

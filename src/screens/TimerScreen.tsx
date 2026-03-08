@@ -70,6 +70,7 @@ export default function TimerScreen({
   const [customHours, setCustomHours] = useState('');
   const [customMinutes, setCustomMinutes] = useState('');
   const [customSeconds, setCustomSeconds] = useState('');
+  const [soundMode, setSoundMode] = useState<'sound' | 'vibrate' | 'silent'>('sound');
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -296,6 +297,38 @@ export default function TimerScreen({
       fontWeight: '700',
       color: colors.textPrimary,
     },
+    soundModeLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: 10,
+    },
+    soundModeRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 20,
+    },
+    soundModePill: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+    },
+    soundModePillActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    soundModePillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    soundModePillTextActive: {
+      color: colors.textPrimary,
+    },
   }), [colors, insets.bottom]);
 
   useEffect(() => {
@@ -321,7 +354,7 @@ export default function TimerScreen({
     return { recentPresets: recent, restPresets: rest, customPreset: custom };
   }, [presets, recentIds]);
 
-  const handleStartTimer = async (preset: TimerPreset) => {
+  const handleStartTimer = async (preset: TimerPreset, timerSoundId?: string) => {
     hapticLight();
     const duration = preset.customSeconds || preset.seconds;
     if (duration <= 0) {
@@ -343,6 +376,7 @@ export default function TimerScreen({
       remainingSeconds: duration,
       startedAt: new Date().toISOString(),
       isRunning: true,
+      soundId: timerSoundId,
     };
     try {
       await onAddTimer(timer);
@@ -359,6 +393,7 @@ export default function TimerScreen({
     setCustomHours(hours > 0 ? hours.toString() : '');
     setCustomMinutes(mins > 0 ? mins.toString() : '');
     setCustomSeconds(secs > 0 ? secs.toString() : '');
+    setSoundMode('sound');
     setCustomModal(preset);
   };
 
@@ -388,12 +423,15 @@ export default function TimerScreen({
       return;
     }
     await saveCustomDuration(customModal.id, totalSeconds);
+    const updatedPreset = { ...customModal, customSeconds: totalSeconds };
     setPresets((prev) =>
       prev.map((p) =>
         p.id === customModal.id ? { ...p, customSeconds: totalSeconds } : p
       )
     );
+    const timerSoundId = soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined;
     setCustomModal(null);
+    await handleStartTimer(updatedPreset, timerSoundId);
   };
 
   const handleHoursChange = (t: string) => {
@@ -601,6 +639,36 @@ export default function TimerScreen({
                 <Text style={styles.modalInputLabel}>sec</Text>
               </View>
             </View>
+            <Text style={styles.soundModeLabel}>Timer Sound</Text>
+            <View style={styles.soundModeRow}>
+              <TouchableOpacity
+                style={[styles.soundModePill, soundMode === 'sound' && styles.soundModePillActive]}
+                onPress={() => { hapticLight(); setSoundMode('sound'); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.soundModePillText, soundMode === 'sound' && styles.soundModePillTextActive]}>
+                  {'\u{1F514}'} Sound
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.soundModePill, soundMode === 'vibrate' && styles.soundModePillActive]}
+                onPress={() => { hapticLight(); setSoundMode('vibrate'); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.soundModePillText, soundMode === 'vibrate' && styles.soundModePillTextActive]}>
+                  {'\u{1F4F3}'} Vibrate
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.soundModePill, soundMode === 'silent' && styles.soundModePillActive]}
+                onPress={() => { hapticLight(); setSoundMode('silent'); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.soundModePillText, soundMode === 'silent' && styles.soundModePillTextActive]}>
+                  {'\u{1F507}'} Silent
+                </Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.modalBtns}>
               <TouchableOpacity
                 onPress={() => { hapticLight(); setCustomModal(null); }}
@@ -614,7 +682,7 @@ export default function TimerScreen({
                 style={styles.modalSaveBtn}
                 activeOpacity={0.7}
               >
-                <Text style={styles.modalSaveText}>Save</Text>
+                <Text style={styles.modalSaveText}>Save & Start</Text>
               </TouchableOpacity>
             </View>
           </View>

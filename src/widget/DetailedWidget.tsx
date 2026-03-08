@@ -40,7 +40,7 @@ const PIN_BORDER = '#4A90D9';
 function AlarmCell({ alarm }: { alarm: DetailedAlarm }) {
   return (
     <FlexWidget
-      clickAction="OPEN_APP"
+      clickAction={`OPEN_ALARM__${alarm.id}`}
       style={{
         width: 'match_parent',
         backgroundColor: CELL_BG,
@@ -89,12 +89,14 @@ function AlarmCell({ alarm }: { alarm: DetailedAlarm }) {
 function EmptyAlarmCell() {
   return (
     <FlexWidget
+      clickAction="CREATE_ALARM"
       style={{
         width: 'match_parent',
         backgroundColor: CELL_BG,
         borderRadius: 12,
         borderColor: BORDER,
         borderWidth: 1,
+        borderStyle: 'dashed',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 8,
@@ -102,10 +104,10 @@ function EmptyAlarmCell() {
       }}
     >
       <TextWidget
-        text={'\u2014'}
+        text={'\uFF0B Set Alarm'}
         style={{
-          fontSize: 14,
-          color: BORDER,
+          fontSize: 11,
+          color: TEXT_SEC,
         }}
       />
     </FlexWidget>
@@ -164,12 +166,14 @@ function TimerCell({ preset }: { preset: DetailedPreset }) {
 function EmptyTimerCell() {
   return (
     <FlexWidget
+      clickAction="OPEN_TIMERS"
       style={{
         width: 'match_parent',
         backgroundColor: CELL_BG,
         borderRadius: 12,
         borderColor: BORDER,
         borderWidth: 1,
+        borderStyle: 'dashed',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 8,
@@ -177,10 +181,10 @@ function EmptyTimerCell() {
       }}
     >
       <TextWidget
-        text={'\u2014'}
+        text={'\uFF0B Set Timer'}
         style={{
-          fontSize: 14,
-          color: BORDER,
+          fontSize: 11,
+          color: TEXT_SEC,
         }}
       />
     </FlexWidget>
@@ -190,7 +194,7 @@ function EmptyTimerCell() {
 function ReminderCell({ reminder }: { reminder: DetailedReminder }) {
   return (
     <FlexWidget
-      clickAction="OPEN_APP"
+      clickAction="OPEN_REMINDERS"
       style={{
         flex: 1,
         backgroundColor: CELL_BG,
@@ -296,7 +300,7 @@ export function DetailedWidget({ alarms, presets, reminders }: DetailedWidgetPro
               style={{
                 width: 'match_parent',
                 flex: 1,
-                marginBottom: i < 2 ? 4 : 0,
+                marginBottom: 4,
               }}
             >
               {presets[i] ? (
@@ -306,6 +310,15 @@ export function DetailedWidget({ alarms, presets, reminders }: DetailedWidgetPro
               )}
             </FlexWidget>
           ))}
+          <FlexWidget
+            key="timer-add"
+            style={{
+              width: 'match_parent',
+              flex: 1,
+            }}
+          >
+            <EmptyTimerCell />
+          </FlexWidget>
         </FlexWidget>
 
         {/* Right column: Alarms */}
@@ -331,7 +344,7 @@ export function DetailedWidget({ alarms, presets, reminders }: DetailedWidgetPro
               style={{
                 width: 'match_parent',
                 flex: 1,
-                marginBottom: i < 2 ? 4 : 0,
+                marginBottom: 4,
               }}
             >
               {alarms[i] ? (
@@ -341,6 +354,15 @@ export function DetailedWidget({ alarms, presets, reminders }: DetailedWidgetPro
               )}
             </FlexWidget>
           ))}
+          <FlexWidget
+            key="alarm-add"
+            style={{
+              width: 'match_parent',
+              flex: 1,
+            }}
+          >
+            <EmptyAlarmCell />
+          </FlexWidget>
         </FlexWidget>
       </FlexWidget>
 
@@ -352,15 +374,44 @@ export function DetailedWidget({ alarms, presets, reminders }: DetailedWidgetPro
           flexDirection: 'column',
         }}
       >
-        <TextWidget
-          text="Reminders"
+        <FlexWidget
           style={{
-            fontSize: 11,
-            fontWeight: '600',
-            color: TEXT_SEC,
+            width: 'match_parent',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             marginBottom: 4,
           }}
-        />
+        >
+          <TextWidget
+            text="Reminders"
+            style={{
+              fontSize: 11,
+              fontWeight: '600',
+              color: TEXT_SEC,
+            }}
+          />
+          <FlexWidget
+            clickAction="CREATE_REMINDER"
+            style={{
+              backgroundColor: CELL_BG,
+              borderRadius: 8,
+              borderColor: BORDER,
+              borderWidth: 1,
+              borderStyle: 'dashed',
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+            }}
+          >
+            <TextWidget
+              text={'\uFF0B Set Reminder'}
+              style={{
+                fontSize: 10,
+                color: TEXT_SEC,
+              }}
+            />
+          </FlexWidget>
+        </FlexWidget>
         {reminders.length > 0 ? (
           <FlexWidget
             style={{

@@ -194,7 +194,18 @@ async function _createChannels(): Promise<void> {
     bypassDnd: true,
   });
 
-  console.log('[Channels] Preset channels created:', ALARM_CHANNEL_ID, 'alarms_gentle_v4', 'alarms_urgent_v4', 'alarms_classic_v4', 'alarms_digital_v4', 'alarms_silent_v4');
+  // True Silent — no sound AND no vibration
+  await notifee.createChannel({
+    id: 'alarms_true_silent_v1',
+    name: 'Alarms (True Silent)',
+    importance: AndroidImportance.LOW,
+    vibration: false,
+    lights: true,
+    lightColor: '#808080',
+    bypassDnd: true,
+  });
+
+  console.log('[Channels] Preset channels created:', ALARM_CHANNEL_ID, 'alarms_gentle_v4', 'alarms_urgent_v4', 'alarms_classic_v4', 'alarms_digital_v4', 'alarms_silent_v4', 'alarms_true_silent_v1');
 
   await notifee.createChannel({
     id: TIMER_PROGRESS_CHANNEL_ID,
@@ -209,6 +220,42 @@ async function _createChannels(): Promise<void> {
     importance: AndroidImportance.DEFAULT,
     sound: 'default',
     vibration: true,
+  });
+
+  // Reminder vibrate-only — no sound, vibration enabled
+  await notifee.createChannel({
+    id: 'reminders_vibrate_v1',
+    name: 'Reminders (Vibrate)',
+    importance: AndroidImportance.DEFAULT,
+    vibration: true,
+    vibrationPattern: [300, 300],
+  });
+
+  // Reminder silent — no sound, no vibration
+  await notifee.createChannel({
+    id: 'reminders_silent_v1',
+    name: 'Reminders (Silent)',
+    importance: AndroidImportance.LOW,
+    vibration: false,
+  });
+
+  // Timer vibrate-only — no sound, vibration enabled
+  await notifee.createChannel({
+    id: 'timer_vibrate_v1',
+    name: 'Timers (Vibrate)',
+    importance: AndroidImportance.HIGH,
+    vibration: true,
+    vibrationPattern: [300, 300],
+    bypassDnd: true,
+  });
+
+  // Timer silent — no sound, no vibration
+  await notifee.createChannel({
+    id: 'timer_silent_v1',
+    name: 'Timers (Silent)',
+    importance: AndroidImportance.LOW,
+    vibration: false,
+    bypassDnd: true,
   });
 }
 
@@ -294,11 +341,16 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
   }
 
   // Resolve which channel to use:
-  // Custom system sound (soundUri) → dynamic channel, otherwise default alarms_v4
+  // soundId overrides → silent/true_silent channels
+  // Custom system sound (soundUri) → dynamic channel, otherwise default
   let channelId: string;
   let customChannel = false;
 
-  if (alarm.soundUri) {
+  if (alarm.soundId === 'silent') {
+    channelId = 'alarms_silent_v4';
+  } else if (alarm.soundId === 'true_silent') {
+    channelId = 'alarms_true_silent_v1';
+  } else if (alarm.soundUri) {
     try {
       channelId = await getOrCreateSoundChannel(
         alarm.soundUri,
@@ -421,7 +473,11 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
 
   let channelId = ALARM_CHANNEL_ID;
   let customChannel = false;
-  if (alarm.soundUri) {
+  if (alarm.soundId === 'silent') {
+    channelId = 'alarms_silent_v4';
+  } else if (alarm.soundId === 'true_silent') {
+    channelId = 'alarms_true_silent_v1';
+  } else if (alarm.soundUri) {
     try {
       channelId = await getOrCreateSoundChannel(
         alarm.soundUri,
@@ -468,12 +524,17 @@ export async function scheduleTimerNotification(
   timerId: string,
   soundUri?: string,
   soundName?: string,
+  soundId?: string,
 ): Promise<string> {
   await setupNotificationChannel();
 
   let channelId = ALARM_CHANNEL_ID;
   let customChannel = false;
-  if (soundUri) {
+  if (soundId === 'silent') {
+    channelId = 'timer_vibrate_v1';
+  } else if (soundId === 'true_silent') {
+    channelId = 'timer_silent_v1';
+  } else if (soundUri) {
     try {
       channelId = await getOrCreateSoundChannel(
         soundUri,
@@ -588,14 +649,22 @@ export async function scheduleReminderNotification(
     ? 'You had something to remember...'
     : "Don't forget!";
 
+  // Route to correct channel based on soundId
+  let reminderChannelId = REMINDER_CHANNEL_ID;
+  if (reminder.soundId === 'silent') {
+    reminderChannelId = 'reminders_vibrate_v1';
+  } else if (reminder.soundId === 'true_silent') {
+    reminderChannelId = 'reminders_silent_v1';
+  }
+
   const notificationPayload = {
     title,
     body,
     data: { reminderId: reminder.id },
     android: {
-      channelId: REMINDER_CHANNEL_ID,
+      channelId: reminderChannelId,
       importance: AndroidImportance.DEFAULT,
-      sound: 'default' as const,
+      sound: reminderChannelId === REMINDER_CHANNEL_ID ? 'default' as const : undefined,
       pressAction: { id: 'default' },
     },
   };

@@ -22,7 +22,7 @@ import {
   scheduleSnooze,
 } from '../services/notifications';
 import { deleteAlarm, updateSingleAlarm } from '../services/storage';
-import { loadSettings } from '../services/settings';
+import { loadSettings, getSilenceAll } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticHeavy } from '../utils/haptics';
@@ -83,6 +83,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   } = route.params;
 
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [globalSilenced, setGlobalSilenced] = useState(false);
   const [snoozeShameMessage, setSnoozeShameMessage] = useState<string | null>(null);
   const [isSnoozing, setIsSnoozing] = useState(false);
   const snoozeShameOpacity = useRef(new Animated.Value(0)).current;
@@ -90,6 +91,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     loadSettings().then((s) => setTimeFormat(s.timeFormat)).catch(() => {});
+    getSilenceAll().then(setGlobalSilenced).catch(() => {});
   }, []);
 
   // DO NOT cancel notifications on mount — the alarm sound plays FROM the
@@ -118,7 +120,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   // Sound is normally started on DELIVERED in index.ts / App.tsx.
   useEffect(() => {
     if (!fromNotification || postGuessWhy) return;
-    if (!isTimer && alarm?.soundId === 'silent') return;
+    if (!isTimer && (alarm?.soundId === 'silent' || alarm?.soundId === 'true_silent')) return;
+    if (globalSilenced) return;
 
     // If sound is already playing (started by DELIVERED event handler),
     // just register cleanup — don't start a second playback.
@@ -150,13 +153,17 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   }, []);
 
   // Start vibration when screen shows from notification (not when returning from GuessWhy)
+  // Skip vibration for true_silent alarms and when global silence is active
   useEffect(() => {
     if (fromNotification && !postGuessWhy) {
-      hapticHeavy();
-      Vibration.vibrate(VIBRATION_PATTERN, true);
-      return () => Vibration.cancel();
+      const isTrueSilent = !isTimer && alarm?.soundId === 'true_silent';
+      if (!isTrueSilent && !globalSilenced) {
+        hapticHeavy();
+        Vibration.vibrate(VIBRATION_PATTERN, true);
+        return () => Vibration.cancel();
+      }
     }
-  }, [fromNotification, postGuessWhy]);
+  }, [fromNotification, postGuessWhy, isTimer, alarm?.soundId, globalSilenced]);
 
   // When returning from GuessWhy, notifications + vibration are already
   // cancelled (handleGuessWhy does it before navigating). This is a
@@ -478,6 +485,13 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       fontSize: 48,
       marginBottom: 20,
     },
+    silencedIndicator: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#FFA500',
+      textAlign: 'center',
+      marginBottom: 12,
+    },
   }), [colors, insets.bottom]);
 
   // Snooze shame overlay
@@ -501,6 +515,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
         <View style={styles.container}>
           <View style={styles.top}>
+            {globalSilenced && (
+              <Text style={styles.silencedIndicator}>{'\u{1F507}'} All alarms silenced</Text>
+            )}
             <Text style={styles.time}>{displayTime}</Text>
             <Text style={styles.emoji}>{displayIcon}</Text>
             <Text style={styles.label}>{displayLabel}</Text>

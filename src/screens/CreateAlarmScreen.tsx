@@ -131,6 +131,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const minuteRef = useRef<TextInput>(null);
   const [nickname, setNickname] = useState(existingAlarm?.nickname || '');
 
+  const [soundMode, setSoundMode] = useState<'sound' | 'vibrate' | 'silent'>(() => {
+    if (existingAlarm?.soundId === 'silent') return 'vibrate';
+    if (existingAlarm?.soundId === 'true_silent') return 'silent';
+    return 'sound';
+  });
   const [systemSoundPickerVisible, setSystemSoundPickerVisible] = useState(false);
   const [iconPickerVisible, setIconPickerVisible] = useState(false);
   const [selectedSoundUri, setSelectedSoundUri] = useState<string | null>(
@@ -715,6 +720,31 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontSize: 16,
       color: colors.textTertiary,
     },
+    soundModeRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 12,
+    },
+    soundModePill: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: cardBg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    soundModePillActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    soundModePillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    soundModePillTextActive: {
+      color: colors.textPrimary,
+    },
   }), [colors, cardBg, insets.top, insets.bottom]);
 
   const handleIconPress = (emoji: string) => {
@@ -864,10 +894,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           mode,
           days: selectedDays,
           date: mode === 'one-time' ? alarmDate : null,
-          soundId: undefined,
-          soundUri: selectedSoundUri || undefined,
-          soundName: selectedSoundName || undefined,
-          soundID: selectedSystemSoundID ?? undefined,
+          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
+          soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
+          soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
+          soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
         };
         await updateAlarm(updated);
       } else {
@@ -886,9 +916,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           private: selectedPrivate,
           createdAt: new Date().toISOString(),
           notificationIds: [],
-          soundUri: selectedSoundUri || undefined,
-          soundName: selectedSoundName || undefined,
-          soundID: selectedSystemSoundID ?? undefined,
+          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
+          soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
+          soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
+          soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
         };
 
         let notificationIds: string[] = [];
@@ -1176,21 +1207,52 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         </View>
 
         <Text style={styles.label}>Alarm Sound</Text>
-        <TouchableOpacity
-          style={styles.systemSoundRow}
-          onPress={() => { hapticLight(); setSystemSoundPickerVisible(true); }}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.soundLabel}>
-            {selectedSoundUri ? '\u{1F3B5}' : '\u{1F514}'} {selectedSoundName || 'Default'}
-          </Text>
-          <View style={styles.systemSoundValue}>
-            <Text style={styles.systemSoundValueText} numberOfLines={1}>
-              {selectedSoundUri ? 'System sound' : 'Tap to change'}
+        <View style={styles.soundModeRow}>
+          <TouchableOpacity
+            style={[styles.soundModePill, soundMode === 'sound' && styles.soundModePillActive]}
+            onPress={() => { hapticLight(); setSoundMode('sound'); }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.soundModePillText, soundMode === 'sound' && styles.soundModePillTextActive]}>
+              {'\u{1F514}'} Sound
             </Text>
-            <Text style={styles.systemSoundChevron}>{'\u203A'}</Text>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.soundModePill, soundMode === 'vibrate' && styles.soundModePillActive]}
+            onPress={() => { hapticLight(); setSoundMode('vibrate'); }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.soundModePillText, soundMode === 'vibrate' && styles.soundModePillTextActive]}>
+              {'\u{1F4F3}'} Vibrate
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.soundModePill, soundMode === 'silent' && styles.soundModePillActive]}
+            onPress={() => { hapticLight(); setSoundMode('silent'); }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.soundModePillText, soundMode === 'silent' && styles.soundModePillTextActive]}>
+              {'\u{1F507}'} Silent
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {soundMode === 'sound' && (
+          <TouchableOpacity
+            style={styles.systemSoundRow}
+            onPress={() => { hapticLight(); setSystemSoundPickerVisible(true); }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.soundLabel}>
+              {selectedSoundUri ? '\u{1F3B5}' : '\u{1F514}'} {selectedSoundName || 'Default'}
+            </Text>
+            <View style={styles.systemSoundValue}>
+              <Text style={styles.systemSoundValueText} numberOfLines={1}>
+                {selectedSoundUri ? 'System sound' : 'Tap to change'}
+              </Text>
+              <Text style={styles.systemSoundChevron}>{'\u203A'}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.toggleCard}>
           <View style={styles.toggleRow}>

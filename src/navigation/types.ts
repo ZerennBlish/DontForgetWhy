@@ -2,7 +2,7 @@ import { Alarm } from '../types/alarm';
 
 export type RootStackParamList = {
   Onboarding: { startSlide?: number } | undefined;
-  AlarmList: undefined;
+  AlarmList: { initialTab?: number } | undefined;
   CreateAlarm: { alarm?: Alarm } | undefined;
   CreateReminder: { reminderId?: string } | undefined;
   AlarmFire: {

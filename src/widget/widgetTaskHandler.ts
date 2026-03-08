@@ -696,6 +696,39 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         break;
       }
 
+      if (action === 'OPEN_ALARMS' || action === 'OPEN_TIMERS' || action === 'OPEN_REMINDERS') {
+        const tab = action === 'OPEN_ALARMS' ? 0 : action === 'OPEN_TIMERS' ? 1 : 2;
+        await AsyncStorage.setItem('pendingTabAction', JSON.stringify({ tab, timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action?.startsWith('OPEN_ALARM__')) {
+        const alarmId = action.replace('OPEN_ALARM__', '');
+        await AsyncStorage.setItem('pendingAlarmAction', JSON.stringify({ action: 'editAlarm', alarmId, timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action?.startsWith('OPEN_REMINDER__')) {
+        const reminderId = action.replace('OPEN_REMINDER__', '');
+        await AsyncStorage.setItem('pendingReminderAction', JSON.stringify({ action: 'editReminder', reminderId, timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'CREATE_ALARM') {
+        await AsyncStorage.setItem('pendingAlarmAction', JSON.stringify({ action: 'createAlarm', timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'CREATE_REMINDER') {
+        await AsyncStorage.setItem('pendingReminderAction', JSON.stringify({ action: 'createReminder', timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
       if (action === 'ADD_NOTE') {
         await setPendingNoteAction({ type: 'new' });
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
@@ -762,6 +795,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
             timer.id,
             soundUri,
             soundName,
+            timer.soundId,
           );
         } catch (error) {
           console.error('[widgetTaskHandler] scheduleTimerNotification failed:', error);

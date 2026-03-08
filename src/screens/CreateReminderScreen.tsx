@@ -89,6 +89,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const hourRef = useRef<TextInput>(null);
   const minuteRef = useRef<TextInput>(null);
 
+  // Sound mode
+  const [soundMode, setSoundMode] = useState<'sound' | 'vibrate' | 'silent'>('sound');
+
   // Reminder-specific state
   const [existing, setExisting] = useState<Reminder | null>(null);
   const [text, setText] = useState('');
@@ -211,6 +214,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       if (found.recurring) {
         setMode('recurring');
       }
+      if (found.soundId === 'silent') setSoundMode('vibrate');
+      else if (found.soundId === 'true_silent') setSoundMode('silent');
       setEditReady(true);
     });
   }, [editId, timeFormat]);
@@ -655,6 +660,31 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       fontWeight: '700',
       color: colors.textPrimary,
     },
+    soundModeRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 24,
+    },
+    soundModePill: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: cardBg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    soundModePillActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    soundModePillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    soundModePillTextActive: {
+      color: colors.textPrimary,
+    },
   }), [colors, cardBg, insets.top, insets.bottom]);
 
   const handleCalPrev = () => {
@@ -719,6 +749,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           recurring,
           notificationId: null,
           notificationIds: [],
+          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
         };
 
         if (dueTime && !updated.completed) {
@@ -746,6 +777,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           notificationIds: [],
           pinned: false,
           completionHistory: [],
+          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
         };
 
         if (dueTime) {
@@ -1093,6 +1125,37 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           ) : null}
           <TouchableOpacity style={styles.iconPickerBtn} onPress={() => { hapticLight(); setIconPickerVisible(true); }} activeOpacity={0.7}>
             <Text style={styles.iconPickerBtnText}>{selectedIcon ? 'Change Icon' : '+ Add Icon'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.label}>Notification Sound</Text>
+        <View style={styles.soundModeRow}>
+          <TouchableOpacity
+            style={[styles.soundModePill, soundMode === 'sound' && styles.soundModePillActive]}
+            onPress={() => { hapticLight(); setSoundMode('sound'); }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.soundModePillText, soundMode === 'sound' && styles.soundModePillTextActive]}>
+              {'\u{1F514}'} Sound
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.soundModePill, soundMode === 'vibrate' && styles.soundModePillActive]}
+            onPress={() => { hapticLight(); setSoundMode('vibrate'); }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.soundModePillText, soundMode === 'vibrate' && styles.soundModePillTextActive]}>
+              {'\u{1F4F3}'} Vibrate
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.soundModePill, soundMode === 'silent' && styles.soundModePillActive]}
+            onPress={() => { hapticLight(); setSoundMode('silent'); }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.soundModePillText, soundMode === 'silent' && styles.soundModePillTextActive]}>
+              {'\u{1F507}'} Silent
+            </Text>
           </TouchableOpacity>
         </View>
 

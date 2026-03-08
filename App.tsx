@@ -101,6 +101,9 @@ function AppNavigator() {
     onboardingDone: boolean;
     alarmFireParams: RootStackParamList['AlarmFire'] | null;
     notepadParams: RootStackParamList['Notepad'] | null;
+    alarmListParams: RootStackParamList['AlarmList'] | null;
+    createAlarmParams: RootStackParamList['CreateAlarm'] | null;
+    createReminderParams: RootStackParamList['CreateReminder'] | null;
   } | null>(null);
 
   const navigationRef = useRef<any>(null);
@@ -334,11 +337,66 @@ function AppNavigator() {
           } catch {}
         }
 
+        // 4. Check for pending alarm action from widget (create or edit)
+        let createAlarmParams: RootStackParamList['CreateAlarm'] | null = null;
+        if (!alarmFireParams && !notepadParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingAlarmAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingAlarmAction');
+              const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                if (parsed.action === 'createAlarm') {
+                  createAlarmParams = {};
+                } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
+                  const allAlarms = await loadAlarms();
+                  const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
+                  if (alarm) createAlarmParams = { alarm };
+                }
+              }
+            }
+          } catch {}
+        }
+
+        // 5. Check for pending reminder action from widget (create or edit)
+        let createReminderParams: RootStackParamList['CreateReminder'] | null = null;
+        if (!alarmFireParams && !notepadParams && !createAlarmParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingReminderAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingReminderAction');
+              const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                if (parsed.action === 'createReminder') {
+                  createReminderParams = {};
+                } else if (parsed.action === 'editReminder' && parsed.reminderId) {
+                  createReminderParams = { reminderId: parsed.reminderId };
+                }
+              }
+            }
+          } catch {}
+        }
+
+        // 6. Check for pending tab action from widget deep-link
+        let alarmListParams: RootStackParamList['AlarmList'] | null = null;
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingTabAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingTabAction');
+              const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                alarmListParams = { initialTab: parsed.tab };
+              }
+            }
+          } catch {}
+        }
+
         console.log('[NOTIF] INIT — complete. alarmFireParams:', alarmFireParams ? 'SET' : 'null');
-        setInitState({ onboardingDone, alarmFireParams, notepadParams });
+        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams });
       } catch (e) {
         console.error('[NOTIF] INIT — fatal error:', e);
-        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null });
+        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: null, createAlarmParams: null, createReminderParams: null });
       }
     })();
   }, []);
@@ -577,6 +635,51 @@ function AppNavigator() {
         }
       }
     }).catch(() => {});
+
+    // Check for pending alarm action from widget (create or edit)
+    AsyncStorage.getItem('pendingAlarmAction').then(async (raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingAlarmAction');
+        const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          if (parsed.action === 'createAlarm') {
+            navigationRef.current.navigate('CreateAlarm');
+          } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
+            const allAlarms = await loadAlarms();
+            const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
+            if (alarm && navigationRef.current) {
+              navigationRef.current.navigate('CreateAlarm', { alarm });
+            }
+          }
+        }
+      }
+    }).catch(() => {});
+
+    // Check for pending reminder action from widget (create or edit)
+    AsyncStorage.getItem('pendingReminderAction').then((raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingReminderAction');
+        const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          if (parsed.action === 'createReminder') {
+            navigationRef.current.navigate('CreateReminder');
+          } else if (parsed.action === 'editReminder' && parsed.reminderId) {
+            navigationRef.current.navigate('CreateReminder', { reminderId: parsed.reminderId });
+          }
+        }
+      }
+    }).catch(() => {});
+
+    // Check for pending tab action from widget
+    AsyncStorage.getItem('pendingTabAction').then((raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingTabAction');
+        const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          navigationRef.current.navigate('AlarmList', { initialTab: parsed.tab });
+        }
+      }
+    }).catch(() => {});
   }, [navigateToAlarmFire]);
 
   // ── AppState fallback ────────────────────────────────────────────
@@ -601,6 +704,48 @@ function AppNavigator() {
             }
           }
         }).catch(() => {});
+        // Check for pending alarm action from widget (create or edit)
+        AsyncStorage.getItem('pendingAlarmAction').then(async (raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingAlarmAction');
+            const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              if (parsed.action === 'createAlarm') {
+                navigationRef.current.navigate('CreateAlarm');
+              } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
+                const allAlarms = await loadAlarms();
+                const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
+                if (alarm && navigationRef.current) {
+                  navigationRef.current.navigate('CreateAlarm', { alarm });
+                }
+              }
+            }
+          }
+        }).catch(() => {});
+        // Check for pending reminder action from widget (create or edit)
+        AsyncStorage.getItem('pendingReminderAction').then((raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingReminderAction');
+            const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              if (parsed.action === 'createReminder') {
+                navigationRef.current.navigate('CreateReminder');
+              } else if (parsed.action === 'editReminder' && parsed.reminderId) {
+                navigationRef.current.navigate('CreateReminder', { reminderId: parsed.reminderId });
+              }
+            }
+          }
+        }).catch(() => {});
+        // Check for pending tab action from widget
+        AsyncStorage.getItem('pendingTabAction').then((raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingTabAction');
+            const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              navigationRef.current.navigate('AlarmList', { initialTab: parsed.tab });
+            }
+          }
+        }).catch(() => {});
       }
     });
     return () => subscription.remove();
@@ -612,7 +757,7 @@ function AppNavigator() {
   // This prevents any flash of the wrong screen.
   if (!initState) return null;
 
-  const { onboardingDone, alarmFireParams, notepadParams } = initState;
+  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams } = initState;
 
   // For TRUE cold start: set initialState so the navigator renders
   // AlarmFireScreen or NotepadScreen on the very first frame. AlarmList
@@ -629,6 +774,23 @@ function AppNavigator() {
       { name: 'Notepad' as const, params: notepadParams },
     ],
     index: 1,
+  } : createAlarmParams ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'CreateAlarm' as const, params: createAlarmParams },
+    ],
+    index: 1,
+  } : createReminderParams ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'CreateReminder' as const, params: createReminderParams },
+    ],
+    index: 1,
+  } : alarmListParams ? {
+    routes: [
+      { name: 'AlarmList' as const, params: alarmListParams },
+    ],
+    index: 0,
   } : undefined;
 
   return (

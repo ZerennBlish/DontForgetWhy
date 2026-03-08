@@ -1,6 +1,7 @@
 import { NativeModules, Platform } from 'react-native';
 import { loadAlarms } from './storage';
-import { getDefaultTimerSound } from './settings';
+import { loadActiveTimers } from './timerStorage';
+import { getDefaultTimerSound, getSilenceAll } from './settings';
 
 /**
  * Plays alarm/timer sounds via native MediaPlayer with AudioAttributes.USAGE_ALARM.
@@ -57,7 +58,14 @@ export async function playAlarmSoundForNotification(
 ): Promise<void> {
   if (Platform.OS !== 'android') return;
   try {
+    // Global silence override — skip all sound playback
+    const silenced = await getSilenceAll();
+    if (silenced) return;
+
     if (timerId) {
+      const timers = await loadActiveTimers();
+      const timer = timers.find((t) => t.id === timerId);
+      if (timer?.soundId === 'silent' || timer?.soundId === 'true_silent') return;
       const timerSound = await getDefaultTimerSound();
       await playAlarmSound(timerSound.uri);
       return;
@@ -66,7 +74,7 @@ export async function playAlarmSoundForNotification(
       const alarms = await loadAlarms();
       const alarm = alarms.find((a) => a.id === alarmId);
       if (!alarm) { await playAlarmSound(null); return; }
-      if (alarm.soundId === 'silent') return; // vibration only
+      if (alarm.soundId === 'silent' || alarm.soundId === 'true_silent') return;
       await playAlarmSound(alarm.soundUri ?? null);
       return;
     }

@@ -16,4 +16,5 @@ export interface ActiveTimer {
   startedAt: string;
   isRunning: boolean;
   notificationId?: string;
+  soundId?: string;
 }

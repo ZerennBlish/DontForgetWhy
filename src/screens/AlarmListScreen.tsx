@@ -63,7 +63,7 @@ function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
   });
 }
 
-export default function AlarmListScreen({ navigation }: Props) {
+export default function AlarmListScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const layout = useWindowDimensions();
@@ -409,12 +409,20 @@ export default function AlarmListScreen({ navigation }: Props) {
     });
   }, [tab]);
 
+  // Apply initialTab from navigation params (widget deep-link)
+  const initialTab = route.params?.initialTab;
+  useEffect(() => {
+    if (initialTab !== undefined) {
+      setIndex(initialTab);
+    }
+  }, [initialTab]);
+
   // Load active timers on mount (picks up widget-started timers on cold start)
   useEffect(() => {
     loadActiveTimers().then((loaded) => {
       const recalculated = recalculateTimers(loaded);
       setActiveTimers(recalculated);
-      if (recalculated.some((t) => t.isRunning)) {
+      if (initialTab === undefined && recalculated.some((t) => t.isRunning)) {
         setIndex(1);
       }
       const needsSave = recalculated.some(
@@ -571,6 +579,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         timer.id,
         soundUri,
         soundName,
+        timer.soundId,
       );
       console.log('[handleAddTimer] notificationId:', notificationId);
     } catch (error) {
@@ -646,7 +655,7 @@ export default function AlarmListScreen({ navigation }: Props) {
 
         try {
           const notifId = await scheduleTimerNotification(
-            timer.label, timer.icon, ts, timer.id, rSoundUri, rSoundName,
+            timer.label, timer.icon, ts, timer.id, rSoundUri, rSoundName, timer.soundId,
           );
           // Notification scheduled — now mark timer as running
           setActiveTimers((prev) => {
