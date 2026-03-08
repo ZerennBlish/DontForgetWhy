@@ -1261,7 +1261,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
                         text: 'Print',
                         onPress: () => {
                           const iconHtml = editorIcon ? `<div style="font-size:48px;margin-bottom:16px;">${editorIcon}</div>` : '';
-                          const html = `<html><body style="background:${editorColor};color:${noteTextColor};font-family:system-ui;padding:40px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:${noteTextColor};margin:0;">${editorText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre><div style="margin-top:40px;font-size:11px;color:${noteTextColor}80;text-align:center;">Don't Forget Why &mdash; Bald Guy &amp; Company Games</div></body></html>`;
+                          const html = `<html><head><style>@page { size: letter; margin: 0.75in; }</style></head><body style="background:${editorColor};color:${noteTextColor};font-family:system-ui;padding:40px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:${noteTextColor};margin:0;">${editorText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre></body></html>`;
                           Print.printAsync({ html });
                         },
                       },
