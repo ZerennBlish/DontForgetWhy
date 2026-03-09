@@ -1253,6 +1253,10 @@ export default function NotepadScreen({ navigation, route }: Props) {
                       {
                         text: 'Share',
                         onPress: () => {
+                          if (!editorText.trim()) {
+                            ToastAndroid.show('Nothing to share', ToastAndroid.SHORT);
+                            return;
+                          }
                           const content = editorIcon ? `${editorIcon} ${editorText}` : editorText;
                           Share.share({ message: content });
                         },
@@ -1260,6 +1264,10 @@ export default function NotepadScreen({ navigation, route }: Props) {
                       {
                         text: 'Print',
                         onPress: () => {
+                          if (!editorText.trim()) {
+                            ToastAndroid.show('Nothing to print', ToastAndroid.SHORT);
+                            return;
+                          }
                           const iconHtml = editorIcon ? `<div style="font-size:48px;margin-bottom:16px;">${editorIcon}</div>` : '';
                           const html = `<html><head><style>@page { size: letter; margin: 0.75in; }</style></head><body style="background:${editorColor};color:${noteTextColor};font-family:system-ui;padding:40px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:${noteTextColor};margin:0;">${editorText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre></body></html>`;
                           Print.printAsync({ html });

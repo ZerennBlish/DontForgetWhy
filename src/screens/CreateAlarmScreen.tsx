@@ -894,7 +894,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           mode,
           days: selectedDays,
           date: mode === 'one-time' ? alarmDate : null,
-          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
+          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : (selectedSoundUri ? undefined : existingAlarm!.soundId),
           soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
           soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
           soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,

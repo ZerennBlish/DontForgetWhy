@@ -11,6 +11,7 @@ export interface PendingAlarmData {
   notificationId?: string;
   timerLabel?: string;
   timerIcon?: string;
+  timerSoundId?: string;
 }
 
 let _pending: PendingAlarmData | null = null;

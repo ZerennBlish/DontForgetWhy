@@ -194,7 +194,7 @@ function EmptyTimerCell() {
 function ReminderCell({ reminder }: { reminder: DetailedReminder }) {
   return (
     <FlexWidget
-      clickAction="OPEN_REMINDERS"
+      clickAction={`OPEN_REMINDER__${reminder.id}`}
       style={{
         flex: 1,
         backgroundColor: CELL_BG,

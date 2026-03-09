@@ -216,6 +216,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       }
       if (found.soundId === 'silent') setSoundMode('vibrate');
       else if (found.soundId === 'true_silent') setSoundMode('silent');
+      else setSoundMode('sound');
       setEditReady(true);
     });
   }, [editId, timeFormat]);

@@ -9,7 +9,7 @@ import type { TimestampTrigger } from '@notifee/react-native';
 import { NativeModules, Platform } from 'react-native';
 import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
-import { loadSettings } from './settings';
+import { loadSettings, getSilenceAll } from './settings';
 
 // Android notification channels are immutable after creation. Changing sound
 // or audioAttributes on an existing channel has no effect. We use 'alarms_v4'
@@ -365,6 +365,12 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
     channelId = ALARM_CHANNEL_ID;
   }
 
+  // Override channel when global silence is active
+  const isSilenced = await getSilenceAll();
+  if (isSilenced) {
+    channelId = 'alarms_true_silent_v1';
+  }
+
   // Do NOT set sound in the notification payload — let the channel control it.
   // Setting sound here can cause Android to route audio through the notification
   // stream instead of the channel's ALARM audio stream.
@@ -489,6 +495,12 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
     }
   }
 
+  // Override channel when global silence is active
+  const snoozeSilenced = await getSilenceAll();
+  if (snoozeSilenced) {
+    channelId = 'alarms_true_silent_v1';
+  }
+
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
     timestamp: Date.now() + minutes * 60 * 1000,
@@ -547,6 +559,12 @@ export async function scheduleTimerNotification(
       console.error('[Timer] getOrCreateSoundChannel failed, using default:', err);
       // fallback to default channel
     }
+  }
+
+  // Override channel when global silence is active
+  const timerSilenced = await getSilenceAll();
+  if (timerSilenced) {
+    channelId = 'timer_silent_v1';
   }
 
   const trigger: TimestampTrigger = {
@@ -654,6 +672,12 @@ export async function scheduleReminderNotification(
   if (reminder.soundId === 'silent') {
     reminderChannelId = 'reminders_vibrate_v1';
   } else if (reminder.soundId === 'true_silent') {
+    reminderChannelId = 'reminders_silent_v1';
+  }
+
+  // Override channel when global silence is active
+  const reminderSilenced = await getSilenceAll();
+  if (reminderSilenced) {
     reminderChannelId = 'reminders_silent_v1';
   }
 

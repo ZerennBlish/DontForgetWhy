@@ -12,6 +12,7 @@ export type RootStackParamList = {
     timerLabel?: string;
     timerIcon?: string;
     timerId?: string;
+    timerSoundId?: string;
     timerNotificationId?: string;
     notificationId?: string;
     guessWhyEnabled?: boolean;

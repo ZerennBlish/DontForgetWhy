@@ -129,11 +129,19 @@ function AppNavigator() {
 
     if (pending.timerId && pending.notificationId) {
       console.log('[NOTIF] navigateToAlarmFire — timer:', pending.timerId);
+      let timerSoundId = pending.timerSoundId;
+      if (timerSoundId === undefined) {
+        try {
+          const timers = await loadActiveTimers();
+          timerSoundId = timers.find(t => t.id === pending.timerId)?.soundId;
+        } catch {}
+      }
       navigationRef.current.navigate('AlarmFire', {
         isTimer: true,
         timerLabel: pending.timerLabel || 'Timer',
         timerIcon: pending.timerIcon || '\u23F1\uFE0F',
         timerId: pending.timerId,
+        timerSoundId,
         timerNotificationId: pending.notificationId,
         notificationId: pending.notificationId,
         fromNotification: true,
@@ -200,8 +208,13 @@ function AppNavigator() {
         if (dTimerId && dNotifId && !wasNotifHandled(dNotifId)) {
           const tIcon = (d.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
           const tLabel = (d.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
+          let fbTimerSoundId: string | undefined;
+          try {
+            const timers = await loadActiveTimers();
+            fbTimerSoundId = timers.find(t => t.id === dTimerId)?.soundId;
+          } catch {}
           console.log('[NOTIF] consumePendingAlarm fallback — found displayed timer:', dTimerId);
-          await navigateToAlarmFire({ timerId: dTimerId, notificationId: dNotifId, timerLabel: tLabel, timerIcon: tIcon });
+          await navigateToAlarmFire({ timerId: dTimerId, notificationId: dNotifId, timerLabel: tLabel, timerIcon: tIcon, timerSoundId: fbTimerSoundId });
           return true;
         }
       }
@@ -231,11 +244,19 @@ function AppNavigator() {
           console.log('[NOTIF] INIT — found pending alarm data:', JSON.stringify(pending));
 
           if (pending.timerId && pending.notificationId) {
+            let timerSoundId = pending.timerSoundId;
+            if (timerSoundId === undefined) {
+              try {
+                const timers = await loadActiveTimers();
+                timerSoundId = timers.find(t => t.id === pending.timerId)?.soundId;
+              } catch {}
+            }
             alarmFireParams = {
               isTimer: true,
               timerLabel: pending.timerLabel || 'Timer',
               timerIcon: pending.timerIcon || '\u23F1\uFE0F',
               timerId: pending.timerId,
+              timerSoundId,
               timerNotificationId: pending.notificationId,
               notificationId: pending.notificationId,
               fromNotification: true,
@@ -277,11 +298,17 @@ function AppNavigator() {
                 if (timerId && notifId) {
                   const tIcon = (initial.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
                   const tLabel = (initial.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
+                  let initTimerSoundId: string | undefined;
+                  try {
+                    const timers = await loadActiveTimers();
+                    initTimerSoundId = timers.find(t => t.id === timerId)?.soundId;
+                  } catch {}
                   alarmFireParams = {
                     isTimer: true,
                     timerLabel: tLabel,
                     timerIcon: tIcon,
                     timerId,
+                    timerSoundId: initTimerSoundId,
                     timerNotificationId: notifId,
                     notificationId: notifId,
                     fromNotification: true,
@@ -510,7 +537,12 @@ function AppNavigator() {
           if (timerId && notifId) {
             const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
             const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
-            setPendingAlarm({ timerId, notificationId: notifId, timerLabel: tLabel, timerIcon: tIcon });
+            let pendTimerSoundId: string | undefined;
+            try {
+              const timers = await loadActiveTimers();
+              pendTimerSoundId = timers.find(t => t.id === timerId)?.soundId;
+            } catch {}
+            setPendingAlarm({ timerId, notificationId: notifId, timerLabel: tLabel, timerIcon: tIcon, timerSoundId: pendTimerSoundId });
           } else if (alarmId) {
             setPendingAlarm({ alarmId, notificationId: notifId });
           }
@@ -550,6 +582,11 @@ function AppNavigator() {
           markNotifHandled(notifId);
           const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
           const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
+          let fgTimerSoundId: string | undefined;
+          try {
+            const timers = await loadActiveTimers();
+            fgTimerSoundId = timers.find(t => t.id === timerId)?.soundId;
+          } catch {}
 
           console.log('[NOTIF] FOREGROUND — navigating to AlarmFire (timer)');
           navigationRef.current.navigate('AlarmFire', {
@@ -557,6 +594,7 @@ function AppNavigator() {
             timerLabel: tLabel,
             timerIcon: tIcon,
             timerId,
+            timerSoundId: fgTimerSoundId,
             timerNotificationId: notifId,
             notificationId: notifId,
             fromNotification: true,

@@ -76,6 +76,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     timerLabel,
     timerIcon,
     timerId,
+    timerSoundId,
     timerNotificationId,
     notificationId,
     guessWhyEnabled,
@@ -84,6 +85,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [globalSilenced, setGlobalSilenced] = useState(false);
+  const [silenceLoaded, setSilenceLoaded] = useState(false);
   const [snoozeShameMessage, setSnoozeShameMessage] = useState<string | null>(null);
   const [isSnoozing, setIsSnoozing] = useState(false);
   const snoozeShameOpacity = useRef(new Animated.Value(0)).current;
@@ -91,7 +93,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     loadSettings().then((s) => setTimeFormat(s.timeFormat)).catch(() => {});
-    getSilenceAll().then(setGlobalSilenced).catch(() => {});
+    getSilenceAll().then((v) => { setGlobalSilenced(v); setSilenceLoaded(true); }).catch(() => { setSilenceLoaded(true); });
   }, []);
 
   // DO NOT cancel notifications on mount — the alarm sound plays FROM the
@@ -118,9 +120,12 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   // Fallback: play alarm sound if event handlers didn't start it
   // (e.g., cold start where background JS context is separate).
   // Sound is normally started on DELIVERED in index.ts / App.tsx.
+  // Waits for silenceLoaded so we don't play before getSilenceAll() resolves.
   useEffect(() => {
     if (!fromNotification || postGuessWhy) return;
     if (!isTimer && (alarm?.soundId === 'silent' || alarm?.soundId === 'true_silent')) return;
+    if (isTimer && (timerSoundId === 'silent' || timerSoundId === 'true_silent')) return;
+    if (!silenceLoaded) return;
     if (globalSilenced) return;
 
     // If sound is already playing (started by DELIVERED event handler),
@@ -150,20 +155,20 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       stopAlarmSound();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [silenceLoaded]);
 
   // Start vibration when screen shows from notification (not when returning from GuessWhy)
-  // Skip vibration for true_silent alarms and when global silence is active
+  // Skip vibration for true_silent alarms/timers and when global silence is active
   useEffect(() => {
     if (fromNotification && !postGuessWhy) {
-      const isTrueSilent = !isTimer && alarm?.soundId === 'true_silent';
+      const isTrueSilent = isTimer ? timerSoundId === 'true_silent' : alarm?.soundId === 'true_silent';
       if (!isTrueSilent && !globalSilenced) {
         hapticHeavy();
         Vibration.vibrate(VIBRATION_PATTERN, true);
         return () => Vibration.cancel();
       }
     }
-  }, [fromNotification, postGuessWhy, isTimer, alarm?.soundId, globalSilenced]);
+  }, [fromNotification, postGuessWhy, isTimer, alarm?.soundId, timerSoundId, globalSilenced]);
 
   // When returning from GuessWhy, notifications + vibration are already
   // cancelled (handleGuessWhy does it before navigating). This is a

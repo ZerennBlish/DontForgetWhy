@@ -10,6 +10,7 @@ import {
   Linking,
   Platform,
   ImageBackground,
+  ToastAndroid,
 } from 'react-native';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
@@ -387,8 +388,11 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const handleSilencePickerSet = async () => {
     hapticMedium();
-    let totalMinutes = pickerHours * 60 + pickerMinutes;
-    if (totalMinutes === 0) totalMinutes = 1;
+    const totalMinutes = pickerHours * 60 + pickerMinutes;
+    if (totalMinutes === 0) {
+      ToastAndroid.show('Pick a time first', ToastAndroid.SHORT);
+      return;
+    }
     setSilencePickerVisible(false);
     await applySilence(totalMinutes);
   };

@@ -9,6 +9,7 @@ import { getReminders, updateReminder } from './src/services/reminderStorage';
 import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { setPendingAlarm } from './src/services/pendingAlarm';
+import { loadActiveTimers } from './src/services/timerStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
 
@@ -94,11 +95,17 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
     if (timerId && notifId) {
       const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
       const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
+      let timerSoundId: string | undefined;
+      try {
+        const timers = await loadActiveTimers();
+        timerSoundId = timers.find(t => t.id === timerId)?.soundId;
+      } catch {}
       setPendingAlarm({
         timerId,
         notificationId: notifId,
         timerLabel: tLabel,
         timerIcon: tIcon,
+        timerSoundId,
       });
       console.log('[NOTIF] BACKGROUND — stored pending timer data for App.tsx');
     } else if (alarmId && notifId) {

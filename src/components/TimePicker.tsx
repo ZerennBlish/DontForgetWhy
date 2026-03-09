@@ -73,13 +73,23 @@ export default function TimePicker({
   const getItemLayout = useCallback(
     (_: any, index: number) => ({
       length: itemHeight,
-      offset: padItems * itemHeight + index * itemHeight,
+      offset: index * itemHeight,
       index,
     }),
-    [itemHeight, padItems],
+    [itemHeight],
   );
 
   const keyExtractor = useCallback((_: number, i: number) => String(i), []);
+
+  const handleHoursScroll = useCallback(
+    (e: any) => {
+      const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
+      const value = hoursData[Math.max(0, Math.min(idx, hoursData.length - 1))];
+      setLocalHours(value);
+      onHoursChange(value);
+    },
+    [hoursData, itemHeight, onHoursChange],
+  );
 
   const handleHoursSnap = useCallback(
     (e: any) => {
@@ -93,6 +103,16 @@ export default function TimePicker({
       }
     },
     [hoursData, itemHeight, onHoursChange],
+  );
+
+  const handleMinutesScroll = useCallback(
+    (e: any) => {
+      const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
+      const value = minutesData[Math.max(0, Math.min(idx, minutesData.length - 1))];
+      setLocalMinutes(value);
+      onMinutesChange(value);
+    },
+    [minutesData, itemHeight, onMinutesChange],
   );
 
   const handleMinutesSnap = useCallback(
@@ -187,6 +207,8 @@ export default function TimePicker({
           snapToInterval={itemHeight}
           decelerationRate="fast"
           contentContainerStyle={{ paddingVertical: padItems * itemHeight }}
+          scrollEventThrottle={16}
+          onScroll={handleHoursScroll}
           onMomentumScrollEnd={handleHoursSnap}
           renderItem={renderHour}
         />
@@ -216,6 +238,8 @@ export default function TimePicker({
           snapToInterval={itemHeight}
           decelerationRate="fast"
           contentContainerStyle={{ paddingVertical: padItems * itemHeight }}
+          scrollEventThrottle={16}
+          onScroll={handleMinutesScroll}
           onMomentumScrollEnd={handleMinutesSnap}
           renderItem={renderMinute}
         />
