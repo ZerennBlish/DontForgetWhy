@@ -25,6 +25,7 @@ import {
   saveActiveTimers,
 } from '../services/timerStorage';
 import { getPinnedAlarms, togglePinAlarm, isAlarmPinned, unpinAlarm, pruneAlarmPins } from '../services/widgetPins';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { getReminders } from '../services/reminderStorage';
 import { getNotes } from '../services/noteStorage';
@@ -409,20 +410,57 @@ export default function AlarmListScreen({ navigation, route }: Props) {
     });
   }, [tab]);
 
-  // Apply initialTab from navigation params (widget deep-link)
-  const initialTab = route.params?.initialTab;
+  // Cold-start: apply initialTab from navigation params on first render
   useEffect(() => {
-    if (initialTab !== undefined) {
-      setIndex(initialTab);
+    const tab = route.params?.initialTab;
+    if (tab !== undefined) {
+      setIndex(tab);
     }
-  }, [initialTab]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Widget deep-link: check pendingTabAction every time this screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem('pendingTabAction').then((raw) => {
+        if (raw) {
+          AsyncStorage.removeItem('pendingTabAction');
+          try {
+            const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              setIndex(parsed.tab);
+            }
+          } catch {}
+        }
+      });
+    }, [])
+  );
+
+  // Widget deep-link: check pendingTabAction when app returns from background
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        AsyncStorage.getItem('pendingTabAction').then((raw) => {
+          if (raw) {
+            AsyncStorage.removeItem('pendingTabAction');
+            try {
+              const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                setIndex(parsed.tab);
+              }
+            } catch {}
+          }
+        });
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // Load active timers on mount (picks up widget-started timers on cold start)
   useEffect(() => {
     loadActiveTimers().then((loaded) => {
       const recalculated = recalculateTimers(loaded);
       setActiveTimers(recalculated);
-      if (initialTab === undefined && recalculated.some((t) => t.isRunning)) {
+      if (route.params?.initialTab === undefined && recalculated.some((t) => t.isRunning)) {
         setIndex(1);
       }
       const needsSave = recalculated.some(

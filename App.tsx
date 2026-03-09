@@ -708,16 +708,7 @@ function AppNavigator() {
       }
     }).catch(() => {});
 
-    // Check for pending tab action from widget
-    AsyncStorage.getItem('pendingTabAction').then((raw) => {
-      if (raw && navigationRef.current) {
-        AsyncStorage.removeItem('pendingTabAction');
-        const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
-        if (Date.now() - parsed.timestamp < 10000) {
-          navigationRef.current.navigate('AlarmList', { initialTab: parsed.tab });
-        }
-      }
-    }).catch(() => {});
+    // pendingTabAction is now handled directly by AlarmListScreen
   }, [navigateToAlarmFire]);
 
   // ── AppState fallback ────────────────────────────────────────────
@@ -774,16 +765,7 @@ function AppNavigator() {
             }
           }
         }).catch(() => {});
-        // Check for pending tab action from widget
-        AsyncStorage.getItem('pendingTabAction').then((raw) => {
-          if (raw && navigationRef.current) {
-            AsyncStorage.removeItem('pendingTabAction');
-            const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
-            if (Date.now() - parsed.timestamp < 10000) {
-              navigationRef.current.navigate('AlarmList', { initialTab: parsed.tab });
-            }
-          }
-        }).catch(() => {});
+        // pendingTabAction is now handled directly by AlarmListScreen
       }
     });
     return () => subscription.remove();
