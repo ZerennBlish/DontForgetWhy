@@ -920,17 +920,17 @@ export default function AlarmListScreen({ navigation, route }: Props) {
 
                   {filteredAlarms.length === 0 ? (
                     <View style={styles.empty}>
-                      {nonDeletedAlarmCount === 0 && (alarmFilter === 'all' || alarmFilter === 'active') && (
+                      {nonDeletedAlarmCount === 0 && (
                         <Text style={styles.quoteText} numberOfLines={2}>
                           {appQuote}
                         </Text>
                       )}
                       <Text style={styles.emptyText}>
-                        {nonDeletedAlarmCount === 0 && (alarmFilter === 'all' || alarmFilter === 'active')
+                        {nonDeletedAlarmCount === 0
                           ? 'No alarms yet' : 'No matches'}
                       </Text>
                       <Text style={styles.emptySubtext}>
-                        {nonDeletedAlarmCount === 0 && (alarmFilter === 'all' || alarmFilter === 'active')
+                        {nonDeletedAlarmCount === 0
                           ? 'Tap + to set one and immediately forget why.' : 'Try a different filter.'}
                       </Text>
                     </View>

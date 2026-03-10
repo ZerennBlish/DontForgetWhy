@@ -207,8 +207,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const handleModalHoursChange = useCallback((h: number) => {
     const prev = prevModalHourRef.current;
     if (timeFormat === '12h') {
-      if (prev === 11 && h === 12) setModalAmpm((a) => a === 'AM' ? 'PM' : 'AM');
-      else if (prev === 12 && h === 11) setModalAmpm((a) => a === 'AM' ? 'PM' : 'AM');
+      const crossedBoundary = (prev <= 11 && h >= 12) || (prev >= 12 && h <= 11);
+      if (crossedBoundary) setModalAmpm((a) => a === 'AM' ? 'PM' : 'AM');
     }
     prevModalHourRef.current = h;
     setModalHours(h);
@@ -907,7 +907,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           mode,
           days: selectedDays,
           date: mode === 'one-time' ? alarmDate : null,
-          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : (selectedSoundUri ? undefined : existingAlarm!.soundId),
+          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : (selectedSoundUri ? undefined : (existingAlarm!.soundId === 'silent' || existingAlarm!.soundId === 'true_silent' ? undefined : existingAlarm!.soundId)),
           soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
           soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
           soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
@@ -1339,8 +1339,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             autoCorrect={false}
             onChangeText={(t) => {
               if (t) {
-                const chars = [...t];
-                setSelectedIcon(chars[0]);
+                const graphemes = [...t];
+                setSelectedIcon(graphemes[graphemes.length - 1] || null);
               }
               setEmojiPickerOpen(false);
               if (iconInputRef.current) {

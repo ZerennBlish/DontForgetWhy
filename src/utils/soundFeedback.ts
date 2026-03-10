@@ -1,37 +1,25 @@
-import notifee, { AndroidImportance } from '@notifee/react-native';
-import { Platform } from 'react-native';
+import { Audio, AVPlaybackStatus } from 'expo-av';
 
-let feedbackChannelCreated = false;
+let activeSound: Audio.Sound | null = null;
 
 export async function playModeFeedbackChirp(): Promise<void> {
-  if (Platform.OS !== 'android') return;
   try {
-    if (!feedbackChannelCreated) {
-      await notifee.createChannel({
-        id: 'sound_feedback_v2',
-        name: 'UI Feedback',
-        importance: AndroidImportance.HIGH,
-        sound: 'default',
-        vibration: false,
-      });
-      feedbackChannelCreated = true;
+    if (activeSound) {
+      try { await activeSound.unloadAsync(); } catch {}
+      activeSound = null;
     }
-    const notifId = await notifee.displayNotification({
-      id: 'sound_feedback',
-      body: ' ',
-      android: {
-        channelId: 'sound_feedback_v2',
-        smallIcon: 'ic_notification',
-        autoCancel: true,
-        asForegroundService: false,
-        onlyAlertOnce: false,
-      },
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: 'content://settings/system/notification_sound' },
+      { volume: 0.15, shouldPlay: true }
+    );
+    activeSound = sound;
+    sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+      if (status.isLoaded && status.didJustFinish) {
+        sound.unloadAsync().catch(() => {});
+        if (activeSound === sound) activeSound = null;
+      }
     });
-    // Give the sound time to play before cancelling
-    setTimeout(() => {
-      notifee.cancelNotification(notifId);
-    }, 1500);
-  } catch (e) {
-    // Non-critical — fail silently
+  } catch {
+    // silently ignore
   }
 }

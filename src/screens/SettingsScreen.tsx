@@ -34,7 +34,7 @@ import type { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 const presetNames = Object.keys(themes) as (ThemeName & keyof typeof themes)[];
-const themeDisplayNames: Record<string, string> = { amoled: 'AMOLED' };
+const themeDisplayNames: Record<string, string> = {};
 
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, themeName, customAccent, customBackground, setTheme, setCustomTheme } = useTheme();

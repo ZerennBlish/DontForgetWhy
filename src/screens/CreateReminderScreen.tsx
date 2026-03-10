@@ -192,8 +192,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const handleModalHoursChange = useCallback((h: number) => {
     const prev = prevModalHourRef.current;
     if (timeFormat === '12h') {
-      if (prev === 11 && h === 12) setModalAmpm((a) => a === 'AM' ? 'PM' : 'AM');
-      else if (prev === 12 && h === 11) setModalAmpm((a) => a === 'AM' ? 'PM' : 'AM');
+      const crossedBoundary = (prev <= 11 && h >= 12) || (prev >= 12 && h <= 11);
+      if (crossedBoundary) setModalAmpm((a) => a === 'AM' ? 'PM' : 'AM');
     }
     prevModalHourRef.current = h;
     setModalHours(h);
@@ -837,7 +837,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
         const updated: Reminder = {
           ...existing,
-          icon: selectedIcon,
+          icon: selectedIcon || '\u{1F4DD}',
           text: text.trim(),
           nickname: nickname.trim() || undefined,
           private: selectedPrivate,
@@ -860,7 +860,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       } else {
         const reminder: Reminder = {
           id: uuidv4(),
-          icon: selectedIcon,
+          icon: selectedIcon || '\u{1F4DD}',
           text: text.trim(),
           nickname: nickname.trim() || undefined,
           private: selectedPrivate,
@@ -1355,8 +1355,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             autoCorrect={false}
             onChangeText={(t) => {
               if (t) {
-                const chars = [...t];
-                setSelectedIcon(chars[0]);
+                const graphemes = [...t];
+                setSelectedIcon(graphemes[graphemes.length - 1] || '');
               }
               setEmojiPickerOpen(false);
               if (iconInputRef.current) {
@@ -1371,7 +1371,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             {['\u{1F4DD}', '\u{1F4C5}', '\u{1F48A}', '\u{1F6D2}', '\u{1F4DE}', '\u{1F3CB}\u{FE0F}', '\u{1F4A7}', '\u{1F4E6}'].map((emoji) => (
               <TouchableOpacity
                 key={emoji}
-                onPress={() => { hapticLight(); setSelectedIcon(selectedIcon === emoji ? null : emoji); setEmojiPickerOpen(false); }}
+                onPress={() => { hapticLight(); setSelectedIcon(selectedIcon === emoji ? '' : emoji); setEmojiPickerOpen(false); }}
                 style={[styles.quickEmojiBtn, selectedIcon === emoji && styles.quickEmojiBtnActive]}
               >
                 <Text style={{ fontSize: 18 }}>{emoji}</Text>

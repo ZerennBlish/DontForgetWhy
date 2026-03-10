@@ -1,5 +1,6 @@
 import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
+import type { WidgetTheme } from './NotepadWidget';
 
 export interface WidgetPreset {
   id: string;
@@ -18,24 +19,18 @@ export interface WidgetAlarm {
 interface TimerWidgetProps {
   alarms: WidgetAlarm[];
   presets: WidgetPreset[];
+  theme: WidgetTheme;
 }
 
-const BG = '#121220';
-const CELL_BG = '#1E1E2E';
-const TEXT = '#EAEAFF';
-const TEXT_SEC = '#B0B0CC';
-const BORDER = '#2A2A3E';
-const PIN_BORDER = '#4A90D9';
-
-function AlarmCell({ alarm }: { alarm: WidgetAlarm }) {
+function AlarmCell({ alarm, theme }: { alarm: WidgetAlarm; theme: WidgetTheme }) {
   return (
     <FlexWidget
       clickAction={`OPEN_ALARM__${alarm.id}`}
       style={{
         width: 'match_parent',
-        backgroundColor: CELL_BG,
+        backgroundColor: theme.cellBg as `#${string}`,
         borderRadius: 12,
-        borderColor: BORDER,
+        borderColor: theme.border as `#${string}`,
         borderWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
@@ -61,14 +56,14 @@ function AlarmCell({ alarm }: { alarm: WidgetAlarm }) {
           style={{
             fontSize: 13,
             fontWeight: 'bold',
-            color: TEXT,
+            color: theme.text as `#${string}`,
           }}
         />
         <TextWidget
           text={alarm.label}
           style={{
             fontSize: 10,
-            color: TEXT_SEC,
+            color: theme.textSecondary as `#${string}`,
           }}
         />
       </FlexWidget>
@@ -76,15 +71,15 @@ function AlarmCell({ alarm }: { alarm: WidgetAlarm }) {
   );
 }
 
-function EmptyAlarmCell() {
+function EmptyAlarmCell({ theme }: { theme: WidgetTheme }) {
   return (
     <FlexWidget
       clickAction="CREATE_ALARM"
       style={{
         width: 'match_parent',
-        backgroundColor: CELL_BG,
+        backgroundColor: theme.cellBg as `#${string}`,
         borderRadius: 12,
-        borderColor: BORDER,
+        borderColor: theme.border as `#${string}`,
         borderWidth: 1,
         borderStyle: 'dashed',
         justifyContent: 'center',
@@ -97,22 +92,22 @@ function EmptyAlarmCell() {
         text={'\uFF0B Set Alarm'}
         style={{
           fontSize: 11,
-          color: TEXT_SEC,
+          color: theme.textSecondary as `#${string}`,
         }}
       />
     </FlexWidget>
   );
 }
 
-function TimerCell({ preset }: { preset: WidgetPreset }) {
+function TimerCell({ preset, theme }: { preset: WidgetPreset; theme: WidgetTheme }) {
   return (
     <FlexWidget
       clickAction={`START_TIMER__${preset.id}`}
       style={{
         width: 'match_parent',
-        backgroundColor: CELL_BG,
+        backgroundColor: theme.cellBg as `#${string}`,
         borderRadius: 12,
-        borderColor: preset.isPinned ? PIN_BORDER : BORDER,
+        borderColor: (preset.isPinned ? theme.accent : theme.border) as `#${string}`,
         borderWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
@@ -132,7 +127,7 @@ function TimerCell({ preset }: { preset: WidgetPreset }) {
         text={preset.label}
         style={{
           fontSize: 13,
-          color: TEXT,
+          color: theme.text as `#${string}`,
           fontWeight: '600',
         }}
       />
@@ -140,15 +135,15 @@ function TimerCell({ preset }: { preset: WidgetPreset }) {
   );
 }
 
-function EmptyTimerCell() {
+function EmptyTimerCell({ theme }: { theme: WidgetTheme }) {
   return (
     <FlexWidget
       clickAction="OPEN_TIMERS"
       style={{
         width: 'match_parent',
-        backgroundColor: CELL_BG,
+        backgroundColor: theme.cellBg as `#${string}`,
         borderRadius: 12,
-        borderColor: BORDER,
+        borderColor: theme.border as `#${string}`,
         borderWidth: 1,
         justifyContent: 'center',
         alignItems: 'center',
@@ -160,14 +155,14 @@ function EmptyTimerCell() {
         text={'\u2014'}
         style={{
           fontSize: 14,
-          color: BORDER,
+          color: theme.border as `#${string}`,
         }}
       />
     </FlexWidget>
   );
 }
 
-export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
+export function TimerWidget({ alarms, presets, theme }: TimerWidgetProps) {
   const slots = [0, 1, 2];
 
   return (
@@ -175,7 +170,7 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: BG,
+        backgroundColor: theme.background as `#${string}`,
         borderRadius: 16,
         padding: 12,
         flexDirection: 'column',
@@ -187,7 +182,7 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
         style={{
           fontSize: 16,
           fontWeight: 'bold',
-          color: TEXT,
+          color: theme.text as `#${string}`,
           marginBottom: 8,
         }}
       />
@@ -213,7 +208,7 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
             style={{
               fontSize: 11,
               fontWeight: '600',
-              color: TEXT_SEC,
+              color: theme.textSecondary as `#${string}`,
               marginBottom: 4,
             }}
           />
@@ -227,9 +222,9 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
               }}
             >
               {presets[i] ? (
-                <TimerCell preset={presets[i]} />
+                <TimerCell preset={presets[i]} theme={theme} />
               ) : (
-                <EmptyTimerCell />
+                <EmptyTimerCell theme={theme} />
               )}
             </FlexWidget>
           ))}
@@ -248,7 +243,7 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
             style={{
               fontSize: 11,
               fontWeight: '600',
-              color: TEXT_SEC,
+              color: theme.textSecondary as `#${string}`,
               marginBottom: 4,
             }}
           />
@@ -262,9 +257,9 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
               }}
             >
               {alarms[i] ? (
-                <AlarmCell alarm={alarms[i]} />
+                <AlarmCell alarm={alarms[i]} theme={theme} />
               ) : (
-                <EmptyAlarmCell />
+                <EmptyAlarmCell theme={theme} />
               )}
             </FlexWidget>
           ))}
@@ -275,7 +270,7 @@ export function TimerWidget({ alarms, presets }: TimerWidgetProps) {
               flex: 1,
             }}
           >
-            <EmptyAlarmCell />
+            <EmptyAlarmCell theme={theme} />
           </FlexWidget>
         </FlexWidget>
       </FlexWidget>

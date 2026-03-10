@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { themes, generateCustomTheme, generateCustomThemeDual, type ThemeColors, type ThemeName } from './colors';
+import { refreshTimerWidget } from '../widget/updateWidget';
 
 const THEME_KEY = 'appTheme';
 const CUSTOM_KEY = 'customTheme';
@@ -36,25 +37,37 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     ]).then(([savedName, savedCustom]) => {
       if (savedCustom) {
         try {
-          const parsed = JSON.parse(savedCustom) as { accent: string; background?: string | null };
-          setCustomAccent(parsed.accent);
-          if (parsed.background) {
-            setCustomBackground(parsed.background);
-            setCustomColors(generateCustomThemeDual(parsed.background, parsed.accent));
+          const parsed = JSON.parse(savedCustom);
+          if (typeof parsed === 'string') {
+            setCustomAccent(parsed);
+            setCustomColors(generateCustomTheme(parsed));
           } else {
-            setCustomColors(generateCustomTheme(parsed.accent));
+            const obj = parsed as { accent: string; background?: string | null };
+            setCustomAccent(obj.accent);
+            if (obj.background) {
+              setCustomBackground(obj.background);
+              setCustomColors(generateCustomThemeDual(obj.background, obj.accent));
+            } else {
+              setCustomColors(generateCustomTheme(obj.accent));
+            }
           }
         } catch {}
       }
       // Migrate old theme names to new ones
       const migrationMap: Record<string, string> = {
-        obsidian: 'charcoal',
-        forest: 'slate',
+        obsidian: 'void',
+        forest: 'neon',
         royal: 'ember',
-        bubblegum: 'paper',
-        sunshine: 'cream',
-        ocean: 'arctic',
-        mint: 'arctic',
+        bubblegum: 'frost',
+        sunshine: 'sand',
+        ocean: 'frost',
+        mint: 'frost',
+        charcoal: 'void',
+        amoled: 'void',
+        slate: 'neon',
+        paper: 'frost',
+        cream: 'sand',
+        arctic: 'frost',
       };
       if (savedName && savedName in migrationMap) {
         const newName = migrationMap[savedName];
@@ -70,7 +83,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((name: ThemeName) => {
     setThemeName(name);
-    AsyncStorage.setItem(THEME_KEY, name);
+    AsyncStorage.setItem(THEME_KEY, name).then(() => {
+      refreshTimerWidget().catch(() => {});
+    });
   }, []);
 
   const setCustomTheme = useCallback((accentHex: string, bgHex?: string) => {
@@ -81,8 +96,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setCustomAccent(accentHex);
     setCustomBackground(bgHex || null);
     setThemeName('custom');
-    AsyncStorage.setItem(THEME_KEY, 'custom');
-    AsyncStorage.setItem(CUSTOM_KEY, JSON.stringify({ accent: accentHex, background: bgHex || null }));
+    Promise.all([
+      AsyncStorage.setItem(THEME_KEY, 'custom'),
+      AsyncStorage.setItem(CUSTOM_KEY, JSON.stringify({ accent: accentHex, background: bgHex || null })),
+    ]).then(() => {
+      refreshTimerWidget().catch(() => {});
+    });
   }, []);
 
   const colors =

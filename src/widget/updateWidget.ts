@@ -7,13 +7,14 @@ import { NotepadWidgetCompact } from './NotepadWidgetCompact';
 import { getWidgetAlarms, getWidgetPresets, getDetailedAlarms, getDetailedPresets, getDetailedReminders, getWidgetNotes, getWidgetTheme } from './widgetTaskHandler';
 
 export async function refreshTimerWidget(): Promise<void> {
+  const theme = await getWidgetTheme();
   try {
     await requestWidgetUpdate({
       widgetName: 'TimerWidget',
       renderWidget: async () => {
         const alarms = await getWidgetAlarms();
         const presets = await getWidgetPresets();
-        return React.createElement(TimerWidget, { alarms, presets });
+        return React.createElement(TimerWidget, { alarms, presets, theme });
       },
     });
   } catch (error) {
@@ -27,7 +28,7 @@ export async function refreshTimerWidget(): Promise<void> {
         const alarms = await getDetailedAlarms();
         const presets = await getDetailedPresets();
         const reminders = await getDetailedReminders();
-        return React.createElement(DetailedWidget, { alarms, presets, reminders });
+        return React.createElement(DetailedWidget, { alarms, presets, reminders, theme });
       },
     });
   } catch (error) {
@@ -39,7 +40,6 @@ export async function refreshTimerWidget(): Promise<void> {
       widgetName: 'NotepadWidget',
       renderWidget: async () => {
         const notes = await getWidgetNotes();
-        const theme = await getWidgetTheme();
         return React.createElement(NotepadWidget, { notes, theme });
       },
     });
@@ -51,7 +51,6 @@ export async function refreshTimerWidget(): Promise<void> {
       widgetName: 'NotepadWidgetCompact',
       renderWidget: async () => {
         const notes = await getWidgetNotes();
-        const theme = await getWidgetTheme();
         return React.createElement(NotepadWidgetCompact, { notes, theme });
       },
     });

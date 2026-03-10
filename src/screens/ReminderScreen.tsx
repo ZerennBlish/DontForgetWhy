@@ -34,7 +34,7 @@ import {
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { loadSettings } from '../services/settings';
 import { formatTime } from '../utils/time';
-import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
+import { getRandomReminderQuote } from '../data/reminderQuotes';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
@@ -147,7 +147,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   const [deletedReminderPinned, setDeletedReminderPinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
   const [undoKey, setUndoKey] = useState(0);
-  const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
+  const [appQuote, setAppQuote] = useState(getRandomReminderQuote);
 
   const loadData = useCallback(async () => {
     const [loaded, settings] = await Promise.all([
@@ -162,7 +162,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   useFocusEffect(
     useCallback(() => {
-      setAppQuote(getRandomAppOpenQuote());
+      setAppQuote(getRandomReminderQuote());
       loadData();
     }, [loadData]),
   );
@@ -873,17 +873,17 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
       {sorted.length === 0 ? (
         <View style={styles.empty}>
-          {nonDeletedReminderCount === 0 && reminderFilter === 'active' && (
+          {nonDeletedReminderCount === 0 && (
             <Text style={styles.quoteText} numberOfLines={2}>
               {appQuote}
             </Text>
           )}
           <Text style={styles.emptyText}>
-            {nonDeletedReminderCount === 0 && reminderFilter === 'active'
+            {nonDeletedReminderCount === 0
               ? 'Nothing to remember' : 'No matches'}
           </Text>
           <Text style={styles.emptySubtext}>
-            {nonDeletedReminderCount === 0 && reminderFilter === 'active'
+            {nonDeletedReminderCount === 0
               ? 'Must be nice. Tap + to ruin that.' : 'Try a different filter.'}
           </Text>
         </View>

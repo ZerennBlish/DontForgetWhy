@@ -104,6 +104,34 @@ export default function TimePicker({
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (hours !== lastHourRef.current) {
+      lastHourRef.current = hours;
+      setLocalHours(hours);
+      hoursFLRef.current?.scrollToOffset({
+        offset: (hoursMid + (hours - minHours)) * itemHeight,
+        animated: false,
+      });
+    }
+    if (minutes !== lastMinuteRef.current) {
+      lastMinuteRef.current = minutes;
+      setLocalMinutes(minutes);
+      const minIdx = minuteStep > 1 ? Math.round(minutes / minuteStep) : minutes;
+      minutesFLRef.current?.scrollToOffset({
+        offset: (minutesMid + minIdx) * itemHeight,
+        animated: false,
+      });
+    }
+    if (showSeconds && seconds !== lastSecondRef.current) {
+      lastSecondRef.current = seconds;
+      setLocalSeconds(seconds);
+      secondsFLRef.current?.scrollToOffset({
+        offset: (secondsMid + seconds) * itemHeight,
+        animated: false,
+      });
+    }
+  }, [hours, minutes, seconds, showSeconds, hoursMid, minutesMid, secondsMid, minHours, minuteStep, itemHeight]);
+
   const getItemLayout = useCallback(
     (_: any, index: number) => ({
       length: itemHeight,

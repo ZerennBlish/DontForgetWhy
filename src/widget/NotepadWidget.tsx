@@ -11,7 +11,9 @@ export interface WidgetNote {
 
 export interface WidgetTheme {
   background: string;
+  cellBg: string;
   text: string;
+  textSecondary: string;
   border: string;
   accent: string;
 }

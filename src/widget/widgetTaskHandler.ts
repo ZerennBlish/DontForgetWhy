@@ -28,8 +28,8 @@ import { DetailedWidget } from './DetailedWidget';
 import type { DetailedAlarm, DetailedPreset, DetailedReminder } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
 import { NotepadWidgetCompact } from './NotepadWidgetCompact';
-import type { WidgetNote } from './NotepadWidget';
-import { generateCustomTheme } from '../theme/colors';
+import type { WidgetNote, WidgetTheme } from './NotepadWidget';
+import { themes, generateCustomThemeDual } from '../theme/colors';
 import { getNotes } from '../services/noteStorage';
 import { getPinnedNotes } from '../services/widgetPins';
 import { setPendingNoteAction } from '../services/noteStorage';
@@ -549,31 +549,36 @@ export async function getDetailedReminders(): Promise<DetailedReminder[]> {
 
 // ── Widget theme ──
 
-export async function getWidgetTheme(): Promise<{ background: string; text: string; border: string; accent: string }> {
-  const themeBackgrounds: Record<string, { background: string; text: string; border: string; accent: string }> = {
-    midnight: { background: '#121220', text: '#EAEAFF', border: '#2A2A3E', accent: '#4A90D9' },
-    obsidian: { background: '#1A1A1E', text: '#E5E5EA', border: '#3A3A40', accent: '#A0A0B0' },
-    forest: { background: '#0E1A12', text: '#E0F0E2', border: '#2A3E2D', accent: '#4CAF50' },
-    royal: { background: '#14101E', text: '#EDE0FF', border: '#322642', accent: '#9C6ADE' },
-    bubblegum: { background: '#FFF0F5', text: '#2A0A18', border: '#F0C0D5', accent: '#E0389A' },
-    sunshine: { background: '#FFFDE7', text: '#1A1400', border: '#EFE0A0', accent: '#E6A817' },
-    ocean: { background: '#F0F7FF', text: '#0A1520', border: '#B8D4F0', accent: '#0077CC' },
-    mint: { background: '#F0FFF4', text: '#0A1A10', border: '#B8E0C8', accent: '#10B981' },
-  };
+export async function getWidgetTheme(): Promise<WidgetTheme> {
   try {
     const themeName = await AsyncStorage.getItem('appTheme');
-    const key = themeName || 'midnight';
+    let key = themeName || 'midnight';
+    const themeMigration: Record<string, string> = {
+      obsidian: 'void', forest: 'neon', royal: 'ember',
+      bubblegum: 'frost', sunshine: 'sand', ocean: 'frost',
+      mint: 'frost', charcoal: 'void', amoled: 'void',
+      slate: 'neon', paper: 'frost', cream: 'sand', arctic: 'frost',
+    };
+    if (themeMigration[key]) key = themeMigration[key];
     if (key === 'custom') {
       const customRaw = await AsyncStorage.getItem('customTheme');
       if (customRaw) {
-        const parsed = JSON.parse(customRaw) as { accent: string };
-        const generated = generateCustomTheme(parsed.accent);
-        return { background: generated.background, text: generated.textPrimary, border: generated.border, accent: generated.accent };
+        const parsed = JSON.parse(customRaw);
+        if (typeof parsed === 'string') {
+          const generated = generateCustomThemeDual(parsed, parsed);
+          return { background: generated.background, cellBg: generated.card, text: generated.textPrimary, textSecondary: generated.textSecondary, border: generated.border, accent: generated.accent };
+        }
+        const obj = parsed as { accent: string; background?: string };
+        const bgHex = obj.background || obj.accent;
+        const generated = generateCustomThemeDual(bgHex, obj.accent);
+        return { background: generated.background, cellBg: generated.card, text: generated.textPrimary, textSecondary: generated.textSecondary, border: generated.border, accent: generated.accent };
       }
     }
-    return themeBackgrounds[key] || themeBackgrounds.midnight;
+    const theme = themes[key as keyof typeof themes] || themes.midnight;
+    return { background: theme.background, cellBg: theme.card, text: theme.textPrimary, textSecondary: theme.textSecondary, border: theme.border, accent: theme.accent };
   } catch {
-    return themeBackgrounds.midnight;
+    const fallback = themes.midnight;
+    return { background: fallback.background, cellBg: fallback.card, text: fallback.textPrimary, textSecondary: fallback.textSecondary, border: fallback.border, accent: fallback.accent };
   }
 }
 
@@ -616,14 +621,16 @@ export async function getWidgetNotes(): Promise<WidgetNote[]> {
 async function renderCompactWidget(props: WidgetTaskHandlerProps) {
   const alarms = await getWidgetAlarms();
   const presets = await getWidgetPresets();
-  props.renderWidget(React.createElement(TimerWidget, { alarms, presets }));
+  const theme = await getWidgetTheme();
+  props.renderWidget(React.createElement(TimerWidget, { alarms, presets, theme }));
 }
 
 async function renderDetailedWidget(props: WidgetTaskHandlerProps) {
   const alarms = await getDetailedAlarms();
   const presets = await getDetailedPresets();
   const reminders = await getDetailedReminders();
-  props.renderWidget(React.createElement(DetailedWidget, { alarms, presets, reminders }));
+  const theme = await getWidgetTheme();
+  props.renderWidget(React.createElement(DetailedWidget, { alarms, presets, reminders, theme }));
 }
 
 async function renderNotepadWidget(props: WidgetTaskHandlerProps): Promise<void> {
@@ -641,13 +648,14 @@ async function renderNotepadWidgetCompact(props: WidgetTaskHandlerProps): Promis
 // ── Refresh both widgets (called after timer start from widget) ──
 
 async function refreshAllWidgets(): Promise<void> {
+  const theme = await getWidgetTheme();
   try {
     await requestWidgetUpdate({
       widgetName: 'TimerWidget',
       renderWidget: async () => {
         const alarms = await getWidgetAlarms();
         const presets = await getWidgetPresets();
-        return React.createElement(TimerWidget, { alarms, presets });
+        return React.createElement(TimerWidget, { alarms, presets, theme });
       },
     });
   } catch {
@@ -660,7 +668,7 @@ async function refreshAllWidgets(): Promise<void> {
         const alarms = await getDetailedAlarms();
         const presets = await getDetailedPresets();
         const reminders = await getDetailedReminders();
-        return React.createElement(DetailedWidget, { alarms, presets, reminders });
+        return React.createElement(DetailedWidget, { alarms, presets, reminders, theme });
       },
     });
   } catch {
@@ -671,7 +679,6 @@ async function refreshAllWidgets(): Promise<void> {
       widgetName: 'NotepadWidget',
       renderWidget: async () => {
         const notes = await getWidgetNotes();
-        const theme = await getWidgetTheme();
         return React.createElement(NotepadWidget, { notes, theme });
       },
     });
@@ -683,7 +690,6 @@ async function refreshAllWidgets(): Promise<void> {
       widgetName: 'NotepadWidgetCompact',
       renderWidget: async () => {
         const notes = await getWidgetNotes();
-        const theme = await getWidgetTheme();
         return React.createElement(NotepadWidgetCompact, { notes, theme });
       },
     });

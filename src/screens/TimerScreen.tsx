@@ -23,7 +23,7 @@ import {
   deleteUserTimer,
   updateUserTimer,
 } from '../services/timerStorage';
-import { getPinnedPresets, togglePinPreset, isPinned } from '../services/widgetPins';
+import { getPinnedPresets, togglePinPreset, isPinned, unpinPreset } from '../services/widgetPins';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { loadSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
@@ -559,7 +559,7 @@ export default function TimerScreen({
 
     const ut: UserTimer = {
       id: uuidv4(),
-      icon: newTimerIcon,
+      icon: newTimerIcon || '\u{23F1}\u{FE0F}',
       label: newTimerName.trim(),
       seconds: totalSeconds,
       createdAt: new Date().toISOString(),
@@ -607,7 +607,7 @@ export default function TimerScreen({
 
     const timerSoundId = soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined;
     const updatedLabel = newTimerName.trim();
-    const updatedIcon = newTimerIcon;
+    const updatedIcon = newTimerIcon || '\u{23F1}\u{FE0F}';
 
     await updateUserTimer(editingUserTimer.id, { seconds: totalSeconds, soundId: timerSoundId, label: updatedLabel, icon: updatedIcon });
     setUserTimers((prev) =>
@@ -689,7 +689,10 @@ export default function TimerScreen({
               onPress: async () => {
                 hapticHeavy();
                 await deleteUserTimer(ut.id);
+                await unpinPreset(ut.id);
                 setUserTimers((prev) => prev.filter((t) => t.id !== ut.id));
+                setPinnedIds((prev) => prev.filter((id) => id !== ut.id));
+                refreshTimerWidget().catch(() => {});
               },
             },
           ]);
@@ -913,8 +916,8 @@ export default function TimerScreen({
                   autoCorrect={false}
                   onChangeText={(text) => {
                     if (text) {
-                      const chars = [...text];
-                      setNewTimerIcon(chars[0]);
+                      const graphemes = [...text];
+                      setNewTimerIcon(graphemes[graphemes.length - 1] || '\u{1F60A}');
                     }
                     if (iconInputRef.current) {
                       iconInputRef.current.setNativeProps({ text: '' });

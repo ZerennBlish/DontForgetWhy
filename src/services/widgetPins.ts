@@ -38,6 +38,14 @@ export function isPinned(presetId: string, pinnedList: string[]): boolean {
   return pinnedList.includes(presetId);
 }
 
+export async function unpinPreset(presetId: string): Promise<void> {
+  const current = await getPinnedPresets();
+  const filtered = current.filter((id) => id !== presetId);
+  if (filtered.length !== current.length) {
+    await AsyncStorage.setItem(PINNED_KEY, JSON.stringify(filtered));
+  }
+}
+
 // --- Alarm pins ---
 
 export async function getPinnedAlarms(): Promise<string[]> {
