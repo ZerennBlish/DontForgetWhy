@@ -5,11 +5,13 @@ const STORAGE_KEY = 'appSettings';
 export interface AppSettings {
   guessWhyEnabled: boolean;
   timeFormat: '12h' | '24h';
+  timeInputMode: 'scroll' | 'type';
 }
 
 const defaultSettings: AppSettings = {
   guessWhyEnabled: true,
   timeFormat: '12h',
+  timeInputMode: 'scroll',
 };
 
 export async function loadSettings(): Promise<AppSettings> {
@@ -26,6 +28,10 @@ export async function loadSettings(): Promise<AppSettings> {
         parsed.timeFormat === '12h' || parsed.timeFormat === '24h'
           ? parsed.timeFormat
           : defaultSettings.timeFormat,
+      timeInputMode:
+        parsed.timeInputMode === 'scroll' || parsed.timeInputMode === 'type'
+          ? parsed.timeInputMode
+          : defaultSettings.timeInputMode,
     };
   } catch {
     return { ...defaultSettings };

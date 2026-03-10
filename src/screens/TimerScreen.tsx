@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,23 +6,30 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  TextInput,
   Dimensions,
   ToastAndroid,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
-import type { TimerPreset, ActiveTimer } from '../types/timer';
+import type { TimerPreset, ActiveTimer, UserTimer } from '../types/timer';
 import {
   loadPresets,
   saveCustomDuration,
   recordPresetUsage,
   loadRecentPresetIds,
+  loadUserTimers,
+  saveUserTimer,
+  deleteUserTimer,
+  updateUserTimer,
 } from '../services/timerStorage';
 import { getPinnedPresets, togglePinPreset, isPinned } from '../services/widgetPins';
 import { refreshTimerWidget } from '../widget/updateWidget';
+import { loadSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticLight, hapticHeavy } from '../utils/haptics';
+import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
+import TimePicker from '../components/TimePicker';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PRESET_CARD_WIDTH = (SCREEN_WIDTH - 32 - 16) / 3;
@@ -67,10 +74,17 @@ export default function TimerScreen({
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [customModal, setCustomModal] = useState<TimerPreset | null>(null);
-  const [customHours, setCustomHours] = useState('');
-  const [customMinutes, setCustomMinutes] = useState('');
-  const [customSeconds, setCustomSeconds] = useState('');
+  const [customHours, setCustomHours] = useState(0);
+  const [customMinutes, setCustomMinutes] = useState(0);
+  const [customSeconds, setCustomSeconds] = useState(0);
   const [soundMode, setSoundMode] = useState<'sound' | 'vibrate' | 'silent'>('sound');
+  const [userTimers, setUserTimers] = useState<UserTimer[]>([]);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [newTimerName, setNewTimerName] = useState('');
+  const [newTimerIcon, setNewTimerIcon] = useState('\u{1F60A}');
+  const [editingUserTimer, setEditingUserTimer] = useState<UserTimer | null>(null);
+  const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
+  const iconInputRef = useRef<TextInput>(null);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -213,7 +227,7 @@ export default function TimerScreen({
     modalTitleRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'space-between',
       marginBottom: 4,
     },
     modalTitle: {
@@ -229,10 +243,20 @@ export default function TimerScreen({
       justifyContent: 'center',
       borderRadius: 17,
       backgroundColor: colors.background,
-      marginLeft: 10,
     },
     modalPinText: {
       fontSize: 16,
+    },
+    soundModeIconBtn: {
+      width: 34,
+      height: 34,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 17,
+      backgroundColor: colors.card,
+    },
+    soundModeIconText: {
+      fontSize: 18,
     },
     modalSubtitle: {
       fontSize: 14,
@@ -297,37 +321,53 @@ export default function TimerScreen({
       fontWeight: '700',
       color: colors.textPrimary,
     },
-    soundModeLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textSecondary,
-      marginBottom: 10,
-    },
-    soundModeRow: {
+    newTimerHeaderRow: {
       flexDirection: 'row',
-      gap: 10,
-      marginBottom: 20,
+      alignItems: 'center',
+      marginBottom: 4,
     },
-    soundModePill: {
-      flex: 1,
-      paddingVertical: 10,
-      borderRadius: 12,
-      backgroundColor: colors.background,
+    emojiCircle: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border,
       alignItems: 'center',
+      justifyContent: 'center',
     },
-    soundModePillActive: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent,
+    emojiCircleText: {
+      fontSize: 24,
     },
-    soundModePillText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textSecondary,
-    },
-    soundModePillTextActive: {
+    headerNameInput: {
+      flex: 1,
+      marginHorizontal: 12,
+      fontSize: 18,
+      fontWeight: '700',
       color: colors.textPrimary,
+      textAlign: 'center',
+      backgroundColor: 'transparent',
+      paddingVertical: 4,
+    },
+    headerSoundBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.card,
+    },
+    emojiHintSmall: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    hiddenInput: {
+      position: 'absolute',
+      opacity: 0,
+      width: 1,
+      height: 1,
     },
   }), [colors, insets.bottom]);
 
@@ -335,6 +375,8 @@ export default function TimerScreen({
     loadPresets().then(setPresets);
     loadRecentPresetIds().then(setRecentIds);
     getPinnedPresets().then(setPinnedIds);
+    loadUserTimers().then(setUserTimers);
+    loadSettings().then((s) => setTimeInputMode(s.timeInputMode));
   }, []);
 
   // Split presets into recent, rest, and custom
@@ -358,6 +400,17 @@ export default function TimerScreen({
     hapticLight();
     const duration = preset.customSeconds || preset.seconds;
     if (duration <= 0) {
+      if (preset.id === 'custom') {
+        setIsCreatingNew(true);
+        setCustomHours(0);
+        setCustomMinutes(0);
+        setCustomSeconds(0);
+        setSoundMode('sound');
+        setNewTimerName('');
+        setNewTimerIcon('\u{1F60A}');
+        setCustomModal(preset);
+        return;
+      }
       handleLongPress(preset);
       return;
     }
@@ -386,13 +439,24 @@ export default function TimerScreen({
   };
 
   const handleLongPress = (preset: TimerPreset) => {
+    if (preset.id === 'custom') {
+      setIsCreatingNew(true);
+      setNewTimerName('');
+      setNewTimerIcon('\u{1F60A}');
+      setCustomHours(0);
+      setCustomMinutes(0);
+      setCustomSeconds(0);
+      setSoundMode('sound');
+      setCustomModal(preset);
+      return;
+    }
     const total = preset.customSeconds || preset.seconds;
     const hours = Math.floor(total / 3600);
     const mins = Math.floor((total % 3600) / 60);
     const secs = total % 60;
-    setCustomHours(hours > 0 ? hours.toString() : '');
-    setCustomMinutes(mins > 0 ? mins.toString() : '');
-    setCustomSeconds(secs > 0 ? secs.toString() : '');
+    setCustomHours(hours);
+    setCustomMinutes(mins);
+    setCustomSeconds(secs);
     setSoundMode('sound');
     setCustomModal(preset);
   };
@@ -414,9 +478,9 @@ export default function TimerScreen({
 
   const handleSaveCustom = async () => {
     if (!customModal) return;
-    const hours = Math.min(parseInt(customHours, 10) || 0, 23);
-    const mins = Math.min(parseInt(customMinutes, 10) || 0, 59);
-    const secs = Math.min(parseInt(customSeconds, 10) || 0, 59);
+    const hours = Math.min(customHours, 23);
+    const mins = Math.min(customMinutes, 59);
+    const secs = Math.min(customSeconds, 59);
     const totalSeconds = hours * 3600 + mins * 60 + secs;
     if (totalSeconds <= 0) {
       setCustomModal(null);
@@ -434,46 +498,177 @@ export default function TimerScreen({
     await handleStartTimer(updatedPreset, timerSoundId);
   };
 
-  const handleHoursChange = (t: string) => {
-    const digits = t.replace(/[^0-9]/g, '');
-    if (digits === '') {
-      setCustomHours('');
+  const closeModal = () => {
+    setCustomModal(null);
+    setIsCreatingNew(false);
+    setEditingUserTimer(null);
+    setNewTimerName('');
+    setNewTimerIcon('\u{1F60A}');
+  };
+
+  const handleSaveNewTimer = async () => {
+    const hours = Math.min(customHours, 23);
+    const mins = Math.min(customMinutes, 59);
+    const secs = Math.min(customSeconds, 59);
+    const totalSeconds = hours * 3600 + mins * 60 + secs;
+
+    if (!newTimerName.trim()) {
+      ToastAndroid.show('Give your timer a name', ToastAndroid.SHORT);
       return;
     }
-    const num = parseInt(digits, 10);
-    if (num > 23) {
-      setCustomHours('23');
-    } else {
-      setCustomHours(digits);
+    if (totalSeconds <= 0) {
+      closeModal();
+      return;
+    }
+
+    const timerSoundId = soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined;
+
+    const ut: UserTimer = {
+      id: uuidv4(),
+      icon: newTimerIcon,
+      label: newTimerName.trim(),
+      seconds: totalSeconds,
+      createdAt: new Date().toISOString(),
+      soundId: timerSoundId,
+    };
+
+    await saveUserTimer(ut);
+    setUserTimers((prev) => [ut, ...prev]);
+
+    const activeTimer: ActiveTimer = {
+      id: uuidv4(),
+      presetId: ut.id,
+      label: ut.label,
+      icon: ut.icon,
+      totalSeconds,
+      remainingSeconds: totalSeconds,
+      startedAt: new Date().toISOString(),
+      isRunning: true,
+      soundId: timerSoundId,
+    };
+
+    closeModal();
+    try {
+      await onAddTimer(activeTimer);
+    } catch (error) {
+      console.error('[handleSaveNewTimer] onAddTimer failed:', error);
     }
   };
 
-  const handleMinutesChange = (t: string) => {
-    const digits = t.replace(/[^0-9]/g, '');
-    if (digits === '') {
-      setCustomMinutes('');
+  const handleSaveEditTimer = async () => {
+    if (!editingUserTimer) return;
+    const hours = Math.min(customHours, 23);
+    const mins = Math.min(customMinutes, 59);
+    const secs = Math.min(customSeconds, 59);
+    const totalSeconds = hours * 3600 + mins * 60 + secs;
+
+    if (!newTimerName.trim()) {
+      ToastAndroid.show('Give your timer a name', ToastAndroid.SHORT);
       return;
     }
-    const num = parseInt(digits, 10);
-    if (num > 59) {
-      setCustomMinutes('59');
-    } else {
-      setCustomMinutes(digits);
+    if (totalSeconds <= 0) {
+      closeModal();
+      return;
+    }
+
+    const timerSoundId = soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined;
+    const updatedLabel = newTimerName.trim();
+    const updatedIcon = newTimerIcon;
+
+    await updateUserTimer(editingUserTimer.id, { seconds: totalSeconds, soundId: timerSoundId, label: updatedLabel, icon: updatedIcon });
+    setUserTimers((prev) =>
+      prev.map((t) =>
+        t.id === editingUserTimer.id ? { ...t, seconds: totalSeconds, soundId: timerSoundId, label: updatedLabel, icon: updatedIcon } : t
+      )
+    );
+
+    const activeTimer: ActiveTimer = {
+      id: uuidv4(),
+      presetId: editingUserTimer.id,
+      label: updatedLabel,
+      icon: updatedIcon,
+      totalSeconds,
+      remainingSeconds: totalSeconds,
+      startedAt: new Date().toISOString(),
+      isRunning: true,
+      soundId: timerSoundId,
+    };
+
+    closeModal();
+    try {
+      await onAddTimer(activeTimer);
+    } catch (error) {
+      console.error('[handleSaveEditTimer] onAddTimer failed:', error);
     }
   };
 
-  const handleSecondsChange = (t: string) => {
-    const digits = t.replace(/[^0-9]/g, '');
-    if (digits === '') {
-      setCustomSeconds('');
-      return;
+  const handleStartUserTimer = async (ut: UserTimer) => {
+    hapticLight();
+    const activeTimer: ActiveTimer = {
+      id: uuidv4(),
+      presetId: ut.id,
+      label: ut.label,
+      icon: ut.icon,
+      totalSeconds: ut.seconds,
+      remainingSeconds: ut.seconds,
+      startedAt: new Date().toISOString(),
+      isRunning: true,
+      soundId: ut.soundId,
+    };
+    try {
+      await onAddTimer(activeTimer);
+    } catch (error) {
+      console.error('[handleStartUserTimer] onAddTimer failed:', error);
     }
-    const num = parseInt(digits, 10);
-    if (num > 59) {
-      setCustomSeconds('59');
-    } else {
-      setCustomSeconds(digits);
-    }
+  };
+
+  const handleUserTimerLongPress = (ut: UserTimer) => {
+    hapticLight();
+    Alert.alert(ut.icon + ' ' + ut.label, undefined, [
+      {
+        text: 'Edit',
+        onPress: () => {
+          const hours = Math.floor(ut.seconds / 3600);
+          const mins = Math.floor((ut.seconds % 3600) / 60);
+          const secs = ut.seconds % 60;
+          setCustomHours(hours);
+          setCustomMinutes(mins);
+          setCustomSeconds(secs);
+          setNewTimerName(ut.label);
+          setNewTimerIcon(ut.icon);
+          setSoundMode(
+            ut.soundId === 'silent' ? 'vibrate' : ut.soundId === 'true_silent' ? 'silent' : 'sound'
+          );
+          setEditingUserTimer(ut);
+          setCustomModal({ id: ut.id, icon: ut.icon, label: ut.label, seconds: ut.seconds });
+        },
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert('Delete ' + ut.label + '?', undefined, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: async () => {
+                hapticHeavy();
+                await deleteUserTimer(ut.id);
+                setUserTimers((prev) => prev.filter((t) => t.id !== ut.id));
+              },
+            },
+          ]);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handleModalSave = () => {
+    if (isCreatingNew) return handleSaveNewTimer();
+    if (editingUserTimer) return handleSaveEditTimer();
+    return handleSaveCustom();
   };
 
   const renderPresetCard = (preset: TimerPreset) => (
@@ -549,6 +744,30 @@ export default function TimerScreen({
         </View>
       )}
 
+      {/* My Timers */}
+      {userTimers.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.subsectionLabel}>My Timers</Text>
+          <View style={styles.presetGrid}>
+            {userTimers.map((ut) => (
+              <TouchableOpacity
+                key={ut.id}
+                style={styles.presetCard}
+                onPress={() => handleStartUserTimer(ut)}
+                onLongPress={() => handleUserTimerLongPress(ut)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.presetIcon}>{ut.icon}</Text>
+                <Text style={styles.presetLabel}>{ut.label}</Text>
+                <Text style={styles.presetDuration}>
+                  {formatDuration(ut.seconds)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
       {/* Recent Presets */}
       {recentPresets.length > 0 && (
         <View style={styles.section}>
@@ -571,114 +790,175 @@ export default function TimerScreen({
         </View>
       </View>
 
-      {/* Custom Duration Modal */}
+      {/* Custom Duration / New Timer / Edit Timer Modal */}
       <Modal transparent visible={!!customModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <View style={styles.modalTitleRow}>
-              <Text style={styles.modalTitle}>
-                {customModal?.icon} {customModal?.label}
-              </Text>
-              {customModal && customModal.id !== 'custom' && (
-                <TouchableOpacity
-                  onPress={() => { hapticLight(); handlePinToggle(customModal); }}
-                  style={[
-                    styles.modalPinBtn,
-                    modalPresetPinned && { backgroundColor: colors.accent },
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[
-                    styles.modalPinText,
-                    { opacity: modalPresetPinned ? 1 : 0.3 },
-                  ]}>
-                    {'\u{1F4CC}'}
+            {isCreatingNew || editingUserTimer ? (
+              <>
+                <View style={styles.newTimerHeaderRow}>
+                  <TouchableOpacity
+                    style={styles.emojiCircle}
+                    onPress={() => { hapticLight(); iconInputRef.current?.focus(); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.emojiCircleText}>{newTimerIcon}</Text>
+                  </TouchableOpacity>
+                  <TextInput
+                    style={styles.headerNameInput}
+                    placeholder="Name your timer"
+                    placeholderTextColor={colors.textTertiary}
+                    maxLength={30}
+                    value={newTimerName}
+                    onChangeText={setNewTimerName}
+                    autoFocus={isCreatingNew}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSoundMode((prev) => {
+                        if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
+                        if (prev === 'vibrate') return 'silent';
+                        hapticLight(); setTimeout(() => hapticLight(), 100); return 'sound';
+                      });
+                    }}
+                    style={[
+                      styles.headerSoundBtn,
+                      soundMode === 'sound' && { backgroundColor: colors.accent },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.soundModeIconText}>
+                      {soundMode === 'sound' ? '\u{1F514}' : soundMode === 'vibrate' ? '\u{1F4F3}' : '\u{1F507}'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.emojiHintSmall}>Tap {'\u{1F60A}'} to set icon</Text>
+                <TextInput
+                  ref={iconInputRef}
+                  style={styles.hiddenInput}
+                  autoCorrect={false}
+                  onChangeText={(text) => {
+                    if (text) {
+                      const chars = [...text];
+                      setNewTimerIcon(chars[0]);
+                    }
+                    if (iconInputRef.current) {
+                      iconInputRef.current.setNativeProps({ text: '' });
+                      iconInputRef.current.blur();
+                    }
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                <View style={styles.modalTitleRow}>
+                  {customModal && customModal.id !== 'custom' ? (
+                    <TouchableOpacity
+                      onPress={() => { hapticLight(); handlePinToggle(customModal); }}
+                      style={[
+                        styles.modalPinBtn,
+                        modalPresetPinned && { backgroundColor: colors.accent },
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.modalPinText,
+                        { opacity: modalPresetPinned ? 1 : 0.3 },
+                      ]}>
+                        {'\u{1F4CC}'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{ width: 34 }} />
+                  )}
+                  <Text style={styles.modalTitle}>
+                    {(customModal?.icon ?? '') + ' ' + (customModal?.label ?? '')}
                   </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <Text style={styles.modalSubtitle}>
-              Set custom duration
-            </Text>
-            <View style={styles.modalInputRow}>
-              <View style={styles.modalInputGroup}>
-                <TextInput
-                  style={styles.modalInput}
-                  value={customHours}
-                  onChangeText={handleHoursChange}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  placeholderTextColor={colors.textTertiary}
-                  autoFocus
-                  maxLength={2}
-                />
-                <Text style={styles.modalInputLabel}>hr</Text>
-              </View>
-              <View style={styles.modalInputGroup}>
-                <TextInput
-                  style={styles.modalInput}
-                  value={customMinutes}
-                  onChangeText={handleMinutesChange}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  placeholderTextColor={colors.textTertiary}
-                  maxLength={2}
-                />
-                <Text style={styles.modalInputLabel}>min</Text>
-              </View>
-              <View style={styles.modalInputGroup}>
-                <TextInput
-                  style={styles.modalInput}
-                  value={customSeconds}
-                  onChangeText={handleSecondsChange}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  placeholderTextColor={colors.textTertiary}
-                  maxLength={2}
-                />
-                <Text style={styles.modalInputLabel}>sec</Text>
-              </View>
-            </View>
-            <Text style={styles.soundModeLabel}>Timer Sound</Text>
-            <View style={styles.soundModeRow}>
-              <TouchableOpacity
-                style={[styles.soundModePill, soundMode === 'sound' && styles.soundModePillActive]}
-                onPress={() => { hapticLight(); setSoundMode('sound'); }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.soundModePillText, soundMode === 'sound' && styles.soundModePillTextActive]}>
-                  {'\u{1F514}'} Sound
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSoundMode((prev) => {
+                        if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
+                        if (prev === 'vibrate') return 'silent';
+                        hapticLight(); setTimeout(() => hapticLight(), 100); return 'sound';
+                      });
+                    }}
+                    style={[
+                      styles.soundModeIconBtn,
+                      soundMode === 'sound' && { backgroundColor: colors.accent },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.soundModeIconText}>
+                      {soundMode === 'sound' ? '\u{1F514}' : soundMode === 'vibrate' ? '\u{1F4F3}' : '\u{1F507}'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.modalSubtitle}>
+                  Set custom duration
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.soundModePill, soundMode === 'vibrate' && styles.soundModePillActive]}
-                onPress={() => { hapticLight(); setSoundMode('vibrate'); }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.soundModePillText, soundMode === 'vibrate' && styles.soundModePillTextActive]}>
-                  {'\u{1F4F3}'} Vibrate
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.soundModePill, soundMode === 'silent' && styles.soundModePillActive]}
-                onPress={() => { hapticLight(); setSoundMode('silent'); }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.soundModePillText, soundMode === 'silent' && styles.soundModePillTextActive]}>
-                  {'\u{1F507}'} Silent
-                </Text>
-              </TouchableOpacity>
-            </View>
+              </>
+            )}
+            {timeInputMode === 'type' ? (
+              <View style={styles.modalInputRow}>
+                <View style={styles.modalInputGroup}>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={String(customHours)}
+                    onChangeText={(t) => { const n = parseInt(t.replace(/[^0-9]/g, ''), 10); setCustomHours(isNaN(n) ? 0 : Math.min(n, 23)); }}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectTextOnFocus
+                  />
+                  <Text style={styles.modalInputLabel}>hr</Text>
+                </View>
+                <View style={styles.modalInputGroup}>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={String(customMinutes)}
+                    onChangeText={(t) => { const n = parseInt(t.replace(/[^0-9]/g, ''), 10); setCustomMinutes(isNaN(n) ? 0 : Math.min(n, 59)); }}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectTextOnFocus
+                  />
+                  <Text style={styles.modalInputLabel}>min</Text>
+                </View>
+                <View style={styles.modalInputGroup}>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={String(customSeconds)}
+                    onChangeText={(t) => { const n = parseInt(t.replace(/[^0-9]/g, ''), 10); setCustomSeconds(isNaN(n) ? 0 : Math.min(n, 59)); }}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectTextOnFocus
+                  />
+                  <Text style={styles.modalInputLabel}>sec</Text>
+                </View>
+              </View>
+            ) : (
+              <TimePicker
+                hours={customHours}
+                minutes={customMinutes}
+                seconds={customSeconds}
+                onHoursChange={setCustomHours}
+                onMinutesChange={setCustomMinutes}
+                onSecondsChange={setCustomSeconds}
+                showSeconds={true}
+                maxHours={24}
+                maxMinutes={60}
+                maxSeconds={60}
+                labels={{ hours: 'hr', minutes: 'min', seconds: 'sec' }}
+              />
+            )}
             <View style={styles.modalBtns}>
               <TouchableOpacity
-                onPress={() => { hapticLight(); setCustomModal(null); }}
+                onPress={() => { hapticLight(); closeModal(); }}
                 style={styles.modalCancelBtn}
                 activeOpacity={0.7}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={handleSaveCustom}
+                onPress={handleModalSave}
                 style={styles.modalSaveBtn}
                 activeOpacity={0.7}
               >

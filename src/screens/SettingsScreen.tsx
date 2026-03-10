@@ -11,6 +11,7 @@ import {
   Platform,
   ImageBackground,
   ToastAndroid,
+  TextInput,
 } from 'react-native';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
@@ -38,6 +39,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const { colors, themeName, customAccent, setTheme, setCustomTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [timerSoundName, setTimerSoundName] = useState<string | null>(null);
   const [timerSoundID, setTimerSoundID] = useState<number | null>(null);
@@ -271,6 +273,7 @@ export default function SettingsScreen({ navigation }: Props) {
   useEffect(() => {
     loadSettings().then((s) => {
       setTimeFormat(s.timeFormat);
+      setTimeInputMode(s.timeInputMode);
     });
     // Load haptics setting
     (async () => {
@@ -415,6 +418,12 @@ export default function SettingsScreen({ navigation }: Props) {
     await saveSettings({ timeFormat: newFormat });
   };
 
+  const handleTimeInputModeChange = async (mode: 'scroll' | 'type') => {
+    hapticLight();
+    setTimeInputMode(mode);
+    await saveSettings({ timeInputMode: mode });
+  };
+
   const handleHapticsToggle = async (value: boolean) => {
     setHapticsEnabled(value);
     try {
@@ -487,6 +496,29 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
         <Text style={styles.description}>
           Show times as 14:30 instead of 2:30 PM.
+        </Text>
+      </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <Text style={styles.label}>Time Input Style</Text>
+        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 2, marginTop: 8 }}>
+          <TouchableOpacity
+            style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: timeInputMode === 'scroll' ? colors.accent : 'transparent' }}
+            onPress={() => handleTimeInputModeChange('scroll')}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: timeInputMode === 'scroll' ? colors.textPrimary : colors.textTertiary }}>Scroll</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: timeInputMode === 'type' ? colors.accent : 'transparent' }}
+            onPress={() => handleTimeInputModeChange('type')}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: timeInputMode === 'type' ? colors.textPrimary : colors.textTertiary }}>Type</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.description}>
+          Choose how you set alarm and timer times: scroll wheels or text input.
         </Text>
       </View>
 
@@ -758,12 +790,39 @@ export default function SettingsScreen({ navigation }: Props) {
             </View>
 
             {silencePickerVisible && (
-              <TimePicker
-                hours={pickerHours}
-                minutes={pickerMinutes}
-                onHoursChange={setPickerHours}
-                onMinutesChange={setPickerMinutes}
-              />
+              timeInputMode === 'type' ? (
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 4 }}>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <TextInput
+                      style={{ backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 24, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', borderWidth: 1, borderColor: colors.border, width: '100%' }}
+                      value={String(pickerHours)}
+                      onChangeText={(t) => { const n = parseInt(t.replace(/[^0-9]/g, ''), 10); setPickerHours(isNaN(n) ? 0 : Math.min(n, 23)); }}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      selectTextOnFocus
+                    />
+                    <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 6 }}>Hours</Text>
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <TextInput
+                      style={{ backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 24, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', borderWidth: 1, borderColor: colors.border, width: '100%' }}
+                      value={String(pickerMinutes)}
+                      onChangeText={(t) => { const n = parseInt(t.replace(/[^0-9]/g, ''), 10); setPickerMinutes(isNaN(n) ? 0 : Math.min(n, 59)); }}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      selectTextOnFocus
+                    />
+                    <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 6 }}>Minutes</Text>
+                  </View>
+                </View>
+              ) : (
+                <TimePicker
+                  hours={pickerHours}
+                  minutes={pickerMinutes}
+                  onHoursChange={setPickerHours}
+                  onMinutesChange={setPickerMinutes}
+                />
+              )
             )}
 
             {/* Buttons */}

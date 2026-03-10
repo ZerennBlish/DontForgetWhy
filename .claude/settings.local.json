@@ -48,7 +48,9 @@
       "Bash(grep -rl \"audioAttributes\\\\|AudioAttributes\\\\|USAGE_ALARM\\\\|setSound\" /tmp/notifee_inspect/classes_dir --include=\"*.class\" -l 2>/dev/null | head -10; echo \"---\"; strings /tmp/notifee_inspect/classes_dir/n/o/t/i/f/e/e/*.class 2>/dev/null | grep -i \"audio\\\\|sound\\\\|channel\\\\|setSound\" | sort -u | head -30)",
       "Bash(npx expo prebuild --clean --platform android 2>&1)",
       "Bash(/tmp/analysis.txt:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(npm list -g eas-cli 2>/dev/null; which eas 2>/dev/null; ls node_modules/.bin/eas 2>/dev/null)",
+      "Bash(eas build --profile development --platform android --non-interactive)"
     ]
   }
 }
