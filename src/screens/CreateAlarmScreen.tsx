@@ -28,6 +28,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
+import { playModeFeedbackChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
@@ -586,7 +587,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: cardBg,
+      backgroundColor: colors.border,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
@@ -834,14 +835,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleSave = async () => {
-    hapticMedium();
+  const proceedWithSave = async () => {
     try {
-      if (!note.trim() && !selectedIcon) {
-        Alert.alert('Hold Up', "Hold up \u2014 give this alarm at least a note or an icon so you'll know what it's for.");
-        return;
-      }
-
       let rawH: number, rawM: number;
       if (timeInputMode === 'type') {
         rawH = parseInt(hourText, 10);
@@ -1010,6 +1005,23 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       console.error('[SAVE ERROR]', error);
       Alert.alert('Error', 'Failed to save alarm: ' + error.message);
     }
+  };
+
+  const handleSave = () => {
+    hapticMedium();
+    const hasSomething = nickname.trim() || note.trim() || (selectedIcon && selectedIcon !== '😊');
+    if (!hasSomething) {
+      Alert.alert(
+        'Really? Nothing?',
+        "No nickname, no reason, no icon. You're literally setting a mystery alarm. Future you is going to be SO confused.",
+        [
+          { text: "Go back, I'll fix it", style: 'cancel' },
+          { text: 'I like chaos', onPress: () => proceedWithSave() },
+        ],
+      );
+      return;
+    }
+    proceedWithSave();
   };
 
   return (
@@ -1389,7 +1401,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 setSoundMode((prev) => {
                   if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
                   if (prev === 'vibrate') return 'silent';
-                  hapticLight(); setTimeout(() => hapticLight(), 100); return 'sound';
+                  hapticLight(); setTimeout(() => hapticLight(), 100); playModeFeedbackChirp(); return 'sound';
                 });
               }}
               style={[

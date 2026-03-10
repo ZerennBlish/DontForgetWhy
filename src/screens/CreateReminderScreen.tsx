@@ -35,6 +35,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
+import { playModeFeedbackChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
@@ -522,7 +523,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: cardBg,
+      backgroundColor: colors.border,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
@@ -949,11 +950,22 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
   const handleSave = async () => {
     hapticMedium();
-    if (!text.trim() && !selectedIcon) {
-      Alert.alert('Hold Up', 'Add some text or pick an icon so you know what to remember.');
+    const hasSomething = nickname.trim() || text.trim() || (selectedIcon && selectedIcon !== '📝');
+    if (!hasSomething) {
+      Alert.alert(
+        'Bold move.',
+        "A reminder with no details. That's not a reminder, that's a vibe. Good luck remembering... whatever this is.",
+        [
+          { text: "Fine, I'll add something", style: 'cancel' },
+          { text: 'Vibes only', onPress: () => handleSave_proceed() },
+        ],
+      );
       return;
     }
+    await handleSave_proceed();
+  };
 
+  const handleSave_proceed = async () => {
     let rawH: number, rawM: number;
     if (timeInputMode === 'type') {
       rawH = parseInt(hourText, 10);
@@ -1404,7 +1416,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 setSoundMode((prev) => {
                   if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
                   if (prev === 'vibrate') return 'silent';
-                  hapticLight(); setTimeout(() => hapticLight(), 100); return 'sound';
+                  hapticLight(); setTimeout(() => hapticLight(), 100); playModeFeedbackChirp(); return 'sound';
                 });
               }}
               style={[

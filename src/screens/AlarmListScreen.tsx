@@ -131,7 +131,7 @@ export default function AlarmListScreen({ navigation, route }: Props) {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.accent + '26',
+      backgroundColor: colors.card,
       borderRadius: 14,
       paddingHorizontal: 14,
       paddingVertical: 14,
@@ -139,7 +139,7 @@ export default function AlarmListScreen({ navigation, route }: Props) {
       borderWidth: 1,
       borderColor: colors.border,
       borderLeftWidth: 4,
-      borderLeftColor: colors.accent,
+      borderLeftColor: colors.border,
     },
     navCardIcon: {
       fontSize: 26,

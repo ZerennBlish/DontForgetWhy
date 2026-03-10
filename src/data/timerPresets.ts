@@ -1,6 +1,7 @@
 import type { TimerPreset } from '../types/timer';
 
 const defaultPresets: TimerPreset[] = [
+  { id: 'custom', icon: '\u2795', label: 'Custom', seconds: 0 },
   { id: 'pizza', icon: '\u{1F355}', label: 'Pizza', seconds: 720 },
   { id: 'laundry', icon: '\u{1F455}', label: 'Laundry', seconds: 2700 },
   { id: 'stove', icon: '\u{1F525}', label: 'Stove', seconds: 1200 },
@@ -45,7 +46,6 @@ const defaultPresets: TimerPreset[] = [
   { id: 'auction', icon: '\u{1F528}', label: 'Auction', seconds: 600 },
   { id: 'car', icon: '\u{1F697}', label: 'Car', seconds: 1800 },
   { id: 'transit', icon: '\u{1F68C}', label: 'Transit', seconds: 900 },
-  { id: 'custom', icon: '\u2795', label: 'Custom', seconds: 0 },
 ];
 
 export { defaultPresets };

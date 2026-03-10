@@ -29,6 +29,7 @@ import { loadSettings } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
+import { playModeFeedbackChirp } from '../utils/soundFeedback';
 import TimePicker from '../components/TimePicker';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -202,6 +203,36 @@ export default function TimerScreen({
       right: 5,
       fontSize: 10,
       color: colors.accent,
+    },
+    cardEditBtn: {
+      position: 'absolute',
+      top: 4,
+      left: 4,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.background + '99',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1,
+    },
+    cardEditBtnText: {
+      fontSize: 10,
+    },
+    cardPinBtn: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.background + '99',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1,
+    },
+    cardPinBtnText: {
+      fontSize: 10,
     },
     hint: {
       fontSize: 11,
@@ -380,21 +411,24 @@ export default function TimerScreen({
   }, []);
 
   // Split presets into recent, rest, and custom
-  const { recentPresets, restPresets, customPreset } = useMemo(() => {
+  const { recentPresets, restPresets, customPreset, pinnedPresets } = useMemo(() => {
     const custom = presets.find((p) => p.id === 'custom') || null;
     const nonCustom = presets.filter((p) => p.id !== 'custom');
     const recentSet = new Set(recentIds);
+    const pinnedSet = new Set(pinnedIds);
+
+    const pinned = nonCustom.filter((p) => pinnedSet.has(p.id));
 
     const recent: TimerPreset[] = [];
     for (const id of recentIds) {
       const preset = nonCustom.find((p) => p.id === id);
-      if (preset) recent.push(preset);
+      if (preset && recent.length < 3) recent.push(preset);
     }
 
-    const rest = nonCustom.filter((p) => !recentSet.has(p.id));
+    const rest = nonCustom;
 
-    return { recentPresets: recent, restPresets: rest, customPreset: custom };
-  }, [presets, recentIds]);
+    return { recentPresets: recent, restPresets: rest, customPreset: custom, pinnedPresets: pinned };
+  }, [presets, recentIds, pinnedIds]);
 
   const handleStartTimer = async (preset: TimerPreset, timerSoundId?: string) => {
     hapticLight();
@@ -671,21 +705,17 @@ export default function TimerScreen({
     return handleSaveCustom();
   };
 
-  const renderPresetCard = (preset: TimerPreset) => (
+  const renderPresetCard = (preset: TimerPreset, openModal?: boolean) => (
     <TouchableOpacity
       key={preset.id}
       style={styles.presetCard}
-      onPress={() => handleStartTimer(preset)}
-      onLongPress={() => handleLongPress(preset)}
+      onPress={() => openModal ? handleLongPress(preset) : handleStartTimer(preset)}
       activeOpacity={0.7}
     >
-      {isPinned(preset.id, pinnedIds) && (
-        <Text style={styles.pinIndicator}>{'\u{1F4CC}'}</Text>
-      )}
       <Text style={styles.presetIcon}>{preset.icon}</Text>
       <Text style={styles.presetLabel}>{preset.label}</Text>
       <Text style={styles.presetDuration}>
-        {formatDuration(preset.customSeconds || preset.seconds)}
+        {preset.id === 'custom' ? 'Custom' : openModal ? 'Set' : formatDuration(preset.customSeconds || preset.seconds)}
       </Text>
     </TouchableOpacity>
   );
@@ -745,7 +775,7 @@ export default function TimerScreen({
       )}
 
       {/* My Timers */}
-      {userTimers.length > 0 && (
+      {(userTimers.length > 0 || pinnedPresets.length > 0) && (
         <View style={styles.section}>
           <Text style={styles.subsectionLabel}>My Timers</Text>
           <View style={styles.presetGrid}>
@@ -754,13 +784,58 @@ export default function TimerScreen({
                 key={ut.id}
                 style={styles.presetCard}
                 onPress={() => handleStartUserTimer(ut)}
-                onLongPress={() => handleUserTimerLongPress(ut)}
                 activeOpacity={0.7}
               >
+                <TouchableOpacity
+                  onPress={() => { hapticLight(); handleUserTimerLongPress(ut); }}
+                  style={styles.cardEditBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.cardEditBtnText}>{'\u270F\uFE0F'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { hapticLight(); handlePinToggle({ id: ut.id, icon: ut.icon, label: ut.label, seconds: ut.seconds }); }}
+                  style={styles.cardPinBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.6}
+                >
+                  <Text style={[styles.cardPinBtnText, !isPinned(ut.id, pinnedIds) && { opacity: 0.3 }]}>{'\u{1F4CC}'}</Text>
+                </TouchableOpacity>
                 <Text style={styles.presetIcon}>{ut.icon}</Text>
                 <Text style={styles.presetLabel}>{ut.label}</Text>
                 <Text style={styles.presetDuration}>
                   {formatDuration(ut.seconds)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {pinnedPresets.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                style={styles.presetCard}
+                onPress={() => handleStartTimer(p)}
+                activeOpacity={0.7}
+              >
+                <TouchableOpacity
+                  onPress={() => { hapticLight(); handleLongPress(p); }}
+                  style={styles.cardEditBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.cardEditBtnText}>{'\u270F\uFE0F'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { hapticLight(); handlePinToggle(p); }}
+                  style={styles.cardPinBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.cardPinBtnText}>{'\u{1F4CC}'}</Text>
+                </TouchableOpacity>
+                <Text style={styles.presetIcon}>{p.icon}</Text>
+                <Text style={styles.presetLabel}>{p.label}</Text>
+                <Text style={styles.presetDuration}>
+                  {formatDuration(p.customSeconds || p.seconds)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -773,7 +848,7 @@ export default function TimerScreen({
         <View style={styles.section}>
           <Text style={styles.subsectionLabel}>Recent</Text>
           <View style={styles.presetGrid}>
-            {recentPresets.map(renderPresetCard)}
+            {recentPresets.map((p) => renderPresetCard(p))}
           </View>
         </View>
       )}
@@ -783,15 +858,14 @@ export default function TimerScreen({
         <Text style={styles.subsectionLabel}>
           {recentPresets.length > 0 ? 'All Timers' : 'Quick Start'}
         </Text>
-        <Text style={styles.hint}>Long press any preset to customize</Text>
         <View style={styles.presetGrid}>
-          {restPresets.map(renderPresetCard)}
-          {customPreset && renderPresetCard(customPreset)}
+          {customPreset && renderPresetCard(customPreset, true)}
+          {restPresets.map((p) => renderPresetCard(p, true))}
         </View>
       </View>
 
       {/* Custom Duration / New Timer / Edit Timer Modal */}
-      <Modal transparent visible={!!customModal} animationType="fade">
+      <Modal transparent visible={!!customModal} animationType="fade" onRequestClose={() => { hapticLight(); setCustomModal(null); setIsCreatingNew(false); setEditingUserTimer(null); }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             {isCreatingNew || editingUserTimer ? (
@@ -818,7 +892,7 @@ export default function TimerScreen({
                       setSoundMode((prev) => {
                         if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
                         if (prev === 'vibrate') return 'silent';
-                        hapticLight(); setTimeout(() => hapticLight(), 100); return 'sound';
+                        hapticLight(); setTimeout(() => hapticLight(), 100); playModeFeedbackChirp(); return 'sound';
                       });
                     }}
                     style={[
@@ -879,7 +953,7 @@ export default function TimerScreen({
                       setSoundMode((prev) => {
                         if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
                         if (prev === 'vibrate') return 'silent';
-                        hapticLight(); setTimeout(() => hapticLight(), 100); return 'sound';
+                        hapticLight(); setTimeout(() => hapticLight(), 100); playModeFeedbackChirp(); return 'sound';
                       });
                     }}
                     style={[

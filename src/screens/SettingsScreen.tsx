@@ -34,9 +34,10 @@ import type { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 const presetNames = Object.keys(themes) as (ThemeName & keyof typeof themes)[];
+const themeDisplayNames: Record<string, string> = { amoled: 'AMOLED' };
 
 export default function SettingsScreen({ navigation }: Props) {
-  const { colors, themeName, customAccent, setTheme, setCustomTheme } = useTheme();
+  const { colors, themeName, customAccent, customBackground, setTheme, setCustomTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
@@ -45,7 +46,8 @@ export default function SettingsScreen({ navigation }: Props) {
   const [timerSoundID, setTimerSoundID] = useState<number | null>(null);
   const [timerSoundPickerVisible, setTimerSoundPickerVisible] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
-  const pickedColorRef = useRef(customAccent || colors.accent);
+  const pickedAccentRef = useRef(customAccent || colors.accent);
+  const pickedBgRef = useRef(customBackground || '#121220');
   const [hasPermissionIssues, setHasPermissionIssues] = useState(false);
   const [silenceAll, setSilenceAllState] = useState(false);
   const [silenceRemaining, setSilenceRemaining] = useState<string | null>(null);
@@ -451,14 +453,24 @@ export default function SettingsScreen({ navigation }: Props) {
     }
   };
 
-  const handleColorChange = (result: ColorFormatsObject) => {
-    pickedColorRef.current = result.hex;
+  const handleAccentChange = (result: ColorFormatsObject) => {
+    pickedAccentRef.current = result.hex;
+  };
+
+  const handleBgChange = (result: ColorFormatsObject) => {
+    pickedBgRef.current = result.hex;
   };
 
   const handleConfirmCustom = () => {
     hapticLight();
     setPickerVisible(false);
-    setCustomTheme(pickedColorRef.current);
+    setCustomTheme(pickedAccentRef.current, pickedBgRef.current);
+  };
+
+  const handleResetTheme = () => {
+    hapticLight();
+    setPickerVisible(false);
+    setTheme('midnight');
   };
 
   const isCustomActive = themeName === 'custom';
@@ -603,7 +615,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 <Text
                   style={[styles.themeName, isActive && styles.themeNameActive]}
                 >
-                  {name.charAt(0).toUpperCase() + name.slice(1)}
+                  {themeDisplayNames[name] || name.charAt(0).toUpperCase() + name.slice(1)}
                 </Text>
               </TouchableOpacity>
             );
@@ -614,7 +626,8 @@ export default function SettingsScreen({ navigation }: Props) {
             style={styles.themeItem}
             onPress={() => {
               hapticLight();
-              pickedColorRef.current = customAccent || colors.accent;
+              pickedAccentRef.current = customAccent || colors.accent;
+              pickedBgRef.current = customBackground || '#121220';
               setPickerVisible(true);
             }}
             activeOpacity={0.7}
@@ -722,13 +735,16 @@ export default function SettingsScreen({ navigation }: Props) {
       </TouchableOpacity>
 
       {/* Color Picker Modal */}
-      <Modal transparent visible={pickerVisible} animationType="fade">
+      <Modal transparent visible={pickerVisible} animationType="fade" onRequestClose={() => { hapticLight(); setPickerVisible(false); }}>
         <View style={styles.modalOverlay}>
+          <ScrollView style={{ width: '100%' }} contentContainerStyle={{ paddingVertical: 24 }} keyboardShouldPersistTaps="handled">
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Pick a Color</Text>
+            <Text style={styles.modalTitle}>Custom Theme</Text>
+
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 }}>Background Color</Text>
             <ColorPicker
-              value={pickedColorRef.current}
-              onCompleteJS={handleColorChange}
+              value={pickedBgRef.current}
+              onCompleteJS={handleBgChange}
             >
               <View style={styles.pickerWrapper}>
                 <Preview hideInitialColor />
@@ -736,6 +752,19 @@ export default function SettingsScreen({ navigation }: Props) {
                 <HueSlider />
               </View>
             </ColorPicker>
+
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginTop: 20, marginBottom: 8 }}>Accent Color</Text>
+            <ColorPicker
+              value={pickedAccentRef.current}
+              onCompleteJS={handleAccentChange}
+            >
+              <View style={styles.pickerWrapper}>
+                <Preview hideInitialColor />
+                <Panel1 />
+                <HueSlider />
+              </View>
+            </ColorPicker>
+
             <View style={styles.modalBtns}>
               <TouchableOpacity
                 onPress={() => { hapticLight(); setPickerVisible(false); }}
@@ -743,6 +772,13 @@ export default function SettingsScreen({ navigation }: Props) {
                 activeOpacity={0.7}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleResetTheme}
+                style={[styles.modalCancelBtn, { borderColor: colors.red }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalCancelText, { color: colors.red }]}>Reset</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleConfirmCustom}
@@ -753,6 +789,7 @@ export default function SettingsScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
           </View>
+          </ScrollView>
         </View>
       </Modal>
 

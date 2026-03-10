@@ -14,9 +14,10 @@ import {
   addActiveTimer,
   loadPresets,
   recordPresetUsage,
+  loadUserTimers,
 } from '../services/timerStorage';
 import { getPinnedPresets, getPinnedAlarms, getPinnedReminders } from '../services/widgetPins';
-import type { ActiveTimer } from '../types/timer';
+import type { ActiveTimer, UserTimer } from '../types/timer';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
@@ -205,6 +206,7 @@ function alarmToCompact(
 
 export async function getWidgetPresets(): Promise<WidgetPreset[]> {
   const nonCustom = defaultPresets.filter((p) => p.id !== 'custom');
+  const userTimers = await loadUserTimers();
   const result: WidgetPreset[] = [];
   const addedIds = new Set<string>();
 
@@ -216,6 +218,12 @@ export async function getWidgetPresets(): Promise<WidgetPreset[]> {
       if (preset) {
         result.push({ id: preset.id, icon: preset.icon, label: preset.label, isPinned: true });
         addedIds.add(preset.id);
+      } else {
+        const userTimer = userTimers.find((t) => t.id === id);
+        if (userTimer) {
+          result.push({ id: userTimer.id, icon: userTimer.icon, label: userTimer.label, isPinned: true });
+          addedIds.add(userTimer.id);
+        }
       }
     }
   } catch {
@@ -238,6 +246,12 @@ export async function getWidgetPresets(): Promise<WidgetPreset[]> {
             if (preset) {
               result.push({ id: preset.id, icon: preset.icon, label: preset.label });
               addedIds.add(preset.id);
+            } else {
+              const userTimer = userTimers.find((t) => t.id === id);
+              if (userTimer) {
+                result.push({ id: userTimer.id, icon: userTimer.icon, label: userTimer.label });
+                addedIds.add(userTimer.id);
+              }
             }
           }
         }
@@ -323,21 +337,34 @@ function alarmToDetailed(
 export async function getDetailedPresets(): Promise<DetailedPreset[]> {
   const nonCustom = defaultPresets.filter((p) => p.id !== 'custom');
   const allPresets = await loadPresets();
+  const userTimers = await loadUserTimers();
   const result: DetailedPreset[] = [];
   const addedIds = new Set<string>();
 
   function resolvePreset(id: string, isPinned?: boolean): DetailedPreset | null {
     const base = nonCustom.find((p) => p.id === id);
-    if (!base) return null;
-    const custom = allPresets.find((p) => p.id === id);
-    const seconds = custom?.customSeconds || base.seconds;
-    return {
-      id: base.id,
-      icon: base.icon,
-      label: base.label,
-      duration: formatDuration(seconds),
-      isPinned,
-    };
+    if (base) {
+      const custom = allPresets.find((p) => p.id === id);
+      const seconds = custom?.customSeconds || base.seconds;
+      return {
+        id: base.id,
+        icon: base.icon,
+        label: base.label,
+        duration: formatDuration(seconds),
+        isPinned,
+      };
+    }
+    const userTimer = userTimers.find((t) => t.id === id);
+    if (userTimer) {
+      return {
+        id: userTimer.id,
+        icon: userTimer.icon,
+        label: userTimer.label,
+        duration: formatDuration(userTimer.seconds),
+        isPinned,
+      };
+    }
+    return null;
   }
 
   try {
@@ -753,22 +780,40 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
         const allPresets = await loadPresets();
         const preset = allPresets.find((p) => p.id === presetId);
-        if (!preset) break;
 
-        const duration = preset.customSeconds || preset.seconds;
+        let duration: number;
+        let timerLabel: string;
+        let timerIcon: string;
+        let timerSoundId: string | undefined;
+
+        if (preset) {
+          duration = preset.customSeconds || preset.seconds;
+          timerLabel = preset.label;
+          timerIcon = preset.icon;
+        } else {
+          const userTimers = await loadUserTimers();
+          const userTimer = userTimers.find((t) => t.id === presetId);
+          if (!userTimer) break;
+          duration = userTimer.seconds;
+          timerLabel = userTimer.label;
+          timerIcon = userTimer.icon;
+          timerSoundId = userTimer.soundId;
+        }
+
         if (duration <= 0) break;
 
         const timerId = Date.now().toString() + Math.random().toString(36).slice(2);
 
         const timer: ActiveTimer = {
           id: timerId,
-          presetId: preset.id,
-          label: preset.label,
-          icon: preset.icon,
+          presetId,
+          label: timerLabel,
+          icon: timerIcon,
           totalSeconds: duration,
           remainingSeconds: duration,
           startedAt: new Date().toISOString(),
           isRunning: true,
+          soundId: timerSoundId,
         };
 
         const completionTimestamp = Date.now() + duration * 1000;
@@ -813,7 +858,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         }
 
         await addActiveTimer({ ...timer, notificationId });
-        await recordPresetUsage(preset.id);
+        await recordPresetUsage(presetId);
         await refreshAllWidgets();
       }
       break;
