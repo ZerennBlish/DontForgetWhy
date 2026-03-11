@@ -122,7 +122,17 @@ export async function loadRecentPresetIds(): Promise<string[]> {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((e: RecentEntry) => e.presetId);
+    const entries = parsed as RecentEntry[];
+    const validIds = new Set(defaultPresets.map((p) => p.id));
+    try {
+      const userTimers = await loadUserTimers();
+      for (const t of userTimers) validIds.add(t.id);
+    } catch {}
+    const pruned = entries.filter((e) => validIds.has(e.presetId));
+    if (pruned.length !== entries.length) {
+      await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(pruned));
+    }
+    return pruned.map((e) => e.presetId);
   } catch {
     return [];
   }

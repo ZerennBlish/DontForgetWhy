@@ -947,7 +947,7 @@ export default function AlarmListScreen({ navigation, route }: Props) {
                                   {formatTime(item.time, timeFormat)}
                                 </Text>
                                 <Text style={styles.deletedDetail} numberOfLines={1}>
-                                  {item.icon || '\u23F0'} {item.nickname || item.note || 'Alarm'}
+                                  {item.private ? 'Alarm' : `${item.icon || '\u23F0'} ${item.nickname || item.note || 'Alarm'}`}
                                 </Text>
                                 <Text style={styles.deletedAgo}>
                                   {formatDeletedAgo(item.deletedAt)}

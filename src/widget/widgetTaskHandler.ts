@@ -190,6 +190,14 @@ function alarmToCompact(
       label: 'Mystery',
     };
   }
+  if (alarm.private) {
+    return {
+      id: alarm.id,
+      icon: '\u23F0',
+      time: formatTime(alarm.time, timeFormat),
+      label: 'Alarm',
+    };
+  }
   let label = alarm.nickname || alarm.icon || 'Alarm';
   if (alarm.mode === 'one-time' && alarm.date) {
     const [year, month, day] = alarm.date.split('-').map(Number);
@@ -324,6 +332,14 @@ function alarmToDetailed(
       icon: '\u2753',
       time: formatTime(alarm.time, timeFormat),
       schedule: 'Mystery',
+    };
+  }
+  if (alarm.private) {
+    return {
+      id: alarm.id,
+      icon: '\u23F0',
+      time: formatTime(alarm.time, timeFormat),
+      schedule: formatSchedule(alarm),
     };
   }
   return {

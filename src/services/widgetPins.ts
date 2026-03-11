@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { defaultPresets } from '../data/timerPresets';
+import { loadUserTimers } from './timerStorage';
 
 const PINNED_KEY = 'widgetPinnedPresets';
 const ALARM_PINNED_KEY = 'widgetPinnedAlarms';
@@ -12,10 +14,18 @@ export async function getPinnedPresets(): Promise<string[]> {
     const raw = await AsyncStorage.getItem(PINNED_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((id): id is string => typeof id === 'string').slice(0, MAX_PRESET_PINS);
+    if (!Array.isArray(parsed)) return [];
+    const ids = parsed.filter((id): id is string => typeof id === 'string').slice(0, MAX_PRESET_PINS);
+    const validIds = new Set(defaultPresets.map((p) => p.id));
+    try {
+      const userTimers = await loadUserTimers();
+      for (const t of userTimers) validIds.add(t.id);
+    } catch {}
+    const pruned = ids.filter((id) => validIds.has(id));
+    if (pruned.length !== ids.length) {
+      await AsyncStorage.setItem(PINNED_KEY, JSON.stringify(pruned));
     }
-    return [];
+    return pruned;
   } catch {
     return [];
   }
