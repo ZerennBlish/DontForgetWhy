@@ -28,7 +28,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
-import { playModeFeedbackChirp } from '../utils/soundFeedback';
+import { playChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
@@ -260,6 +260,18 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const [selectedPrivate, setSelectedPrivate] = useState(
     existingAlarm?.private || false
   );
+  const [privateHint] = useState(() => {
+    const hints = [
+      "Hides your secrets from the alarm list. You're welcome.",
+      "What alarm? I don't see an alarm.",
+      'Your business is your business.',
+      'Prying eyes get nothing.',
+      'Stealth mode: engaged.',
+      'Nobody needs to know about your 3 AM alarm.',
+      'Hidden from the list. Hidden from judgment.',
+    ];
+    return hints[Math.floor(Math.random() * hints.length)];
+  });
   const [mode, setMode] = useState<'recurring' | 'one-time'>(
     existingAlarm?.mode || 'one-time'
   );
@@ -1393,6 +1405,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
           />
         </View>
+        <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: -22, marginBottom: selectedPrivate ? 2 : 20, paddingLeft: 16 }}>Hides name and details from the alarm list</Text>
+        {selectedPrivate && (
+          <Text style={{ fontSize: 10, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{privateHint}</Text>
+        )}
 
         <View style={styles.soundRow}>
           <View style={{ alignItems: 'center' }}>
@@ -1401,7 +1417,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 setSoundMode((prev) => {
                   if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
                   if (prev === 'vibrate') return 'silent';
-                  hapticLight(); setTimeout(() => hapticLight(), 100); playModeFeedbackChirp(); return 'sound';
+                  hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); return 'sound';
                 });
               }}
               style={[

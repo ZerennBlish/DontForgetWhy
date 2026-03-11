@@ -20,13 +20,11 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import notifee from '@notifee/react-native';
-import { loadSettings, saveSettings, getDefaultTimerSound, saveDefaultTimerSound, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
+import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
-import SoundPickerModal from '../components/SoundPickerModal';
-import type { SystemSound } from '../components/SoundPickerModal';
 import BackButton from '../components/BackButton';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
@@ -42,9 +40,6 @@ export default function SettingsScreen({ navigation }: Props) {
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const [timerSoundName, setTimerSoundName] = useState<string | null>(null);
-  const [timerSoundID, setTimerSoundID] = useState<number | null>(null);
-  const [timerSoundPickerVisible, setTimerSoundPickerVisible] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedAccentRef = useRef(customAccent || colors.accent);
   const pickedBgRef = useRef(customBackground || '#121220');
@@ -264,12 +259,6 @@ export default function SettingsScreen({ navigation }: Props) {
       fontSize: 18,
       color: 'rgba(255,255,255,0.5)',
     },
-    timerSoundValue: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: 'rgba(255,255,255,0.7)',
-      marginRight: 8,
-    },
   }), [colors, insets.bottom]);
 
   useEffect(() => {
@@ -284,14 +273,6 @@ export default function SettingsScreen({ navigation }: Props) {
         if (raw !== null) {
           setHapticsEnabled(raw !== 'false');
         }
-      } catch {}
-    })();
-    // Load default timer sound
-    (async () => {
-      try {
-        const s = await getDefaultTimerSound();
-        setTimerSoundName(s.name);
-        setTimerSoundID(s.soundID);
       } catch {}
     })();
   }, []);
@@ -435,24 +416,6 @@ export default function SettingsScreen({ navigation }: Props) {
     if (value) hapticLight();
   };
 
-  const handleTimerSoundSelect = async (sound: SystemSound | null) => {
-    hapticLight();
-    setTimerSoundPickerVisible(false);
-    if (sound) {
-      setTimerSoundName(sound.title);
-      setTimerSoundID(sound.soundID);
-      try {
-        await saveDefaultTimerSound({ uri: sound.url, name: sound.title, soundID: sound.soundID });
-      } catch {}
-    } else {
-      setTimerSoundName(null);
-      setTimerSoundID(null);
-      try {
-        await saveDefaultTimerSound({ uri: null, name: null, soundID: null });
-      } catch {}
-    }
-  };
-
   const handleAccentChange = (result: ColorFormatsObject) => {
     pickedAccentRef.current = result.hex;
   };
@@ -536,7 +499,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
       <View style={[styles.card, { marginTop: 16 }]}>
         <View style={styles.row}>
-          <Text style={styles.label}>Vibration</Text>
+          <Text style={styles.label}>Haptic Feedback</Text>
           <Switch
             value={hapticsEnabled}
             onValueChange={handleHapticsToggle}
@@ -545,24 +508,7 @@ export default function SettingsScreen({ navigation }: Props) {
           />
         </View>
         <Text style={styles.description}>
-          Haptic feedback for buttons, toggles, and interactions throughout the app.
-        </Text>
-      </View>
-
-      <View style={[styles.card, { marginTop: 16 }]}>
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => { hapticLight(); setTimerSoundPickerVisible(true); }}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.label}>Timer Sound</Text>
-          <Text style={styles.timerSoundValue}>
-            {timerSoundName || 'Default'}
-          </Text>
-          <Text style={styles.aboutChevron}>{'\u203A'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.description}>
-          Sound played when a timer completes.
+          Touch feedback for buttons, toggles, and interactions.
         </Text>
       </View>
 
@@ -792,14 +738,6 @@ export default function SettingsScreen({ navigation }: Props) {
           </ScrollView>
         </View>
       </Modal>
-
-      {/* Timer Sound Picker */}
-      <SoundPickerModal
-        visible={timerSoundPickerVisible}
-        currentSoundID={timerSoundID}
-        onSelect={handleTimerSoundSelect}
-        onClose={() => setTimerSoundPickerVisible(false)}
-      />
 
       {/* Silence duration picker modal */}
       <Modal transparent visible={silencePickerVisible} animationType="slide" onRequestClose={handleSilencePickerCancel}>

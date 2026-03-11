@@ -25,12 +25,14 @@ import {
 } from '../services/timerStorage';
 import { getPinnedPresets, togglePinPreset, isPinned, unpinPreset } from '../services/widgetPins';
 import { refreshTimerWidget } from '../widget/updateWidget';
-import { loadSettings } from '../services/settings';
+import { loadSettings, getDefaultTimerSound, saveDefaultTimerSound } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
-import { playModeFeedbackChirp } from '../utils/soundFeedback';
+import { playChirp } from '../utils/soundFeedback';
 import TimePicker from '../components/TimePicker';
+import SoundPickerModal from '../components/SoundPickerModal';
+import type { SystemSound } from '../components/SoundPickerModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PRESET_CARD_WIDTH = (SCREEN_WIDTH - 32 - 16) / 3;
@@ -85,6 +87,9 @@ export default function TimerScreen({
   const [newTimerIcon, setNewTimerIcon] = useState('\u{1F60A}');
   const [editingUserTimer, setEditingUserTimer] = useState<UserTimer | null>(null);
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
+  const [timerSoundName, setTimerSoundName] = useState<string | null>(null);
+  const [timerSoundID, setTimerSoundID] = useState<number | null>(null);
+  const [timerSoundPickerVisible, setTimerSoundPickerVisible] = useState(false);
   const iconInputRef = useRef<TextInput>(null);
 
   const styles = useMemo(() => StyleSheet.create({
@@ -408,6 +413,7 @@ export default function TimerScreen({
     getPinnedPresets().then(setPinnedIds);
     loadUserTimers().then(setUserTimers);
     loadSettings().then((s) => setTimeInputMode(s.timeInputMode));
+    getDefaultTimerSound().then((s) => { setTimerSoundName(s.name || null); setTimerSoundID(s.soundID || null); }).catch(() => {});
   }, []);
 
   // Split presets into recent, rest, and custom
@@ -538,6 +544,20 @@ export default function TimerScreen({
     setEditingUserTimer(null);
     setNewTimerName('');
     setNewTimerIcon('\u{1F60A}');
+  };
+
+  const handleTimerSoundSelect = async (sound: SystemSound | null) => {
+    hapticLight();
+    if (sound) {
+      setTimerSoundName(sound.title);
+      setTimerSoundID(sound.soundID);
+      await saveDefaultTimerSound({ name: sound.title, soundID: sound.soundID, uri: sound.url });
+    } else {
+      setTimerSoundName(null);
+      setTimerSoundID(null);
+      await saveDefaultTimerSound({ name: null, soundID: null, uri: null });
+    }
+    setTimerSoundPickerVisible(false);
   };
 
   const handleSaveNewTimer = async () => {
@@ -867,6 +887,18 @@ export default function TimerScreen({
         </View>
       </View>
 
+      {/* Default Timer Sound */}
+      <View style={{ paddingHorizontal: 0, marginTop: 16, marginBottom: 24 }}>
+        <TouchableOpacity
+          onPress={() => { hapticLight(); setTimerSoundPickerVisible(true); }}
+          activeOpacity={0.7}
+          style={{ backgroundColor: colors.card, borderRadius: 20, borderWidth: 1, borderColor: colors.accent, paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <Text style={{ fontSize: 14, color: colors.accent }}>Timer Sound</Text>
+          <Text style={{ fontSize: 13, color: colors.textTertiary }}>{timerSoundName || 'Default'} <Text style={{ color: colors.accent }}>{'\u203A'}</Text></Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Custom Duration / New Timer / Edit Timer Modal */}
       <Modal transparent visible={!!customModal} animationType="fade" onRequestClose={() => { hapticLight(); setCustomModal(null); setIsCreatingNew(false); setEditingUserTimer(null); }}>
         <View style={styles.modalOverlay}>
@@ -895,7 +927,7 @@ export default function TimerScreen({
                       setSoundMode((prev) => {
                         if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
                         if (prev === 'vibrate') return 'silent';
-                        hapticLight(); setTimeout(() => hapticLight(), 100); playModeFeedbackChirp(); return 'sound';
+                        hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); return 'sound';
                       });
                     }}
                     style={[
@@ -956,7 +988,7 @@ export default function TimerScreen({
                       setSoundMode((prev) => {
                         if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
                         if (prev === 'vibrate') return 'silent';
-                        hapticLight(); setTimeout(() => hapticLight(), 100); playModeFeedbackChirp(); return 'sound';
+                        hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); return 'sound';
                       });
                     }}
                     style={[
@@ -1045,6 +1077,13 @@ export default function TimerScreen({
           </View>
         </View>
       </Modal>
+
+      <SoundPickerModal
+        visible={timerSoundPickerVisible}
+        onSelect={handleTimerSoundSelect}
+        onClose={() => setTimerSoundPickerVisible(false)}
+        currentSoundID={timerSoundID}
+      />
     </ScrollView>
   );
 }

@@ -35,7 +35,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
-import { playModeFeedbackChirp } from '../utils/soundFeedback';
+import { playChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
@@ -110,6 +110,18 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const [selectedIcon, setSelectedIcon] = useState<string>('\u{1F4DD}');
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [selectedPrivate, setSelectedPrivate] = useState(false);
+  const [privateHint] = useState(() => {
+    const hints = [
+      "Hides your secrets from the reminder list. You're welcome.",
+      "What reminder? Never heard of it.",
+      'Your business is your business.',
+      'Prying eyes get nothing.',
+      'Stealth mode: engaged.',
+      'Nobody needs to know you need reminders.',
+      'Hidden from the list. Hidden from judgment.',
+    ];
+    return hints[Math.floor(Math.random() * hints.length)];
+  });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const iconInputRef = useRef<TextInput>(null);
@@ -1408,6 +1420,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
           />
         </View>
+        <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: -22, marginBottom: selectedPrivate ? 2 : 20, paddingLeft: 16 }}>Hides text and details from the reminder list</Text>
+        {selectedPrivate && (
+          <Text style={{ fontSize: 10, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{privateHint}</Text>
+        )}
 
         <View style={styles.soundRow}>
           <View style={{ alignItems: 'center' }}>
@@ -1416,7 +1432,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 setSoundMode((prev) => {
                   if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
                   if (prev === 'vibrate') return 'silent';
-                  hapticLight(); setTimeout(() => hapticLight(), 100); playModeFeedbackChirp(); return 'sound';
+                  hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); return 'sound';
                 });
               }}
               style={[
