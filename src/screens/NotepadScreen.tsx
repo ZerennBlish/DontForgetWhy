@@ -51,7 +51,6 @@ import { NOTE_COLORS, NOTE_FONT_COLORS, CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_K
 import type { Note } from '../types/note';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
-import { NOTE_ICON_GROUPS } from '../data/noteIcons';
 import type { RootStackParamList } from '../navigation/types';
 
 const MAX_NOTE_LENGTH = 500;
@@ -207,6 +206,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const [undoKey, setUndoKey] = useState(0);
 
   const textInputRef = useRef<TextInput>(null);
+  const emojiInputRef = useRef<TextInput>(null);
   const handledActionRef = useRef('');
   useEffect(() => {
     (async () => {
@@ -930,35 +930,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
       fontWeight: '700',
       marginBottom: 6,
     },
-    iconGroupLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.textTertiary,
-      marginTop: 10,
-      marginBottom: 6,
-    },
-    iconGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    iconCell: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
-      backgroundColor: colors.background,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    iconCellActive: {
-      backgroundColor: colors.activeBackground,
-      borderColor: colors.accent,
-    },
-    iconEmoji: {
-      fontSize: 20,
-    },
     cpOverlay: {
       flex: 1,
       backgroundColor: colors.modalOverlay,
@@ -1311,6 +1282,23 @@ export default function NotepadScreen({ navigation, route }: Props) {
                 >
                   <Text style={styles.editorTopBtnEmoji}>{editorIcon || '\u{1F600}'}</Text>
                 </TouchableOpacity>
+                <TextInput
+                  ref={emojiInputRef}
+                  style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}
+                  autoCorrect={false}
+                  onChangeText={(t) => {
+                    if (t) {
+                      const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+                      const graphemes = Array.from(segmenter.segment(t), s => s.segment);
+                      setEditorIcon(graphemes[graphemes.length - 1] || '');
+                    }
+                    setShowEmojiPicker(false);
+                    if (emojiInputRef.current) {
+                      emojiInputRef.current.setNativeProps({ text: '' });
+                      emojiInputRef.current.blur();
+                    }
+                  }}
+                />
                 <TouchableOpacity
                   style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }, showColorPicker && styles.editorTopBtnActive]}
                   onPress={() => {
@@ -1335,6 +1323,51 @@ export default function NotepadScreen({ navigation, route }: Props) {
               </>
             )}
           </View>
+
+          {/* Emoji quick-pick row */}
+          {showEmojiPicker && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 8, paddingVertical: 8 }}>
+              {['\u{1F4DD}', '\u{1F4CC}', '\u{1F4A1}', '\u2B50', '\u2764\uFE0F', '\u{1F3AF}', '\u{1F4C5}', '\u{1F514}'].map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  onPress={() => {
+                    hapticLight();
+                    if (editorIcon === emoji) {
+                      setEditorIcon('');
+                    } else {
+                      setEditorIcon(emoji);
+                      setShowEmojiPicker(false);
+                    }
+                  }}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: editorIcon === emoji ? noteTextColor + '25' : noteTextColor + '10',
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 18 }}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                onPress={() => { hapticLight(); emojiInputRef.current?.focus(); }}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: noteTextColor + '10',
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 18, color: noteTextColor + '80' }}>+</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Hero text area */}
           {isViewMode ? (
@@ -1504,42 +1537,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
             </View>
           )}
 
-          {/* Emoji picker overlay */}
-          {showEmojiPicker && (
-            <ScrollView
-              style={[styles.pickerOverlay, { backgroundColor: editorColor, borderTopColor: noteTextColor + '20' }]}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={[styles.pickerTitle, { color: noteTextColor + '99' }]}>
-                Icon {editorIcon ? `\u2014 ${editorIcon} (tap to remove)` : ''}
-              </Text>
-              {NOTE_ICON_GROUPS.map((group) => (
-                <View key={group.label}>
-                  <Text style={[styles.iconGroupLabel, { color: noteTextColor + '99' }]}>{group.label}</Text>
-                  <View style={styles.iconGrid}>
-                    {group.icons.map((icon) => (
-                      <TouchableOpacity
-                        key={icon.id}
-                        style={[
-                          styles.iconCell,
-                          editorIcon === icon.emoji && styles.iconCellActive,
-                        ]}
-                        onPress={() => {
-                          hapticLight();
-                          setEditorIcon(editorIcon === icon.emoji ? '' : icon.emoji);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.iconEmoji}>{icon.emoji}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              ))}
-              <View style={{ height: insets.bottom + 20 }} />
-            </ScrollView>
-          )}
 
         </ScrollView>
         </KeyboardAvoidingView>

@@ -147,6 +147,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
         clickAction="OPEN_APP"
         style={{
           width: 'match_parent',
+          alignItems: 'center',
           marginBottom: 8,
         }}
       >

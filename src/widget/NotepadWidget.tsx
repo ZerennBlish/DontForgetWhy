@@ -96,14 +96,14 @@ export function NotepadWidget({ notes, theme }: NotepadWidgetProps) {
         style={{
           width: 'match_parent',
           flexDirection: 'row',
-          justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 8,
         }}
       >
+        <FlexWidget style={{ width: 34, height: 1 }} />
         <FlexWidget
           clickAction="OPEN_NOTES"
-          style={{ flex: 1 }}
+          style={{ flex: 1, alignItems: 'center' }}
         >
           <TextWidget
             text={'\u{1F4DD} Notes'}

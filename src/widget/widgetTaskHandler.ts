@@ -31,20 +31,6 @@ import { getNotes } from '../services/noteStorage';
 import { getPinnedNotes } from '../services/widgetPins';
 import { setPendingNoteAction } from '../services/noteStorage';
 
-interface WidgetPreset {
-  id: string;
-  icon: string;
-  label: string;
-  isPinned?: boolean;
-}
-
-interface WidgetAlarm {
-  id: string;
-  icon: string;
-  time: string;
-  label: string;
-}
-
 const RECENT_KEY = 'recentPresets';
 const ALARMS_KEY = 'alarms';
 
@@ -147,150 +133,6 @@ async function loadWidgetAlarms(): Promise<Alarm[]> {
   } catch {
     return [];
   }
-}
-
-// ── Compact widget data ──
-
-export async function getWidgetAlarms(): Promise<WidgetAlarm[]> {
-  const result: WidgetAlarm[] = [];
-  const addedIds = new Set<string>();
-
-  const allAlarms = await loadWidgetAlarms();
-  const enabledAlarms = allAlarms.filter((a) => a.enabled);
-  const settings = await loadSettings();
-
-  try {
-    const pinnedIds = await getPinnedAlarms();
-    for (const id of pinnedIds) {
-      if (result.length >= 3) break;
-      const alarm = enabledAlarms.find((a) => a.id === id);
-      if (alarm) {
-        result.push(alarmToCompact(alarm, settings.guessWhyEnabled, settings.timeFormat));
-        addedIds.add(alarm.id);
-      }
-    }
-  } catch {
-    // fall through
-  }
-
-  if (result.length < 3) {
-    const remaining = enabledAlarms
-      .filter((a) => !addedIds.has(a.id))
-      .sort((a, b) => getNextFireTime(a) - getNextFireTime(b));
-
-    for (const alarm of remaining) {
-      if (result.length >= 3) break;
-      result.push(alarmToCompact(alarm, settings.guessWhyEnabled, settings.timeFormat));
-      addedIds.add(alarm.id);
-    }
-  }
-
-  return result;
-}
-
-function alarmToCompact(
-  alarm: Alarm,
-  guessWhyEnabled: boolean,
-  timeFormat: '12h' | '24h',
-): WidgetAlarm {
-  if (guessWhyEnabled) {
-    return {
-      id: alarm.id,
-      icon: '\u2753',
-      time: formatTime(alarm.time, timeFormat),
-      label: 'Mystery',
-    };
-  }
-  if (alarm.private) {
-    return {
-      id: alarm.id,
-      icon: '\u23F0',
-      time: formatTime(alarm.time, timeFormat),
-      label: 'Alarm',
-    };
-  }
-  let label = alarm.nickname || alarm.icon || 'Alarm';
-  if (alarm.mode === 'one-time' && alarm.date) {
-    const [year, month, day] = alarm.date.split('-').map(Number);
-    const d = new Date(year, month - 1, day);
-    label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-  return {
-    id: alarm.id,
-    icon: alarm.icon || '\u23F0',
-    time: formatTime(alarm.time, timeFormat),
-    label,
-  };
-}
-
-export async function getWidgetPresets(): Promise<WidgetPreset[]> {
-  const nonCustom = defaultPresets.filter((p) => p.id !== 'custom');
-  const userTimers = await loadUserTimers();
-  const result: WidgetPreset[] = [];
-  const addedIds = new Set<string>();
-
-  try {
-    const pinnedIds = await getPinnedPresets();
-    for (const id of pinnedIds) {
-      if (result.length >= 3) break;
-      const preset = nonCustom.find((p) => p.id === id);
-      if (preset) {
-        result.push({ id: preset.id, icon: preset.icon, label: preset.label, isPinned: true });
-        addedIds.add(preset.id);
-      } else {
-        const userTimer = userTimers.find((t) => t.id === id);
-        if (userTimer) {
-          result.push({ id: userTimer.id, icon: userTimer.icon, label: userTimer.label, isPinned: true });
-          addedIds.add(userTimer.id);
-        }
-      }
-    }
-  } catch {
-    // fall through
-  }
-
-  if (result.length < 3) {
-    try {
-      const raw = await AsyncStorage.getItem(RECENT_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          const recentIds: string[] = parsed.map(
-            (e: { presetId: string }) => e.presetId,
-          );
-          for (const id of recentIds) {
-            if (result.length >= 3) break;
-            if (addedIds.has(id)) continue;
-            const preset = nonCustom.find((p) => p.id === id);
-            if (preset) {
-              result.push({ id: preset.id, icon: preset.icon, label: preset.label });
-              addedIds.add(preset.id);
-            } else {
-              const userTimer = userTimers.find((t) => t.id === id);
-              if (userTimer) {
-                result.push({ id: userTimer.id, icon: userTimer.icon, label: userTimer.label });
-                addedIds.add(userTimer.id);
-              }
-            }
-          }
-        }
-      }
-    } catch {
-      // fall through
-    }
-  }
-
-  if (result.length < 3) {
-    for (const preset of nonCustom) {
-      if (result.length >= 3) break;
-      if (!addedIds.has(preset.id)) {
-        result.push({ id: preset.id, icon: preset.icon, label: preset.label });
-        addedIds.add(preset.id);
-      }
-    }
-  }
-
-  return result;
 }
 
 // ── Widget reminders ──
@@ -666,18 +508,6 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
       if (action?.startsWith('OPEN_REMINDER__')) {
         const reminderId = action.replace('OPEN_REMINDER__', '');
         await AsyncStorage.setItem('pendingReminderAction', JSON.stringify({ action: 'editReminder', reminderId, timestamp: Date.now() }));
-        try { await Linking.openURL('dontforgetwhy://'); } catch {}
-        break;
-      }
-
-      if (action === 'CREATE_ALARM') {
-        await AsyncStorage.setItem('pendingAlarmAction', JSON.stringify({ action: 'createAlarm', timestamp: Date.now() }));
-        try { await Linking.openURL('dontforgetwhy://'); } catch {}
-        break;
-      }
-
-      if (action === 'CREATE_REMINDER') {
-        await AsyncStorage.setItem('pendingReminderAction', JSON.stringify({ action: 'createReminder', timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }

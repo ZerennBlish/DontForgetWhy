@@ -635,7 +635,7 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={styles.setupGuideText}>Setup Guide</Text>
         </TouchableOpacity>
         <Text style={styles.setupGuideDesc}>
-          Re-run the permission setup for notifications, alarms, battery optimization, full screen alarms, and more.
+          Re-run setup. In case you forgot to do something...
         </Text>
       </View>
 

@@ -46,9 +46,9 @@
         "widgets": [
           {
             "name": "DetailedWidget",
-            "label": "DFW Detailed",
+            "label": "DFW",
             "minWidth": "180dp",
-            "minHeight": "110dp",
+            "minHeight": "250dp",
             "resizeMode": "horizontal|vertical",
             "description": "Timer presets with durations and alarm schedules",
             "updatePeriodMillis": 1800000
@@ -57,7 +57,7 @@
             "name": "NotepadWidget",
             "label": "DFW Notes",
             "minWidth": "180dp",
-            "minHeight": "110dp",
+            "minHeight": "250dp",
             "resizeMode": "horizontal|vertical",
             "description": "Quick notes at a glance",
             "updatePeriodMillis": 1800000

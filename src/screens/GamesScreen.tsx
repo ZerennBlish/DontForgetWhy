@@ -55,7 +55,7 @@ export default function GamesScreen({ navigation }: Props) {
         header: {
           paddingTop: 60,
           paddingHorizontal: 20,
-          paddingBottom: 24,
+          paddingBottom: 12,
         },
         title: {
           fontSize: 28,
@@ -125,18 +125,6 @@ export default function GamesScreen({ navigation }: Props) {
           fontStyle: 'italic',
           marginTop: 4,
         },
-        statsCard: {
-          marginHorizontal: 16,
-          marginTop: 16,
-          backgroundColor: 'rgba(255,255,255,0.15)',
-          borderRadius: 16,
-          padding: 20,
-          borderWidth: 2,
-          borderColor: colors.accent,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 16,
-        },
       }),
     [colors, insets.bottom],
   );
@@ -146,9 +134,40 @@ export default function GamesScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.title}>{'\u{1F3AE}'} Brain Games</Text>
-        <Text style={styles.subtitle}>Exercise that forgetful brain of yours</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Text style={{ fontSize: 36 }}>{'\u{1F3AE}'}</Text>
+          <TouchableOpacity
+            onPress={() => { hapticLight(); navigation.navigate('MemoryScore'); }}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 24 }}>{'\u{1F3C6}'}</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={[styles.title, { textAlign: 'center', marginTop: 4 }]}>Brain Games</Text>
+        <Text style={[styles.subtitle, { textAlign: 'center' }]}>Exercise that forgetful brain of yours</Text>
+      </View>
+
+      {/* Guess Why — toggle only, not navigable */}
+      <View style={styles.guessWhyCard}>
+        <Text style={styles.gameEmoji}>{'\u{1F9E0}'}</Text>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>Guess Why</Text>
+          <Text style={styles.gameDesc}>
+            Can you remember why you set your alarms?
+          </Text>
+          <Text style={styles.guessWhySubtext}>
+            {guessWhyEnabled
+              ? 'Plays automatically when alarms fire'
+              : 'Disabled \u2014 toggle to play when alarms fire'}
+          </Text>
+        </View>
+        <Switch
+          value={guessWhyEnabled}
+          onValueChange={handleGuessWhyToggle}
+          trackColor={{ false: colors.border, true: colors.accent }}
+          thumbColor={guessWhyEnabled ? colors.textPrimary : colors.textTertiary}
+        />
       </View>
 
       {/* Daily Riddle */}
@@ -168,20 +187,6 @@ export default function GamesScreen({ navigation }: Props) {
               {'\u{1F525}'} {riddleStreak} day streak
             </Text>
           )}
-        </View>
-        <Text style={styles.chevron}>{'\u203A'}</Text>
-      </TouchableOpacity>
-
-      {/* Memory Match */}
-      <TouchableOpacity
-        style={styles.gameCard}
-        onPress={() => { hapticLight(); navigation.navigate('MemoryMatch'); }}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.gameEmoji}>{'\u{1F9E9}'}</Text>
-        <View style={styles.gameInfo}>
-          <Text style={styles.gameName}>Memory Match</Text>
-          <Text style={styles.gameDesc}>Flip cards and find matching pairs</Text>
         </View>
         <Text style={styles.chevron}>{'\u203A'}</Text>
       </TouchableOpacity>
@@ -216,38 +221,16 @@ export default function GamesScreen({ navigation }: Props) {
         <Text style={styles.chevron}>{'\u203A'}</Text>
       </TouchableOpacity>
 
-      {/* Guess Why — toggle only, not navigable */}
-      <View style={styles.guessWhyCard}>
-        <Text style={styles.gameEmoji}>{'\u{1F9E0}'}</Text>
-        <View style={styles.gameInfo}>
-          <Text style={styles.gameName}>Guess Why</Text>
-          <Text style={styles.gameDesc}>
-            Can you remember why you set your alarms?
-          </Text>
-          <Text style={styles.guessWhySubtext}>
-            {guessWhyEnabled
-              ? 'Plays automatically when alarms fire'
-              : 'Disabled \u2014 toggle to play when alarms fire'}
-          </Text>
-        </View>
-        <Switch
-          value={guessWhyEnabled}
-          onValueChange={handleGuessWhyToggle}
-          trackColor={{ false: colors.border, true: colors.accent }}
-          thumbColor={guessWhyEnabled ? colors.textPrimary : colors.textTertiary}
-        />
-      </View>
-
-      {/* Stats */}
+      {/* Memory Match */}
       <TouchableOpacity
-        style={styles.statsCard}
-        onPress={() => { hapticLight(); navigation.navigate('MemoryScore'); }}
+        style={styles.gameCard}
+        onPress={() => { hapticLight(); navigation.navigate('MemoryMatch'); }}
         activeOpacity={0.7}
       >
-        <Text style={styles.gameEmoji}>{'\u{1F4CA}'}</Text>
+        <Text style={styles.gameEmoji}>{'\u{1F9E9}'}</Text>
         <View style={styles.gameInfo}>
-          <Text style={styles.gameName}>Your Stats</Text>
-          <Text style={styles.gameDesc}>Track your brain training progress</Text>
+          <Text style={styles.gameName}>Memory Match</Text>
+          <Text style={styles.gameDesc}>Flip cards and find matching pairs</Text>
         </View>
         <Text style={styles.chevron}>{'\u203A'}</Text>
       </TouchableOpacity>
