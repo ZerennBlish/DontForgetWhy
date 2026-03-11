@@ -22,7 +22,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "versionCode": 6,
+      "versionCode": 7,
       "package": "com.zerennblish.DontForgetWhy",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
