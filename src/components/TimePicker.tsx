@@ -150,9 +150,8 @@ export default function TimePicker({
       const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
       const value = hoursData[Math.max(0, Math.min(idx, hoursData.length - 1))];
       setLocalHours(value);
-      onHoursChange(value);
     },
-    [hoursData, itemHeight, onHoursChange],
+    [hoursData, itemHeight],
   );
 
   const handleHoursSnap = useCallback(
@@ -174,9 +173,8 @@ export default function TimePicker({
       const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
       const value = minutesData[Math.max(0, Math.min(idx, minutesData.length - 1))];
       setLocalMinutes(value);
-      onMinutesChange(value);
     },
-    [minutesData, itemHeight, onMinutesChange],
+    [minutesData, itemHeight],
   );
 
   const handleMinutesSnap = useCallback(
@@ -198,9 +196,8 @@ export default function TimePicker({
       const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
       const value = secondsData[Math.max(0, Math.min(idx, secondsData.length - 1))];
       setLocalSeconds(value);
-      onSecondsChange?.(value);
     },
-    [secondsData, itemHeight, onSecondsChange],
+    [secondsData, itemHeight],
   );
 
   const handleSecondsSnap = useCallback(
