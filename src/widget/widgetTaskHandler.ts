@@ -16,23 +16,34 @@ import {
   recordPresetUsage,
   loadUserTimers,
 } from '../services/timerStorage';
-import { getPinnedPresets, getPinnedAlarms, getPinnedReminders } from '../services/widgetPins';
+import { getPinnedPresets, getPinnedAlarms } from '../services/widgetPins';
 import type { ActiveTimer, UserTimer } from '../types/timer';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
 import { formatTime } from '../utils/time';
-import { TimerWidget } from './TimerWidget';
-import type { WidgetPreset, WidgetAlarm } from './TimerWidget';
 import { DetailedWidget } from './DetailedWidget';
 import type { DetailedAlarm, DetailedPreset, DetailedReminder } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
-import { NotepadWidgetCompact } from './NotepadWidgetCompact';
 import type { WidgetNote, WidgetTheme } from './NotepadWidget';
 import { themes, generateCustomThemeDual } from '../theme/colors';
 import { getNotes } from '../services/noteStorage';
 import { getPinnedNotes } from '../services/widgetPins';
 import { setPendingNoteAction } from '../services/noteStorage';
+
+interface WidgetPreset {
+  id: string;
+  icon: string;
+  label: string;
+  isPinned?: boolean;
+}
+
+interface WidgetAlarm {
+  id: string;
+  icon: string;
+  time: string;
+  label: string;
+}
 
 const RECENT_KEY = 'recentPresets';
 const ALARMS_KEY = 'alarms';
@@ -282,6 +293,24 @@ export async function getWidgetPresets(): Promise<WidgetPreset[]> {
   return result;
 }
 
+// ── Widget reminders ──
+
+export async function getCompactReminders(): Promise<DetailedReminder[]> {
+  const allReminders = await loadWidgetReminders();
+  const incomplete = allReminders.filter((r) => !r.completed);
+  if (incomplete.length === 0) return [];
+
+  const sorted = incomplete.sort(
+    (a, b) => getReminderSortTimestamp(a) - getReminderSortTimestamp(b),
+  );
+
+  return sorted.slice(0, 2).map((r) => ({
+    id: r.id,
+    icon: r.private ? '\u{1F4DD}' : r.icon,
+    text: r.private ? 'Something to do...' : (r.nickname || r.text || 'Reminder'),
+  }));
+}
+
 // ── Detailed widget data ──
 
 export async function getDetailedAlarms(): Promise<DetailedAlarm[]> {
@@ -478,91 +507,6 @@ function getReminderSortTimestamp(reminder: Reminder): number {
   return Infinity;
 }
 
-function formatReminderDueInfo(reminder: Reminder, timeFormat: '12h' | '24h'): string {
-  const hasDate = !!reminder.dueDate;
-  const hasTime = !!reminder.dueTime;
-
-  if (!hasDate && !hasTime) return '';
-
-  let timePart = '';
-  if (hasTime) {
-    timePart = formatTime(reminder.dueTime!, timeFormat);
-  }
-
-  let datePart = '';
-  if (hasDate) {
-    const [year, month, day] = reminder.dueDate!.split('-').map(Number);
-    const d = new Date(year, month - 1, day);
-    datePart = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  if (hasTime && hasDate) {
-    return `${timePart} \u00B7 ${datePart}`;
-  }
-
-  if (hasTime) {
-    const now = new Date();
-    const [hours, minutes] = reminder.dueTime!.split(':').map(Number);
-    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-    const label = target.getTime() <= now.getTime() ? 'tomorrow' : 'today';
-    return `${timePart} ${label}`;
-  }
-
-  return datePart;
-}
-
-function reminderToDetailed(reminder: Reminder, timeFormat: '12h' | '24h'): DetailedReminder {
-  return {
-    id: reminder.id,
-    icon: reminder.private ? '\u{1F4DD}' : reminder.icon,
-    text: reminder.private ? 'Something to do...' : reminder.text,
-    completed: reminder.completed,
-    dueInfo: formatReminderDueInfo(reminder, timeFormat),
-  };
-}
-
-export async function getDetailedReminders(): Promise<DetailedReminder[]> {
-  const allReminders = await loadWidgetReminders();
-  const incomplete = allReminders.filter((r) => !r.completed);
-
-  if (incomplete.length === 0) return [];
-
-  const settings = await loadSettings();
-  const timeFormat = settings.timeFormat;
-
-  const result: DetailedReminder[] = [];
-  const addedIds = new Set<string>();
-
-  // Pinned reminders first (only incomplete ones)
-  try {
-    const pinnedIds = await getPinnedReminders();
-    for (const id of pinnedIds) {
-      if (result.length >= 3) break;
-      const reminder = incomplete.find((r) => r.id === id);
-      if (reminder) {
-        result.push(reminderToDetailed(reminder, timeFormat));
-        addedIds.add(reminder.id);
-      }
-    }
-  } catch {
-    // fall through
-  }
-
-  // Fill remaining slots with soonest unpinned reminders
-  if (result.length < 3) {
-    const unpinned = incomplete
-      .filter((r) => !addedIds.has(r.id))
-      .sort((a, b) => getReminderSortTimestamp(a) - getReminderSortTimestamp(b));
-
-    for (const reminder of unpinned) {
-      if (result.length >= 3) break;
-      result.push(reminderToDetailed(reminder, timeFormat));
-    }
-  }
-
-  return result;
-}
-
 // ── Widget theme ──
 
 export async function getWidgetTheme(): Promise<WidgetTheme> {
@@ -634,17 +578,10 @@ export async function getWidgetNotes(): Promise<WidgetNote[]> {
 
 // ── Rendering ──
 
-async function renderCompactWidget(props: WidgetTaskHandlerProps) {
-  const alarms = await getWidgetAlarms();
-  const presets = await getWidgetPresets();
-  const theme = await getWidgetTheme();
-  props.renderWidget(React.createElement(TimerWidget, { alarms, presets, theme }));
-}
-
 async function renderDetailedWidget(props: WidgetTaskHandlerProps) {
   const alarms = await getDetailedAlarms();
   const presets = await getDetailedPresets();
-  const reminders = await getDetailedReminders();
+  const reminders = await getCompactReminders();
   const theme = await getWidgetTheme();
   props.renderWidget(React.createElement(DetailedWidget, { alarms, presets, reminders, theme }));
 }
@@ -655,35 +592,17 @@ async function renderNotepadWidget(props: WidgetTaskHandlerProps): Promise<void>
   props.renderWidget(React.createElement(NotepadWidget, { notes, theme }));
 }
 
-async function renderNotepadWidgetCompact(props: WidgetTaskHandlerProps): Promise<void> {
-  const notes = await getWidgetNotes();
-  const theme = await getWidgetTheme();
-  props.renderWidget(React.createElement(NotepadWidgetCompact, { notes, theme }));
-}
-
 // ── Refresh both widgets (called after timer start from widget) ──
 
 async function refreshAllWidgets(): Promise<void> {
   const theme = await getWidgetTheme();
   try {
     await requestWidgetUpdate({
-      widgetName: 'TimerWidget',
-      renderWidget: async () => {
-        const alarms = await getWidgetAlarms();
-        const presets = await getWidgetPresets();
-        return React.createElement(TimerWidget, { alarms, presets, theme });
-      },
-    });
-  } catch {
-    // compact widget may not be placed
-  }
-  try {
-    await requestWidgetUpdate({
       widgetName: 'DetailedWidget',
       renderWidget: async () => {
         const alarms = await getDetailedAlarms();
         const presets = await getDetailedPresets();
-        const reminders = await getDetailedReminders();
+        const reminders = await getCompactReminders();
         return React.createElement(DetailedWidget, { alarms, presets, reminders, theme });
       },
     });
@@ -701,17 +620,6 @@ async function refreshAllWidgets(): Promise<void> {
   } catch {
     // notepad widget may not be placed
   }
-  try {
-    await requestWidgetUpdate({
-      widgetName: 'NotepadWidgetCompact',
-      renderWidget: async () => {
-        const notes = await getWidgetNotes();
-        return React.createElement(NotepadWidgetCompact, { notes, theme });
-      },
-    });
-  } catch {
-    // notepad compact widget may not be placed
-  }
 }
 
 // ── Task handler ──
@@ -723,14 +631,10 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_ADDED':
     case 'WIDGET_UPDATE':
     case 'WIDGET_RESIZED':
-      if (widgetInfo.widgetName === 'TimerWidget') {
-        await renderCompactWidget(props);
-      } else if (widgetInfo.widgetName === 'DetailedWidget') {
+      if (widgetInfo.widgetName === 'DetailedWidget') {
         await renderDetailedWidget(props);
       } else if (widgetInfo.widgetName === 'NotepadWidget') {
         await renderNotepadWidget(props);
-      } else if (widgetInfo.widgetName === 'NotepadWidgetCompact') {
-        await renderNotepadWidgetCompact(props);
       }
       break;
     case 'WIDGET_CLICK': {

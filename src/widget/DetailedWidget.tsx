@@ -21,8 +21,6 @@ export interface DetailedReminder {
   id: string;
   icon: string;
   text: string;
-  completed: boolean;
-  dueInfo: string;
 }
 
 interface DetailedWidgetProps {
@@ -81,33 +79,6 @@ function AlarmCell({ alarm, theme }: { alarm: DetailedAlarm; theme: WidgetTheme 
   );
 }
 
-function EmptyAlarmCell({ theme }: { theme: WidgetTheme }) {
-  return (
-    <FlexWidget
-      clickAction="CREATE_ALARM"
-      style={{
-        width: 'match_parent',
-        backgroundColor: theme.cellBg as `#${string}`,
-        borderRadius: 12,
-        borderColor: theme.border as `#${string}`,
-        borderWidth: 1,
-        borderStyle: 'dashed',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 8,
-        flex: 1,
-      }}
-    >
-      <TextWidget
-        text={'\uFF0B Set Alarm'}
-        style={{
-          fontSize: 11,
-          color: theme.textSecondary as `#${string}`,
-        }}
-      />
-    </FlexWidget>
-  );
-}
 
 function TimerCell({ preset, theme }: { preset: DetailedPreset; theme: WidgetTheme }) {
   return (
@@ -158,92 +129,8 @@ function TimerCell({ preset, theme }: { preset: DetailedPreset; theme: WidgetThe
   );
 }
 
-function EmptyTimerCell({ theme }: { theme: WidgetTheme }) {
-  return (
-    <FlexWidget
-      clickAction="OPEN_TIMERS"
-      style={{
-        width: 'match_parent',
-        backgroundColor: theme.cellBg as `#${string}`,
-        borderRadius: 12,
-        borderColor: theme.border as `#${string}`,
-        borderWidth: 1,
-        borderStyle: 'dashed',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 8,
-        flex: 1,
-      }}
-    >
-      <TextWidget
-        text={'\uFF0B Set Timer'}
-        style={{
-          fontSize: 11,
-          color: theme.textSecondary as `#${string}`,
-        }}
-      />
-    </FlexWidget>
-  );
-}
-
-function ReminderCell({ reminder, theme }: { reminder: DetailedReminder; theme: WidgetTheme }) {
-  return (
-    <FlexWidget
-      clickAction={`OPEN_REMINDER__${reminder.id}`}
-      style={{
-        flex: 1,
-        backgroundColor: theme.cellBg as `#${string}`,
-        borderRadius: 12,
-        borderColor: theme.border as `#${string}`,
-        borderWidth: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 8,
-        marginRight: 4,
-      }}
-    >
-      <TextWidget
-        text={reminder.icon}
-        style={{
-          fontSize: 14,
-          marginRight: 6,
-        }}
-      />
-      {(reminder.text || reminder.dueInfo) ? (
-        <FlexWidget
-          style={{
-            flex: 1,
-            flexDirection: 'column',
-          }}
-        >
-          {reminder.text ? (
-            <TextWidget
-              text={reminder.text}
-              style={{
-                fontSize: 11,
-                fontWeight: '600',
-                color: (reminder.completed ? theme.border : theme.text) as `#${string}`,
-              }}
-            />
-          ) : null}
-          {reminder.dueInfo ? (
-            <TextWidget
-              text={reminder.dueInfo}
-              style={{
-                fontSize: 9,
-                color: theme.textSecondary as `#${string}`,
-              }}
-            />
-          ) : null}
-        </FlexWidget>
-      ) : null}
-    </FlexWidget>
-  );
-}
 
 export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWidgetProps) {
-  const slots = [0, 1, 2];
-
   return (
     <FlexWidget
       style={{
@@ -255,16 +142,25 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
         flexDirection: 'column',
       }}
     >
-      <TextWidget
-        text="Don't Forget Why"
+      {/* Header */}
+      <FlexWidget
+        clickAction="OPEN_APP"
         style={{
-          fontSize: 16,
-          fontWeight: 'bold',
-          color: theme.text as `#${string}`,
+          width: 'match_parent',
           marginBottom: 8,
         }}
-      />
+      >
+        <TextWidget
+          text="Don't Forget Why"
+          style={{
+            fontSize: 16,
+            fontWeight: 'bold',
+            color: theme.text as `#${string}`,
+          }}
+        />
+      </FlexWidget>
 
+      {/* Two-column area */}
       <FlexWidget
         style={{
           width: 'match_parent',
@@ -289,7 +185,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
               marginBottom: 4,
             }}
           />
-          {slots.map((i) => (
+          {presets.slice(0, 3).map((preset, i) => (
             <FlexWidget
               key={`timer-${i}`}
               style={{
@@ -298,22 +194,9 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
                 marginBottom: 4,
               }}
             >
-              {presets[i] ? (
-                <TimerCell preset={presets[i]} theme={theme} />
-              ) : (
-                <EmptyTimerCell theme={theme} />
-              )}
+              <TimerCell preset={preset} theme={theme} />
             </FlexWidget>
           ))}
-          <FlexWidget
-            key="timer-add"
-            style={{
-              width: 'match_parent',
-              flex: 1,
-            }}
-          >
-            <EmptyTimerCell theme={theme} />
-          </FlexWidget>
         </FlexWidget>
 
         {/* Right column: Alarms */}
@@ -333,7 +216,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
               marginBottom: 4,
             }}
           />
-          {slots.map((i) => (
+          {alarms.slice(0, 3).map((alarm, i) => (
             <FlexWidget
               key={`alarm-${i}`}
               style={{
@@ -342,40 +225,124 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
                 marginBottom: 4,
               }}
             >
-              {alarms[i] ? (
-                <AlarmCell alarm={alarms[i]} theme={theme} />
-              ) : (
-                <EmptyAlarmCell theme={theme} />
-              )}
+              <AlarmCell alarm={alarm} theme={theme} />
             </FlexWidget>
           ))}
-          <FlexWidget
-            key="alarm-add"
-            style={{
-              width: 'match_parent',
-              flex: 1,
-            }}
-          >
-            <EmptyAlarmCell theme={theme} />
-          </FlexWidget>
         </FlexWidget>
       </FlexWidget>
 
-      {/* Full-width Reminders section */}
-      <FlexWidget
-        style={{
-          width: 'match_parent',
-          marginTop: 6,
-          flexDirection: 'column',
-        }}
-      >
+      {/* Reminders section */}
+      {reminders.length > 0 ? (
         <FlexWidget
           style={{
             width: 'match_parent',
-            flexDirection: 'row',
+            flexDirection: 'column',
+            marginTop: 4,
+          }}
+        >
+          {reminders.slice(0, 2).map((reminder, i) => (
+            <FlexWidget
+              key={`rem-${i}`}
+              clickAction={`OPEN_REMINDER__${reminder.id}`}
+              style={{
+                width: 'match_parent',
+                height: 28,
+                backgroundColor: theme.cellBg as `#${string}`,
+                borderRadius: 8,
+                borderColor: theme.border as `#${string}`,
+                borderWidth: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 8,
+                marginBottom: 2,
+              }}
+            >
+              <TextWidget
+                text={reminder.icon}
+                style={{
+                  fontSize: 12,
+                  marginRight: 4,
+                }}
+              />
+              <TextWidget
+                text={reminder.text}
+                style={{
+                  fontSize: 10,
+                  fontWeight: '600',
+                  color: theme.text as `#${string}`,
+                }}
+              />
+            </FlexWidget>
+          ))}
+        </FlexWidget>
+      ) : null}
+
+      {/* Bottom navigation capsules */}
+      <FlexWidget
+        style={{
+          width: 'match_parent',
+          flexDirection: 'row',
+          marginTop: 6,
+        }}
+      >
+        <FlexWidget
+          clickAction="OPEN_ALARMS"
+          style={{
+            flex: 1,
+            marginHorizontal: 2,
+            backgroundColor: theme.cellBg as `#${string}`,
+            borderColor: theme.border as `#${string}`,
+            borderWidth: 1,
+            borderRadius: 16,
+            paddingVertical: 6,
+            justifyContent: 'center',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 4,
+          }}
+        >
+          <TextWidget
+            text="Alarms"
+            style={{
+              fontSize: 11,
+              fontWeight: '600',
+              color: theme.accent as `#${string}`,
+            }}
+          />
+        </FlexWidget>
+        <FlexWidget
+          clickAction="OPEN_TIMERS"
+          style={{
+            flex: 1,
+            marginHorizontal: 2,
+            backgroundColor: theme.cellBg as `#${string}`,
+            borderColor: theme.border as `#${string}`,
+            borderWidth: 1,
+            borderRadius: 16,
+            paddingVertical: 6,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <TextWidget
+            text="Timers"
+            style={{
+              fontSize: 11,
+              fontWeight: '600',
+              color: theme.accent as `#${string}`,
+            }}
+          />
+        </FlexWidget>
+        <FlexWidget
+          clickAction="OPEN_REMINDERS"
+          style={{
+            flex: 1,
+            marginHorizontal: 2,
+            backgroundColor: theme.cellBg as `#${string}`,
+            borderColor: theme.border as `#${string}`,
+            borderWidth: 1,
+            borderRadius: 16,
+            paddingVertical: 6,
+            justifyContent: 'center',
+            alignItems: 'center',
           }}
         >
           <TextWidget
@@ -383,63 +350,10 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
             style={{
               fontSize: 11,
               fontWeight: '600',
-              color: theme.textSecondary as `#${string}`,
+              color: theme.accent as `#${string}`,
             }}
           />
-          <FlexWidget
-            clickAction="CREATE_REMINDER"
-            style={{
-              backgroundColor: theme.cellBg as `#${string}`,
-              borderRadius: 8,
-              borderColor: theme.border as `#${string}`,
-              borderWidth: 1,
-              borderStyle: 'dashed',
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-            }}
-          >
-            <TextWidget
-              text={'\uFF0B Set Reminder'}
-              style={{
-                fontSize: 10,
-                color: theme.textSecondary as `#${string}`,
-              }}
-            />
-          </FlexWidget>
         </FlexWidget>
-        {reminders.length > 0 ? (
-          <FlexWidget
-            style={{
-              width: 'match_parent',
-              flexDirection: 'row',
-            }}
-          >
-            {reminders.map((r, i) => (
-              <ReminderCell key={`rem-${i}`} reminder={r} theme={theme} />
-            ))}
-          </FlexWidget>
-        ) : (
-          <FlexWidget
-            clickAction="OPEN_APP"
-            style={{
-              width: 'match_parent',
-              backgroundColor: theme.cellBg as `#${string}`,
-              borderRadius: 12,
-              borderColor: theme.border as `#${string}`,
-              borderWidth: 1,
-              padding: 8,
-              alignItems: 'center',
-            }}
-          >
-            <TextWidget
-              text="No reminders"
-              style={{
-                fontSize: 11,
-                color: theme.border as `#${string}`,
-              }}
-            />
-          </FlexWidget>
-        )}
       </FlexWidget>
     </FlexWidget>
   );
