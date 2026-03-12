@@ -38,7 +38,6 @@ function getMysteryText(id: string): string {
 interface AlarmCardProps {
   alarm: Alarm;
   timeFormat: '12h' | '24h';
-  guessWhyEnabled: boolean;
   isPinned: boolean;
   onToggle: (id: string) => void;
   onEdit: (alarm: Alarm) => void;
@@ -49,11 +48,11 @@ interface AlarmCardProps {
 function getDetailLine(alarm: Alarm): string {
   if (alarm.icon && alarm.nickname) return `${alarm.icon} ${alarm.nickname}`;
   if (alarm.icon) return alarm.icon;
-  if (alarm.nickname) return `${alarm.nickname} \u{1F512}`;
+  if (alarm.nickname) return alarm.nickname;
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned, onToggle, onEdit, onDelete, onTogglePin }: AlarmCardProps) {
+export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdit, onDelete, onTogglePin }: AlarmCardProps) {
   const { colors } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -140,10 +139,11 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
     },
   }), [colors]);
 
-  const hideDetail = !guessWhyEnabled && alarm.private;
+  const guessWhy = alarm.guessWhy ?? false;
+  const hideDetail = !guessWhy && alarm.private;
   let detailText: string = '';
   let detailStyle = styles.detail;
-  if (guessWhyEnabled) {
+  if (guessWhy) {
     detailText = getMysteryText(alarm.id);
     detailStyle = styles.mysteryText;
   } else if (!hideDetail) {

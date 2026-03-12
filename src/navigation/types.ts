@@ -15,7 +15,6 @@ export type RootStackParamList = {
     timerSoundId?: string;
     timerNotificationId?: string;
     notificationId?: string;
-    guessWhyEnabled?: boolean;
     postGuessWhy?: boolean;
   };
   GuessWhy: { alarm: Alarm; fromNotification?: boolean; notificationId?: string };

@@ -9,7 +9,7 @@ import type { TimestampTrigger } from '@notifee/react-native';
 import { NativeModules, Platform } from 'react-native';
 import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
-import { loadSettings, getSilenceAll } from './settings';
+import { getSilenceAll } from './settings';
 
 // Android notification channels are immutable after creation. Changing sound
 // or audioAttributes on an existing channel has no effect. We use 'alarms_v4'
@@ -320,12 +320,11 @@ export async function requestPermissions(): Promise<boolean> {
 
 export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
   await setupNotificationChannel();
-  const settings = await loadSettings();
 
   let title: string;
   let body: string;
 
-  if (settings.guessWhyEnabled) {
+  if (alarm.guessWhy) {
     title = '\u23F0 Alarm!';
     body = '\u{1F9E0} Can you remember why?';
   } else {
@@ -462,14 +461,13 @@ export async function cancelAllAlarms(): Promise<void> {
 
 export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string> {
   await setupNotificationChannel();
-  const settings = await loadSettings();
 
   const title = alarm.icon
     ? `${alarm.icon} Snoozed Alarm`
     : '\u23F0 Snoozed Alarm';
 
   let body: string;
-  if (settings.guessWhyEnabled) {
+  if (alarm.guessWhy) {
     body = 'Snoozed \u2014 can you remember why?';
   } else if (alarm.private) {
     body = 'Snoozed \u2014 time to wake up!';

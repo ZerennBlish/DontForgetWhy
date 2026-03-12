@@ -9,7 +9,7 @@ export interface AppSettings {
 }
 
 const defaultSettings: AppSettings = {
-  guessWhyEnabled: true,
+  guessWhyEnabled: false,
   timeFormat: '12h',
   timeInputMode: 'scroll',
 };

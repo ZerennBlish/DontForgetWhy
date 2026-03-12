@@ -1,11 +1,10 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { loadSettings, saveSettings } from '../services/settings';
 import BackButton from '../components/BackButton';
 import { hapticLight } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
@@ -15,12 +14,10 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Games'>;
 export default function GamesScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [riddleStreak, setRiddleStreak] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
-      loadSettings().then((s) => setGuessWhyEnabled(s.guessWhyEnabled));
       AsyncStorage.getItem('dailyRiddleStats').then((data) => {
         try {
           if (data) {
@@ -35,12 +32,6 @@ export default function GamesScreen({ navigation }: Props) {
       });
     }, []),
   );
-
-  const handleGuessWhyToggle = async (value: boolean) => {
-    hapticLight();
-    setGuessWhyEnabled(value);
-    await saveSettings({ guessWhyEnabled: value });
-  };
 
   const styles = useMemo(
     () =>
@@ -90,39 +81,23 @@ export default function GamesScreen({ navigation }: Props) {
           fontSize: 18,
           fontWeight: '700',
           color: '#FFFFFF',
+          textAlign: 'center',
         },
         gameDesc: {
           fontSize: 14,
           color: 'rgba(255,255,255,0.7)',
           marginTop: 4,
           lineHeight: 20,
+          textAlign: 'center',
         },
         chevron: {
           fontSize: 18,
           color: 'rgba(255,255,255,0.5)',
         },
-        guessWhyCard: {
-          marginHorizontal: 16,
-          marginTop: 12,
-          backgroundColor: 'rgba(255,255,255,0.15)',
-          borderRadius: 16,
-          padding: 20,
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.2)',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 16,
-        },
         streakText: {
           fontSize: 13,
           color: colors.orange,
           fontWeight: '700',
-          marginTop: 4,
-        },
-        guessWhySubtext: {
-          fontSize: 13,
-          color: 'rgba(255,255,255,0.7)',
-          fontStyle: 'italic',
           marginTop: 4,
         },
       }),
@@ -134,40 +109,10 @@ export default function GamesScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <BackButton onPress={() => navigation.goBack()} />
-          <Text style={{ fontSize: 36 }}>{'\u{1F3AE}'}</Text>
-          <TouchableOpacity
-            onPress={() => { hapticLight(); navigation.navigate('MemoryScore'); }}
-            activeOpacity={0.7}
-          >
-            <Text style={{ fontSize: 24 }}>{'\u{1F3C6}'}</Text>
-          </TouchableOpacity>
-        </View>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={{ fontSize: 36, textAlign: 'center' }}>{'\u{1F3AE}'}</Text>
         <Text style={[styles.title, { textAlign: 'center', marginTop: 4 }]}>Brain Games</Text>
         <Text style={[styles.subtitle, { textAlign: 'center' }]}>Exercise that forgetful brain of yours</Text>
-      </View>
-
-      {/* Guess Why — toggle only, not navigable */}
-      <View style={styles.guessWhyCard}>
-        <Text style={styles.gameEmoji}>{'\u{1F9E0}'}</Text>
-        <View style={styles.gameInfo}>
-          <Text style={styles.gameName}>Guess Why</Text>
-          <Text style={styles.gameDesc}>
-            Can you remember why you set your alarms?
-          </Text>
-          <Text style={styles.guessWhySubtext}>
-            {guessWhyEnabled
-              ? 'Plays automatically when alarms fire'
-              : 'Disabled \u2014 toggle to play when alarms fire'}
-          </Text>
-        </View>
-        <Switch
-          value={guessWhyEnabled}
-          onValueChange={handleGuessWhyToggle}
-          trackColor={{ false: colors.border, true: colors.accent }}
-          thumbColor={guessWhyEnabled ? colors.textPrimary : colors.textTertiary}
-        />
       </View>
 
       {/* Daily Riddle */}
@@ -176,7 +121,9 @@ export default function GamesScreen({ navigation }: Props) {
         onPress={() => { hapticLight(); navigation.navigate('DailyRiddle'); }}
         activeOpacity={0.7}
       >
-        <Text style={styles.gameEmoji}>{'\u{1F4A1}'}</Text>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.gameEmoji}>{'\u{1F4A1}'}</Text>
+        </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Daily Riddle</Text>
           <Text style={styles.gameDesc}>
@@ -188,7 +135,9 @@ export default function GamesScreen({ navigation }: Props) {
             </Text>
           )}
         </View>
-        <Text style={styles.chevron}>{'\u203A'}</Text>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.chevron}>{'\u203A'}</Text>
+        </View>
       </TouchableOpacity>
 
       {/* Trivia */}
@@ -197,14 +146,18 @@ export default function GamesScreen({ navigation }: Props) {
         onPress={() => { hapticLight(); navigation.navigate('Trivia'); }}
         activeOpacity={0.7}
       >
-        <Text style={styles.gameEmoji}>{'\u{1F9E0}'}</Text>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.gameEmoji}>{'\u{1F9E0}'}</Text>
+        </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trivia</Text>
           <Text style={styles.gameDesc}>
             10 categories. 370+ questions offline.
           </Text>
         </View>
-        <Text style={styles.chevron}>{'\u203A'}</Text>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.chevron}>{'\u203A'}</Text>
+        </View>
       </TouchableOpacity>
 
       {/* Sudoku */}
@@ -213,12 +166,16 @@ export default function GamesScreen({ navigation }: Props) {
         onPress={() => { hapticLight(); navigation.navigate('Sudoku'); }}
         activeOpacity={0.7}
       >
-        <Text style={styles.gameEmoji}>{'\u{1F522}'}</Text>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.gameEmoji}>{'\u{1F522}'}</Text>
+        </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Sudoku</Text>
           <Text style={styles.gameDesc}>Classic number puzzle. No forgetting allowed.</Text>
         </View>
-        <Text style={styles.chevron}>{'\u203A'}</Text>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.chevron}>{'\u203A'}</Text>
+        </View>
       </TouchableOpacity>
 
       {/* Memory Match */}
@@ -227,12 +184,34 @@ export default function GamesScreen({ navigation }: Props) {
         onPress={() => { hapticLight(); navigation.navigate('MemoryMatch'); }}
         activeOpacity={0.7}
       >
-        <Text style={styles.gameEmoji}>{'\u{1F9E9}'}</Text>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.gameEmoji}>{'\u{1F9E9}'}</Text>
+        </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Memory Match</Text>
           <Text style={styles.gameDesc}>Flip cards and find matching pairs</Text>
         </View>
-        <Text style={styles.chevron}>{'\u203A'}</Text>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.chevron}>{'\u203A'}</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Trophies */}
+      <TouchableOpacity
+        style={styles.gameCard}
+        onPress={() => { hapticLight(); navigation.navigate('MemoryScore'); }}
+        activeOpacity={0.7}
+      >
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.gameEmoji}>{'\u{1F3C6}'}</Text>
+        </View>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>Trophies</Text>
+          <Text style={styles.gameDesc}>Track your brain training progress</Text>
+        </View>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Text style={styles.chevron}>{'\u203A'}</Text>
+        </View>
       </TouchableOpacity>
     </ScrollView>
     </View>

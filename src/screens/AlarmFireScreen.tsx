@@ -79,7 +79,6 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     timerSoundId,
     timerNotificationId,
     notificationId,
-    guessWhyEnabled,
     postGuessWhy,
   } = route.params;
 
@@ -331,10 +330,11 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   // Determine if Guess Why button should show
   const canPlayGuessWhy = useMemo(() => {
-    if (isTimer || !alarm || !guessWhyEnabled || postGuessWhy) return false;
+    if (isTimer || !alarm || !alarm.guessWhy || postGuessWhy) return false;
     const hasIcon = Boolean(alarm.icon) && guessWhyIcons.some((i) => i.emoji === alarm.icon);
-    return hasIcon || (alarm.note?.length ?? 0) >= 3;
-  }, [isTimer, alarm, guessWhyEnabled, postGuessWhy]);
+    const hasNickname = (alarm.nickname?.trim().length ?? 0) >= 1;
+    return hasIcon || hasNickname || (alarm.note?.length ?? 0) >= 3;
+  }, [isTimer, alarm, postGuessWhy]);
 
   // ── Display values ──────────────────────────────────────────────
   //
@@ -351,7 +351,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     : formatTime(alarm?.time || '', timeFormat);
 
   const isPrivate = !isTimer && !!alarm?.private;
-  const isPreGame = !!guessWhyEnabled && !postGuessWhy;
+  const isPreGame = !!alarm?.guessWhy && !postGuessWhy;
 
   // Icon: private alarms and pre-game always show generic bell.
   // Non-private post-game or no-GuessWhy shows the real icon.
@@ -369,7 +369,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   // Note: NEVER shown for private alarms. For non-private, only shown
   // when Guess Why is off or the game has been played (postGuessWhy).
   const displayNote = !isTimer && !isPrivate && alarm?.note
-    && (!guessWhyEnabled || postGuessWhy)
+    && (!alarm?.guessWhy || postGuessWhy)
     ? alarm.note : null;
 
   // Button visibility

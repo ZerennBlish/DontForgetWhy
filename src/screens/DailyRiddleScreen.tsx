@@ -294,11 +294,13 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           fontSize: 28,
           fontWeight: '800',
           color: '#FFFFFF',
+          textAlign: 'center',
         },
         dateText: {
           fontSize: 15,
           color: colors.textTertiary,
           marginTop: 4,
+          textAlign: 'center',
         },
         streakRow: {
           flexDirection: 'row',

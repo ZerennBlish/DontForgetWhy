@@ -257,6 +257,15 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     existingAlarm?.icon || null
   );
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [guessWhy, setGuessWhy] = useState(existingAlarm?.guessWhy ?? false);
+
+  // Auto-clear guessWhy when eligibility is lost (no nickname, note < 3 chars, no icon)
+  useEffect(() => {
+    if (guessWhy && !nickname.trim() && note.trim().length < 3 && !selectedIcon) {
+      setGuessWhy(false);
+    }
+  }, [nickname, note, selectedIcon, guessWhy]);
+
   const [selectedPrivate, setSelectedPrivate] = useState(
     existingAlarm?.private || false
   );
@@ -620,7 +629,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     quickDayRow: {
       flexDirection: 'row',
       gap: 10,
-      marginBottom: 24,
+      marginBottom: 10,
     },
     quickDayBtn: {
       paddingHorizontal: 14,
@@ -642,13 +651,19 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     setDateRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 6,
-      marginBottom: 16,
-      gap: 6,
+      backgroundColor: cardBg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      minHeight: 48,
+      marginBottom: 8,
     },
     setDateText: {
-      fontSize: 14,
-      color: colors.textTertiary,
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textPrimary,
     },
     setDateChevron: {
       fontSize: 11,
@@ -731,7 +746,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       fontWeight: '600',
     },
     scheduleSection: {
-      marginBottom: 24,
+      marginBottom: 8,
     },
     headerRight: {
       position: 'absolute',
@@ -915,6 +930,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           note: note.trim(),
           category: 'general' as AlarmCategory,
           icon: selectedIcon || undefined,
+          guessWhy,
           private: selectedPrivate,
           mode,
           days: selectedDays,
@@ -938,6 +954,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           date: mode === 'one-time' ? alarmDate : null,
           category: 'general' as AlarmCategory,
           icon: selectedIcon || undefined,
+          guessWhy,
           private: selectedPrivate,
           createdAt: new Date().toISOString(),
           notificationIds: [],
@@ -1258,7 +1275,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 activeOpacity={0.6}
               >
                 <Text style={styles.setDateText}>
-                  {'\u{1F4C5}'} {selectedDate ? formatDateDisplay(selectedDate) : 'No date set'}
+                  {'\u{1F4C5}'} {selectedDate ? formatDateDisplay(selectedDate) : 'Set date'}
                 </Text>
               </TouchableOpacity>
               {selectedDate ? (
@@ -1395,8 +1412,35 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         />
         <Text style={styles.charCount}>{note.length}/200</Text>
 
+        {(() => {
+          const guessWhyDisabled = !nickname.trim() && note.trim().length < 3 && !selectedIcon;
+          return (
+            <>
+              <View style={[styles.toggleCard, { marginTop: 4 }, guessWhyDisabled && { opacity: 0.5 }]}>
+                <Text style={[styles.toggleLabel, { flex: 0, marginRight: 0 }]}>Guess Why</Text>
+                <TouchableOpacity
+                  onPress={() => Alert.alert('Guess Why', 'When this alarm fires, you\'ll have to guess why you set it before you can dismiss it. Requires a nickname, note, or icon to play.')}
+                  activeOpacity={0.7}
+                  style={{ marginLeft: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center', marginRight: 'auto' }}
+                >
+                  <Text style={{ fontSize: 12, color: colors.textTertiary, fontWeight: '700' }}>i</Text>
+                </TouchableOpacity>
+                <Switch
+                  value={guessWhy}
+                  onValueChange={(v) => { hapticLight(); setGuessWhy(v); }}
+                  trackColor={{ false: colors.border, true: colors.accent }}
+                  thumbColor={guessWhy ? colors.textPrimary : colors.textTertiary}
+                  disabled={guessWhyDisabled}
+                />
+              </View>
+              <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: -22, marginBottom: 20, paddingLeft: 16 }}>
+                {guessWhyDisabled ? 'Add a nickname, note, or icon first' : 'Play a guessing game when this alarm fires'}
+              </Text>
+            </>
+          );
+        })()}
 
-        <View style={styles.toggleCard}>
+        <View style={[styles.toggleCard, { marginTop: 4 }]}>
           <Text style={styles.toggleLabel}>Private Alarm</Text>
           <Switch
             value={selectedPrivate}

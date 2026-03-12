@@ -68,6 +68,7 @@ export default function SettingsScreen({ navigation }: Props) {
       fontSize: 28,
       fontWeight: '800',
       color: '#FFFFFF',
+      textAlign: 'center',
     },
     permissionBanner: {
       marginHorizontal: 16,
@@ -475,6 +476,26 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
 
       <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={styles.row}>
+          <Text style={styles.label}>Silence All Alarms</Text>
+          <Switch
+            value={silenceAll}
+            onValueChange={handleSilenceToggle}
+            trackColor={{ false: colors.border, true: '#FFA500' }}
+            thumbColor={silenceAll ? '#FFFFFF' : colors.textTertiary}
+          />
+        </View>
+        {silenceAll && (
+          <Text style={{ fontSize: 14, color: '#FFA500', fontWeight: '600', marginTop: 10 }}>
+            {silenceRemaining || 'Silenced until you turn it off'}
+          </Text>
+        )}
+        <Text style={styles.description}>
+          Mute all alarm sounds and vibrations. Alarms still fire and show notifications.
+        </Text>
+      </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
         <Text style={styles.label}>Time Input Style</Text>
         <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 2, marginTop: 8 }}>
           <TouchableOpacity
@@ -494,41 +515,6 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
         <Text style={styles.description}>
           Choose how you set alarm and timer times: scroll wheels or text input.
-        </Text>
-      </View>
-
-      <View style={[styles.card, { marginTop: 16 }]}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Haptic Feedback</Text>
-          <Switch
-            value={hapticsEnabled}
-            onValueChange={handleHapticsToggle}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={hapticsEnabled ? colors.textPrimary : colors.textTertiary}
-          />
-        </View>
-        <Text style={styles.description}>
-          Touch feedback for buttons, toggles, and interactions.
-        </Text>
-      </View>
-
-      <View style={[styles.card, { marginTop: 16 }]}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Silence All Alarms</Text>
-          <Switch
-            value={silenceAll}
-            onValueChange={handleSilenceToggle}
-            trackColor={{ false: colors.border, true: '#FFA500' }}
-            thumbColor={silenceAll ? '#FFFFFF' : colors.textTertiary}
-          />
-        </View>
-        {silenceAll && (
-          <Text style={{ fontSize: 14, color: '#FFA500', fontWeight: '600', marginTop: 10 }}>
-            {silenceRemaining || 'Silenced until you turn it off'}
-          </Text>
-        )}
-        <Text style={styles.description}>
-          Mute all alarm sounds and vibrations. Alarms still fire and show notifications.
         </Text>
       </View>
 
@@ -626,16 +612,17 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
 
       <View style={[styles.card, { marginTop: 16 }]}>
-        <Text style={styles.sectionLabel}>Permissions</Text>
-        <TouchableOpacity
-          style={styles.setupGuideBtn}
-          onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.setupGuideText}>Setup Guide</Text>
-        </TouchableOpacity>
-        <Text style={styles.setupGuideDesc}>
-          Re-run setup. In case you forgot to do something...
+        <View style={styles.row}>
+          <Text style={styles.label}>Haptic Feedback</Text>
+          <Switch
+            value={hapticsEnabled}
+            onValueChange={handleHapticsToggle}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={hapticsEnabled ? colors.textPrimary : colors.textTertiary}
+          />
+        </View>
+        <Text style={styles.description}>
+          Touch feedback for buttons, toggles, and interactions.
         </Text>
       </View>
 
@@ -676,9 +663,23 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={styles.aboutChevron}>{'\u203A'}</Text>
         </View>
         <Text style={styles.description}>
-          Version info, credits, and a hidden surprise.
+          Version info and credits.
         </Text>
       </TouchableOpacity>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <Text style={styles.sectionLabel}>Permissions</Text>
+        <TouchableOpacity
+          style={styles.setupGuideBtn}
+          onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.setupGuideText}>Setup Guide</Text>
+        </TouchableOpacity>
+        <Text style={styles.setupGuideDesc}>
+          Re-run setup. In case you forgot to do something...
+        </Text>
+      </View>
 
       {/* Color Picker Modal */}
       <Modal transparent visible={pickerVisible} animationType="fade" onRequestClose={() => { hapticLight(); setPickerVisible(false); }}>

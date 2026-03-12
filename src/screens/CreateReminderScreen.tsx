@@ -500,7 +500,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       marginBottom: 10,
     },
     scheduleSection: {
-      marginBottom: 24,
+      marginBottom: 8,
     },
     modeContainer: {
       flexDirection: 'row',
@@ -556,7 +556,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     quickDayRow: {
       flexDirection: 'row',
       gap: 10,
-      marginBottom: 24,
+      marginBottom: 10,
     },
     quickDayBtn: {
       paddingHorizontal: 14,
@@ -578,13 +578,19 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     setDateRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 6,
-      marginBottom: 16,
-      gap: 6,
+      backgroundColor: cardBg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      minHeight: 48,
+      marginBottom: 8,
     },
     setDateText: {
-      fontSize: 14,
-      color: colors.textTertiary,
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textPrimary,
     },
     setDateChevron: {
       fontSize: 11,
@@ -1274,7 +1280,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 activeOpacity={0.6}
               >
                 <Text style={styles.setDateText}>
-                  {'\u{1F4C5}'} {selectedDate ? formatDateDisplay(selectedDate) : 'No date set'}
+                  {'\u{1F4C5}'} {selectedDate ? formatDateDisplay(selectedDate) : 'Set date'}
                 </Text>
               </TouchableOpacity>
               {selectedDate ? (
@@ -1411,7 +1417,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         />
         <Text style={styles.charCount}>{text.length}/200</Text>
 
-        <View style={styles.toggleCard}>
+        <View style={[styles.toggleCard, { marginTop: 4 }]}>
           <Text style={styles.toggleLabel}>Private Reminder</Text>
           <Switch
             value={selectedPrivate}

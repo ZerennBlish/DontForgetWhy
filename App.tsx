@@ -24,7 +24,7 @@ import NotepadScreen from './src/screens/NotepadScreen';
 import { loadAlarms, disableAlarm, deleteAlarm, purgeDeletedAlarms } from './src/services/storage';
 import { getReminders, updateReminder, purgeDeletedReminders } from './src/services/reminderStorage';
 import { purgeDeletedNotes, getPendingNoteAction } from './src/services/noteStorage';
-import { loadSettings, getOnboardingComplete } from './src/services/settings';
+import { getOnboardingComplete } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshTimerWidget } from './src/widget/updateWidget';
@@ -155,13 +155,11 @@ function AppNavigator() {
           console.log('[NOTIF] navigateToAlarmFire — alarm not found:', pending.alarmId);
           return;
         }
-        const settings = await loadSettings();
         if (navigationRef.current) {
           navigationRef.current.navigate('AlarmFire', {
             alarm,
             fromNotification: true,
             notificationId: pending.notificationId,
-            guessWhyEnabled: settings.guessWhyEnabled,
           });
         }
       } catch (e) {
@@ -266,12 +264,10 @@ function AppNavigator() {
               const alarms = await loadAlarms();
               const alarm = alarms.find((a) => a.id === pending.alarmId);
               if (alarm) {
-                const settings = await loadSettings();
                 alarmFireParams = {
                   alarm,
                   fromNotification: true,
                   notificationId: pending.notificationId,
-                  guessWhyEnabled: settings.guessWhyEnabled,
                 };
               }
             } catch (e) {
@@ -318,12 +314,10 @@ function AppNavigator() {
                     const alarms = await loadAlarms();
                     const alarm = alarms.find((a) => a.id === alarmId);
                     if (alarm) {
-                      const settings = await loadSettings();
                       alarmFireParams = {
                         alarm,
                         fromNotification: true,
                         notificationId: notifId,
-                        guessWhyEnabled: settings.guessWhyEnabled,
                       };
                     }
                   } catch (e) {

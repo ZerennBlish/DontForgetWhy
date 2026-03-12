@@ -169,7 +169,7 @@ export async function getDetailedAlarms(): Promise<DetailedAlarm[]> {
       if (result.length >= 3) break;
       const alarm = enabledAlarms.find((a) => a.id === id);
       if (alarm) {
-        result.push(alarmToDetailed(alarm, settings.guessWhyEnabled, settings.timeFormat));
+        result.push(alarmToDetailed(alarm, settings.timeFormat));
         addedIds.add(alarm.id);
       }
     }
@@ -184,7 +184,7 @@ export async function getDetailedAlarms(): Promise<DetailedAlarm[]> {
 
     for (const alarm of remaining) {
       if (result.length >= 3) break;
-      result.push(alarmToDetailed(alarm, settings.guessWhyEnabled, settings.timeFormat));
+      result.push(alarmToDetailed(alarm, settings.timeFormat));
       addedIds.add(alarm.id);
     }
   }
@@ -194,10 +194,9 @@ export async function getDetailedAlarms(): Promise<DetailedAlarm[]> {
 
 function alarmToDetailed(
   alarm: Alarm,
-  guessWhyEnabled: boolean,
   timeFormat: '12h' | '24h',
 ): DetailedAlarm {
-  if (guessWhyEnabled) {
+  if (alarm.guessWhy) {
     return {
       id: alarm.id,
       icon: '\u2753',

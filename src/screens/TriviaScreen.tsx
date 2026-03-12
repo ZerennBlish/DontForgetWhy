@@ -633,6 +633,7 @@ function makeStyles(colors: any, insets: any) {
       fontSize: 28,
       fontWeight: '800',
       color: '#FFFFFF',
+      textAlign: 'center',
     },
 
     // Mode toggle

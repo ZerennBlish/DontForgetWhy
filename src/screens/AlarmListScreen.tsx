@@ -69,7 +69,6 @@ export default function AlarmListScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const layout = useWindowDimensions();
   const [alarms, setAlarms] = useState<Alarm[]>([]);
-  const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
   const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
@@ -392,7 +391,6 @@ export default function AlarmListScreen({ navigation, route }: Props) {
         pruneAlarmPins(loaded.filter((a) => !a.deletedAt).map((a) => a.id)).then(setPinnedAlarmIds);
       });
       loadSettings().then((s) => {
-        setGuessWhyEnabled(s.guessWhyEnabled);
         setTimeFormat(s.timeFormat);
       });
       loadStats().then(setStats);
@@ -968,7 +966,6 @@ export default function AlarmListScreen({ navigation, route }: Props) {
                             <AlarmCard
                               alarm={item}
                               timeFormat={timeFormat}
-                              guessWhyEnabled={guessWhyEnabled}
                               isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
                               onToggle={handleToggle}
                               onEdit={handleEdit}

@@ -413,6 +413,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           fontSize: 28,
           fontWeight: '800',
           color: '#FFFFFF',
+          textAlign: 'center',
         },
         selectSubtitle: {
           fontSize: 15,
@@ -427,16 +428,19 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           padding: 20,
           borderWidth: 1,
           borderColor: 'rgba(255,255,255,0.2)',
+          alignItems: 'center',
         },
         difficultyLabel: {
           fontSize: 20,
           fontWeight: '700',
           color: colors.textPrimary,
+          textAlign: 'center',
         },
         difficultyInfo: {
           fontSize: 14,
           color: colors.textTertiary,
           marginTop: 4,
+          textAlign: 'center',
         },
         bestScoreText: {
           fontSize: 13,
