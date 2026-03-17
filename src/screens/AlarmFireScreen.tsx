@@ -204,18 +204,32 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         promises.push(cancelTimerCountdownNotification(timerId).catch(() => {}));
       }
     } else if (alarm) {
+      const isRecurring = alarm.mode !== 'one-time';
       if (alarm.notificationIds?.length) {
         for (const id of alarm.notificationIds) {
-          promises.push(dismissAlarmNotification(id).catch(() => {}));
+          promises.push(
+            isRecurring
+              ? notifee.cancelDisplayedNotification(id).catch(() => {})
+              : dismissAlarmNotification(id).catch(() => {}),
+          );
         }
       }
       if (alarm.notificationId) {
-        promises.push(dismissAlarmNotification(alarm.notificationId).catch(() => {}));
+        promises.push(
+          isRecurring
+            ? notifee.cancelDisplayedNotification(alarm.notificationId).catch(() => {})
+            : dismissAlarmNotification(alarm.notificationId).catch(() => {}),
+        );
       }
     }
     // Also cancel the specific pressed/triggered notification
     if (notificationId) {
-      promises.push(notifee.cancelNotification(notificationId).catch(() => {}));
+      const isRecurring = alarm?.mode !== 'one-time' && !isTimer;
+      promises.push(
+        isRecurring
+          ? notifee.cancelDisplayedNotification(notificationId).catch(() => {})
+          : notifee.cancelNotification(notificationId).catch(() => {}),
+      );
     }
     await Promise.all(promises);
     console.log('[AlarmFire] cancelAllNotifications — done');
