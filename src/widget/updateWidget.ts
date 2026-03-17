@@ -4,7 +4,7 @@ import { DetailedWidget } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
 import { getDetailedAlarms, getDetailedPresets, getCompactReminders, getWidgetNotes, getWidgetTheme } from './widgetTaskHandler';
 
-export async function refreshTimerWidget(): Promise<void> {
+export async function refreshWidgets(): Promise<void> {
   const theme = await getWidgetTheme();
   try {
     await requestWidgetUpdate({

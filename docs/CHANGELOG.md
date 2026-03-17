@@ -38,7 +38,7 @@ All notable changes to Don't Forget Why, organized by date.
 **Integration:**
 - purgeDeletedNotes() runs on app startup (30-day cycle, same as alarms/reminders)
 - Note pins: max 4, managed via widgetPins.ts
-- refreshTimerWidget() updated to also refresh both notepad widgets
+- refreshWidgets() updated to also refresh both notepad widgets
 
 ### Production Resubmission Plan
 - First production application rejected: "More testing required" — only 5/14 testers downloaded

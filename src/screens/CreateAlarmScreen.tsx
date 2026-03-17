@@ -17,6 +17,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 import type { AlarmCategory, AlarmDay } from '../types/alarm';
 import { WEEKDAYS, WEEKENDS } from '../types/alarm';
+import type { SoundMode } from '../utils/soundModeUtils';
+import { cycleSoundMode, soundModeToSoundId, soundIdToSoundMode, getSoundModeIcon, getSoundModeLabel } from '../utils/soundModeUtils';
+import { useCalendar } from '../hooks/useCalendar';
+import { useDaySelection } from '../hooks/useDaySelection';
 import { addAlarm, updateAlarm } from '../services/storage';
 import { scheduleAlarm, requestPermissions } from '../services/notifications';
 import { loadSettings } from '../services/settings';
@@ -26,7 +30,7 @@ import SoundPickerModal from '../components/SoundPickerModal';
 import type { SystemSound } from '../components/SoundPickerModal';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { refreshTimerWidget } from '../widget/updateWidget';
+import { refreshWidgets } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
@@ -43,19 +47,6 @@ const DAY_LABELS: { key: AlarmDay; short: string }[] = [
   { key: 'Sat', short: 'S' },
 ];
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function getDaysInMonth(year: number, month: number): number {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-function getFirstDayOfMonth(year: number, month: number): number {
-  // 0=Sun, 1=Mon ... 6=Sat — shift to Mon-start: (day + 6) % 7
-  return (new Date(year, month, 1).getDay() + 6) % 7;
-}
 
 function getDateStr(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -119,11 +110,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
 
   const [nickname, setNickname] = useState(existingAlarm?.nickname || '');
 
-  const [soundMode, setSoundMode] = useState<'sound' | 'vibrate' | 'silent'>(() => {
-    if (existingAlarm?.soundId === 'silent') return 'vibrate';
-    if (existingAlarm?.soundId === 'true_silent') return 'silent';
-    return 'sound';
-  });
+  const [soundMode, setSoundMode] = useState<SoundMode>(() => soundIdToSoundMode(existingAlarm?.soundId));
   const [systemSoundPickerVisible, setSystemSoundPickerVisible] = useState(false);
   const iconInputRef = useRef<TextInput>(null);
   const [selectedSoundUri, setSelectedSoundUri] = useState<string | null>(
@@ -284,26 +271,32 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const [mode, setMode] = useState<'recurring' | 'one-time'>(
     existingAlarm?.mode || 'one-time'
   );
-  const [selectedDays, setSelectedDays] = useState<AlarmDay[]>(
-    existingAlarm?.days?.length ? existingAlarm.days as AlarmDay[] : []
-  );
   const [selectedDate, setSelectedDate] = useState<string | null>(
     existingAlarm?.date || null
   );
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [calMonth, setCalMonth] = useState(() => {
-    if (existingAlarm?.date) {
-      const [, mo] = existingAlarm.date.split('-').map(Number);
-      return mo - 1;
-    }
-    return new Date().getMonth();
-  });
-  const [calYear, setCalYear] = useState(() => {
-    if (existingAlarm?.date) {
-      const [yr] = existingAlarm.date.split('-').map(Number);
-      return yr;
-    }
-    return new Date().getFullYear();
+
+  const {
+    selectedDays, setSelectedDays,
+    handleToggleDay, handleQuickDays,
+    isWeekdaysSelected, isWeekendsSelected,
+  } = useDaySelection(
+    existingAlarm?.days?.length ? existingAlarm.days as AlarmDay[] : []
+  );
+
+  const {
+    calendarMonth: calMonth, calendarYear: calYear,
+    showCalendar, handleCalPrev, handleCalNext,
+    handleSelectDate, toggleCalendar,
+    calDays, calFirstDay, MONTH_NAMES,
+  } = useCalendar({
+    initialMonth: existingAlarm?.date ? existingAlarm.date.split('-').map(Number)[1] - 1 : undefined,
+    initialYear: existingAlarm?.date ? existingAlarm.date.split('-').map(Number)[0] : undefined,
+    onSelectDate: (dateStr) => {
+      setSelectedDate(dateStr);
+      if (mode === 'recurring') {
+        setSelectedDays([]);
+      }
+    },
   });
 
   const cardBg = colors.card + 'BF';
@@ -788,26 +781,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     },
   }), [colors, cardBg, insets.top, insets.bottom]);
 
-  const handleToggleDay = (day: AlarmDay) => {
-    if (mode === 'one-time') {
-      setSelectedDays((prev) => prev.includes(day) ? [] : [day]);
-    } else {
-      setSelectedDate(null);
-      setSelectedDays((prev) => {
-        if (prev.includes(day)) return prev.filter((d) => d !== day);
-        return [...prev, day];
-      });
-    }
-  };
-
-  const handleQuickDays = (preset: AlarmDay[]) => {
-    setSelectedDate(null);
-    setSelectedDays((prev) => {
-      const same = prev.length === preset.length && preset.every((d) => prev.includes(d));
-      if (same) return [];
-      return [...preset];
-    });
-  };
+  const clearDate = () => setSelectedDate(null);
 
   const handleSystemSoundSelect = (sound: SystemSound | null) => {
     hapticLight();
@@ -823,44 +797,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     setSystemSoundPickerVisible(false);
   };
 
-  const isWeekdaysSelected = selectedDays.length === 5 && WEEKDAYS.every((d) => selectedDays.includes(d));
-  const isWeekendsSelected = selectedDays.length === 2 && WEEKENDS.every((d) => selectedDays.includes(d));
-
-  const calDays = getDaysInMonth(calYear, calMonth);
-  const calFirstDay = getFirstDayOfMonth(calYear, calMonth);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  const handleCalPrev = () => {
-    if (calMonth === 0) {
-      setCalMonth(11);
-      setCalYear((y) => y - 1);
-    } else {
-      setCalMonth((m) => m - 1);
-    }
-  };
-
-  const handleCalNext = () => {
-    if (calMonth === 11) {
-      setCalMonth(0);
-      setCalYear((y) => y + 1);
-    } else {
-      setCalMonth((m) => m + 1);
-    }
-  };
-
-  const handleSelectDate = (day: number) => {
-    const d = new Date(calYear, calMonth, day);
-    d.setHours(0, 0, 0, 0);
-    if (d.getTime() < today.getTime()) return;
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    setSelectedDate(`${yyyy}-${mm}-${dd}`);
-    if (mode === 'recurring') {
-      setSelectedDays([]);
-    }
-  };
 
   const proceedWithSave = async () => {
     try {
@@ -935,7 +873,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           mode,
           days: selectedDays,
           date: mode === 'one-time' ? alarmDate : null,
-          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : (selectedSoundUri ? undefined : (existingAlarm!.soundId === 'silent' || existingAlarm!.soundId === 'true_silent' ? undefined : existingAlarm!.soundId)),
+          soundId: soundModeToSoundId(soundMode) ?? (selectedSoundUri ? undefined : (existingAlarm!.soundId === 'silent' || existingAlarm!.soundId === 'true_silent' ? undefined : existingAlarm!.soundId)),
           soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
           soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
           soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
@@ -958,7 +896,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           private: selectedPrivate,
           createdAt: new Date().toISOString(),
           notificationIds: [],
-          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
+          soundId: soundModeToSoundId(soundMode),
           soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
           soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
           soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
@@ -1024,7 +962,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         }
       } catch {}
 
-      refreshTimerWidget();
+      refreshWidgets();
       if (navigation.canGoBack()) {
         navigation.goBack();
       } else {
@@ -1217,7 +1155,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               <TouchableOpacity
                 key={key}
                 style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
-                onPress={() => { hapticLight(); handleToggleDay(key); }}
+                onPress={() => { hapticLight(); handleToggleDay(key, mode, clearDate); }}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
@@ -1231,21 +1169,21 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               <View style={styles.quickDayRow}>
                 <TouchableOpacity
                   style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
-                  onPress={() => { hapticLight(); handleQuickDays([...WEEKDAYS]); }}
+                  onPress={() => { hapticLight(); handleQuickDays([...WEEKDAYS], clearDate); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.quickDayText}>Weekdays</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
-                  onPress={() => { hapticLight(); handleQuickDays([...WEEKENDS]); }}
+                  onPress={() => { hapticLight(); handleQuickDays([...WEEKENDS], clearDate); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.quickDayText}>Weekends</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickDayBtn, showCalendar && styles.quickDayBtnActive]}
-                  onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+                  onPress={() => { hapticLight(); toggleCalendar(); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.quickDayText}>{'\u{1F4C5}'}</Text>
@@ -1271,7 +1209,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             <View style={styles.setDateRow}>
               <TouchableOpacity
                 style={{ flex: 1 }}
-                onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+                onPress={() => { hapticLight(); toggleCalendar(); }}
                 activeOpacity={0.6}
               >
                 <Text style={styles.setDateText}>
@@ -1459,9 +1397,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             <TouchableOpacity
               onPress={() => {
                 setSoundMode((prev) => {
-                  if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
-                  if (prev === 'vibrate') return 'silent';
-                  hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); return 'sound';
+                  const next = cycleSoundMode(prev);
+                  if (next === 'vibrate') { hapticMedium(); }
+                  if (next === 'sound') { hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); }
+                  return next;
                 });
               }}
               style={[
@@ -1471,11 +1410,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               activeOpacity={0.7}
             >
               <Text style={styles.soundModeIconText}>
-                {soundMode === 'sound' ? '\u{1F514}' : soundMode === 'vibrate' ? '\u{1F4F3}' : '\u{1F507}'}
+                {getSoundModeIcon(soundMode)}
               </Text>
             </TouchableOpacity>
             <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
-              {soundMode === 'sound' ? 'Sound' : soundMode === 'vibrate' ? 'Vibrate' : 'Silent'}
+              {getSoundModeLabel(soundMode)}
             </Text>
           </View>
           {soundMode === 'sound' && (

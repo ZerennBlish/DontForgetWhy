@@ -26,7 +26,7 @@ import {
 } from '../services/timerStorage';
 import { getPinnedAlarms, togglePinAlarm, isAlarmPinned, unpinAlarm, pruneAlarmPins } from '../services/widgetPins';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { refreshTimerWidget } from '../widget/updateWidget';
+import { refreshWidgets } from '../widget/updateWidget';
 import { getReminders } from '../services/reminderStorage';
 import { getNotes } from '../services/noteStorage';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
@@ -521,7 +521,7 @@ export default function AlarmListScreen({ navigation, route }: Props) {
   const handleToggle = async (id: string) => {
     const updated = await toggleAlarm(id);
     setAlarms(updated);
-    refreshTimerWidget();
+    refreshWidgets();
   };
 
   const handleDelete = async (id: string) => {
@@ -535,7 +535,7 @@ export default function AlarmListScreen({ navigation, route }: Props) {
     const updated = await deleteAlarm(id);
     setAlarms(updated);
     setPinnedAlarmIds((prev) => prev.filter((pid) => pid !== id));
-    refreshTimerWidget();
+    refreshWidgets();
     setUndoKey((k) => k + 1);
     setShowUndo(true);
   };
@@ -549,7 +549,7 @@ export default function AlarmListScreen({ navigation, route }: Props) {
       const pins = await togglePinAlarm(deletedAlarm.id);
       setPinnedAlarmIds(pins);
     }
-    refreshTimerWidget();
+    refreshWidgets();
     setDeletedAlarm(null);
   };
 
@@ -561,7 +561,7 @@ export default function AlarmListScreen({ navigation, route }: Props) {
   const handleRestore = async (id: string) => {
     const updated = await restoreAlarm(id);
     setAlarms(updated);
-    refreshTimerWidget();
+    refreshWidgets();
   };
 
   const handlePermanentDelete = async (id: string) => {
@@ -581,7 +581,7 @@ export default function AlarmListScreen({ navigation, route }: Props) {
     }
     const updated = await togglePinAlarm(id);
     setPinnedAlarmIds(updated);
-    refreshTimerWidget();
+    refreshWidgets();
     ToastAndroid.show(
       isAlarmPinned(id, updated) ? 'Pinned to widget' : 'Unpinned from widget',
       ToastAndroid.SHORT,

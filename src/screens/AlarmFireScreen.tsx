@@ -27,7 +27,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticHeavy } from '../utils/haptics';
 import { getSnoozeMessage } from '../data/snoozeMessages';
-import { refreshTimerWidget } from '../widget/updateWidget';
+import { refreshWidgets } from '../widget/updateWidget';
 import { markNotifHandled } from '../services/pendingAlarm';
 import { playAlarmSound, stopAlarmSound, isAlarmSoundPlaying } from '../services/alarmSound';
 import { getDefaultTimerSound } from '../services/settings';
@@ -249,7 +249,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       if (!isTimer && alarm?.mode === 'one-time') {
         try {
           await deleteAlarm(alarm.id);
-          refreshTimerWidget();
+          refreshWidgets();
         } catch {}
       }
       // Reset snooze count on dismiss

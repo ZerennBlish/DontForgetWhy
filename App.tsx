@@ -27,7 +27,7 @@ import { purgeDeletedNotes, getPendingNoteAction } from './src/services/noteStor
 import { getOnboardingComplete } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshHapticsSetting } from './src/utils/haptics';
-import { refreshTimerWidget } from './src/widget/updateWidget';
+import { refreshWidgets } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
 import { getPendingAlarm, setPendingAlarm, clearPendingAlarm, markNotifHandled, wasNotifHandled } from './src/services/pendingAlarm';
 import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
@@ -617,7 +617,7 @@ function AppNavigator() {
                 await AsyncStorage.removeItem(`snoozing_${alarmId}`);
               } else {
                 await deleteAlarm(alarmId);
-                refreshTimerWidget();
+                refreshWidgets();
               }
             }
           } catch {}

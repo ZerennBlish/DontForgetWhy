@@ -24,7 +24,7 @@ import {
   updateUserTimer,
 } from '../services/timerStorage';
 import { getPinnedPresets, togglePinPreset, isPinned, unpinPreset } from '../services/widgetPins';
-import { refreshTimerWidget } from '../widget/updateWidget';
+import { refreshWidgets } from '../widget/updateWidget';
 import { loadSettings, getDefaultTimerSound, saveDefaultTimerSound } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -455,7 +455,7 @@ export default function TimerScreen({
       return;
     }
     await recordPresetUsage(preset.id);
-    refreshTimerWidget();
+    refreshWidgets();
     setRecentIds((prev) => {
       const filtered = prev.filter((id) => id !== preset.id);
       return [preset.id, ...filtered].slice(0, 20);
@@ -509,7 +509,7 @@ export default function TimerScreen({
     }
     const updated = await togglePinPreset(preset.id);
     setPinnedIds(updated);
-    refreshTimerWidget();
+    refreshWidgets();
     ToastAndroid.show(
       isPinned(preset.id, updated) ? 'Pinned to widget' : 'Unpinned from widget',
       ToastAndroid.SHORT,
@@ -712,7 +712,7 @@ export default function TimerScreen({
                 await unpinPreset(ut.id);
                 setUserTimers((prev) => prev.filter((t) => t.id !== ut.id));
                 setPinnedIds((prev) => prev.filter((id) => id !== ut.id));
-                refreshTimerWidget().catch(() => {});
+                refreshWidgets().catch(() => {});
               },
             },
           ]);

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { themes, generateCustomTheme, generateCustomThemeDual, type ThemeColors, type ThemeName } from './colors';
-import { refreshTimerWidget } from '../widget/updateWidget';
+import { refreshWidgets } from '../widget/updateWidget';
 
 const THEME_KEY = 'appTheme';
 const CUSTOM_KEY = 'customTheme';
@@ -84,7 +84,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback((name: ThemeName) => {
     setThemeName(name);
     AsyncStorage.setItem(THEME_KEY, name).then(() => {
-      refreshTimerWidget().catch(() => {});
+      refreshWidgets().catch(() => {});
     });
   }, []);
 
@@ -100,7 +100,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem(THEME_KEY, 'custom'),
       AsyncStorage.setItem(CUSTOM_KEY, JSON.stringify({ accent: accentHex, background: bgHex || null })),
     ]).then(() => {
-      refreshTimerWidget().catch(() => {});
+      refreshWidgets().catch(() => {});
     });
   }, []);
 

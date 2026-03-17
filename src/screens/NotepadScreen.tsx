@@ -44,7 +44,7 @@ import {
   isNotePinned,
 } from '../services/widgetPins';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { refreshTimerWidget } from '../widget/updateWidget';
+import { refreshWidgets } from '../widget/updateWidget';
 import UndoToast from '../components/UndoToast';
 import BackButton from '../components/BackButton';
 import { NOTE_COLORS, NOTE_FONT_COLORS, CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
@@ -257,7 +257,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
       };
       await addNote(welcomeNote);
       await togglePinNote(welcomeNote.id);
-      refreshTimerWidget();
+      refreshWidgets();
       loaded = await getAllNotes(true);
     }
 
@@ -444,7 +444,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     }
 
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
     closeEditor();
     ToastAndroid.show(
       isNew ? SAVE_TOASTS[Math.floor(Math.random() * SAVE_TOASTS.length)] : 'Note updated',
@@ -461,7 +461,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     await unpinNote(editingNote.id);
     await deleteNote(editingNote.id);
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
     closeEditor();
     setUndoKey((k) => k + 1);
     setShowUndo(true);
@@ -477,7 +477,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     await unpinNote(id);
     await deleteNote(id);
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
     setUndoKey((k) => k + 1);
     setShowUndo(true);
   };
@@ -490,7 +490,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
       await togglePinNote(deletedNote.id);
     }
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
     setDeletedNote(null);
   };
 
@@ -503,14 +503,14 @@ export default function NotepadScreen({ navigation, route }: Props) {
     hapticLight();
     await restoreNote(id);
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
   };
 
   const handlePermanentDelete = async (id: string) => {
     hapticHeavy();
     await permanentlyDeleteNote(id);
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
   };
 
   const handleTogglePin = async (id: string) => {
@@ -523,7 +523,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     await togglePinNote(id);
     const updated = await getPinnedNotes();
     setPinnedIds(updated);
-    refreshTimerWidget();
+    refreshWidgets();
     ToastAndroid.show(
       currentlyPinned ? 'Unpinned from widget' : 'Pinned to widget',
       ToastAndroid.SHORT,

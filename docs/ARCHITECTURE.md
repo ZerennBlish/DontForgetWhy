@@ -121,7 +121,7 @@ DontForgetWhy/
         ├── NotepadWidget.tsx        Full notepad widget: up to 4 sticky-note cards
         ├── NotepadWidgetCompact.tsx  Compact notepad widget: up to 3 note previews
         ├── TimerWidget.tsx          Compact widget: timer presets + alarm cards
-        ├── updateWidget.ts          refreshTimerWidget() — updates both widgets
+        ├── updateWidget.ts          refreshWidgets() — updates both widgets
         └── widgetTaskHandler.ts     Background widget handler: render, click, timer start
 ```
 
@@ -192,7 +192,7 @@ DontForgetWhy/
 1. **Alarm creation**: CreateAlarmScreen → `storage.addAlarm()` → `notifications.scheduleAlarm()` → Notifee trigger
 2. **Alarm fires**: Android system → Notifee DELIVERED event → `index.ts` (background) OR `App.tsx` (foreground) → `pendingAlarm.setPendingAlarm()` → AlarmFireScreen
 3. **Sound playback**: Event handler → `alarmSound.playAlarmSoundForNotification()` → NativeModules.AlarmChannelModule.playAlarmSound → Java MediaPlayer with USAGE_ALARM
-4. **Widget updates**: Any alarm/timer state change → `updateWidget.refreshTimerWidget()` → `requestWidgetUpdate()` → re-render both widgets
+4. **Widget updates**: Any alarm/timer state change → `updateWidget.refreshWidgets()` → `requestWidgetUpdate()` → re-render both widgets
 
 ---
 
@@ -251,7 +251,7 @@ Alarms and reminders set `deletedAt: string` (ISO timestamp) instead of hard del
 Notifee has no YEARLY repeat frequency. Yearly reminders use a one-time trigger. Both `index.ts` and `App.tsx` contain `rescheduleYearlyReminder()` which bumps the `dueDate` to next year and schedules a new trigger on DELIVERED or DISMISSED events.
 
 ### Widget Sync
-`refreshTimerWidget()` in `updateWidget.ts` is called after any alarm/timer/reminder state change. It calls `requestWidgetUpdate()` for both `TimerWidget` (compact) and `DetailedWidget` (large), re-rendering them with fresh data from AsyncStorage.
+`refreshWidgets()` in `updateWidget.ts` is called after any alarm/timer/reminder state change. It calls `requestWidgetUpdate()` for both `TimerWidget` (compact) and `DetailedWidget` (large), re-rendering them with fresh data from AsyncStorage.
 
 ### Migration on Load
 `storage.loadAlarms()` detects old data formats and migrates:

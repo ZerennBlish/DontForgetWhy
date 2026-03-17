@@ -360,7 +360,7 @@ await notifee.createChannel({
 
 **What happens** (same in both handlers):
 1. `stopAlarmSound()` — stops MediaPlayer
-2. If alarmId and alarm is one-time → `deleteAlarm(alarmId)` (soft delete) + `refreshTimerWidget()`
+2. If alarmId and alarm is one-time → `deleteAlarm(alarmId)` (soft delete) + `refreshWidgets()`
 
 ### EventType.TRIGGER_NOTIFICATION_CREATED (7)
 

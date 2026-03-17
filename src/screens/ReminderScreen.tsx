@@ -31,7 +31,7 @@ import {
   unpinReminder,
   pruneReminderPins,
 } from '../services/widgetPins';
-import { refreshTimerWidget } from '../widget/updateWidget';
+import { refreshWidgets } from '../widget/updateWidget';
 import { loadSettings } from '../services/settings';
 import { formatTime } from '../utils/time';
 import { getRandomReminderQuote } from '../data/reminderQuotes';
@@ -191,7 +191,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       }
       await completeRecurringReminder(id);
       await loadData();
-      refreshTimerWidget();
+      refreshWidgets();
       ToastAndroid.show('Rescheduled', ToastAndroid.SHORT);
       return;
     }
@@ -212,7 +212,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       }
     }
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
   };
 
   const handleDelete = async (id: string) => {
@@ -225,7 +225,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     await unpinReminder(id);
     await deleteReminder(id);
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
     setUndoKey((k) => k + 1);
     setShowUndo(true);
   };
@@ -245,7 +245,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       await togglePinReminder(deletedReminder.id);
     }
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
     setDeletedReminder(null);
   };
 
@@ -258,7 +258,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     hapticLight();
     await restoreReminder(id);
     await loadData();
-    refreshTimerWidget();
+    refreshWidgets();
   };
 
   const handlePermanentDelete = async (id: string) => {
@@ -277,7 +277,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     const newState = await togglePinReminder(id);
     const updated = await getPinnedReminders();
     setPinnedIds(updated);
-    refreshTimerWidget();
+    refreshWidgets();
     ToastAndroid.show(
       newState ? 'Pinned to widget' : 'Unpinned from widget',
       ToastAndroid.SHORT,

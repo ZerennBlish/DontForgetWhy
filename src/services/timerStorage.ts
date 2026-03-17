@@ -7,6 +7,27 @@ const ACTIVE_KEY = 'activeTimers';
 const RECENT_KEY = 'recentPresets';
 const USER_TIMERS_KEY = 'userTimers';
 
+// Async mutex for serializing read-modify-write operations on ACTIVE_KEY
+let _mutex: Promise<void> = Promise.resolve();
+
+function withLock<T>(fn: () => Promise<T>): Promise<T> {
+  let release: () => void;
+  const next = new Promise<void>((resolve) => { release = resolve; });
+  const prev = _mutex;
+  _mutex = next;
+  return prev.then(async () => {
+    try {
+      return await fn();
+    } finally {
+      release!();
+    }
+  });
+}
+
+async function _writeActiveTimers(timers: ActiveTimer[]): Promise<void> {
+  await AsyncStorage.setItem(ACTIVE_KEY, JSON.stringify(timers));
+}
+
 export async function loadPresets(): Promise<TimerPreset[]> {
   const raw = await AsyncStorage.getItem(PRESETS_KEY);
   let customDurations: Record<string, number> = {};
@@ -68,28 +89,32 @@ export async function loadActiveTimers(): Promise<ActiveTimer[]> {
   }
 }
 
-export async function saveActiveTimers(
+export function saveActiveTimers(
   timers: ActiveTimer[]
 ): Promise<void> {
-  await AsyncStorage.setItem(ACTIVE_KEY, JSON.stringify(timers));
+  return withLock(() => _writeActiveTimers(timers));
 }
 
-export async function addActiveTimer(
+export function addActiveTimer(
   timer: ActiveTimer
 ): Promise<ActiveTimer[]> {
-  const timers = await loadActiveTimers();
-  timers.push(timer);
-  await saveActiveTimers(timers);
-  return timers;
+  return withLock(async () => {
+    const timers = await loadActiveTimers();
+    timers.push(timer);
+    await _writeActiveTimers(timers);
+    return timers;
+  });
 }
 
-export async function removeActiveTimer(
+export function removeActiveTimer(
   id: string
 ): Promise<ActiveTimer[]> {
-  const timers = await loadActiveTimers();
-  const filtered = timers.filter((t) => t.id !== id);
-  await saveActiveTimers(filtered);
-  return filtered;
+  return withLock(async () => {
+    const timers = await loadActiveTimers();
+    const filtered = timers.filter((t) => t.id !== id);
+    await _writeActiveTimers(filtered);
+    return filtered;
+  });
 }
 
 interface RecentEntry {

@@ -18,6 +18,10 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Reminder } from '../types/reminder';
 import type { AlarmDay } from '../types/alarm';
 import { WEEKDAYS, WEEKENDS } from '../types/alarm';
+import type { SoundMode } from '../utils/soundModeUtils';
+import { cycleSoundMode, soundModeToSoundId, soundIdToSoundMode, getSoundModeIcon, getSoundModeLabel } from '../utils/soundModeUtils';
+import { useCalendar } from '../hooks/useCalendar';
+import { useDaySelection } from '../hooks/useDaySelection';
 import {
   getReminders,
   addReminder,
@@ -33,7 +37,7 @@ import { loadSettings } from '../services/settings';
 import { getRandomPlaceholder } from '../data/placeholders';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { refreshTimerWidget } from '../widget/updateWidget';
+import { refreshWidgets } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
@@ -50,18 +54,6 @@ const DAY_LABELS: { key: AlarmDay; short: string }[] = [
   { key: 'Sat', short: 'S' },
 ];
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function getDaysInMonth(year: number, month: number): number {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-function getFirstDayOfMonth(year: number, month: number): number {
-  return (new Date(year, month, 1).getDay() + 6) % 7;
-}
 
 function getDateStr(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -101,7 +93,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
 
   // Sound mode
-  const [soundMode, setSoundMode] = useState<'sound' | 'vibrate' | 'silent'>('sound');
+  const [soundMode, setSoundMode] = useState<SoundMode>('sound');
 
   // Reminder-specific state
   const [existing, setExisting] = useState<Reminder | null>(null);
@@ -123,14 +115,31 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     return hints[Math.floor(Math.random() * hints.length)];
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [showCalendar, setShowCalendar] = useState(false);
   const iconInputRef = useRef<TextInput>(null);
-  const [selectedDays, setSelectedDays] = useState<AlarmDay[]>([]);
   const [mode, setMode] = useState<'one-time' | 'recurring'>('one-time');
   const [placeholder] = useState(getRandomPlaceholder);
   const [editReady, setEditReady] = useState(!editId);
-  const [calMonth, setCalMonth] = useState(new Date().getMonth());
-  const [calYear, setCalYear] = useState(new Date().getFullYear());
+
+  const {
+    selectedDays, setSelectedDays,
+    handleToggleDay, handleQuickDays,
+    isWeekdaysSelected, isWeekendsSelected,
+  } = useDaySelection([]);
+
+  const {
+    calendarMonth: calMonth, calendarYear: calYear,
+    showCalendar, handleCalPrev, handleCalNext,
+    handleSelectDate, toggleCalendar,
+    setCalendarMonth: setCalMonth, setCalendarYear: setCalYear,
+    calDays, calFirstDay, MONTH_NAMES,
+  } = useCalendar({
+    onSelectDate: (dateStr) => {
+      setSelectedDate(dateStr);
+      if (mode === 'recurring') {
+        setSelectedDays([]);
+      }
+    },
+  });
 
   // Time input handlers — identical to CreateAlarmScreen
   const handleHourChange = useCallback((text: string) => {
@@ -284,9 +293,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       if (found.recurring) {
         setMode('recurring');
       }
-      if (found.soundId === 'silent') setSoundMode('vibrate');
-      else if (found.soundId === 'true_silent') setSoundMode('silent');
-      else setSoundMode('sound');
+      setSoundMode(soundIdToSoundMode(found.soundId));
       setEditReady(true);
     });
   }, [editId, timeFormat]);
@@ -294,32 +301,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const calDays = getDaysInMonth(calYear, calMonth);
-  const calFirstDay = getFirstDayOfMonth(calYear, calMonth);
-
-  const handleToggleDay = (day: AlarmDay) => {
-    if (mode === 'one-time') {
-      setSelectedDays((prev) => prev.includes(day) ? [] : [day]);
-    } else {
-      setSelectedDate(null);
-      setSelectedDays((prev) => {
-        if (prev.includes(day)) return prev.filter((d) => d !== day);
-        return [...prev, day];
-      });
-    }
-  };
-
-  const handleQuickDays = (preset: AlarmDay[]) => {
-    setSelectedDate(null);
-    setSelectedDays((prev) => {
-      const same = prev.length === preset.length && preset.every((d) => prev.includes(d));
-      if (same) return [];
-      return [...preset];
-    });
-  };
-
-  const isWeekdaysSelected = selectedDays.length === 5 && WEEKDAYS.every((d) => selectedDays.includes(d));
-  const isWeekendsSelected = selectedDays.length === 2 && WEEKENDS.every((d) => selectedDays.includes(d));
+  const clearDate = () => setSelectedDate(null);
 
   const cardBg = colors.card + 'BF';
 
@@ -803,37 +785,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     },
   }), [colors, cardBg, insets.top, insets.bottom]);
 
-  const handleCalPrev = () => {
-    if (calMonth === 0) {
-      setCalMonth(11);
-      setCalYear((y) => y - 1);
-    } else {
-      setCalMonth((m) => m - 1);
-    }
-  };
-
-  const handleCalNext = () => {
-    if (calMonth === 11) {
-      setCalMonth(0);
-      setCalYear((y) => y + 1);
-    } else {
-      setCalMonth((m) => m + 1);
-    }
-  };
-
-  const handleSelectDate = (day: number) => {
-    const d = new Date(calYear, calMonth, day);
-    d.setHours(0, 0, 0, 0);
-    if (d.getTime() < today.getTime()) return;
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    setSelectedDate(`${yyyy}-${mm}-${dd}`);
-    if (mode === 'recurring') {
-      setSelectedDays([]);
-    }
-  };
-
   const doSave = async (dueDate: string | null, dueTime: string | null) => {
     try {
       if (dueTime) {
@@ -865,7 +816,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           recurring,
           notificationId: null,
           notificationIds: [],
-          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
+          soundId: soundModeToSoundId(soundMode),
         };
 
         if (dueTime && !updated.completed) {
@@ -893,7 +844,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           notificationIds: [],
           pinned: false,
           completionHistory: [],
-          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
+          soundId: soundModeToSoundId(soundMode),
         };
 
         if (dueTime) {
@@ -954,7 +905,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         }
       } catch {}
 
-      refreshTimerWidget();
+      refreshWidgets();
       if (navigation.canGoBack()) {
         navigation.goBack();
       } else {
@@ -1222,7 +1173,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               <TouchableOpacity
                 key={key}
                 style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
-                onPress={() => { hapticLight(); handleToggleDay(key); }}
+                onPress={() => { hapticLight(); handleToggleDay(key, mode, clearDate); }}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
@@ -1236,21 +1187,21 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               <View style={styles.quickDayRow}>
                 <TouchableOpacity
                   style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
-                  onPress={() => { hapticLight(); handleQuickDays([...WEEKDAYS]); }}
+                  onPress={() => { hapticLight(); handleQuickDays([...WEEKDAYS], clearDate); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.quickDayText}>Weekdays</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
-                  onPress={() => { hapticLight(); handleQuickDays([...WEEKENDS]); }}
+                  onPress={() => { hapticLight(); handleQuickDays([...WEEKENDS], clearDate); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.quickDayText}>Weekends</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickDayBtn, showCalendar && styles.quickDayBtnActive]}
-                  onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+                  onPress={() => { hapticLight(); toggleCalendar(); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.quickDayText}>{'\u{1F4C5}'}</Text>
@@ -1276,7 +1227,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             <View style={styles.setDateRow}>
               <TouchableOpacity
                 style={{ flex: 1 }}
-                onPress={() => { hapticLight(); setShowCalendar((prev) => !prev); }}
+                onPress={() => { hapticLight(); toggleCalendar(); }}
                 activeOpacity={0.6}
               >
                 <Text style={styles.setDateText}>
@@ -1436,9 +1387,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             <TouchableOpacity
               onPress={() => {
                 setSoundMode((prev) => {
-                  if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
-                  if (prev === 'vibrate') return 'silent';
-                  hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); return 'sound';
+                  const next = cycleSoundMode(prev);
+                  if (next === 'vibrate') { hapticMedium(); }
+                  if (next === 'sound') { hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); }
+                  return next;
                 });
               }}
               style={[
@@ -1448,11 +1400,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               activeOpacity={0.7}
             >
               <Text style={styles.soundModeIconText}>
-                {soundMode === 'sound' ? '\u{1F514}' : soundMode === 'vibrate' ? '\u{1F4F3}' : '\u{1F507}'}
+                {getSoundModeIcon(soundMode)}
               </Text>
             </TouchableOpacity>
             <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
-              {soundMode === 'sound' ? 'Sound' : soundMode === 'vibrate' ? 'Vibrate' : 'Silent'}
+              {getSoundModeLabel(soundMode)}
             </Text>
           </View>
           {soundMode === 'sound' && (

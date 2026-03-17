@@ -7,7 +7,7 @@ import { widgetTaskHandler } from './src/widget/widgetTaskHandler';
 import { loadAlarms, deleteAlarm } from './src/services/storage';
 import { getReminders, updateReminder } from './src/services/reminderStorage';
 import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
-import { refreshTimerWidget } from './src/widget/updateWidget';
+import { refreshWidgets } from './src/widget/updateWidget';
 import { setPendingAlarm } from './src/services/pendingAlarm';
 import { loadActiveTimers } from './src/services/timerStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -134,7 +134,7 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
             await AsyncStorage.removeItem(`snoozing_${alarmId}`);
           } else {
             await deleteAlarm(alarmId);
-            await refreshTimerWidget();
+            await refreshWidgets();
           }
         }
       } catch {}
