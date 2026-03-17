@@ -11,6 +11,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadForgetLog, clearForgetLog, ForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
+import BackButton from '../components/BackButton';
+import { hapticLight } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -56,12 +58,6 @@ export default function ForgetLogScreen({ navigation }: Props) {
       paddingTop: 60,
       paddingHorizontal: 20,
       paddingBottom: 16,
-    },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
-      marginBottom: 16,
     },
     title: {
       fontSize: 28,
@@ -162,6 +158,7 @@ export default function ForgetLogScreen({ navigation }: Props) {
   );
 
   const handleClear = () => {
+    hapticLight();
     Alert.alert('Clear Log', 'Are you sure? This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -208,9 +205,7 @@ export default function ForgetLogScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>What Did I Forget?</Text>
         <Text style={styles.subtitle}>Every time you couldn't remember why.</Text>
       </View>

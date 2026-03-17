@@ -2,7 +2,7 @@ import { Alarm } from '../types/alarm';
 
 export type RootStackParamList = {
   Onboarding: { startSlide?: number } | undefined;
-  AlarmList: undefined;
+  AlarmList: { initialTab?: number } | undefined;
   CreateAlarm: { alarm?: Alarm } | undefined;
   CreateReminder: { reminderId?: string } | undefined;
   AlarmFire: {
@@ -12,9 +12,9 @@ export type RootStackParamList = {
     timerLabel?: string;
     timerIcon?: string;
     timerId?: string;
+    timerSoundId?: string;
     timerNotificationId?: string;
     notificationId?: string;
-    guessWhyEnabled?: boolean;
     postGuessWhy?: boolean;
   };
   GuessWhy: { alarm: Alarm; fromNotification?: boolean; notificationId?: string };
@@ -27,4 +27,5 @@ export type RootStackParamList = {
   ForgetLog: undefined;
   About: undefined;
   Trivia: undefined;
+  Notepad: { noteId?: string; newNote?: boolean } | undefined;
 };

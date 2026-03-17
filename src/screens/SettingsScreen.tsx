@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Linking,
   Platform,
   ImageBackground,
+  ToastAndroid,
+  TextInput,
 } from 'react-native';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
@@ -18,30 +20,36 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import notifee from '@notifee/react-native';
-import { loadSettings, saveSettings, getDefaultTimerSound, saveDefaultTimerSound } from '../services/settings';
+import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
-import { hapticLight, refreshHapticsSetting } from '../utils/haptics';
+import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
-import SoundPickerModal from '../components/SoundPickerModal';
-import type { SystemSound } from '../components/SoundPickerModal';
+import BackButton from '../components/BackButton';
+import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 const presetNames = Object.keys(themes) as (ThemeName & keyof typeof themes)[];
+const themeDisplayNames: Record<string, string> = {};
 
 export default function SettingsScreen({ navigation }: Props) {
-  const { colors, themeName, customAccent, setTheme, setCustomTheme } = useTheme();
+  const { colors, themeName, customAccent, customBackground, setTheme, setCustomTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const [timerSoundName, setTimerSoundName] = useState<string | null>(null);
-  const [timerSoundID, setTimerSoundID] = useState<number | null>(null);
-  const [timerSoundPickerVisible, setTimerSoundPickerVisible] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
-  const pickedColorRef = useRef(customAccent || colors.accent);
+  const pickedAccentRef = useRef(customAccent || colors.accent);
+  const pickedBgRef = useRef(customBackground || '#121220');
   const [hasPermissionIssues, setHasPermissionIssues] = useState(false);
+  const [silenceAll, setSilenceAllState] = useState(false);
+  const [silenceRemaining, setSilenceRemaining] = useState<string | null>(null);
+  const silenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [silencePickerVisible, setSilencePickerVisible] = useState(false);
+  const [pickerHours, setPickerHours] = useState(1);
+  const [pickerMinutes, setPickerMinutes] = useState(0);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -56,16 +64,11 @@ export default function SettingsScreen({ navigation }: Props) {
       paddingHorizontal: 20,
       paddingBottom: 24,
     },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
-      marginBottom: 16,
-    },
     title: {
       fontSize: 28,
       fontWeight: '800',
       color: '#FFFFFF',
+      textAlign: 'center',
     },
     permissionBanner: {
       marginHorizontal: 16,
@@ -257,17 +260,12 @@ export default function SettingsScreen({ navigation }: Props) {
       fontSize: 18,
       color: 'rgba(255,255,255,0.5)',
     },
-    timerSoundValue: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: 'rgba(255,255,255,0.7)',
-      marginRight: 8,
-    },
   }), [colors, insets.bottom]);
 
   useEffect(() => {
     loadSettings().then((s) => {
       setTimeFormat(s.timeFormat);
+      setTimeInputMode(s.timeInputMode);
     });
     // Load haptics setting
     (async () => {
@@ -276,14 +274,6 @@ export default function SettingsScreen({ navigation }: Props) {
         if (raw !== null) {
           setHapticsEnabled(raw !== 'false');
         }
-      } catch {}
-    })();
-    // Load default timer sound
-    (async () => {
-      try {
-        const s = await getDefaultTimerSound();
-        setTimerSoundName(s.name);
-        setTimerSoundID(s.soundID);
       } catch {}
     })();
   }, []);
@@ -330,11 +320,92 @@ export default function SettingsScreen({ navigation }: Props) {
     })();
   }, []);
 
+  // --- Silence All: load state + countdown timer ---
+  const refreshSilenceStatus = useCallback(async () => {
+    const on = await getSilenceAll();
+    setSilenceAllState(on);
+    if (on) {
+      const mins = await getSilenceExpiry();
+      if (mins !== null) {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        setSilenceRemaining(h > 0 ? `Sound resumes in ${h}h ${m}m` : `Sound resumes in ${m}m`);
+      } else {
+        setSilenceRemaining(null);
+      }
+    } else {
+      setSilenceRemaining(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSilenceStatus();
+  }, [refreshSilenceStatus]);
+
+  useEffect(() => {
+    if (silenceAll) {
+      silenceIntervalRef.current = setInterval(refreshSilenceStatus, 60000);
+    }
+    return () => {
+      if (silenceIntervalRef.current) {
+        clearInterval(silenceIntervalRef.current);
+        silenceIntervalRef.current = null;
+      }
+    };
+  }, [silenceAll, refreshSilenceStatus]);
+
+  const handleSilenceToggle = async (value: boolean) => {
+    if (value) {
+      hapticMedium();
+      setPickerHours(1);
+      setPickerMinutes(0);
+      setSilencePickerVisible(true);
+    } else {
+      hapticLight();
+      await setSilenceAll(false);
+      setSilenceAllState(false);
+      setSilenceRemaining(null);
+    }
+  };
+
+  const handleSilencePickerCancel = () => {
+    hapticLight();
+    setSilencePickerVisible(false);
+  };
+
+  const handleSilencePickerSet = async () => {
+    hapticMedium();
+    const totalMinutes = pickerHours * 60 + pickerMinutes;
+    if (totalMinutes === 0) {
+      ToastAndroid.show('Pick a time first', ToastAndroid.SHORT);
+      return;
+    }
+    setSilencePickerVisible(false);
+    await applySilence(totalMinutes);
+  };
+
+  const handleSilencePickerIndefinite = async () => {
+    hapticMedium();
+    setSilencePickerVisible(false);
+    await applySilence(null);
+  };
+
+  const applySilence = async (minutes: number | null) => {
+    await setSilenceAll(true, minutes);
+    await refreshSilenceStatus();
+  };
+
   const handleTimeFormatToggle = async (value: boolean) => {
     hapticLight();
     const newFormat = value ? '24h' : '12h';
     setTimeFormat(newFormat);
     await saveSettings({ timeFormat: newFormat });
+  };
+
+  const handleTimeInputModeChange = async (mode: 'scroll' | 'type') => {
+    hapticLight();
+    setTimeInputMode(mode);
+    await saveSettings({ timeInputMode: mode });
   };
 
   const handleHapticsToggle = async (value: boolean) => {
@@ -346,31 +417,24 @@ export default function SettingsScreen({ navigation }: Props) {
     if (value) hapticLight();
   };
 
-  const handleTimerSoundSelect = async (sound: SystemSound | null) => {
-    hapticLight();
-    setTimerSoundPickerVisible(false);
-    if (sound) {
-      setTimerSoundName(sound.title);
-      setTimerSoundID(sound.soundID);
-      try {
-        await saveDefaultTimerSound({ uri: sound.url, name: sound.title, soundID: sound.soundID });
-      } catch {}
-    } else {
-      setTimerSoundName(null);
-      setTimerSoundID(null);
-      try {
-        await saveDefaultTimerSound({ uri: null, name: null, soundID: null });
-      } catch {}
-    }
+  const handleAccentChange = (result: ColorFormatsObject) => {
+    pickedAccentRef.current = result.hex;
   };
 
-  const handleColorChange = (result: ColorFormatsObject) => {
-    pickedColorRef.current = result.hex;
+  const handleBgChange = (result: ColorFormatsObject) => {
+    pickedBgRef.current = result.hex;
   };
 
   const handleConfirmCustom = () => {
+    hapticLight();
     setPickerVisible(false);
-    setCustomTheme(pickedColorRef.current);
+    setCustomTheme(pickedAccentRef.current, pickedBgRef.current);
+  };
+
+  const handleResetTheme = () => {
+    hapticLight();
+    setPickerVisible(false);
+    setTheme('midnight');
   };
 
   const isCustomActive = themeName === 'custom';
@@ -380,16 +444,14 @@ export default function SettingsScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>Settings</Text>
       </View>
 
       {hasPermissionIssues && (
         <TouchableOpacity
           style={styles.permissionBanner}
-          onPress={() => navigation.navigate('Onboarding', { startSlide: 2 })}
+          onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
           activeOpacity={0.7}
         >
           <Text style={styles.permissionBannerIcon}>{'\u26A0\uFE0F'}</Text>
@@ -415,33 +477,44 @@ export default function SettingsScreen({ navigation }: Props) {
 
       <View style={[styles.card, { marginTop: 16 }]}>
         <View style={styles.row}>
-          <Text style={styles.label}>Vibration</Text>
+          <Text style={styles.label}>Silence All Alarms</Text>
           <Switch
-            value={hapticsEnabled}
-            onValueChange={handleHapticsToggle}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={hapticsEnabled ? colors.textPrimary : colors.textTertiary}
+            value={silenceAll}
+            onValueChange={handleSilenceToggle}
+            trackColor={{ false: colors.border, true: '#FFA500' }}
+            thumbColor={silenceAll ? '#FFFFFF' : colors.textTertiary}
           />
         </View>
+        {silenceAll && (
+          <Text style={{ fontSize: 14, color: '#FFA500', fontWeight: '600', marginTop: 10 }}>
+            {silenceRemaining || 'Silenced until you turn it off'}
+          </Text>
+        )}
         <Text style={styles.description}>
-          Haptic feedback for buttons, toggles, and interactions throughout the app.
+          Mute all alarm sounds and vibrations. Alarms still fire and show notifications.
         </Text>
       </View>
 
       <View style={[styles.card, { marginTop: 16 }]}>
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => { hapticLight(); setTimerSoundPickerVisible(true); }}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.label}>Timer Sound</Text>
-          <Text style={styles.timerSoundValue}>
-            {timerSoundName || 'Default'}
-          </Text>
-          <Text style={styles.aboutChevron}>{'\u203A'}</Text>
-        </TouchableOpacity>
+        <Text style={styles.label}>Time Input Style</Text>
+        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 2, marginTop: 8 }}>
+          <TouchableOpacity
+            style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: timeInputMode === 'scroll' ? colors.accent : 'transparent' }}
+            onPress={() => handleTimeInputModeChange('scroll')}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: timeInputMode === 'scroll' ? colors.textPrimary : colors.textTertiary }}>Scroll</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: timeInputMode === 'type' ? colors.accent : 'transparent' }}
+            onPress={() => handleTimeInputModeChange('type')}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: timeInputMode === 'type' ? colors.textPrimary : colors.textTertiary }}>Type</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.description}>
-          Sound played when a timer completes.
+          Choose how you set alarm and timer times: scroll wheels or text input.
         </Text>
       </View>
 
@@ -455,7 +528,7 @@ export default function SettingsScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={name}
                 style={styles.themeItem}
-                onPress={() => setTheme(name)}
+                onPress={() => { hapticLight(); setTheme(name); }}
                 activeOpacity={0.7}
               >
                 <View
@@ -474,7 +547,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 <Text
                   style={[styles.themeName, isActive && styles.themeNameActive]}
                 >
-                  {name.charAt(0).toUpperCase() + name.slice(1)}
+                  {themeDisplayNames[name] || name.charAt(0).toUpperCase() + name.slice(1)}
                 </Text>
               </TouchableOpacity>
             );
@@ -484,7 +557,9 @@ export default function SettingsScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.themeItem}
             onPress={() => {
-              pickedColorRef.current = customAccent || colors.accent;
+              hapticLight();
+              pickedAccentRef.current = customAccent || colors.accent;
+              pickedBgRef.current = customBackground || '#121220';
               setPickerVisible(true);
             }}
             activeOpacity={0.7}
@@ -537,22 +612,24 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
 
       <View style={[styles.card, { marginTop: 16 }]}>
-        <Text style={styles.sectionLabel}>Permissions</Text>
-        <TouchableOpacity
-          style={styles.setupGuideBtn}
-          onPress={() => navigation.navigate('Onboarding', { startSlide: 2 })}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.setupGuideText}>Setup Guide</Text>
-        </TouchableOpacity>
-        <Text style={styles.setupGuideDesc}>
-          Re-run the permission setup for notifications, alarms, battery optimization, full screen alarms, and more.
+        <View style={styles.row}>
+          <Text style={styles.label}>Haptic Feedback</Text>
+          <Switch
+            value={hapticsEnabled}
+            onValueChange={handleHapticsToggle}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={hapticsEnabled ? colors.textPrimary : colors.textTertiary}
+          />
+        </View>
+        <Text style={styles.description}>
+          Touch feedback for buttons, toggles, and interactions.
         </Text>
       </View>
 
       <TouchableOpacity
         style={[styles.card, { marginTop: 16 }]}
         onPress={() => {
+          hapticLight();
           const version =
             Constants.expoConfig?.version
             || (Constants as any).manifest?.version
@@ -578,7 +655,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
       <TouchableOpacity
         style={[styles.card, { marginTop: 16 }]}
-        onPress={() => navigation.navigate('About')}
+        onPress={() => { hapticLight(); navigation.navigate('About'); }}
         activeOpacity={0.7}
       >
         <View style={styles.aboutRow}>
@@ -586,18 +663,35 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={styles.aboutChevron}>{'\u203A'}</Text>
         </View>
         <Text style={styles.description}>
-          Version info, credits, and a hidden surprise.
+          Version info and credits.
         </Text>
       </TouchableOpacity>
 
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <Text style={styles.sectionLabel}>Permissions</Text>
+        <TouchableOpacity
+          style={styles.setupGuideBtn}
+          onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.setupGuideText}>Setup Guide</Text>
+        </TouchableOpacity>
+        <Text style={styles.setupGuideDesc}>
+          Re-run setup. In case you forgot to do something...
+        </Text>
+      </View>
+
       {/* Color Picker Modal */}
-      <Modal transparent visible={pickerVisible} animationType="fade">
+      <Modal transparent visible={pickerVisible} animationType="fade" onRequestClose={() => { hapticLight(); setPickerVisible(false); }}>
         <View style={styles.modalOverlay}>
+          <ScrollView style={{ width: '100%' }} contentContainerStyle={{ paddingVertical: 24 }} keyboardShouldPersistTaps="handled">
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Pick a Color</Text>
+            <Text style={styles.modalTitle}>Custom Theme</Text>
+
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 }}>Background Color</Text>
             <ColorPicker
-              value={pickedColorRef.current}
-              onCompleteJS={handleColorChange}
+              value={pickedBgRef.current}
+              onCompleteJS={handleBgChange}
             >
               <View style={styles.pickerWrapper}>
                 <Preview hideInitialColor />
@@ -605,13 +699,33 @@ export default function SettingsScreen({ navigation }: Props) {
                 <HueSlider />
               </View>
             </ColorPicker>
+
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginTop: 20, marginBottom: 8 }}>Accent Color</Text>
+            <ColorPicker
+              value={pickedAccentRef.current}
+              onCompleteJS={handleAccentChange}
+            >
+              <View style={styles.pickerWrapper}>
+                <Preview hideInitialColor />
+                <Panel1 />
+                <HueSlider />
+              </View>
+            </ColorPicker>
+
             <View style={styles.modalBtns}>
               <TouchableOpacity
-                onPress={() => setPickerVisible(false)}
+                onPress={() => { hapticLight(); setPickerVisible(false); }}
                 style={styles.modalCancelBtn}
                 activeOpacity={0.7}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleResetTheme}
+                style={[styles.modalCancelBtn, { borderColor: colors.red }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalCancelText, { color: colors.red }]}>Reset</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleConfirmCustom}
@@ -622,16 +736,91 @@ export default function SettingsScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
           </View>
+          </ScrollView>
         </View>
       </Modal>
 
-      {/* Timer Sound Picker */}
-      <SoundPickerModal
-        visible={timerSoundPickerVisible}
-        currentSoundID={timerSoundID}
-        onSelect={handleTimerSoundSelect}
-        onClose={() => setTimerSoundPickerVisible(false)}
-      />
+      {/* Silence duration picker modal */}
+      <Modal transparent visible={silencePickerVisible} animationType="slide" onRequestClose={handleSilencePickerCancel}>
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
+          <View style={{
+            backgroundColor: colors.card,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            padding: 20,
+            paddingBottom: 20 + insets.bottom,
+            borderWidth: 1,
+            borderBottomWidth: 0,
+            borderColor: colors.border,
+          }}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimary }}>Silence Duration</Text>
+              <TouchableOpacity
+                onPress={handleSilencePickerCancel}
+                style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 16, color: colors.textTertiary, fontWeight: '600' }}>{'\u2715'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {silencePickerVisible && (
+              timeInputMode === 'type' ? (
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 4 }}>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <TextInput
+                      style={{ backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 24, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', borderWidth: 1, borderColor: colors.border, width: '100%' }}
+                      value={String(pickerHours)}
+                      onChangeText={(t) => { const n = parseInt(t.replace(/[^0-9]/g, ''), 10); setPickerHours(isNaN(n) ? 0 : Math.min(n, 23)); }}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      selectTextOnFocus
+                    />
+                    <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 6 }}>Hours</Text>
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <TextInput
+                      style={{ backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 24, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', borderWidth: 1, borderColor: colors.border, width: '100%' }}
+                      value={String(pickerMinutes)}
+                      onChangeText={(t) => { const n = parseInt(t.replace(/[^0-9]/g, ''), 10); setPickerMinutes(isNaN(n) ? 0 : Math.min(n, 59)); }}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      selectTextOnFocus
+                    />
+                    <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 6 }}>Minutes</Text>
+                  </View>
+                </View>
+              ) : (
+                <TimePicker
+                  hours={pickerHours}
+                  minutes={pickerMinutes}
+                  onHoursChange={setPickerHours}
+                  onMinutesChange={setPickerMinutes}
+                />
+              )
+            )}
+
+            {/* Buttons */}
+            <View style={{ marginTop: 20, gap: 10 }}>
+              <TouchableOpacity
+                style={{ backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+                onPress={handleSilencePickerSet}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>Set Timer</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ backgroundColor: 'transparent', borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.accent }}
+                onPress={handleSilencePickerIndefinite}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.accent }}>Until I Turn It Off</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
     </View>
     </ImageBackground>

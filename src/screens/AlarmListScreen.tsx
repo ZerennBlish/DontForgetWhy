@@ -25,8 +25,10 @@ import {
   saveActiveTimers,
 } from '../services/timerStorage';
 import { getPinnedAlarms, togglePinAlarm, isAlarmPinned, unpinAlarm, pruneAlarmPins } from '../services/widgetPins';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { getReminders } from '../services/reminderStorage';
+import { getNotes } from '../services/noteStorage';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmCard from '../components/AlarmCard';
 import UndoToast from '../components/UndoToast';
@@ -62,12 +64,11 @@ function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
   });
 }
 
-export default function AlarmListScreen({ navigation }: Props) {
+export default function AlarmListScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const layout = useWindowDimensions();
   const [alarms, setAlarms] = useState<Alarm[]>([]);
-  const [guessWhyEnabled, setGuessWhyEnabled] = useState(false);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
   const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
@@ -87,6 +88,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const [showUndo, setShowUndo] = useState(false);
   const [undoKey, setUndoKey] = useState(0);
   const [reminderCount, setReminderCount] = useState(0);
+  const [noteCount, setNoteCount] = useState(0);
   const [showSortFilter, setShowSortFilter] = useState(false);
 
   const hasNonDefaultSortFilter = alarmSort !== 'time' || alarmFilter !== 'active';
@@ -103,7 +105,7 @@ export default function AlarmListScreen({ navigation }: Props) {
     },
     headerRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'center',
       alignItems: 'center',
     },
     title: {
@@ -111,38 +113,74 @@ export default function AlarmListScreen({ navigation }: Props) {
       fontWeight: '800',
       color: colors.textPrimary,
     },
-    headerIcons: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    gamesPill: {
-      backgroundColor: colors.activeBackground,
-      borderRadius: 14,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      marginRight: 2,
-    },
-    gamesPillIcon: {
-      fontSize: 22,
-    },
-    headerBtn: {
+    headerGear: {
+      position: 'absolute',
+      right: 0,
       padding: 4,
     },
-    headerBtnIcon: {
+    headerGearIcon: {
       fontSize: 24,
     },
-    subtitle: {
+    navCardRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 12,
+    },
+    navCard: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.border,
+    },
+    navCardIcon: {
+      fontSize: 20,
+    },
+    navCardText: {
       fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    navBadge: {
+      backgroundColor: colors.accent,
+      borderRadius: 7,
+      minWidth: 14,
+      height: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 3,
+    },
+    navBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 9,
+      fontWeight: '700',
+    },
+    subtitleRow: {
+      flexDirection: 'row',
+      marginTop: 12,
+      paddingHorizontal: 2,
+    },
+    subtitleItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    subtitleText: {
+      fontSize: 13,
       color: colors.textTertiary,
-      marginTop: 4,
     },
     tabContainer: {
       flexDirection: 'row',
       backgroundColor: colors.card,
       borderRadius: 20,
       padding: 2,
-      marginTop: 12,
+      marginTop: 4,
     },
     tab: {
       flex: 1,
@@ -353,13 +391,13 @@ export default function AlarmListScreen({ navigation }: Props) {
         pruneAlarmPins(loaded.filter((a) => !a.deletedAt).map((a) => a.id)).then(setPinnedAlarmIds);
       });
       loadSettings().then((s) => {
-        setGuessWhyEnabled(s.guessWhyEnabled);
         setTimeFormat(s.timeFormat);
       });
       loadStats().then(setStats);
       getReminders().then((loaded) => {
         setReminderCount(loaded.filter((r) => !r.completed).length);
       });
+      getNotes().then((loaded) => setNoteCount(loaded.length));
     }, [])
   );
 
@@ -370,12 +408,57 @@ export default function AlarmListScreen({ navigation }: Props) {
     });
   }, [tab]);
 
+  // Cold-start: apply initialTab from navigation params on first render
+  useEffect(() => {
+    const tab = route.params?.initialTab;
+    if (tab !== undefined) {
+      setIndex(tab);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Widget deep-link: check pendingTabAction every time this screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem('pendingTabAction').then((raw) => {
+        if (raw) {
+          AsyncStorage.removeItem('pendingTabAction');
+          try {
+            const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              setIndex(parsed.tab);
+            }
+          } catch {}
+        }
+      });
+    }, [])
+  );
+
+  // Widget deep-link: check pendingTabAction when app returns from background
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        AsyncStorage.getItem('pendingTabAction').then((raw) => {
+          if (raw) {
+            AsyncStorage.removeItem('pendingTabAction');
+            try {
+              const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                setIndex(parsed.tab);
+              }
+            } catch {}
+          }
+        });
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   // Load active timers on mount (picks up widget-started timers on cold start)
   useEffect(() => {
     loadActiveTimers().then((loaded) => {
       const recalculated = recalculateTimers(loaded);
       setActiveTimers(recalculated);
-      if (recalculated.some((t) => t.isRunning)) {
+      if (route.params?.initialTab === undefined && recalculated.some((t) => t.isRunning)) {
         setIndex(1);
       }
       const needsSave = recalculated.some(
@@ -532,6 +615,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         timer.id,
         soundUri,
         soundName,
+        timer.soundId,
       );
       console.log('[handleAddTimer] notificationId:', notificationId);
     } catch (error) {
@@ -607,7 +691,7 @@ export default function AlarmListScreen({ navigation }: Props) {
 
         try {
           const notifId = await scheduleTimerNotification(
-            timer.label, timer.icon, ts, timer.id, rSoundUri, rSoundName,
+            timer.label, timer.icon, ts, timer.id, rSoundUri, rSoundName, timer.soundId,
           );
           // Notification scheduled — now mark timer as running
           setActiveTimers((prev) => {
@@ -687,40 +771,56 @@ export default function AlarmListScreen({ navigation }: Props) {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Don't Forget Why</Text>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Games')}
-              activeOpacity={0.7}
-              style={styles.gamesPill}
-            >
-              <Text style={styles.gamesPillIcon}>{'\u{1F3AE}'}</Text>
-            </TouchableOpacity>
-            {hasPlayed && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('MemoryScore')}
-                activeOpacity={0.7}
-                style={styles.headerBtn}
-              >
-                <Text style={styles.headerBtnIcon}>{'\u{1F3C6}'}</Text>
-              </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => { hapticLight(); navigation.navigate('Settings'); }}
+            activeOpacity={0.7}
+            style={styles.headerGear}
+          >
+            <Text style={styles.headerGearIcon}>{'\u2699\uFE0F'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.navCardRow}>
+          <TouchableOpacity
+            onPress={() => { hapticLight(); navigation.navigate('Notepad'); }}
+            activeOpacity={0.7}
+            style={styles.navCard}
+          >
+            <Text style={styles.navCardIcon}>{'\u{1F4DD}'}</Text>
+            <Text style={styles.navCardText}>Notes</Text>
+            {noteCount > 0 && (
+              <View style={styles.navBadge}>
+                <Text style={styles.navBadgeText}>{noteCount}</Text>
+              </View>
             )}
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Settings')}
-              activeOpacity={0.7}
-              style={styles.headerBtn}
-            >
-              <Text style={styles.headerBtnIcon}>{'\u2699\uFE0F'}</Text>
-            </TouchableOpacity>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => { hapticLight(); navigation.navigate('Games'); }}
+            activeOpacity={0.7}
+            style={styles.navCard}
+          >
+            <Text style={styles.navCardIcon}>{'\u{1F3AE}'}</Text>
+            <Text style={styles.navCardText}>Games</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.subtitleRow}>
+          <View style={styles.subtitleItem}>
+            <Text style={styles.subtitleText}>
+              {(() => { const c = alarms.filter(a => a.enabled && !a.deletedAt).length; return `${c} alarm${c !== 1 ? 's' : ''}`; })()}
+            </Text>
+          </View>
+          <View style={styles.subtitleItem}>
+            <Text style={styles.subtitleText}>
+              {(() => { const c = activeTimers.filter(t => t.isRunning).length; return `${c} timer${c !== 1 ? 's' : ''}`; })()}
+            </Text>
+          </View>
+          <View style={styles.subtitleItem}>
+            <Text style={styles.subtitleText}>
+              {`${reminderCount} reminder${reminderCount !== 1 ? 's' : ''}`}
+            </Text>
           </View>
         </View>
-        <Text style={styles.subtitle}>
-          {(() => {
-            const ac = alarms.filter(a => a.enabled && !a.deletedAt).length;
-            const tc = activeTimers.filter(t => t.isRunning).length;
-            const rc = reminderCount;
-            return `${ac} alarm${ac !== 1 ? 's' : ''} \u00B7 ${tc} timer${tc !== 1 ? 's' : ''} \u00B7 ${rc} reminder${rc !== 1 ? 's' : ''}`;
-          })()}
-        </Text>
 
         <View style={styles.tabContainer}>
           {routes.map((route, i) => (
@@ -761,10 +861,6 @@ export default function AlarmListScreen({ navigation }: Props) {
             case 'alarms':
               return (
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.quoteText} numberOfLines={2}>
-                    {appQuote}
-                  </Text>
-
                   <View style={styles.sortFilterToggleRow}>
                     <TouchableOpacity
                       style={styles.sortFilterToggleBtn}
@@ -822,12 +918,17 @@ export default function AlarmListScreen({ navigation }: Props) {
 
                   {filteredAlarms.length === 0 ? (
                     <View style={styles.empty}>
+                      {nonDeletedAlarmCount === 0 && (
+                        <Text style={styles.quoteText} numberOfLines={2}>
+                          {appQuote}
+                        </Text>
+                      )}
                       <Text style={styles.emptyText}>
-                        {nonDeletedAlarmCount === 0 && (alarmFilter === 'all' || alarmFilter === 'active')
+                        {nonDeletedAlarmCount === 0
                           ? 'No alarms yet' : 'No matches'}
                       </Text>
                       <Text style={styles.emptySubtext}>
-                        {nonDeletedAlarmCount === 0 && (alarmFilter === 'all' || alarmFilter === 'active')
+                        {nonDeletedAlarmCount === 0
                           ? 'Tap + to set one and immediately forget why.' : 'Try a different filter.'}
                       </Text>
                     </View>
@@ -844,17 +945,17 @@ export default function AlarmListScreen({ navigation }: Props) {
                                   {formatTime(item.time, timeFormat)}
                                 </Text>
                                 <Text style={styles.deletedDetail} numberOfLines={1}>
-                                  {item.icon || '\u23F0'} {item.nickname || item.note || 'Alarm'}
+                                  {item.private ? 'Alarm' : `${item.icon || '\u23F0'} ${item.nickname || item.note || 'Alarm'}`}
                                 </Text>
                                 <Text style={styles.deletedAgo}>
                                   {formatDeletedAgo(item.deletedAt)}
                                 </Text>
                               </View>
                               <View style={styles.deletedRight}>
-                                <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
+                                <TouchableOpacity onPress={() => { hapticLight(); handleRestore(item.id); }} style={styles.restoreBtn} activeOpacity={0.7}>
                                   <Text style={styles.restoreText}>Restore</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
+                                <TouchableOpacity onPress={() => { hapticHeavy(); handlePermanentDelete(item.id); }} style={styles.foreverBtn} activeOpacity={0.7}>
                                   <Text style={styles.foreverText}>Forever</Text>
                                 </TouchableOpacity>
                               </View>
@@ -865,7 +966,6 @@ export default function AlarmListScreen({ navigation }: Props) {
                             <AlarmCard
                               alarm={item}
                               timeFormat={timeFormat}
-                              guessWhyEnabled={guessWhyEnabled}
                               isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
                               onToggle={handleToggle}
                               onEdit={handleEdit}
@@ -881,7 +981,7 @@ export default function AlarmListScreen({ navigation }: Props) {
 
                   <TouchableOpacity
                     style={styles.fab}
-                    onPress={() => navigation.navigate('CreateAlarm')}
+                    onPress={() => { hapticLight(); navigation.navigate('CreateAlarm'); }}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.fabText}>+</Text>

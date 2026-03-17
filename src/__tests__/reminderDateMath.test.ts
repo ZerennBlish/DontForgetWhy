@@ -35,6 +35,7 @@ import notifee from '@notifee/react-native';
 // setupNotificationChannel → createChannel (already mocked).
 jest.mock('../services/settings', () => ({
   loadSettings: jest.fn().mockResolvedValue({ guessWhyEnabled: false }),
+  getSilenceAll: jest.fn().mockResolvedValue(false),
 }));
 
 // ---------------------------------------------------------------------------

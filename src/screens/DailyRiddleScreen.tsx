@@ -17,6 +17,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticMedium, hapticLight } from '../utils/haptics';
 import { checkConnectivity } from '../utils/connectivity';
+import BackButton from '../components/BackButton';
 import type { RootStackParamList } from '../navigation/types';
 import {
   RIDDLES,
@@ -289,21 +290,17 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           paddingHorizontal: 20,
           paddingBottom: 20,
         },
-        backBtn: {
-          fontSize: 16,
-          color: colors.accent,
-          fontWeight: '600',
-          marginBottom: 16,
-        },
         title: {
           fontSize: 28,
           fontWeight: '800',
           color: '#FFFFFF',
+          textAlign: 'center',
         },
         dateText: {
           fontSize: 15,
           color: colors.textTertiary,
           marginTop: 4,
+          textAlign: 'center',
         },
         streakRow: {
           flexDirection: 'row',
@@ -768,7 +765,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
               {!hintShown ? (
                 <TouchableOpacity
                   style={styles.hintBtn}
-                  onPress={handleShowHint}
+                  onPress={() => { hapticLight(); handleShowHint(); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.hintBtnText}>
@@ -851,7 +848,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         {!revealed && !alreadyPlayedToday && (
           <TouchableOpacity
             style={styles.revealBtn}
-            onPress={handleReveal}
+            onPress={() => { hapticLight(); handleReveal(); }}
             activeOpacity={0.8}
           >
             <Text style={styles.revealBtnText}>
@@ -862,7 +859,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={styles.browseBtn}
-          onPress={() => setMode('browse')}
+          onPress={() => { hapticLight(); setMode('browse'); }}
           activeOpacity={0.7}
         >
           <Text style={styles.browseBtnText}>
@@ -926,7 +923,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   styles.filterBtn,
                   selectedCategory === 'all' && styles.filterBtnActive,
                 ]}
-                onPress={() => setSelectedCategory('all')}
+                onPress={() => { hapticLight(); setSelectedCategory('all'); }}
                 activeOpacity={0.7}
               >
                 <Text
@@ -945,7 +942,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                     styles.filterBtn,
                     selectedCategory === cat && styles.filterBtnActive,
                   ]}
-                  onPress={() => setSelectedCategory(cat)}
+                  onPress={() => { hapticLight(); setSelectedCategory(cat); }}
                   activeOpacity={0.7}
                 >
                   <Text
@@ -971,9 +968,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                 <TouchableOpacity
                   key={riddle.id}
                   style={styles.browseCard}
-                  onPress={() =>
-                    setExpandedRiddleId(isExpanded ? null : riddle.id)
-                  }
+                  onPress={() => {
+                    hapticLight();
+                    setExpandedRiddleId(isExpanded ? null : riddle.id);
+                  }}
                   activeOpacity={0.7}
                 >
                   <View style={styles.browseCardRow}>
@@ -1030,7 +1028,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                 </Text>
                 <TouchableOpacity
                   style={styles.loadMoreBtn}
-                  onPress={handleFetchOnlineRiddles}
+                  onPress={() => { hapticLight(); handleFetchOnlineRiddles(); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.loadMoreText}>Try Again</Text>
@@ -1048,9 +1046,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                     <TouchableOpacity
                       key={riddle.id}
                       style={styles.onlineCard}
-                      onPress={() =>
-                        setExpandedOnlineId(isExpanded ? null : riddle.id)
-                      }
+                      onPress={() => {
+                        hapticLight();
+                        setExpandedOnlineId(isExpanded ? null : riddle.id);
+                      }}
                       activeOpacity={0.7}
                     >
                       <View style={styles.onlineBadge}>
@@ -1072,7 +1071,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
 
                 <TouchableOpacity
                   style={styles.loadMoreBtn}
-                  onPress={handleFetchOnlineRiddles}
+                  onPress={() => { hapticLight(); handleFetchOnlineRiddles(); }}
                   activeOpacity={0.7}
                   disabled={onlineLoading}
                 >
@@ -1107,9 +1106,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>
           {'\u{1F4A1}'} Daily Riddle
         </Text>
@@ -1142,7 +1139,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       <View style={styles.modeToggle}>
         <TouchableOpacity
           style={[styles.modeBtn, mode === 'daily' && styles.modeBtnActive]}
-          onPress={() => setMode('daily')}
+          onPress={() => { hapticLight(); setMode('daily'); }}
           activeOpacity={0.7}
         >
           <Text
@@ -1156,7 +1153,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.modeBtn, mode === 'browse' && styles.modeBtnActive]}
-          onPress={() => setMode('browse')}
+          onPress={() => { hapticLight(); setMode('browse'); }}
           activeOpacity={0.7}
         >
           <Text

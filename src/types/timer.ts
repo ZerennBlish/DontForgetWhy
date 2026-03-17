@@ -6,6 +6,15 @@ export interface TimerPreset {
   customSeconds?: number;
 }
 
+export interface UserTimer {
+  id: string;
+  icon: string;
+  label: string;
+  seconds: number;
+  createdAt: string;
+  soundId?: string;
+}
+
 export interface ActiveTimer {
   id: string;
   presetId: string;
@@ -16,4 +25,5 @@ export interface ActiveTimer {
   startedAt: string;
   isRunning: boolean;
   notificationId?: string;
+  soundId?: string;
 }

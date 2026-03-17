@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Platform,
   Switch,
+  Modal,
+  ToastAndroid,
+  Keyboard,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -29,11 +31,13 @@ import {
 } from '../services/notifications';
 import { loadSettings } from '../services/settings';
 import { getRandomPlaceholder } from '../data/placeholders';
-import guessWhyIcons from '../data/guessWhyIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
+import { playChirp } from '../utils/soundFeedback';
+import BackButton from '../components/BackButton';
+import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
 
 const DAY_LABELS: { key: AlarmDay; short: string }[] = [
@@ -87,18 +91,44 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   );
   const hourRef = useRef<TextInput>(null);
   const minuteRef = useRef<TextInput>(null);
+  const [pickerHours, setPickerHours] = useState<number>(() => new Date().getHours());
+  const [pickerMinutes, setPickerMinutes] = useState<number>(() => new Date().getMinutes());
+  const [timeModalVisible, setTimeModalVisible] = useState(false);
+  const [modalHours, setModalHours] = useState(0);
+  const [modalMinutes, setModalMinutes] = useState(0);
+  const [modalAmpm, setModalAmpm] = useState<'AM' | 'PM'>('AM');
+  const prevModalHourRef = useRef(0);
+  const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
+
+  // Sound mode
+  const [soundMode, setSoundMode] = useState<'sound' | 'vibrate' | 'silent'>('sound');
 
   // Reminder-specific state
   const [existing, setExisting] = useState<Reminder | null>(null);
   const [text, setText] = useState('');
   const [nickname, setNickname] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<string>('\u{1F4DD}');
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [selectedPrivate, setSelectedPrivate] = useState(false);
+  const [privateHint] = useState(() => {
+    const hints = [
+      "Hides your secrets from the reminder list. You're welcome.",
+      "What reminder? Never heard of it.",
+      'Your business is your business.',
+      'Prying eyes get nothing.',
+      'Stealth mode: engaged.',
+      'Nobody needs to know you need reminders.',
+      'Hidden from the list. Hidden from judgment.',
+    ];
+    return hints[Math.floor(Math.random() * hints.length)];
+  });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
+  const iconInputRef = useRef<TextInput>(null);
   const [selectedDays, setSelectedDays] = useState<AlarmDay[]>([]);
   const [mode, setMode] = useState<'one-time' | 'recurring'>('one-time');
   const [placeholder] = useState(getRandomPlaceholder);
+  const [editReady, setEditReady] = useState(!editId);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
 
@@ -162,15 +192,58 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     }
   }, [minuteText]);
 
+  const openTimeModal = () => {
+    hapticLight();
+    setModalHours(pickerHours);
+    setModalMinutes(pickerMinutes);
+    setModalAmpm(ampm);
+    prevModalHourRef.current = pickerHours;
+    setTimeModalVisible(true);
+  };
+
+  const handleModalHoursChange = useCallback((h: number) => {
+    const prev = prevModalHourRef.current;
+    if (timeFormat === '12h') {
+      const crossedBoundary = (prev <= 11 && h >= 12) || (prev >= 12 && h <= 11);
+      if (crossedBoundary) setModalAmpm((a) => a === 'AM' ? 'PM' : 'AM');
+    }
+    prevModalHourRef.current = h;
+    setModalHours(h);
+  }, [timeFormat]);
+
+  const handleModalMinutesChange = useCallback((m: number) => {
+    setModalMinutes(m);
+  }, []);
+
+
+  const handleTimeModalDone = () => {
+    hapticLight();
+    const h = modalHours || (timeFormat === '12h' ? 12 : 0);
+    const m = modalMinutes;
+    setPickerHours(h);
+    setPickerMinutes(m);
+    setAmpm(modalAmpm);
+    setHourText(String(h));
+    setMinuteText(String(m).padStart(2, '0'));
+    setTimeModalVisible(false);
+  };
+
+  const handleTimeModalCancel = () => {
+    hapticLight();
+    setTimeModalVisible(false);
+  };
+
   useEffect(() => {
     loadSettings().then((s) => {
       setTimeFormat(s.timeFormat);
+      setTimeInputMode(s.timeInputMode);
       if (s.timeFormat === '12h') {
         setHourText((prev) => {
           const h24 = parseInt(prev, 10) || 0;
           const h12 = h24 % 12 || 12;
           return String(h12);
         });
+        setPickerHours((prev) => prev % 12 || 12);
       }
     });
   }, []);
@@ -197,10 +270,13 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           setAmpm(h >= 12 ? 'PM' : 'AM');
           const h12 = h % 12 || 12;
           setHourText(String(h12));
+          setPickerHours(h12);
         } else {
           setHourText(String(h));
+          setPickerHours(h);
         }
         setMinuteText(m.toString().padStart(2, '0'));
+        setPickerMinutes(m);
       }
       if (found.days && found.days.length > 0) {
         setSelectedDays(found.days as AlarmDay[]);
@@ -208,6 +284,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       if (found.recurring) {
         setMode('recurring');
       }
+      if (found.soundId === 'silent') setSoundMode('vibrate');
+      else if (found.soundId === 'true_silent') setSoundMode('silent');
+      else setSoundMode('sound');
+      setEditReady(true);
     });
   }, [editId, timeFormat]);
 
@@ -248,16 +328,28 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       flex: 1,
       backgroundColor: colors.background,
     },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: insets.top + 10,
+      paddingHorizontal: 20,
+      paddingBottom: 10,
+    },
+    headerBack: {
+      position: 'absolute',
+      left: 20,
+      top: insets.top + 10,
+    },
     content: {
       padding: 20,
-      paddingTop: Platform.OS === 'ios' ? 60 : 40,
+      paddingTop: 20,
       paddingBottom: 60 + insets.bottom,
     },
     heading: {
       fontSize: 28,
       fontWeight: '800',
       color: colors.textPrimary,
-      marginBottom: 32,
     },
     timeContainer: {
       flexDirection: 'row',
@@ -320,6 +412,87 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     ampmTextActive: {
       color: colors.textPrimary,
     },
+    timeDisplay: {
+      alignItems: 'center',
+      marginBottom: 32,
+      paddingVertical: 20,
+      paddingHorizontal: 32,
+      backgroundColor: cardBg,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignSelf: 'center',
+    },
+    timeDisplayText: {
+      fontSize: 48,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    timeDisplayHint: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    timeDisplayInput: {
+      fontSize: 48,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      minWidth: 60,
+      padding: 0,
+    },
+    timeModalOverlay: {
+      flex: 1,
+      backgroundColor: colors.modalOverlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 32,
+    },
+    timeModalCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 24,
+      width: '100%',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    timeModalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    timeModalBtns: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 8,
+    },
+    timeModalCancelBtn: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    timeModalCancelText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    timeModalDoneBtn: {
+      flex: 1,
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    timeModalDoneText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
     label: {
       fontSize: 16,
       fontWeight: '600',
@@ -327,7 +500,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       marginBottom: 10,
     },
     scheduleSection: {
-      marginBottom: 24,
+      marginBottom: 8,
     },
     modeContainer: {
       flexDirection: 'row',
@@ -362,7 +535,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: cardBg,
+      backgroundColor: colors.border,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
@@ -383,7 +556,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     quickDayRow: {
       flexDirection: 'row',
       gap: 10,
-      marginBottom: 24,
+      marginBottom: 10,
     },
     quickDayBtn: {
       paddingHorizontal: 14,
@@ -405,13 +578,19 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     setDateRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 6,
-      marginBottom: 16,
-      gap: 6,
+      backgroundColor: cardBg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      minHeight: 48,
+      marginBottom: 8,
     },
     setDateText: {
-      fontSize: 14,
-      color: colors.textTertiary,
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textPrimary,
     },
     setDateChevron: {
       fontSize: 11,
@@ -510,30 +689,50 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       marginTop: 4,
       marginBottom: 24,
     },
-    iconGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-      marginBottom: 24,
-    },
-    iconCell: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+    emojiCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: cardBg,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.border,
     },
-    iconCellActive: {
-      backgroundColor: colors.activeBackground,
-      borderColor: colors.accent,
-    },
-    iconEmoji: {
+    emojiCircleText: {
       fontSize: 22,
     },
+    quickEmojiRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 24,
+    },
+    quickEmojiBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    quickEmojiBtnActive: {
+      borderWidth: 2,
+      borderColor: colors.accent,
+    },
+    hiddenInput: {
+      position: 'absolute' as const,
+      opacity: 0,
+      width: 1,
+      height: 1,
+    },
+    nicknameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 8,
+    },
     nicknameInput: {
+      flex: 1,
       backgroundColor: cardBg,
       borderRadius: 12,
       padding: 16,
@@ -542,20 +741,20 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       minHeight: 48,
       borderWidth: 1,
       borderColor: colors.border,
-      marginBottom: 24,
     },
     toggleCard: {
-      backgroundColor: cardBg,
-      borderRadius: 16,
-      padding: 20,
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginBottom: 24,
-    },
-    toggleRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      backgroundColor: cardBg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      minHeight: 48,
+      marginTop: 16,
+      marginBottom: 24,
     },
     toggleLabel: {
       fontSize: 16,
@@ -564,24 +763,45 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       flex: 1,
       marginRight: 12,
     },
-    toggleDescription: {
-      fontSize: 14,
-      color: colors.textTertiary,
-      marginTop: 12,
-      lineHeight: 20,
+    headerRight: {
+      position: 'absolute',
+      right: 20,
+      top: insets.top + 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    soundRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 10,
+      marginBottom: 16,
+    },
+    soundModeIconBtn: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 18,
+      backgroundColor: cardBg,
+    },
+    soundModeIconText: {
+      fontSize: 18,
     },
     saveBtn: {
       backgroundColor: colors.accent,
-      borderRadius: 16,
-      paddingVertical: 18,
+      borderRadius: 20,
+      paddingVertical: 8,
+      paddingHorizontal: 18,
       alignItems: 'center',
     },
     saveBtnText: {
-      fontSize: 18,
+      fontSize: 15,
       fontWeight: '700',
       color: colors.textPrimary,
     },
-  }), [colors, cardBg, insets.bottom]);
+  }), [colors, cardBg, insets.top, insets.bottom]);
 
   const handleCalPrev = () => {
     if (calMonth === 0) {
@@ -635,7 +855,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
         const updated: Reminder = {
           ...existing,
-          icon: selectedIcon,
+          icon: selectedIcon || '\u{1F4DD}',
           text: text.trim(),
           nickname: nickname.trim() || undefined,
           private: selectedPrivate,
@@ -645,6 +865,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           recurring,
           notificationId: null,
           notificationIds: [],
+          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
         };
 
         if (dueTime && !updated.completed) {
@@ -657,7 +878,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       } else {
         const reminder: Reminder = {
           id: uuidv4(),
-          icon: selectedIcon,
+          icon: selectedIcon || '\u{1F4DD}',
           text: text.trim(),
           nickname: nickname.trim() || undefined,
           private: selectedPrivate,
@@ -672,6 +893,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           notificationIds: [],
           pinned: false,
           completionHistory: [],
+          soundId: soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined,
         };
 
         if (dueTime) {
@@ -682,6 +904,55 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
         await addReminder(reminder);
       }
+
+      // Show time-until toast
+      try {
+        if (dueDate && dueTime) {
+          let fireTime: Date | null = null;
+          if (mode === 'one-time') {
+            const [py, pm, pd] = dueDate.split('-').map(Number);
+            const [th, tm] = dueTime.split(':').map(Number);
+            fireTime = new Date(py, pm - 1, pd, th, tm, 0, 0);
+          } else if (mode === 'recurring' && selectedDays.length > 0) {
+            const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+            const dayNums = selectedDays.map(d => dayMap[d]);
+            const [th, tm] = dueTime.split(':').map(Number);
+            const now = new Date();
+            for (let offset = 0; offset <= 7; offset++) {
+              const candidate = new Date(now);
+              candidate.setDate(candidate.getDate() + offset);
+              candidate.setHours(th, tm, 0, 0);
+              if (dayNums.includes(candidate.getDay()) && candidate.getTime() > Date.now()) {
+                fireTime = candidate;
+                break;
+              }
+            }
+          }
+          if (fireTime) {
+            const diffMs = fireTime.getTime() - Date.now();
+            if (diffMs > 0) {
+              const totalMin = Math.floor(diffMs / 60000);
+              let msg: string;
+              if (totalMin < 1) {
+                msg = 'Reminder in less than a minute';
+              } else if (totalMin < 60) {
+                msg = `Reminder in ${totalMin} minute${totalMin === 1 ? '' : 's'}`;
+              } else {
+                const hrs = Math.floor(totalMin / 60);
+                const mins = totalMin % 60;
+                if (hrs < 24) {
+                  msg = `Reminder in ${hrs} hour${hrs === 1 ? '' : 's'}${mins ? ` ${mins} min` : ''}`;
+                } else {
+                  const days = Math.floor(hrs / 24);
+                  const remHrs = hrs % 24;
+                  msg = `Reminder in ${days} day${days === 1 ? '' : 's'}${remHrs ? ` ${remHrs} hour${remHrs === 1 ? '' : 's'}` : ''}`;
+                }
+              }
+              ToastAndroid.show(msg, ToastAndroid.SHORT);
+            }
+          }
+        }
+      } catch {}
 
       refreshTimerWidget();
       if (navigation.canGoBack()) {
@@ -697,16 +968,38 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
   const handleSave = async () => {
     hapticMedium();
-    if (!text.trim() && !selectedIcon) {
-      Alert.alert('Hold Up', 'Add some text or pick an icon so you know what to remember.');
+    const hasSomething = nickname.trim() || text.trim() || (selectedIcon && selectedIcon !== '📝');
+    if (!hasSomething) {
+      Alert.alert(
+        'Bold move.',
+        "A reminder with no details. That's not a reminder, that's a vibe. Good luck remembering... whatever this is.",
+        [
+          { text: "Fine, I'll add something", style: 'cancel' },
+          { text: 'Vibes only', onPress: () => handleSave_proceed() },
+        ],
+      );
       return;
     }
+    await handleSave_proceed();
+  };
 
-    const rawH = parseInt(hourText, 10);
-    const rawM = parseInt(minuteText, 10);
+  const handleSave_proceed = async () => {
+    let rawH: number, rawM: number;
+    if (timeInputMode === 'type') {
+      rawH = parseInt(hourText, 10);
+      rawM = parseInt(minuteText, 10);
+      if (isNaN(rawH)) rawH = pickerHours;
+      if (isNaN(rawM)) rawM = pickerMinutes;
+      if (timeFormat === '12h') { rawH = Math.max(1, Math.min(12, rawH)); } else { rawH = Math.max(0, Math.min(23, rawH)); }
+      rawM = Math.max(0, Math.min(59, rawM));
+    } else {
+      rawH = pickerHours;
+      rawM = pickerMinutes;
+    }
+    const hasTime = true;
     let dueTime: string | null = null;
 
-    if (!isNaN(rawH) && (rawH > 0 || rawM > 0 || hourText !== '')) {
+    if (hasTime) {
       let h: number;
       if (timeFormat === '12h') {
         let h12 = Math.min(12, Math.max(1, rawH || 12));
@@ -772,62 +1065,141 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           resizeMode="cover"
         />
       </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <View style={styles.headerBack}>
+          <BackButton onPress={() => navigation.goBack()} />
+        </View>
         <Text style={styles.heading}>
           {existing ? 'Edit Reminder' : 'New Reminder'}
         </Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={[styles.saveBtn, !editReady && { opacity: 0.4 }]} onPress={editReady ? handleSave : undefined} activeOpacity={0.8} disabled={!editReady}>
+            <Text style={styles.saveBtnText}>{existing ? 'Update' : 'Save'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+        {timeInputMode === 'type' ? (
+          <View style={styles.timeDisplay}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                ref={hourRef}
+                style={styles.timeDisplayInput}
+                value={hourText}
+                onChangeText={handleHourChange}
+                keyboardType="number-pad"
+                maxLength={2}
+                selectTextOnFocus
+              />
+              <Text style={styles.timeDisplayText}>:</Text>
+              <TextInput
+                ref={minuteRef}
+                style={styles.timeDisplayInput}
+                value={minuteText}
+                onChangeText={handleMinuteChange}
+                onKeyPress={handleMinuteKeyPress}
+                keyboardType="number-pad"
+                maxLength={2}
+                selectTextOnFocus
+              />
+              {timeFormat === '12h' && (
+                <View style={{ marginLeft: 12, gap: 4 }}>
+                  <TouchableOpacity
+                    style={[styles.ampmBtn, ampm === 'AM' && styles.ampmBtnActive]}
+                    onPress={() => { hapticLight(); setAmpm('AM'); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.ampmBtn, ampm === 'PM' && styles.ampmBtnActive]}
+                    onPress={() => { hapticLight(); setAmpm('PM'); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              onPress={() => { hapticLight(); Keyboard.dismiss(); }}
+              activeOpacity={0.7}
+              style={{ alignSelf: 'stretch', marginHorizontal: 40, marginTop: 10, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.accent, alignItems: 'center' }}
+            >
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={openTimeModal}
+            activeOpacity={0.7}
+            style={styles.timeDisplay}
+          >
+            <Text style={styles.timeDisplayText}>
+              {timeFormat === '12h'
+                ? `${pickerHours}:${String(pickerMinutes).padStart(2, '0')} ${ampm}`
+                : `${String(pickerHours).padStart(2, '0')}:${String(pickerMinutes).padStart(2, '0')}`}
+            </Text>
+            <Text style={styles.timeDisplayHint}>Tap to set time</Text>
+          </TouchableOpacity>
+        )}
 
-        <View style={styles.timeContainer}>
-          <TextInput
-            ref={hourRef}
-            style={styles.hourInput}
-            value={hourText}
-            onChangeText={handleHourChange}
-            keyboardType="number-pad"
-            maxLength={2}
-            selectTextOnFocus
-            placeholder={timeFormat === '12h' ? '12' : '0'}
-            placeholderTextColor={colors.textTertiary}
-          />
-          <Text style={styles.timeColon}>:</Text>
-          <TextInput
-            ref={minuteRef}
-            style={styles.minuteInput}
-            value={minuteText}
-            onChangeText={handleMinuteChange}
-            onKeyPress={handleMinuteKeyPress}
-            keyboardType="number-pad"
-            maxLength={2}
-            selectTextOnFocus
-            placeholder="00"
-            placeholderTextColor={colors.textTertiary}
-          />
-          {timeFormat === '12h' && (
-            <View style={styles.ampmContainer}>
-              <TouchableOpacity
-                style={[styles.ampmBtn, ampm === 'AM' && styles.ampmBtnActive]}
-                onPress={() => setAmpm('AM')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
+      {/* Time Picker Modal */}
+      <Modal transparent visible={timeModalVisible} animationType="fade">
+        <View style={styles.timeModalOverlay}>
+          <View style={styles.timeModalCard}>
+            <Text style={styles.timeModalTitle}>Set Time</Text>
+            <View style={{ alignItems: 'center', marginVertical: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TimePicker
+                  key={`modal-${timeFormat}`}
+                  hours={modalHours}
+                  minutes={modalMinutes}
+                  onHoursChange={handleModalHoursChange}
+                  onMinutesChange={handleModalMinutesChange}
+                  minHours={timeFormat === '12h' ? 1 : 0}
+                  maxHours={timeFormat === '12h' ? 13 : 24}
+                  padHours={timeFormat === '24h'}
+                  labels={{ hours: '', minutes: '' }}
+                />
+                {timeFormat === '12h' && (
+                  <View style={{ marginLeft: 16, gap: 8 }}>
+                    <TouchableOpacity
+                      style={[styles.ampmBtn, modalAmpm === 'AM' && styles.ampmBtnActive]}
+                      onPress={() => { hapticLight(); setModalAmpm('AM'); }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ampmText, modalAmpm === 'AM' && styles.ampmTextActive]}>AM</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.ampmBtn, modalAmpm === 'PM' && styles.ampmBtnActive]}
+                      onPress={() => { hapticLight(); setModalAmpm('PM'); }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ampmText, modalAmpm === 'PM' && styles.ampmTextActive]}>PM</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </View>
+            <View style={styles.timeModalBtns}>
+              <TouchableOpacity onPress={handleTimeModalCancel} style={styles.timeModalCancelBtn} activeOpacity={0.7}>
+                <Text style={styles.timeModalCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.ampmBtn, ampm === 'PM' && styles.ampmBtnActive]}
-                onPress={() => setAmpm('PM')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
+              <TouchableOpacity onPress={handleTimeModalDone} style={styles.timeModalDoneBtn} activeOpacity={0.7}>
+                <Text style={styles.timeModalDoneText}>Done</Text>
               </TouchableOpacity>
             </View>
-          )}
+          </View>
         </View>
+      </Modal>
 
         <Text style={styles.label}>Schedule</Text>
         <View style={styles.scheduleSection}>
           <View style={styles.modeContainer}>
             <TouchableOpacity
               style={[styles.modeBtn, mode === 'one-time' && styles.modeBtnActive]}
-              onPress={() => setMode('one-time')}
+              onPress={() => { hapticLight(); setMode('one-time'); }}
               activeOpacity={0.7}
             >
               <Text style={[styles.modeBtnText, mode === 'one-time' && styles.modeBtnTextActive]}>
@@ -836,7 +1208,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
-              onPress={() => { setMode('recurring'); setSelectedDate(null); }}
+              onPress={() => { hapticLight(); setMode('recurring'); setSelectedDate(null); }}
               activeOpacity={0.7}
             >
               <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>
@@ -850,7 +1222,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               <TouchableOpacity
                 key={key}
                 style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
-                onPress={() => handleToggleDay(key)}
+                onPress={() => { hapticLight(); handleToggleDay(key); }}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
@@ -864,14 +1236,14 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               <View style={styles.quickDayRow}>
                 <TouchableOpacity
                   style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
-                  onPress={() => handleQuickDays([...WEEKDAYS])}
+                  onPress={() => { hapticLight(); handleQuickDays([...WEEKDAYS]); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.quickDayText}>Weekdays</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
-                  onPress={() => handleQuickDays([...WEEKENDS])}
+                  onPress={() => { hapticLight(); handleQuickDays([...WEEKENDS]); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.quickDayText}>Weekends</Text>
@@ -908,7 +1280,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 activeOpacity={0.6}
               >
                 <Text style={styles.setDateText}>
-                  {'\u{1F4C5}'} {selectedDate ? formatDateDisplay(selectedDate) : 'No date set'}
+                  {'\u{1F4C5}'} {selectedDate ? formatDateDisplay(selectedDate) : 'Set date'}
                 </Text>
               </TouchableOpacity>
               {selectedDate ? (
@@ -927,11 +1299,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           {showCalendar && (
             <>
               <View style={styles.calHeader}>
-                <TouchableOpacity onPress={handleCalPrev} style={styles.calNav}>
+                <TouchableOpacity onPress={() => { hapticLight(); handleCalPrev(); }} style={styles.calNav}>
                   <Text style={styles.calNavText}>{'\u2039'}</Text>
                 </TouchableOpacity>
                 <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
-                <TouchableOpacity onPress={handleCalNext} style={styles.calNav}>
+                <TouchableOpacity onPress={() => { hapticLight(); handleCalNext(); }} style={styles.calNav}>
                   <Text style={styles.calNavText}>{'\u203A'}</Text>
                 </TouchableOpacity>
               </View>
@@ -955,7 +1327,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                     <View key={day} style={styles.calCell}>
                       <TouchableOpacity
                         style={[styles.calDay, isSelected && styles.calDaySelected]}
-                        onPress={() => handleSelectDate(day)}
+                        onPress={() => { hapticLight(); handleSelectDate(day); }}
                         disabled={isPast}
                         activeOpacity={0.7}
                       >
@@ -978,15 +1350,59 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           )}
         </View>
 
-        <Text style={styles.label}>Nickname (optional, for privacy)</Text>
-        <TextInput
-          style={styles.nicknameInput}
-          value={nickname}
-          onChangeText={setNickname}
-          placeholder="e.g. Important thing, Weekly task"
-          placeholderTextColor={colors.textTertiary}
-          maxLength={40}
-        />
+        <Text style={styles.label}>Nickname</Text>
+        <View style={styles.nicknameRow}>
+          <TextInput
+            style={styles.nicknameInput}
+            value={nickname}
+            onChangeText={setNickname}
+            placeholder="e.g. Important thing, Weekly task"
+            placeholderTextColor={colors.textTertiary}
+            maxLength={40}
+          />
+          <TouchableOpacity
+            style={styles.emojiCircle}
+            onPress={() => { hapticLight(); setEmojiPickerOpen((o) => !o); }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.emojiCircleText}>{selectedIcon || '\u{1F4DD}'}</Text>
+          </TouchableOpacity>
+          <TextInput
+            ref={iconInputRef}
+            style={styles.hiddenInput}
+            autoCorrect={false}
+            onChangeText={(t) => {
+              if (t) {
+                const graphemes = [...t];
+                setSelectedIcon(graphemes[graphemes.length - 1] || '');
+              }
+              setEmojiPickerOpen(false);
+              if (iconInputRef.current) {
+                iconInputRef.current.setNativeProps({ text: '' });
+                iconInputRef.current.blur();
+              }
+            }}
+          />
+        </View>
+        {emojiPickerOpen && (
+          <View style={styles.quickEmojiRow}>
+            {['\u{1F4DD}', '\u{1F4C5}', '\u{1F48A}', '\u{1F6D2}', '\u{1F4DE}', '\u{1F3CB}\u{FE0F}', '\u{1F4A7}', '\u{1F4E6}'].map((emoji) => (
+              <TouchableOpacity
+                key={emoji}
+                onPress={() => { hapticLight(); setSelectedIcon(selectedIcon === emoji ? '' : emoji); setEmojiPickerOpen(false); }}
+                style={[styles.quickEmojiBtn, selectedIcon === emoji && styles.quickEmojiBtnActive]}
+              >
+                <Text style={{ fontSize: 18 }}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              onPress={() => { hapticLight(); iconInputRef.current?.focus(); }}
+              style={styles.quickEmojiBtn}
+            >
+              <Text style={{ fontSize: 18, color: colors.textTertiary }}>+</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <Text style={styles.label}>What do you need to remember?</Text>
         <TextInput
@@ -1001,44 +1417,56 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         />
         <Text style={styles.charCount}>{text.length}/200</Text>
 
-        <Text style={styles.label}>What's it for?</Text>
-        <View style={styles.iconGrid}>
-          {guessWhyIcons.map((icon) => (
+        <View style={[styles.toggleCard, { marginTop: 4 }]}>
+          <Text style={styles.toggleLabel}>Private Reminder</Text>
+          <Switch
+            value={selectedPrivate}
+            onValueChange={(v) => { hapticLight(); setSelectedPrivate(v); }}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
+          />
+        </View>
+        <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: -22, marginBottom: selectedPrivate ? 2 : 20, paddingLeft: 16 }}>Hides text and details from the reminder list</Text>
+        {selectedPrivate && (
+          <Text style={{ fontSize: 10, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{privateHint}</Text>
+        )}
+
+        <View style={styles.soundRow}>
+          <View style={{ alignItems: 'center' }}>
             <TouchableOpacity
-              key={icon.id}
+              onPress={() => {
+                setSoundMode((prev) => {
+                  if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
+                  if (prev === 'vibrate') return 'silent';
+                  hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); return 'sound';
+                });
+              }}
               style={[
-                styles.iconCell,
-                selectedIcon === icon.emoji && styles.iconCellActive,
+                styles.soundModeIconBtn,
+                soundMode === 'sound' && { backgroundColor: colors.accent },
               ]}
-              onPress={() => { hapticLight(); setSelectedIcon(selectedIcon === icon.emoji ? '' : icon.emoji); }}
               activeOpacity={0.7}
             >
-              <Text style={styles.iconEmoji}>{icon.emoji}</Text>
+              <Text style={styles.soundModeIconText}>
+                {soundMode === 'sound' ? '\u{1F514}' : soundMode === 'vibrate' ? '\u{1F4F3}' : '\u{1F507}'}
+              </Text>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.toggleCard}>
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Private</Text>
-            <Switch
-              value={selectedPrivate}
-              onValueChange={(v) => { hapticLight(); setSelectedPrivate(v); }}
-              trackColor={{ false: colors.border, true: colors.accent }}
-              thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
-            />
+            <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
+              {soundMode === 'sound' ? 'Sound' : soundMode === 'vibrate' ? 'Vibrate' : 'Silent'}
+            </Text>
           </View>
-          <Text style={styles.toggleDescription}>
-            Hides details on the reminder card and widget.
-          </Text>
+          {soundMode === 'sound' && (
+            <View style={{ alignItems: 'center' }}>
+              <View style={{ backgroundColor: colors.accent + '20', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 }}>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent }}>Default Sound</Text>
+              </View>
+              <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>Select Sound</Text>
+            </View>
+          )}
         </View>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-          <Text style={styles.saveBtnText}>
-            {existing ? 'Update Reminder' : 'Save Reminder'}
-          </Text>
-        </TouchableOpacity>
       </ScrollView>
+
     </View>
   );
 }

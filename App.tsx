@@ -20,18 +20,22 @@ import CreateReminderScreen from './src/screens/CreateReminderScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
+import NotepadScreen from './src/screens/NotepadScreen';
 import { loadAlarms, disableAlarm, deleteAlarm, purgeDeletedAlarms } from './src/services/storage';
 import { getReminders, updateReminder, purgeDeletedReminders } from './src/services/reminderStorage';
-import { loadSettings, getOnboardingComplete } from './src/services/settings';
+import { purgeDeletedNotes, getPendingNoteAction } from './src/services/noteStorage';
+import { getOnboardingComplete } from './src/services/settings';
 import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
 import { getPendingAlarm, setPendingAlarm, clearPendingAlarm, markNotifHandled, wasNotifHandled } from './src/services/pendingAlarm';
+import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
 import type { PendingAlarmData } from './src/services/pendingAlarm';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RootStackParamList } from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -92,10 +96,14 @@ function AppNavigator() {
   const { colors } = useTheme();
 
   // Single init state: null = loading, non-null = ready to render.
-  // Combines onboarding check + cold-start alarm resolution.
+  // Combines onboarding check + cold-start alarm/note resolution.
   const [initState, setInitState] = useState<{
     onboardingDone: boolean;
     alarmFireParams: RootStackParamList['AlarmFire'] | null;
+    notepadParams: RootStackParamList['Notepad'] | null;
+    alarmListParams: RootStackParamList['AlarmList'] | null;
+    createAlarmParams: RootStackParamList['CreateAlarm'] | null;
+    createReminderParams: RootStackParamList['CreateReminder'] | null;
   } | null>(null);
 
   const navigationRef = useRef<any>(null);
@@ -121,11 +129,19 @@ function AppNavigator() {
 
     if (pending.timerId && pending.notificationId) {
       console.log('[NOTIF] navigateToAlarmFire — timer:', pending.timerId);
+      let timerSoundId = pending.timerSoundId;
+      if (timerSoundId === undefined) {
+        try {
+          const timers = await loadActiveTimers();
+          timerSoundId = timers.find(t => t.id === pending.timerId)?.soundId;
+        } catch {}
+      }
       navigationRef.current.navigate('AlarmFire', {
         isTimer: true,
         timerLabel: pending.timerLabel || 'Timer',
         timerIcon: pending.timerIcon || '\u23F1\uFE0F',
         timerId: pending.timerId,
+        timerSoundId,
         timerNotificationId: pending.notificationId,
         notificationId: pending.notificationId,
         fromNotification: true,
@@ -139,13 +155,11 @@ function AppNavigator() {
           console.log('[NOTIF] navigateToAlarmFire — alarm not found:', pending.alarmId);
           return;
         }
-        const settings = await loadSettings();
         if (navigationRef.current) {
           navigationRef.current.navigate('AlarmFire', {
             alarm,
             fromNotification: true,
             notificationId: pending.notificationId,
-            guessWhyEnabled: settings.guessWhyEnabled,
           });
         }
       } catch (e) {
@@ -190,10 +204,15 @@ function AppNavigator() {
           return true;
         }
         if (dTimerId && dNotifId && !wasNotifHandled(dNotifId)) {
-          const tIcon = d.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-          const tLabel = d.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+          const tIcon = (d.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+          const tLabel = (d.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
+          let fbTimerSoundId: string | undefined;
+          try {
+            const timers = await loadActiveTimers();
+            fbTimerSoundId = timers.find(t => t.id === dTimerId)?.soundId;
+          } catch {}
           console.log('[NOTIF] consumePendingAlarm fallback — found displayed timer:', dTimerId);
-          await navigateToAlarmFire({ timerId: dTimerId, notificationId: dNotifId, timerLabel: tLabel, timerIcon: tIcon });
+          await navigateToAlarmFire({ timerId: dTimerId, notificationId: dNotifId, timerLabel: tLabel, timerIcon: tIcon, timerSoundId: fbTimerSoundId });
           return true;
         }
       }
@@ -223,11 +242,19 @@ function AppNavigator() {
           console.log('[NOTIF] INIT — found pending alarm data:', JSON.stringify(pending));
 
           if (pending.timerId && pending.notificationId) {
+            let timerSoundId = pending.timerSoundId;
+            if (timerSoundId === undefined) {
+              try {
+                const timers = await loadActiveTimers();
+                timerSoundId = timers.find(t => t.id === pending.timerId)?.soundId;
+              } catch {}
+            }
             alarmFireParams = {
               isTimer: true,
               timerLabel: pending.timerLabel || 'Timer',
               timerIcon: pending.timerIcon || '\u23F1\uFE0F',
               timerId: pending.timerId,
+              timerSoundId,
               timerNotificationId: pending.notificationId,
               notificationId: pending.notificationId,
               fromNotification: true,
@@ -237,12 +264,10 @@ function AppNavigator() {
               const alarms = await loadAlarms();
               const alarm = alarms.find((a) => a.id === pending.alarmId);
               if (alarm) {
-                const settings = await loadSettings();
                 alarmFireParams = {
                   alarm,
                   fromNotification: true,
                   notificationId: pending.notificationId,
-                  guessWhyEnabled: settings.guessWhyEnabled,
                 };
               }
             } catch (e) {
@@ -267,13 +292,19 @@ function AppNavigator() {
                 console.log('[NOTIF] INIT — getInitialNotification already handled:', notifId);
               } else {
                 if (timerId && notifId) {
-                  const tIcon = initial.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-                  const tLabel = initial.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+                  const tIcon = (initial.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+                  const tLabel = (initial.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
+                  let initTimerSoundId: string | undefined;
+                  try {
+                    const timers = await loadActiveTimers();
+                    initTimerSoundId = timers.find(t => t.id === timerId)?.soundId;
+                  } catch {}
                   alarmFireParams = {
                     isTimer: true,
                     timerLabel: tLabel,
                     timerIcon: tIcon,
                     timerId,
+                    timerSoundId: initTimerSoundId,
                     timerNotificationId: notifId,
                     notificationId: notifId,
                     fromNotification: true,
@@ -283,12 +314,10 @@ function AppNavigator() {
                     const alarms = await loadAlarms();
                     const alarm = alarms.find((a) => a.id === alarmId);
                     if (alarm) {
-                      const settings = await loadSettings();
                       alarmFireParams = {
                         alarm,
                         fromNotification: true,
                         notificationId: notifId,
-                        guessWhyEnabled: settings.guessWhyEnabled,
                       };
                     }
                   } catch (e) {
@@ -312,11 +341,83 @@ function AppNavigator() {
           console.log('[NOTIF] INIT — set dedupe marker for:', alarmFireParams.notificationId);
         }
 
+        // 3. Check for pending note action from widget deep-link
+        let notepadParams: RootStackParamList['Notepad'] | null = null;
+        if (!alarmFireParams) {
+          try {
+            const pendingNote = await getPendingNoteAction();
+            if (pendingNote) {
+              if (pendingNote.type === 'new') {
+                notepadParams = { newNote: true };
+              } else if (pendingNote.noteId) {
+                notepadParams = { noteId: pendingNote.noteId };
+              } else {
+                notepadParams = {};
+              }
+            }
+          } catch {}
+        }
+
+        // 4. Check for pending alarm action from widget (create or edit)
+        let createAlarmParams: RootStackParamList['CreateAlarm'] | null = null;
+        if (!alarmFireParams && !notepadParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingAlarmAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingAlarmAction');
+              const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                if (parsed.action === 'createAlarm') {
+                  createAlarmParams = {};
+                } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
+                  const allAlarms = await loadAlarms();
+                  const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
+                  if (alarm) createAlarmParams = { alarm };
+                }
+              }
+            }
+          } catch {}
+        }
+
+        // 5. Check for pending reminder action from widget (create or edit)
+        let createReminderParams: RootStackParamList['CreateReminder'] | null = null;
+        if (!alarmFireParams && !notepadParams && !createAlarmParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingReminderAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingReminderAction');
+              const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                if (parsed.action === 'createReminder') {
+                  createReminderParams = {};
+                } else if (parsed.action === 'editReminder' && parsed.reminderId) {
+                  createReminderParams = { reminderId: parsed.reminderId };
+                }
+              }
+            }
+          } catch {}
+        }
+
+        // 6. Check for pending tab action from widget deep-link
+        let alarmListParams: RootStackParamList['AlarmList'] | null = null;
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingTabAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingTabAction');
+              const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                alarmListParams = { initialTab: parsed.tab };
+              }
+            }
+          } catch {}
+        }
+
         console.log('[NOTIF] INIT — complete. alarmFireParams:', alarmFireParams ? 'SET' : 'null');
-        setInitState({ onboardingDone, alarmFireParams });
+        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams });
       } catch (e) {
         console.error('[NOTIF] INIT — fatal error:', e);
-        setInitState({ onboardingDone: true, alarmFireParams: null });
+        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: null, createAlarmParams: null, createReminderParams: null });
       }
     })();
   }, []);
@@ -330,6 +431,7 @@ function AppNavigator() {
       try {
         await purgeDeletedAlarms();
         await purgeDeletedReminders();
+        await purgeDeletedNotes();
       } catch {}
     })();
   }, []);
@@ -411,7 +513,15 @@ function AppNavigator() {
         // undefined; the completion trigger has data: { timerId }.
         if (type === EventType.DELIVERED) {
           const isAlarmOrTimerCompletion = !!(alarmId || timerId);
-          if (!isAlarmOrTimerCompletion) return;
+          if (!isAlarmOrTimerCompletion) {
+            // Still handle yearly reminder reschedule for non-alarm DELIVERED
+            const rid = detail.notification?.data?.reminderId as string | undefined;
+            if (rid) rescheduleYearlyReminder(rid).catch(() => {});
+            return;
+          }
+          // Play alarm sound immediately on DELIVERED so it starts the
+          // instant the notification fires, regardless of screen state.
+          playAlarmSoundForNotification(alarmId, timerId).catch(() => {});
         }
 
         if (!navigationRef.current || !isNavigationReady.current) {
@@ -419,9 +529,14 @@ function AppNavigator() {
           // so onNavigationReady or AppState handler can consume it.
           // Without this, the event is lost and AlarmFireScreen never shows.
           if (timerId && notifId) {
-            const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-            const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
-            setPendingAlarm({ timerId, notificationId: notifId, timerLabel: tLabel, timerIcon: tIcon });
+            const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+            const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
+            let pendTimerSoundId: string | undefined;
+            try {
+              const timers = await loadActiveTimers();
+              pendTimerSoundId = timers.find(t => t.id === timerId)?.soundId;
+            } catch {}
+            setPendingAlarm({ timerId, notificationId: notifId, timerLabel: tLabel, timerIcon: tIcon, timerSoundId: pendTimerSoundId });
           } else if (alarmId) {
             setPendingAlarm({ alarmId, notificationId: notifId });
           }
@@ -451,17 +566,21 @@ function AppNavigator() {
         // would cause navigateToAlarmFire to see it as already handled
         // and skip the alarm navigation entirely.
 
-        // DO NOT cancel notifications here — the alarm sound plays FROM the
-        // notification. Cancelling it kills the sound. AlarmFireScreen's
-        // Dismiss/Snooze handlers cancel notifications when the user acts.
+        // DO NOT cancel notifications here — AlarmFireScreen's Dismiss/Snooze
+        // handlers cancel notifications and stop alarm sound when the user acts.
 
         // Timer completion notifications have data.timerId set.
         // The countdown chronometer (same ID prefix) has NO data, so
         // timerId is undefined and this branch is skipped for it.
         if (timerId && notifId) {
           markNotifHandled(notifId);
-          const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-          const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+          const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+          const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
+          let fgTimerSoundId: string | undefined;
+          try {
+            const timers = await loadActiveTimers();
+            fgTimerSoundId = timers.find(t => t.id === timerId)?.soundId;
+          } catch {}
 
           console.log('[NOTIF] FOREGROUND — navigating to AlarmFire (timer)');
           navigationRef.current.navigate('AlarmFire', {
@@ -469,6 +588,7 @@ function AppNavigator() {
             timerLabel: tLabel,
             timerIcon: tIcon,
             timerId,
+            timerSoundId: fgTimerSoundId,
             timerNotificationId: notifId,
             notificationId: notifId,
             fromNotification: true,
@@ -481,14 +601,24 @@ function AppNavigator() {
       }
 
       if (type === EventType.DISMISSED) {
-        console.log('[NOTIF] FOREGROUND DISMISSED — alarmId:', alarmId);
+        console.log('[NOTIF] FOREGROUND DISMISSED — alarmId:', alarmId, 'timerId:', timerId);
+        if (alarmId || timerId) {
+          stopAlarmSound();
+        }
         if (alarmId) {
           try {
             const alarms = await loadAlarms();
             const alarm = alarms.find((a) => a.id === alarmId);
             if (alarm?.mode === 'one-time') {
-              await deleteAlarm(alarmId);
-              refreshTimerWidget();
+              // Check if this DISMISSED was triggered by a snooze cancellation.
+              // The snoozing flag is set atomically before cancel in AlarmFireScreen.
+              const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+              if (snoozingFlag) {
+                await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+              } else {
+                await deleteAlarm(alarmId);
+                refreshTimerWidget();
+              }
             }
           } catch {}
         }
@@ -524,6 +654,55 @@ function AppNavigator() {
       // Use navigateToAlarmFire (async) — navigation is ready at this point
       navigateToAlarmFire(pending);
     }
+
+    // Check for pending note action from widget
+    getPendingNoteAction().then((noteAction) => {
+      if (noteAction && navigationRef.current) {
+        if (noteAction.type === 'edit' && noteAction.noteId) {
+          navigationRef.current.navigate('Notepad', { noteId: noteAction.noteId });
+        } else if (noteAction.type === 'new') {
+          navigationRef.current.navigate('Notepad', { newNote: true });
+        } else {
+          navigationRef.current.navigate('Notepad');
+        }
+      }
+    }).catch(() => {});
+
+    // Check for pending alarm action from widget (create or edit)
+    AsyncStorage.getItem('pendingAlarmAction').then(async (raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingAlarmAction');
+        const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          if (parsed.action === 'createAlarm') {
+            navigationRef.current.navigate('CreateAlarm');
+          } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
+            const allAlarms = await loadAlarms();
+            const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
+            if (alarm && navigationRef.current) {
+              navigationRef.current.navigate('CreateAlarm', { alarm });
+            }
+          }
+        }
+      }
+    }).catch(() => {});
+
+    // Check for pending reminder action from widget (create or edit)
+    AsyncStorage.getItem('pendingReminderAction').then((raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingReminderAction');
+        const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          if (parsed.action === 'createReminder') {
+            navigationRef.current.navigate('CreateReminder');
+          } else if (parsed.action === 'editReminder' && parsed.reminderId) {
+            navigationRef.current.navigate('CreateReminder', { reminderId: parsed.reminderId });
+          }
+        }
+      }
+    }).catch(() => {});
+
+    // pendingTabAction is now handled directly by AlarmListScreen
   }, [navigateToAlarmFire]);
 
   // ── AppState fallback ────────────────────────────────────────────
@@ -536,6 +715,51 @@ function AppNavigator() {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active' && isNavigationReady.current && navigationRef.current) {
         consumePendingAlarm();
+        // Check for pending note action from widget
+        getPendingNoteAction().then((noteAction) => {
+          if (noteAction && navigationRef.current) {
+            if (noteAction.type === 'edit' && noteAction.noteId) {
+              navigationRef.current.navigate('Notepad', { noteId: noteAction.noteId });
+            } else if (noteAction.type === 'new') {
+              navigationRef.current.navigate('Notepad', { newNote: true });
+            } else {
+              navigationRef.current.navigate('Notepad');
+            }
+          }
+        }).catch(() => {});
+        // Check for pending alarm action from widget (create or edit)
+        AsyncStorage.getItem('pendingAlarmAction').then(async (raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingAlarmAction');
+            const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              if (parsed.action === 'createAlarm') {
+                navigationRef.current.navigate('CreateAlarm');
+              } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
+                const allAlarms = await loadAlarms();
+                const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
+                if (alarm && navigationRef.current) {
+                  navigationRef.current.navigate('CreateAlarm', { alarm });
+                }
+              }
+            }
+          }
+        }).catch(() => {});
+        // Check for pending reminder action from widget (create or edit)
+        AsyncStorage.getItem('pendingReminderAction').then((raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingReminderAction');
+            const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              if (parsed.action === 'createReminder') {
+                navigationRef.current.navigate('CreateReminder');
+              } else if (parsed.action === 'editReminder' && parsed.reminderId) {
+                navigationRef.current.navigate('CreateReminder', { reminderId: parsed.reminderId });
+              }
+            }
+          }
+        }).catch(() => {});
+        // pendingTabAction is now handled directly by AlarmListScreen
       }
     });
     return () => subscription.remove();
@@ -547,17 +771,40 @@ function AppNavigator() {
   // This prevents any flash of the wrong screen.
   if (!initState) return null;
 
-  const { onboardingDone, alarmFireParams } = initState;
+  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams } = initState;
 
   // For TRUE cold start: set initialState so the navigator renders
-  // AlarmFireScreen on the very first frame. AlarmList is kept at
-  // index 0 so the nav stack is clean after dismiss.
+  // AlarmFireScreen or NotepadScreen on the very first frame. AlarmList
+  // is kept at index 0 so the nav stack is clean after dismiss.
   const initialNavState = alarmFireParams ? {
     routes: [
       { name: 'AlarmList' as const },
       { name: 'AlarmFire' as const, params: alarmFireParams },
     ],
     index: 1,
+  } : notepadParams ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'Notepad' as const, params: notepadParams },
+    ],
+    index: 1,
+  } : createAlarmParams ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'CreateAlarm' as const, params: createAlarmParams },
+    ],
+    index: 1,
+  } : createReminderParams ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'CreateReminder' as const, params: createReminderParams },
+    ],
+    index: 1,
+  } : alarmListParams ? {
+    routes: [
+      { name: 'AlarmList' as const, params: alarmListParams },
+    ],
+    index: 0,
   } : undefined;
 
   return (
@@ -641,6 +888,11 @@ function AppNavigator() {
           <Stack.Screen
             name="Trivia"
             component={TriviaScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="Notepad"
+            component={NotepadScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen

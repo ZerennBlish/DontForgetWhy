@@ -22,6 +22,7 @@ import {
   resetSeenQuestionsForCategory,
 } from '../services/triviaStorage';
 import type { TriviaQuestion, TriviaCategory } from '../types/trivia';
+import BackButton from '../components/BackButton';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trivia'>;
@@ -369,16 +370,14 @@ export default function TriviaScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backBtn}>{'<'} Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>Trivia Time</Text>
         </View>
 
         {/* Online/Offline toggle (disabled) */}
         <TouchableOpacity
           style={[styles.modeToggle, { opacity: 0.4 }]}
-          onPress={() => Alert.alert('Online Mode', 'Online mode coming in a future update')}
+          onPress={() => { hapticLight(); Alert.alert('Online Mode', 'Online mode coming in a future update'); }}
           activeOpacity={0.6}
         >
           <Text style={styles.modeIcon}>{'\u{1F310}'}</Text>
@@ -440,7 +439,7 @@ export default function TriviaScreen({ navigation }: Props) {
         </View>
         <TouchableOpacity
           style={styles.startBtn}
-          onPress={() => startRound(selectedCategory)}
+          onPress={() => { hapticLight(); startRound(selectedCategory); }}
           activeOpacity={0.7}
         >
           <Text style={styles.startBtnText}>
@@ -461,9 +460,7 @@ export default function TriviaScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backBtn}>{'<'} Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
         </View>
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsTitle}>Round Complete</Text>
@@ -499,7 +496,7 @@ export default function TriviaScreen({ navigation }: Props) {
 
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => startRound(selectedCategory)}
+            onPress={() => { hapticLight(); startRound(selectedCategory); }}
             activeOpacity={0.7}
           >
             <Text style={styles.primaryBtnText}>Play Again</Text>
@@ -508,6 +505,7 @@ export default function TriviaScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.secondaryBtn}
             onPress={() => {
+              hapticLight();
               setPhase('category');
               setAllSeenMessage(null);
             }}
@@ -534,9 +532,7 @@ export default function TriviaScreen({ navigation }: Props) {
       {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
-          <TouchableOpacity onPress={handleBackFromGame} activeOpacity={0.7}>
-            <Text style={[styles.backBtn, { marginBottom: 0 }]}>{'<'} Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={handleBackFromGame} />
         </View>
         <View style={styles.topBarRight}>
           <Text style={styles.topBarCounter}>{currentIndex + 1}/{questions.length}</Text>
@@ -633,16 +629,11 @@ function makeStyles(colors: any, insets: any) {
       paddingHorizontal: 20,
       paddingBottom: 16,
     },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
-      marginBottom: 16,
-    },
     title: {
       fontSize: 28,
       fontWeight: '800',
       color: '#FFFFFF',
+      textAlign: 'center',
     },
 
     // Mode toggle

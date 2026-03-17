@@ -22,13 +22,15 @@ import {
   scheduleSnooze,
 } from '../services/notifications';
 import { deleteAlarm, updateSingleAlarm } from '../services/storage';
-import { loadSettings } from '../services/settings';
+import { loadSettings, getSilenceAll } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticHeavy } from '../utils/haptics';
 import { getSnoozeMessage } from '../data/snoozeMessages';
 import { refreshTimerWidget } from '../widget/updateWidget';
 import { markNotifHandled } from '../services/pendingAlarm';
+import { playAlarmSound, stopAlarmSound, isAlarmSoundPlaying } from '../services/alarmSound';
+import { getDefaultTimerSound } from '../services/settings';
 import guessWhyIcons from '../data/guessWhyIcons';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -74,13 +76,15 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     timerLabel,
     timerIcon,
     timerId,
+    timerSoundId,
     timerNotificationId,
     notificationId,
-    guessWhyEnabled,
     postGuessWhy,
   } = route.params;
 
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [globalSilenced, setGlobalSilenced] = useState(false);
+  const [silenceLoaded, setSilenceLoaded] = useState(false);
   const [snoozeShameMessage, setSnoozeShameMessage] = useState<string | null>(null);
   const [isSnoozing, setIsSnoozing] = useState(false);
   const snoozeShameOpacity = useRef(new Animated.Value(0)).current;
@@ -88,6 +92,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     loadSettings().then((s) => setTimeFormat(s.timeFormat)).catch(() => {});
+    getSilenceAll().then((v) => { setGlobalSilenced(v); setSilenceLoaded(true); }).catch(() => { setSilenceLoaded(true); });
   }, []);
 
   // DO NOT cancel notifications on mount — the alarm sound plays FROM the
@@ -103,17 +108,66 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     if (notificationId) {
       markNotifHandled(notificationId);
     }
+    // Clean up any stale snoozing flag from a previous session that
+    // was never consumed by a DISMISSED handler (e.g., app was killed).
+    if (alarm?.id) {
+      AsyncStorage.removeItem(`snoozing_${alarm.id}`).catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fallback: play alarm sound if event handlers didn't start it
+  // (e.g., cold start where background JS context is separate).
+  // Sound is normally started on DELIVERED in index.ts / App.tsx.
+  // Waits for silenceLoaded so we don't play before getSilenceAll() resolves.
+  useEffect(() => {
+    if (!fromNotification || postGuessWhy) return;
+    if (!isTimer && (alarm?.soundId === 'silent' || alarm?.soundId === 'true_silent')) return;
+    if (isTimer && (timerSoundId === 'silent' || timerSoundId === 'true_silent')) return;
+    if (!silenceLoaded) return;
+    if (globalSilenced) return;
+
+    // If sound is already playing (started by DELIVERED event handler),
+    // just register cleanup — don't start a second playback.
+    if (isAlarmSoundPlaying()) {
+      return () => {
+        stopAlarmSound();
+      };
+    }
+
+    let cancelled = false;
+    (async () => {
+      let soundUri: string | null = null;
+      if (isTimer) {
+        try {
+          const timerSound = await getDefaultTimerSound();
+          soundUri = timerSound.uri;
+        } catch {}
+      } else {
+        soundUri = alarm?.soundUri ?? null;
+      }
+      if (cancelled) return;
+      playAlarmSound(soundUri);
+    })();
+    return () => {
+      cancelled = true;
+      stopAlarmSound();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [silenceLoaded]);
+
   // Start vibration when screen shows from notification (not when returning from GuessWhy)
+  // Skip vibration for true_silent alarms/timers and when global silence is active
   useEffect(() => {
     if (fromNotification && !postGuessWhy) {
-      hapticHeavy();
-      Vibration.vibrate(VIBRATION_PATTERN, true);
-      return () => Vibration.cancel();
+      const isTrueSilent = isTimer ? timerSoundId === 'true_silent' : alarm?.soundId === 'true_silent';
+      if (!isTrueSilent && !globalSilenced) {
+        hapticHeavy();
+        Vibration.vibrate(VIBRATION_PATTERN, true);
+        return () => Vibration.cancel();
+      }
     }
-  }, [fromNotification, postGuessWhy]);
+  }, [fromNotification, postGuessWhy, isTimer, alarm?.soundId, timerSoundId, globalSilenced]);
 
   // When returning from GuessWhy, notifications + vibration are already
   // cancelled (handleGuessWhy does it before navigating). This is a
@@ -135,6 +189,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const cancelAllNotifications = useCallback(async () => {
     Vibration.cancel();
+    stopAlarmSound();
     console.log('[AlarmFire] cancelAllNotifications — isTimer:', isTimer,
       'timerNotificationId:', timerNotificationId, 'timerId:', timerId,
       'notificationId:', notificationId);
@@ -149,18 +204,32 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         promises.push(cancelTimerCountdownNotification(timerId).catch(() => {}));
       }
     } else if (alarm) {
+      const isRecurring = alarm.mode !== 'one-time';
       if (alarm.notificationIds?.length) {
         for (const id of alarm.notificationIds) {
-          promises.push(dismissAlarmNotification(id).catch(() => {}));
+          promises.push(
+            isRecurring
+              ? notifee.cancelDisplayedNotification(id).catch(() => {})
+              : dismissAlarmNotification(id).catch(() => {}),
+          );
         }
       }
       if (alarm.notificationId) {
-        promises.push(dismissAlarmNotification(alarm.notificationId).catch(() => {}));
+        promises.push(
+          isRecurring
+            ? notifee.cancelDisplayedNotification(alarm.notificationId).catch(() => {})
+            : dismissAlarmNotification(alarm.notificationId).catch(() => {}),
+        );
       }
     }
     // Also cancel the specific pressed/triggered notification
     if (notificationId) {
-      promises.push(notifee.cancelNotification(notificationId).catch(() => {}));
+      const isRecurring = alarm?.mode !== 'one-time' && !isTimer;
+      promises.push(
+        isRecurring
+          ? notifee.cancelDisplayedNotification(notificationId).catch(() => {})
+          : notifee.cancelNotification(notificationId).catch(() => {}),
+      );
     }
     await Promise.all(promises);
     console.log('[AlarmFire] cancelAllNotifications — done');
@@ -203,13 +272,31 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const handleSnooze = useCallback(async () => {
     setIsSnoozing(true);
-    await cancelAllNotifications();
     if (!alarm) {
+      await cancelAllNotifications();
       exitToLockScreen();
       return;
     }
 
+    // Set snoozing flag BEFORE cancelling notifications.
+    // DISMISSED fires immediately on cancel; without the flag it would
+    // delete the one-time alarm before the snooze is scheduled.
+    // If the flag fails to set, bail out — a failed snooze is better
+    // than a deleted alarm.
     let newCount = 1;
+    try {
+      await AsyncStorage.setItem(`snoozing_${alarm.id}`, '1');
+    } catch (e) {
+      console.error('[AlarmFire] snooze flag failed, aborting snooze:', e);
+      setIsSnoozing(false);
+      return;
+    }
+    try {
+      newCount = await incrementSnoozeCount(alarm.id);
+    } catch {}
+
+    await cancelAllNotifications();
+
     try {
       const snoozeNotifId = await scheduleSnooze(alarm);
       // Persist the snooze notification ID so it can be cancelled if the
@@ -225,7 +312,6 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
           ],
         }));
       } catch {}
-      newCount = await incrementSnoozeCount(alarm.id);
     } catch (e) {
       console.error('[AlarmFire] snooze failed:', e);
     }
@@ -258,10 +344,11 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   // Determine if Guess Why button should show
   const canPlayGuessWhy = useMemo(() => {
-    if (isTimer || !alarm || !guessWhyEnabled || postGuessWhy) return false;
+    if (isTimer || !alarm || !alarm.guessWhy || postGuessWhy) return false;
     const hasIcon = Boolean(alarm.icon) && guessWhyIcons.some((i) => i.emoji === alarm.icon);
-    return hasIcon || (alarm.note?.length ?? 0) >= 3;
-  }, [isTimer, alarm, guessWhyEnabled, postGuessWhy]);
+    const hasNickname = (alarm.nickname?.trim().length ?? 0) >= 1;
+    return hasIcon || hasNickname || (alarm.note?.length ?? 0) >= 3;
+  }, [isTimer, alarm, postGuessWhy]);
 
   // ── Display values ──────────────────────────────────────────────
   //
@@ -278,7 +365,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     : formatTime(alarm?.time || '', timeFormat);
 
   const isPrivate = !isTimer && !!alarm?.private;
-  const isPreGame = !!guessWhyEnabled && !postGuessWhy;
+  const isPreGame = !!alarm?.guessWhy && !postGuessWhy;
 
   // Icon: private alarms and pre-game always show generic bell.
   // Non-private post-game or no-GuessWhy shows the real icon.
@@ -296,7 +383,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   // Note: NEVER shown for private alarms. For non-private, only shown
   // when Guess Why is off or the game has been played (postGuessWhy).
   const displayNote = !isTimer && !isPrivate && alarm?.note
-    && (!guessWhyEnabled || postGuessWhy)
+    && (!alarm?.guessWhy || postGuessWhy)
     ? alarm.note : null;
 
   // Button visibility
@@ -417,6 +504,13 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       fontSize: 48,
       marginBottom: 20,
     },
+    silencedIndicator: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#FFA500',
+      textAlign: 'center',
+      marginBottom: 12,
+    },
   }), [colors, insets.bottom]);
 
   // Snooze shame overlay
@@ -440,6 +534,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
         <View style={styles.container}>
           <View style={styles.top}>
+            {globalSilenced && (
+              <Text style={styles.silencedIndicator}>{'\u{1F507}'} All alarms silenced</Text>
+            )}
             <Text style={styles.time}>{displayTime}</Text>
             <Text style={styles.emoji}>{displayIcon}</Text>
             <Text style={styles.label}>{displayLabel}</Text>

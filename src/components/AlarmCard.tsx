@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert } from 'react-native';
-import { Alarm, AlarmCategory, ALL_DAYS, WEEKDAYS, WEEKENDS, AlarmDay } from '../types/alarm';
+import { Alarm, ALL_DAYS, WEEKDAYS, WEEKENDS, AlarmDay } from '../types/alarm';
 import { formatTime } from '../utils/time';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -17,15 +17,6 @@ function getScheduleLabel(alarm: Alarm): string {
   if (days.length === 2 && WEEKENDS.every((d) => days.includes(d))) return 'Weekends';
   return days.join(', ');
 }
-
-const categoryLabels: Record<AlarmCategory, string> = {
-  meds: '\u{1F48A} Meds',
-  appointment: '\u{1F4C5} Appt',
-  event: '\u{1F389} Event',
-  task: '\u2705 Task',
-  'self-care': '\u{1F9D8} Self-Care',
-  general: '\u{1F514} General',
-};
 
 const mysteryTexts = [
   '\u2753 Can you remember?',
@@ -47,7 +38,6 @@ function getMysteryText(id: string): string {
 interface AlarmCardProps {
   alarm: Alarm;
   timeFormat: '12h' | '24h';
-  guessWhyEnabled: boolean;
   isPinned: boolean;
   onToggle: (id: string) => void;
   onEdit: (alarm: Alarm) => void;
@@ -58,21 +48,20 @@ interface AlarmCardProps {
 function getDetailLine(alarm: Alarm): string {
   if (alarm.icon && alarm.nickname) return `${alarm.icon} ${alarm.nickname}`;
   if (alarm.icon) return alarm.icon;
-  if (alarm.nickname) return `${alarm.nickname} \u{1F512}`;
+  if (alarm.nickname) return alarm.nickname;
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned, onToggle, onEdit, onDelete, onTogglePin }: AlarmCardProps) {
+export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdit, onDelete, onTogglePin }: AlarmCardProps) {
   const { colors } = useTheme();
-  const [revealed, setRevealed] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
       backgroundColor: colors.card + 'BF',
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 12,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      marginBottom: 10,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -84,37 +73,32 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
     },
     left: {
       flex: 1,
-      marginRight: 12,
+      marginRight: 10,
     },
     timeRow: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     time: {
-      fontSize: 32,
+      fontSize: 28,
       fontWeight: '700',
       color: colors.textPrimary,
       letterSpacing: -1,
     },
     pinIcon: {
-      fontSize: 12,
-      marginLeft: 6,
+      fontSize: 10,
+      marginLeft: 5,
       color: colors.accent,
     },
     detail: {
-      fontSize: 15,
+      fontSize: 14,
       color: colors.textSecondary,
-      marginTop: 4,
-    },
-    privateText: {
-      fontSize: 15,
-      color: colors.textTertiary,
-      marginTop: 4,
+      marginTop: 3,
     },
     mysteryText: {
-      fontSize: 15,
+      fontSize: 14,
       color: colors.accent,
-      marginTop: 4,
+      marginTop: 3,
       fontStyle: 'italic',
     },
     schedule: {
@@ -122,75 +106,48 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
       color: colors.textTertiary,
       marginTop: 2,
     },
-    category: {
-      fontSize: 13,
-      color: colors.textTertiary,
-      marginTop: 4,
-    },
     textDisabled: {
       color: colors.textTertiary,
     },
     right: {
       alignItems: 'center',
-      gap: 10,
-    },
-    peekBtn: {
-      padding: 4,
-    },
-    peekIcon: {
-      fontSize: 18,
+      gap: 8,
     },
     btnRow: {
       flexDirection: 'row',
       gap: 6,
     },
     pinBtn: {
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
       backgroundColor: colors.card,
     },
     pinBtnActive: {
       backgroundColor: colors.activeBackground,
     },
     pinBtnText: {
-      fontSize: 13,
+      fontSize: 12,
     },
     deleteBtn: {
-      paddingHorizontal: 6,
-      paddingVertical: 4,
+      paddingHorizontal: 4,
+      paddingVertical: 3,
     },
     deleteText: {
-      fontSize: 12,
+      fontSize: 11,
       color: colors.red,
     },
   }), [colors]);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  const handlePeek = () => {
-    setRevealed(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setRevealed(false), 3000);
-  };
-
-  const isPrivateHidden = !guessWhyEnabled && alarm.private && !revealed;
-
-  let detailText: string;
-  let detailStyle;
-  if (guessWhyEnabled) {
+  const guessWhy = alarm.guessWhy ?? false;
+  const hideDetail = !guessWhy && alarm.private;
+  let detailText: string = '';
+  let detailStyle = styles.detail;
+  if (guessWhy) {
     detailText = getMysteryText(alarm.id);
     detailStyle = styles.mysteryText;
-  } else if (isPrivateHidden) {
-    detailText = '\u{1F512} Private Alarm';
-    detailStyle = styles.privateText;
-  } else {
+  } else if (!hideDetail) {
     detailText = getDetailLine(alarm);
-    detailStyle = styles.detail;
   }
 
   return (
@@ -206,27 +163,19 @@ export default function AlarmCard({ alarm, timeFormat, guessWhyEnabled, isPinned
           </Text>
           {isPinned && <Text style={styles.pinIcon}>{'\u{1F4CC}'}</Text>}
         </View>
-        <Text
-          style={[detailStyle, !alarm.enabled && styles.textDisabled]}
-          numberOfLines={1}
-        >
-          {detailText}
-        </Text>
-        <Text style={[styles.category, !alarm.enabled && styles.textDisabled]}>
-          {guessWhyEnabled ? '\u2753 ???' : categoryLabels[alarm.category]}
-        </Text>
-        {!guessWhyEnabled && (
-          <Text style={[styles.schedule, !alarm.enabled && styles.textDisabled]}>
-            {getScheduleLabel(alarm)}
+        {!hideDetail && detailText !== '' && (
+          <Text
+            style={[detailStyle, !alarm.enabled && styles.textDisabled]}
+            numberOfLines={1}
+          >
+            {detailText}
           </Text>
         )}
+        <Text style={[styles.schedule, !alarm.enabled && styles.textDisabled]}>
+          {getScheduleLabel(alarm)}
+        </Text>
       </View>
       <View style={styles.right}>
-        {!guessWhyEnabled && alarm.private && (
-          <TouchableOpacity onPress={handlePeek} style={styles.peekBtn} activeOpacity={0.6}>
-            <Text style={styles.peekIcon}>{'\u{1F441}'}</Text>
-          </TouchableOpacity>
-        )}
         <Switch
           value={alarm.enabled}
           onValueChange={() => onToggle(alarm.id)}

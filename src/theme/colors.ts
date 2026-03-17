@@ -20,13 +20,13 @@ export interface ThemeColors {
 
 const midnight: ThemeColors = {
   mode: 'dark',
-  background: '#121220',
-  card: '#1E1E2E',
+  background: '#0F0F1A',
+  card: '#1A1A2E',
   accent: '#4A90D9',
-  textPrimary: '#EAEAFF',
-  textSecondary: '#B0B0CC',
-  textTertiary: '#7A7A9E',
-  border: '#2A2A3E',
+  textPrimary: '#E8E8F0',
+  textSecondary: '#A0A0BC',
+  textTertiary: '#6A6A85',
+  border: '#2A2A40',
   red: '#FF6B6B',
   orange: '#FF9F43',
   activeBackground: '#1A2A44',
@@ -38,18 +38,18 @@ const midnight: ThemeColors = {
   modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
-const obsidian: ThemeColors = {
+const ember: ThemeColors = {
   mode: 'dark',
-  background: '#1A1A1E',
-  card: '#28282E',
-  accent: '#A0A0B0',
-  textPrimary: '#E5E5EA',
-  textSecondary: '#AEAEB4',
-  textTertiary: '#6C6C72',
-  border: '#3A3A40',
+  background: '#1A1008',
+  card: '#2C1E10',
+  accent: '#E8913A',
+  textPrimary: '#F5EBE0',
+  textSecondary: '#C4A882',
+  textTertiary: '#7A6650',
+  border: '#3D2E1E',
   red: '#FF6B6B',
   orange: '#FF9F43',
-  activeBackground: '#36363C',
+  activeBackground: '#3A2510',
   overlayWin: 'rgba(34, 139, 34, 0.85)',
   overlayLose: 'rgba(180, 40, 40, 0.85)',
   overlaySkip: 'rgba(180, 150, 30, 0.85)',
@@ -58,18 +58,18 @@ const obsidian: ThemeColors = {
   modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
-const forest: ThemeColors = {
+const neon: ThemeColors = {
   mode: 'dark',
-  background: '#0E1A12',
-  card: '#1A2C1F',
-  accent: '#4CAF50',
-  textPrimary: '#E0F0E2',
-  textSecondary: '#A5C8A8',
-  textTertiary: '#6B8F6E',
-  border: '#2A3E2D',
+  background: '#0A0A14',
+  card: '#141420',
+  accent: '#00E5CC',
+  textPrimary: '#E0E8F0',
+  textSecondary: '#8899AA',
+  textTertiary: '#556677',
+  border: '#1E1E30',
   red: '#FF6B6B',
   orange: '#FF9F43',
-  activeBackground: '#1C3A22',
+  activeBackground: '#0A2A28',
   overlayWin: 'rgba(34, 139, 34, 0.85)',
   overlayLose: 'rgba(180, 40, 40, 0.85)',
   overlaySkip: 'rgba(180, 150, 30, 0.85)',
@@ -78,18 +78,18 @@ const forest: ThemeColors = {
   modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
-const royal: ThemeColors = {
+const voidTheme: ThemeColors = {
   mode: 'dark',
-  background: '#14101E',
-  card: '#211A30',
-  accent: '#9C6ADE',
-  textPrimary: '#EDE0FF',
-  textSecondary: '#B8A3D4',
-  textTertiary: '#7A6B94',
-  border: '#322642',
+  background: '#000000',
+  card: '#121212',
+  accent: '#FF3B7A',
+  textPrimary: '#E8E8E8',
+  textSecondary: '#999999',
+  textTertiary: '#666666',
+  border: '#1E1E1E',
   red: '#FF6B6B',
   orange: '#FF9F43',
-  activeBackground: '#2C1C42',
+  activeBackground: '#1A0A12',
   overlayWin: 'rgba(34, 139, 34, 0.85)',
   overlayLose: 'rgba(180, 40, 40, 0.85)',
   overlaySkip: 'rgba(180, 150, 30, 0.85)',
@@ -98,18 +98,18 @@ const royal: ThemeColors = {
   modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
-const bubblegum: ThemeColors = {
+const frost: ThemeColors = {
   mode: 'light',
-  background: '#FFF0F5',
-  card: '#FFE0EB',
-  accent: '#E0389A',
-  textPrimary: '#2A0A18',
-  textSecondary: '#6B3050',
-  textTertiary: '#9E708A',
-  border: '#F0C0D5',
+  background: '#F5F7FA',
+  card: '#FFFFFF',
+  accent: '#2563EB',
+  textPrimary: '#111827',
+  textSecondary: '#4B5563',
+  textTertiary: '#9CA3AF',
+  border: '#E5E7EB',
   red: '#D32F2F',
   orange: '#E67E22',
-  activeBackground: '#FFD0E0',
+  activeBackground: '#EBF2FF',
   overlayWin: 'rgba(34, 139, 34, 0.85)',
   overlayLose: 'rgba(180, 40, 40, 0.85)',
   overlaySkip: 'rgba(180, 150, 30, 0.85)',
@@ -118,58 +118,18 @@ const bubblegum: ThemeColors = {
   modalOverlay: 'rgba(0, 0, 0, 0.7)',
 };
 
-const sunshine: ThemeColors = {
+const sand: ThemeColors = {
   mode: 'light',
-  background: '#FFFDE7',
-  card: '#FFF8C4',
-  accent: '#E6A817',
-  textPrimary: '#1A1400',
-  textSecondary: '#6B5A20',
-  textTertiary: '#998755',
-  border: '#EFE0A0',
+  background: '#F5F0E6',
+  card: '#FFFBF4',
+  accent: '#A8521E',
+  textPrimary: '#2D2015',
+  textSecondary: '#6B5C4D',
+  textTertiary: '#9E9088',
+  border: '#E0D6C6',
   red: '#D32F2F',
   orange: '#E67E22',
-  activeBackground: '#FFEEAA',
-  overlayWin: 'rgba(34, 139, 34, 0.85)',
-  overlayLose: 'rgba(180, 40, 40, 0.85)',
-  overlaySkip: 'rgba(180, 150, 30, 0.85)',
-  overlayButton: 'rgba(255, 255, 255, 0.25)',
-  overlayText: '#FFFFFF',
-  modalOverlay: 'rgba(0, 0, 0, 0.7)',
-};
-
-const ocean: ThemeColors = {
-  mode: 'light',
-  background: '#F0F7FF',
-  card: '#E0EEFF',
-  accent: '#0077CC',
-  textPrimary: '#0A1520',
-  textSecondary: '#3A5570',
-  textTertiary: '#6A8090',
-  border: '#B8D4F0',
-  red: '#D32F2F',
-  orange: '#E67E22',
-  activeBackground: '#CCE2FF',
-  overlayWin: 'rgba(34, 139, 34, 0.85)',
-  overlayLose: 'rgba(180, 40, 40, 0.85)',
-  overlaySkip: 'rgba(180, 150, 30, 0.85)',
-  overlayButton: 'rgba(255, 255, 255, 0.25)',
-  overlayText: '#FFFFFF',
-  modalOverlay: 'rgba(0, 0, 0, 0.7)',
-};
-
-const mint: ThemeColors = {
-  mode: 'light',
-  background: '#F0FFF4',
-  card: '#E0F5E8',
-  accent: '#10B981',
-  textPrimary: '#0A1A10',
-  textSecondary: '#305040',
-  textTertiary: '#608070',
-  border: '#B8E0C8',
-  red: '#D32F2F',
-  orange: '#E67E22',
-  activeBackground: '#C4ECD0',
+  activeBackground: '#EDE4D4',
   overlayWin: 'rgba(34, 139, 34, 0.85)',
   overlayLose: 'rgba(180, 40, 40, 0.85)',
   overlaySkip: 'rgba(180, 150, 30, 0.85)',
@@ -180,13 +140,11 @@ const mint: ThemeColors = {
 
 export const themes = {
   midnight,
-  obsidian,
-  forest,
-  royal,
-  bubblegum,
-  sunshine,
-  ocean,
-  mint,
+  ember,
+  neon,
+  void: voidTheme,
+  frost,
+  sand,
 } as const;
 
 export type ThemeName = keyof typeof themes | 'custom';
@@ -238,21 +196,21 @@ function clampAccent(hex: string): string {
   return hex;
 }
 
-export function generateCustomTheme(accentHex: string): ThemeColors {
+export function generateCustomThemeDual(bgHex: string, accentHex: string): ThemeColors {
+  const bgLum = luminance(bgHex);
+  const isDark = bgLum < 0.5;
   const clamped = clampAccent(accentHex);
-  const lum = luminance(clamped);
-  const isDark = lum < 0.5;
 
   if (isDark) {
     return {
       mode: 'dark',
-      background: mix(clamped, '#000000', 0.85),
-      card: mix(clamped, '#000000', 0.72),
+      background: mix(bgHex, '#000000', 0.3),
+      card: mix(bgHex, '#FFFFFF', 0.12),
       accent: clamped,
-      textPrimary: mix(clamped, '#FFFFFF', 0.88),
-      textSecondary: mix(clamped, '#FFFFFF', 0.60),
-      textTertiary: mix(clamped, '#FFFFFF', 0.35),
-      border: mix(clamped, '#000000', 0.60),
+      textPrimary: mix(bgHex, '#FFFFFF', 0.88),
+      textSecondary: mix(bgHex, '#FFFFFF', 0.60),
+      textTertiary: mix(bgHex, '#FFFFFF', 0.35),
+      border: mix(bgHex, '#FFFFFF', 0.16),
       red: '#FF6B6B',
       orange: '#FF9F43',
       activeBackground: mix(clamped, '#000000', 0.65),
@@ -267,13 +225,13 @@ export function generateCustomTheme(accentHex: string): ThemeColors {
 
   return {
     mode: 'light',
-    background: mix(clamped, '#FFFFFF', 0.90),
-    card: mix(clamped, '#FFFFFF', 0.78),
+    background: mix(bgHex, '#FFFFFF', 0.3),
+    card: mix(bgHex, '#000000', 0.03),
     accent: clamped,
-    textPrimary: mix(clamped, '#000000', 0.88),
-    textSecondary: mix(clamped, '#000000', 0.62),
-    textTertiary: mix(clamped, '#000000', 0.40),
-    border: mix(clamped, '#FFFFFF', 0.60),
+    textPrimary: mix(bgHex, '#000000', 0.88),
+    textSecondary: mix(bgHex, '#000000', 0.62),
+    textTertiary: mix(bgHex, '#000000', 0.40),
+    border: mix(bgHex, '#000000', 0.08),
     red: '#D32F2F',
     orange: '#E67E22',
     activeBackground: mix(clamped, '#FFFFFF', 0.68),
@@ -284,4 +242,8 @@ export function generateCustomTheme(accentHex: string): ThemeColors {
     overlayText: '#FFFFFF',
     modalOverlay: 'rgba(0, 0, 0, 0.7)',
   };
+}
+
+export function generateCustomTheme(accentHex: string): ThemeColors {
+  return generateCustomThemeDual(accentHex, accentHex);
 }

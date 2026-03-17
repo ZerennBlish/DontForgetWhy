@@ -14,17 +14,22 @@ import {
   addActiveTimer,
   loadPresets,
   recordPresetUsage,
+  loadUserTimers,
 } from '../services/timerStorage';
-import { getPinnedPresets, getPinnedAlarms, getPinnedReminders } from '../services/widgetPins';
-import type { ActiveTimer } from '../types/timer';
+import { getPinnedPresets, getPinnedAlarms } from '../services/widgetPins';
+import type { ActiveTimer, UserTimer } from '../types/timer';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
 import { formatTime } from '../utils/time';
-import { TimerWidget } from './TimerWidget';
-import type { WidgetPreset, WidgetAlarm } from './TimerWidget';
 import { DetailedWidget } from './DetailedWidget';
 import type { DetailedAlarm, DetailedPreset, DetailedReminder } from './DetailedWidget';
+import { NotepadWidget } from './NotepadWidget';
+import type { WidgetNote, WidgetTheme } from './NotepadWidget';
+import { themes, generateCustomThemeDual } from '../theme/colors';
+import { getNotes } from '../services/noteStorage';
+import { getPinnedNotes } from '../services/widgetPins';
+import { setPendingNoteAction } from '../services/noteStorage';
 
 const RECENT_KEY = 'recentPresets';
 const ALARMS_KEY = 'alarms';
@@ -130,127 +135,22 @@ async function loadWidgetAlarms(): Promise<Alarm[]> {
   }
 }
 
-// ── Compact widget data ──
+// ── Widget reminders ──
 
-export async function getWidgetAlarms(): Promise<WidgetAlarm[]> {
-  const result: WidgetAlarm[] = [];
-  const addedIds = new Set<string>();
+export async function getCompactReminders(): Promise<DetailedReminder[]> {
+  const allReminders = await loadWidgetReminders();
+  const incomplete = allReminders.filter((r) => !r.completed);
+  if (incomplete.length === 0) return [];
 
-  const allAlarms = await loadWidgetAlarms();
-  const enabledAlarms = allAlarms.filter((a) => a.enabled);
-  const settings = await loadSettings();
+  const sorted = incomplete.sort(
+    (a, b) => getReminderSortTimestamp(a) - getReminderSortTimestamp(b),
+  );
 
-  try {
-    const pinnedIds = await getPinnedAlarms();
-    for (const id of pinnedIds) {
-      if (result.length >= 3) break;
-      const alarm = enabledAlarms.find((a) => a.id === id);
-      if (alarm) {
-        result.push(alarmToCompact(alarm, settings.guessWhyEnabled, settings.timeFormat));
-        addedIds.add(alarm.id);
-      }
-    }
-  } catch {
-    // fall through
-  }
-
-  if (result.length < 3) {
-    const remaining = enabledAlarms
-      .filter((a) => !addedIds.has(a.id))
-      .sort((a, b) => getNextFireTime(a) - getNextFireTime(b));
-
-    for (const alarm of remaining) {
-      if (result.length >= 3) break;
-      result.push(alarmToCompact(alarm, settings.guessWhyEnabled, settings.timeFormat));
-      addedIds.add(alarm.id);
-    }
-  }
-
-  return result;
-}
-
-function alarmToCompact(
-  alarm: Alarm,
-  guessWhyEnabled: boolean,
-  timeFormat: '12h' | '24h',
-): WidgetAlarm {
-  if (guessWhyEnabled) {
-    return {
-      id: alarm.id,
-      icon: '\u2753',
-      time: formatTime(alarm.time, timeFormat),
-      label: 'Mystery',
-    };
-  }
-  let label = alarm.nickname || alarm.icon || 'Alarm';
-  if (alarm.mode === 'one-time' && alarm.date) {
-    const [year, month, day] = alarm.date.split('-').map(Number);
-    const d = new Date(year, month - 1, day);
-    label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-  return {
-    id: alarm.id,
-    icon: alarm.icon || '\u23F0',
-    time: formatTime(alarm.time, timeFormat),
-    label,
-  };
-}
-
-export async function getWidgetPresets(): Promise<WidgetPreset[]> {
-  const nonCustom = defaultPresets.filter((p) => p.id !== 'custom');
-  const result: WidgetPreset[] = [];
-  const addedIds = new Set<string>();
-
-  try {
-    const pinnedIds = await getPinnedPresets();
-    for (const id of pinnedIds) {
-      if (result.length >= 3) break;
-      const preset = nonCustom.find((p) => p.id === id);
-      if (preset) {
-        result.push({ id: preset.id, icon: preset.icon, label: preset.label, isPinned: true });
-        addedIds.add(preset.id);
-      }
-    }
-  } catch {
-    // fall through
-  }
-
-  if (result.length < 3) {
-    try {
-      const raw = await AsyncStorage.getItem(RECENT_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          const recentIds: string[] = parsed.map(
-            (e: { presetId: string }) => e.presetId,
-          );
-          for (const id of recentIds) {
-            if (result.length >= 3) break;
-            if (addedIds.has(id)) continue;
-            const preset = nonCustom.find((p) => p.id === id);
-            if (preset) {
-              result.push({ id: preset.id, icon: preset.icon, label: preset.label });
-              addedIds.add(preset.id);
-            }
-          }
-        }
-      }
-    } catch {
-      // fall through
-    }
-  }
-
-  if (result.length < 3) {
-    for (const preset of nonCustom) {
-      if (result.length >= 3) break;
-      if (!addedIds.has(preset.id)) {
-        result.push({ id: preset.id, icon: preset.icon, label: preset.label });
-        addedIds.add(preset.id);
-      }
-    }
-  }
-
-  return result;
+  return sorted.slice(0, 2).map((r) => ({
+    id: r.id,
+    icon: r.private ? '\u{1F4DD}' : r.icon,
+    text: r.private ? 'Something to do...' : (r.nickname || r.text || 'Reminder'),
+  }));
 }
 
 // ── Detailed widget data ──
@@ -269,7 +169,7 @@ export async function getDetailedAlarms(): Promise<DetailedAlarm[]> {
       if (result.length >= 3) break;
       const alarm = enabledAlarms.find((a) => a.id === id);
       if (alarm) {
-        result.push(alarmToDetailed(alarm, settings.guessWhyEnabled, settings.timeFormat));
+        result.push(alarmToDetailed(alarm, settings.timeFormat));
         addedIds.add(alarm.id);
       }
     }
@@ -284,7 +184,7 @@ export async function getDetailedAlarms(): Promise<DetailedAlarm[]> {
 
     for (const alarm of remaining) {
       if (result.length >= 3) break;
-      result.push(alarmToDetailed(alarm, settings.guessWhyEnabled, settings.timeFormat));
+      result.push(alarmToDetailed(alarm, settings.timeFormat));
       addedIds.add(alarm.id);
     }
   }
@@ -294,15 +194,22 @@ export async function getDetailedAlarms(): Promise<DetailedAlarm[]> {
 
 function alarmToDetailed(
   alarm: Alarm,
-  guessWhyEnabled: boolean,
   timeFormat: '12h' | '24h',
 ): DetailedAlarm {
-  if (guessWhyEnabled) {
+  if (alarm.guessWhy) {
     return {
       id: alarm.id,
       icon: '\u2753',
       time: formatTime(alarm.time, timeFormat),
       schedule: 'Mystery',
+    };
+  }
+  if (alarm.private) {
+    return {
+      id: alarm.id,
+      icon: '\u23F0',
+      time: formatTime(alarm.time, timeFormat),
+      schedule: formatSchedule(alarm),
     };
   }
   return {
@@ -316,21 +223,34 @@ function alarmToDetailed(
 export async function getDetailedPresets(): Promise<DetailedPreset[]> {
   const nonCustom = defaultPresets.filter((p) => p.id !== 'custom');
   const allPresets = await loadPresets();
+  const userTimers = await loadUserTimers();
   const result: DetailedPreset[] = [];
   const addedIds = new Set<string>();
 
   function resolvePreset(id: string, isPinned?: boolean): DetailedPreset | null {
     const base = nonCustom.find((p) => p.id === id);
-    if (!base) return null;
-    const custom = allPresets.find((p) => p.id === id);
-    const seconds = custom?.customSeconds || base.seconds;
-    return {
-      id: base.id,
-      icon: base.icon,
-      label: base.label,
-      duration: formatDuration(seconds),
-      isPinned,
-    };
+    if (base) {
+      const custom = allPresets.find((p) => p.id === id);
+      const seconds = custom?.customSeconds || base.seconds;
+      return {
+        id: base.id,
+        icon: base.icon,
+        label: base.label,
+        duration: formatDuration(seconds),
+        isPinned,
+      };
+    }
+    const userTimer = userTimers.find((t) => t.id === id);
+    if (userTimer) {
+      return {
+        id: userTimer.id,
+        icon: userTimer.icon,
+        label: userTimer.label,
+        duration: formatDuration(userTimer.seconds),
+        isPinned,
+      };
+    }
+    return null;
   }
 
   try {
@@ -428,85 +348,69 @@ function getReminderSortTimestamp(reminder: Reminder): number {
   return Infinity;
 }
 
-function formatReminderDueInfo(reminder: Reminder, timeFormat: '12h' | '24h'): string {
-  const hasDate = !!reminder.dueDate;
-  const hasTime = !!reminder.dueTime;
+// ── Widget theme ──
 
-  if (!hasDate && !hasTime) return '';
-
-  let timePart = '';
-  if (hasTime) {
-    timePart = formatTime(reminder.dueTime!, timeFormat);
-  }
-
-  let datePart = '';
-  if (hasDate) {
-    const [year, month, day] = reminder.dueDate!.split('-').map(Number);
-    const d = new Date(year, month - 1, day);
-    datePart = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  if (hasTime && hasDate) {
-    return `${timePart} \u00B7 ${datePart}`;
-  }
-
-  if (hasTime) {
-    const now = new Date();
-    const [hours, minutes] = reminder.dueTime!.split(':').map(Number);
-    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-    const label = target.getTime() <= now.getTime() ? 'tomorrow' : 'today';
-    return `${timePart} ${label}`;
-  }
-
-  return datePart;
-}
-
-function reminderToDetailed(reminder: Reminder, timeFormat: '12h' | '24h'): DetailedReminder {
-  return {
-    id: reminder.id,
-    icon: reminder.private ? '\u{1F4DD}' : reminder.icon,
-    text: reminder.private ? 'Something to do...' : reminder.text,
-    completed: reminder.completed,
-    dueInfo: formatReminderDueInfo(reminder, timeFormat),
-  };
-}
-
-export async function getDetailedReminders(): Promise<DetailedReminder[]> {
-  const allReminders = await loadWidgetReminders();
-  const incomplete = allReminders.filter((r) => !r.completed);
-
-  if (incomplete.length === 0) return [];
-
-  const settings = await loadSettings();
-  const timeFormat = settings.timeFormat;
-
-  const result: DetailedReminder[] = [];
-  const addedIds = new Set<string>();
-
-  // Pinned reminders first (only incomplete ones)
+export async function getWidgetTheme(): Promise<WidgetTheme> {
   try {
-    const pinnedIds = await getPinnedReminders();
+    const themeName = await AsyncStorage.getItem('appTheme');
+    let key = themeName || 'midnight';
+    const themeMigration: Record<string, string> = {
+      obsidian: 'void', forest: 'neon', royal: 'ember',
+      bubblegum: 'frost', sunshine: 'sand', ocean: 'frost',
+      mint: 'frost', charcoal: 'void', amoled: 'void',
+      slate: 'neon', paper: 'frost', cream: 'sand', arctic: 'frost',
+    };
+    if (themeMigration[key]) key = themeMigration[key];
+    if (key === 'custom') {
+      const customRaw = await AsyncStorage.getItem('customTheme');
+      if (customRaw) {
+        const parsed = JSON.parse(customRaw);
+        if (typeof parsed === 'string') {
+          const generated = generateCustomThemeDual(parsed, parsed);
+          return { background: generated.background, cellBg: generated.card, text: generated.textPrimary, textSecondary: generated.textSecondary, border: generated.border, accent: generated.accent };
+        }
+        const obj = parsed as { accent: string; background?: string };
+        const bgHex = obj.background || obj.accent;
+        const generated = generateCustomThemeDual(bgHex, obj.accent);
+        return { background: generated.background, cellBg: generated.card, text: generated.textPrimary, textSecondary: generated.textSecondary, border: generated.border, accent: generated.accent };
+      }
+    }
+    const theme = themes[key as keyof typeof themes] || themes.midnight;
+    return { background: theme.background, cellBg: theme.card, text: theme.textPrimary, textSecondary: theme.textSecondary, border: theme.border, accent: theme.accent };
+  } catch {
+    const fallback = themes.midnight;
+    return { background: fallback.background, cellBg: fallback.card, text: fallback.textPrimary, textSecondary: fallback.textSecondary, border: fallback.border, accent: fallback.accent };
+  }
+}
+
+// ── Notepad widget data ──
+
+export async function getWidgetNotes(): Promise<WidgetNote[]> {
+  const result: WidgetNote[] = [];
+  const allNotes = await getNotes();
+
+  try {
+    const pinnedIds = await getPinnedNotes();
     for (const id of pinnedIds) {
-      if (result.length >= 3) break;
-      const reminder = incomplete.find((r) => r.id === id);
-      if (reminder) {
-        result.push(reminderToDetailed(reminder, timeFormat));
-        addedIds.add(reminder.id);
+      if (result.length >= 4) break;
+      const note = allNotes.find((n) => n.id === id);
+      if (note) {
+        result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor });
       }
     }
   } catch {
     // fall through
   }
 
-  // Fill remaining slots with soonest unpinned reminders
-  if (result.length < 3) {
-    const unpinned = incomplete
-      .filter((r) => !addedIds.has(r.id))
-      .sort((a, b) => getReminderSortTimestamp(a) - getReminderSortTimestamp(b));
-
-    for (const reminder of unpinned) {
-      if (result.length >= 3) break;
-      result.push(reminderToDetailed(reminder, timeFormat));
+  // Fill remaining slots with most recent notes
+  if (result.length < 4) {
+    const addedIds = new Set(result.map((n) => n.id));
+    const sorted = allNotes
+      .filter((n) => !addedIds.has(n.id))
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    for (const note of sorted) {
+      if (result.length >= 4) break;
+      result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor });
     }
   }
 
@@ -515,46 +419,47 @@ export async function getDetailedReminders(): Promise<DetailedReminder[]> {
 
 // ── Rendering ──
 
-async function renderCompactWidget(props: WidgetTaskHandlerProps) {
-  const alarms = await getWidgetAlarms();
-  const presets = await getWidgetPresets();
-  props.renderWidget(React.createElement(TimerWidget, { alarms, presets }));
-}
-
 async function renderDetailedWidget(props: WidgetTaskHandlerProps) {
   const alarms = await getDetailedAlarms();
   const presets = await getDetailedPresets();
-  const reminders = await getDetailedReminders();
-  props.renderWidget(React.createElement(DetailedWidget, { alarms, presets, reminders }));
+  const reminders = await getCompactReminders();
+  const theme = await getWidgetTheme();
+  props.renderWidget(React.createElement(DetailedWidget, { alarms, presets, reminders, theme }));
+}
+
+async function renderNotepadWidget(props: WidgetTaskHandlerProps): Promise<void> {
+  const notes = await getWidgetNotes();
+  const theme = await getWidgetTheme();
+  props.renderWidget(React.createElement(NotepadWidget, { notes, theme }));
 }
 
 // ── Refresh both widgets (called after timer start from widget) ──
 
 async function refreshAllWidgets(): Promise<void> {
-  try {
-    await requestWidgetUpdate({
-      widgetName: 'TimerWidget',
-      renderWidget: async () => {
-        const alarms = await getWidgetAlarms();
-        const presets = await getWidgetPresets();
-        return React.createElement(TimerWidget, { alarms, presets });
-      },
-    });
-  } catch {
-    // compact widget may not be placed
-  }
+  const theme = await getWidgetTheme();
   try {
     await requestWidgetUpdate({
       widgetName: 'DetailedWidget',
       renderWidget: async () => {
         const alarms = await getDetailedAlarms();
         const presets = await getDetailedPresets();
-        const reminders = await getDetailedReminders();
-        return React.createElement(DetailedWidget, { alarms, presets, reminders });
+        const reminders = await getCompactReminders();
+        return React.createElement(DetailedWidget, { alarms, presets, reminders, theme });
       },
     });
   } catch {
     // detailed widget may not be placed
+  }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'NotepadWidget',
+      renderWidget: async () => {
+        const notes = await getWidgetNotes();
+        return React.createElement(NotepadWidget, { notes, theme });
+      },
+    });
+  } catch {
+    // notepad widget may not be placed
   }
 }
 
@@ -567,10 +472,10 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_ADDED':
     case 'WIDGET_UPDATE':
     case 'WIDGET_RESIZED':
-      if (widgetInfo.widgetName === 'TimerWidget') {
-        await renderCompactWidget(props);
-      } else if (widgetInfo.widgetName === 'DetailedWidget') {
+      if (widgetInfo.widgetName === 'DetailedWidget') {
         await renderDetailedWidget(props);
+      } else if (widgetInfo.widgetName === 'NotepadWidget') {
+        await renderNotepadWidget(props);
       }
       break;
     case 'WIDGET_CLICK': {
@@ -585,27 +490,85 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         break;
       }
 
+      if (action === 'OPEN_ALARMS' || action === 'OPEN_TIMERS' || action === 'OPEN_REMINDERS') {
+        const tab = action === 'OPEN_ALARMS' ? 0 : action === 'OPEN_TIMERS' ? 1 : 2;
+        await AsyncStorage.setItem('pendingTabAction', JSON.stringify({ tab, timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action?.startsWith('OPEN_ALARM__')) {
+        const alarmId = action.replace('OPEN_ALARM__', '');
+        await AsyncStorage.setItem('pendingAlarmAction', JSON.stringify({ action: 'editAlarm', alarmId, timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action?.startsWith('OPEN_REMINDER__')) {
+        const reminderId = action.replace('OPEN_REMINDER__', '');
+        await AsyncStorage.setItem('pendingReminderAction', JSON.stringify({ action: 'editReminder', reminderId, timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'ADD_NOTE') {
+        await setPendingNoteAction({ type: 'new' });
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'OPEN_NOTES') {
+        await setPendingNoteAction({ type: 'open' });
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action?.startsWith('OPEN_NOTE__')) {
+        const noteId = action.replace('OPEN_NOTE__', '');
+        await setPendingNoteAction({ type: 'edit', noteId });
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
       if (action?.startsWith('START_TIMER__')) {
         const presetId = action.replace('START_TIMER__', '');
 
         const allPresets = await loadPresets();
         const preset = allPresets.find((p) => p.id === presetId);
-        if (!preset) break;
 
-        const duration = preset.customSeconds || preset.seconds;
+        let duration: number;
+        let timerLabel: string;
+        let timerIcon: string;
+        let timerSoundId: string | undefined;
+
+        if (preset) {
+          duration = preset.customSeconds || preset.seconds;
+          timerLabel = preset.label;
+          timerIcon = preset.icon;
+        } else {
+          const userTimers = await loadUserTimers();
+          const userTimer = userTimers.find((t) => t.id === presetId);
+          if (!userTimer) break;
+          duration = userTimer.seconds;
+          timerLabel = userTimer.label;
+          timerIcon = userTimer.icon;
+          timerSoundId = userTimer.soundId;
+        }
+
         if (duration <= 0) break;
 
         const timerId = Date.now().toString() + Math.random().toString(36).slice(2);
 
         const timer: ActiveTimer = {
           id: timerId,
-          presetId: preset.id,
-          label: preset.label,
-          icon: preset.icon,
+          presetId,
+          label: timerLabel,
+          icon: timerIcon,
           totalSeconds: duration,
           remainingSeconds: duration,
           startedAt: new Date().toISOString(),
           isRunning: true,
+          soundId: timerSoundId,
         };
 
         const completionTimestamp = Date.now() + duration * 1000;
@@ -632,6 +595,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
             timer.id,
             soundUri,
             soundName,
+            timer.soundId,
           );
         } catch (error) {
           console.error('[widgetTaskHandler] scheduleTimerNotification failed:', error);
@@ -649,7 +613,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         }
 
         await addActiveTimer({ ...timer, notificationId });
-        await recordPresetUsage(preset.id);
+        await recordPresetUsage(presetId);
         await refreshAllWidgets();
       }
       break;

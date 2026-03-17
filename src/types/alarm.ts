@@ -15,6 +15,7 @@ export interface Alarm {
   date: string | null;
   category: AlarmCategory;
   icon?: string;
+  guessWhy?: boolean;
   private: boolean;
   createdAt: string;
   notificationIds: string[];

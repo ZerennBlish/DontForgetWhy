@@ -9,6 +9,9 @@ import { getReminders, updateReminder } from './src/services/reminderStorage';
 import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
 import { refreshTimerWidget } from './src/widget/updateWidget';
 import { setPendingAlarm } from './src/services/pendingAlarm';
+import { loadActiveTimers } from './src/services/timerStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
 
 // ── Yearly reminder reschedule helper ──────────────────────────────
 // Yearly recurring reminders use a one-time trigger (notifee has no
@@ -76,6 +79,12 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
   console.log('[NOTIF] onBackgroundEvent type:', type, 'notifId:', notifId, 'alarmId:', alarmId, 'timerId:', timerId);
 
   if (type === EventType.PRESS || type === EventType.DELIVERED) {
+    // Play alarm sound immediately on DELIVERED so it starts the instant
+    // the notification fires, regardless of screen state.
+    if (type === EventType.DELIVERED && (alarmId || timerId)) {
+      playAlarmSoundForNotification(alarmId, timerId).catch(() => {});
+    }
+
     // Filter: only store pending data for alarm/timer COMPLETION notifications.
     // Skip reminders (have reminderId, no alarmId) and previews (no data).
     //
@@ -84,13 +93,19 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
     // by data.timerId: the countdown has no data field → timerId is undefined;
     // the completion trigger has data: { timerId } → timerId is set.
     if (timerId && notifId) {
-      const tIcon = detail.notification?.title?.replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-      const tLabel = detail.notification?.body?.replace(' is done!', '').trim() || 'Timer';
+      const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
+      const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
+      let timerSoundId: string | undefined;
+      try {
+        const timers = await loadActiveTimers();
+        timerSoundId = timers.find(t => t.id === timerId)?.soundId;
+      } catch {}
       setPendingAlarm({
         timerId,
         notificationId: notifId,
         timerLabel: tLabel,
         timerIcon: tIcon,
+        timerSoundId,
       });
       console.log('[NOTIF] BACKGROUND — stored pending timer data for App.tsx');
     } else if (alarmId && notifId) {
@@ -103,14 +118,24 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
   }
 
   if (type === EventType.DISMISSED) {
-    console.log('[NOTIF] BACKGROUND DISMISSED — alarmId:', alarmId);
+    console.log('[NOTIF] BACKGROUND DISMISSED — alarmId:', alarmId, 'timerId:', timerId);
+    if (alarmId || timerId) {
+      stopAlarmSound();
+    }
     if (alarmId) {
       try {
         const alarms = await loadAlarms();
         const alarm = alarms.find((a) => a.id === alarmId);
         if (alarm?.mode === 'one-time') {
-          await deleteAlarm(alarmId);
-          await refreshTimerWidget();
+          // Check if this DISMISSED was triggered by a snooze cancellation.
+          // The snoozing flag is set atomically before cancel in AlarmFireScreen.
+          const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+          if (snoozingFlag) {
+            await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+          } else {
+            await deleteAlarm(alarmId);
+            await refreshTimerWidget();
+          }
         }
       } catch {}
     }

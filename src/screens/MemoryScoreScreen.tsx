@@ -15,7 +15,8 @@ import {
 } from '../services/memoryScore';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticHeavy } from '../utils/haptics';
+import { hapticLight, hapticHeavy } from '../utils/haptics';
+import BackButton from '../components/BackButton';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import type { TriviaStats, TriviaCategory } from '../types/trivia';
@@ -208,10 +209,9 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'<'} Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{'\u{1F3C6}'} Brain Training Stats</Text>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={{ fontSize: 36, textAlign: 'center' }}>{'\u{1F3C6}'}</Text>
+        <Text style={[styles.title, { textAlign: 'center' }]}>Brain Training Stats</Text>
       </View>
 
       {/* Overall Summary — composite rank */}
@@ -238,22 +238,6 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u{1F9E9}'} Memory Match</Text>
-          <Text style={styles.statValue}>{breakdown.memoryMatch} / 20</Text>
-        </View>
-        <View style={styles.breakdownBar}>
-          <View style={[styles.breakdownFill, { width: `${(breakdown.memoryMatch / 20) * 100}%`, backgroundColor: colors.accent }]} />
-        </View>
-
-        <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u{1F522}'} Sudoku</Text>
-          <Text style={styles.statValue}>{breakdown.sudoku} / 20</Text>
-        </View>
-        <View style={styles.breakdownBar}>
-          <View style={[styles.breakdownFill, { width: `${(breakdown.sudoku / 20) * 100}%`, backgroundColor: colors.accent }]} />
-        </View>
-
-        <View style={styles.breakdownRow}>
           <Text style={styles.statLabel}>{'\u{1F4A1}'} Daily Riddle</Text>
           <Text style={styles.statValue}>{breakdown.dailyRiddle} / 20</Text>
         </View>
@@ -267,6 +251,22 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
         <View style={styles.breakdownBar}>
           <View style={[styles.breakdownFill, { width: `${(breakdown.trivia / 20) * 100}%`, backgroundColor: colors.accent }]} />
+        </View>
+
+        <View style={styles.breakdownRow}>
+          <Text style={styles.statLabel}>{'\u{1F522}'} Sudoku</Text>
+          <Text style={styles.statValue}>{breakdown.sudoku} / 20</Text>
+        </View>
+        <View style={styles.breakdownBar}>
+          <View style={[styles.breakdownFill, { width: `${(breakdown.sudoku / 20) * 100}%`, backgroundColor: colors.accent }]} />
+        </View>
+
+        <View style={styles.breakdownRow}>
+          <Text style={styles.statLabel}>{'\u{1F9E9}'} Memory Match</Text>
+          <Text style={styles.statValue}>{breakdown.memoryMatch} / 20</Text>
+        </View>
+        <View style={styles.breakdownBar}>
+          <View style={[styles.breakdownFill, { width: `${(breakdown.memoryMatch / 20) * 100}%`, backgroundColor: colors.accent }]} />
         </View>
       </View>
 
@@ -313,46 +313,61 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={styles.sectionBtn}
-          onPress={() => navigation.navigate('ForgetLog')}
+          onPress={() => { hapticLight(); navigation.navigate('ForgetLog'); }}
           activeOpacity={0.7}
         >
           <Text style={styles.sectionBtnText}>{'\u{1F4DC}'} What Did I Forget?</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Section: Memory Match */}
+      {/* Section: Daily Riddle */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u{1F9E9}'} Memory Match</Text>
+        <Text style={styles.sectionTitle}>{'\u{1F4A1}'} Daily Riddle</Text>
 
-        {(['easy', 'medium', 'hard'] as const).map((diff) => {
-          const best = mmScores[diff];
-          return (
-            <View key={diff}>
-              <Text style={styles.diffLabel}>{diffLabels[diff]}</Text>
-              {best ? (
-                <>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statLabel}>Best Moves</Text>
-                    <Text style={styles.statValue}>{best.bestMoves}</Text>
-                  </View>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statLabel}>Best Time</Text>
-                    <Text style={styles.statValue}>{formatTime(best.bestTime)}</Text>
-                  </View>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statLabel}>Rating</Text>
-                    <Text style={styles.statValue}>
-                      {'\u2B50'.repeat(mmStars(best.bestMoves, diff))}
-                    </Text>
-                  </View>
-                </>
-              ) : (
-                <Text style={styles.notPlayed}>Not played yet</Text>
-              )}
-              {diff !== 'hard' && <View style={styles.divider} />}
+        {riddleStats.totalPlayed > 0 ? (
+          <>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>
+                {riddleStats.streak > 0 ? '\u{1F525} ' : ''}Current Streak
+              </Text>
+              <Text style={styles.statValue}>
+                {riddleStats.streak} day{riddleStats.streak !== 1 ? 's' : ''}
+              </Text>
             </View>
-          );
-        })}
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>{'\u{1F3C6}'} Longest Streak</Text>
+              <Text style={styles.statValue}>
+                {riddleStats.longestStreak} day{riddleStats.longestStreak !== 1 ? 's' : ''}
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Total Attempted</Text>
+              <Text style={styles.statValue}>{riddleStats.totalPlayed}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Total Correct</Text>
+              <Text style={styles.statValue}>{riddleStats.totalCorrect}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Accuracy</Text>
+              <Text style={styles.statValue}>{riddleAccuracy}%</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Riddles Seen</Text>
+              <Text style={styles.statValue}>
+                {riddleStats.seenRiddleIds.length} / {RIDDLES.length}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.notPlayed}>No riddles attempted yet</Text>
+        )}
       </View>
 
       {/* Section: Trivia */}
@@ -457,60 +472,45 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         })}
       </View>
 
-      {/* Section: Daily Riddle */}
+      {/* Section: Memory Match */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u{1F4A1}'} Daily Riddle</Text>
+        <Text style={styles.sectionTitle}>{'\u{1F9E9}'} Memory Match</Text>
 
-        {riddleStats.totalPlayed > 0 ? (
-          <>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>
-                {riddleStats.streak > 0 ? '\u{1F525} ' : ''}Current Streak
-              </Text>
-              <Text style={styles.statValue}>
-                {riddleStats.streak} day{riddleStats.streak !== 1 ? 's' : ''}
-              </Text>
+        {(['easy', 'medium', 'hard'] as const).map((diff) => {
+          const best = mmScores[diff];
+          return (
+            <View key={diff}>
+              <Text style={styles.diffLabel}>{diffLabels[diff]}</Text>
+              {best ? (
+                <>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Best Moves</Text>
+                    <Text style={styles.statValue}>{best.bestMoves}</Text>
+                  </View>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Best Time</Text>
+                    <Text style={styles.statValue}>{formatTime(best.bestTime)}</Text>
+                  </View>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Rating</Text>
+                    <Text style={styles.statValue}>
+                      {'\u2B50'.repeat(mmStars(best.bestMoves, diff))}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.notPlayed}>Not played yet</Text>
+              )}
+              {diff !== 'hard' && <View style={styles.divider} />}
             </View>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>{'\u{1F3C6}'} Longest Streak</Text>
-              <Text style={styles.statValue}>
-                {riddleStats.longestStreak} day{riddleStats.longestStreak !== 1 ? 's' : ''}
-              </Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Total Attempted</Text>
-              <Text style={styles.statValue}>{riddleStats.totalPlayed}</Text>
-            </View>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Total Correct</Text>
-              <Text style={styles.statValue}>{riddleStats.totalCorrect}</Text>
-            </View>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Accuracy</Text>
-              <Text style={styles.statValue}>{riddleAccuracy}%</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Riddles Seen</Text>
-              <Text style={styles.statValue}>
-                {riddleStats.seenRiddleIds.length} / {RIDDLES.length}
-              </Text>
-            </View>
-          </>
-        ) : (
-          <Text style={styles.notPlayed}>No riddles attempted yet</Text>
-        )}
+          );
+        })}
       </View>
 
       {/* Reset All Scores */}
       <TouchableOpacity
         style={styles.resetAllBtn}
-        onPress={handleResetAll}
+        onPress={() => { hapticLight(); handleResetAll(); }}
         activeOpacity={0.7}
       >
         <Text style={styles.resetAllBtnText}>Reset All Scores</Text>
@@ -534,12 +534,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
       paddingTop: 60,
       paddingHorizontal: 20,
       paddingBottom: 20,
-    },
-    backBtn: {
-      fontSize: 16,
-      color: colors.accent,
-      fontWeight: '600',
-      marginBottom: 16,
     },
     title: {
       fontSize: 28,
@@ -594,6 +588,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
       fontWeight: '700',
       color: colors.textPrimary,
       marginBottom: 16,
+      textAlign: 'center',
     },
 
     // Score breakdown bars

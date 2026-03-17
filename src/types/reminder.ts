@@ -21,4 +21,5 @@ export interface Reminder {
   recurring?: boolean;
   notificationIds?: string[];
   completionHistory?: CompletionEntry[];
+  soundId?: string;
 }
