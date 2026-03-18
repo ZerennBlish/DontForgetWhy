@@ -61,3 +61,56 @@ export function wasNotifHandled(notifId: string | undefined): boolean {
   }
   return true;
 }
+
+// ── Persistent notification dedupe ──────────────────────────────────
+// The in-memory Map above does not survive process death. When the app
+// is killed and restarted, getInitialNotification() can return the same
+// notification again. These helpers persist handled IDs in AsyncStorage
+// so cold-start dedupe works across process restarts.
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const HANDLED_NOTIFS_KEY = 'handledNotifIds';
+
+interface PersistedNotifEntry {
+  id: string;
+  ts: number;
+}
+
+export async function persistNotifHandled(notifId: string): Promise<void> {
+  markNotifHandled(notifId); // keep in-memory Map in sync
+  try {
+    const raw = await AsyncStorage.getItem(HANDLED_NOTIFS_KEY);
+    const entries: PersistedNotifEntry[] = raw ? JSON.parse(raw) : [];
+    const now = Date.now();
+    // Add new entry and filter out expired ones
+    entries.push({ id: notifId, ts: now });
+    const filtered = entries.filter((e) => now - e.ts <= HANDLED_TTL);
+    await AsyncStorage.setItem(HANDLED_NOTIFS_KEY, JSON.stringify(filtered));
+  } catch {}
+}
+
+export async function wasNotifHandledPersistent(notifId: string | undefined): Promise<boolean> {
+  if (!notifId) return false;
+  // Fast path: check in-memory Map first
+  if (wasNotifHandled(notifId)) return true;
+  // Slow path: check AsyncStorage
+  try {
+    const raw = await AsyncStorage.getItem(HANDLED_NOTIFS_KEY);
+    if (!raw) return false;
+    const entries: PersistedNotifEntry[] = JSON.parse(raw);
+    const now = Date.now();
+    const entry = entries.find((e) => e.id === notifId);
+    if (entry && now - entry.ts <= HANDLED_TTL) {
+      // Restore to in-memory Map for future fast-path checks
+      markNotifHandled(notifId);
+      return true;
+    }
+    // Clean up expired entries if we found one
+    if (entry) {
+      const filtered = entries.filter((e) => now - e.ts <= HANDLED_TTL);
+      await AsyncStorage.setItem(HANDLED_NOTIFS_KEY, JSON.stringify(filtered));
+    }
+  } catch {}
+  return false;
+}

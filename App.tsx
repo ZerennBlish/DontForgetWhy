@@ -29,7 +29,7 @@ import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleRem
 import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshWidgets } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
-import { getPendingAlarm, setPendingAlarm, clearPendingAlarm, markNotifHandled, wasNotifHandled } from './src/services/pendingAlarm';
+import { getPendingAlarm, setPendingAlarm, clearPendingAlarm, markNotifHandled, wasNotifHandled, wasNotifHandledPersistent, persistNotifHandled } from './src/services/pendingAlarm';
 import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
 import type { PendingAlarmData } from './src/services/pendingAlarm';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -288,7 +288,7 @@ function AppNavigator() {
 
               // Check if AlarmFireScreen already handled this notification
               // (module-level Map — covers same-process dedupe within 30s)
-              if (wasNotifHandled(notifId)) {
+              if (await wasNotifHandledPersistent(notifId)) {
                 console.log('[NOTIF] INIT — getInitialNotification already handled:', notifId);
               } else {
                 if (timerId && notifId) {
@@ -338,6 +338,7 @@ function AppNavigator() {
         // doesn't navigate to AlarmFireScreen a second time.
         if (alarmFireParams?.notificationId) {
           markNotifHandled(alarmFireParams.notificationId);
+          await persistNotifHandled(alarmFireParams.notificationId);
           console.log('[NOTIF] INIT — set dedupe marker for:', alarmFireParams.notificationId);
         }
 

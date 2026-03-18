@@ -838,6 +838,30 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             Alert.alert('Time Passed', 'Selected time has already passed. Choose a future time or date.');
             return;
           }
+        } else if (selectedDays.length === 1) {
+          // Day-of-week chip tapped in one-time mode — schedule for next occurrence
+          const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+          const targetDayIdx = dayMap[selectedDays[0]];
+          const now = new Date();
+          let daysUntil = (targetDayIdx - now.getDay() + 7) % 7;
+          if (daysUntil === 0) {
+            // Same day — check if time already passed
+            const selectedMinutes = h * 60 + m;
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            if (selectedMinutes <= currentMinutes) {
+              daysUntil = 7;
+            }
+          }
+          const target = new Date(now);
+          target.setDate(target.getDate() + daysUntil);
+          alarmDate = getDateStr(target);
+          // Validate the calculated date+time is in the future
+          const [py, pm, pd] = alarmDate.split('-').map(Number);
+          const alarmDateTime = new Date(py, pm - 1, pd, h, m, 0, 0);
+          if (alarmDateTime.getTime() <= Date.now()) {
+            Alert.alert('Time Passed', 'Selected time has already passed. Choose a future time or date.');
+            return;
+          }
         } else {
           const now = new Date();
           const selectedMinutes = h * 60 + m;

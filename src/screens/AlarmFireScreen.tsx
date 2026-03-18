@@ -28,7 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticHeavy } from '../utils/haptics';
 import { getSnoozeMessage } from '../data/snoozeMessages';
 import { refreshWidgets } from '../widget/updateWidget';
-import { markNotifHandled } from '../services/pendingAlarm';
+import { markNotifHandled, persistNotifHandled } from '../services/pendingAlarm';
 import { playAlarmSound, stopAlarmSound, isAlarmSoundPlaying } from '../services/alarmSound';
 import { getDefaultTimerSound } from '../services/settings';
 import guessWhyIcons from '../data/guessWhyIcons';
@@ -244,6 +244,10 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     console.log('[AlarmFire] handleDismiss — isTimer:', isTimer, 'alarmId:', alarm?.id);
     try {
       await cancelAllNotifications();
+      // Persist the notification ID so cold-start dedupe survives process death
+      if (notificationId) {
+        await persistNotifHandled(notificationId);
+      }
       // Soft-delete one-time alarms after firing so they disappear from
       // the active list and move to the deleted/history view.
       if (!isTimer && alarm?.mode === 'one-time') {
