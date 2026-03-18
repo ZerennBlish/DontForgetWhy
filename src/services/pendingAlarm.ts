@@ -81,9 +81,10 @@ export async function persistNotifHandled(notifId: string): Promise<void> {
   markNotifHandled(notifId); // keep in-memory Map in sync
   try {
     const raw = await AsyncStorage.getItem(HANDLED_NOTIFS_KEY);
-    const entries: PersistedNotifEntry[] = raw ? JSON.parse(raw) : [];
+    let entries: PersistedNotifEntry[] = raw ? JSON.parse(raw) : [];
     const now = Date.now();
-    // Add new entry and filter out expired ones
+    // Remove any existing entry for this ID, then add fresh
+    entries = entries.filter((e) => e.id !== notifId);
     entries.push({ id: notifId, ts: now });
     const filtered = entries.filter((e) => now - e.ts <= HANDLED_TTL);
     await AsyncStorage.setItem(HANDLED_NOTIFS_KEY, JSON.stringify(filtered));
