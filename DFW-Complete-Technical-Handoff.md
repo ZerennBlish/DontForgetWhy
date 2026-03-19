@@ -9,23 +9,24 @@
 1. [Project Overview](#1-project-overview)
 2. [Team & Workflow](#2-team--workflow)
 3. [Hardware & Setup](#3-hardware--setup)
-4. [Complete Version History](#4-complete-version-history)
-5. [App Features — Current State](#5-app-features--current-state)
-6. [Data Models — Current State](#6-data-models--current-state)
-7. [Notification System Architecture](#7-notification-system-architecture)
-8. [Theme System](#8-theme-system)
-9. [Widget System](#9-widget-system)
-10. [Complete Bug History](#10-complete-bug-history)
-11. [Complete Audit History](#11-complete-audit-history)
-12. [Design Decisions](#12-design-decisions)
-13. [Environment & Setup Knowledge Base](#13-environment--setup-knowledge-base)
-14. [Workflow Rules](#14-workflow-rules)
-15. [Post-Launch Roadmap](#15-post-launch-roadmap)
-16. [Store Listing](#16-store-listing)
-17. [Image Assets](#17-image-assets)
-18. [File Transfer Script](#18-file-transfer-script)
-19. [Testing Status](#19-testing-status)
-20. [Key Commands](#20-key-commands)
+4. [Project Structure](#4-project-structure)
+5. [Complete Version History](#5-complete-version-history)
+6. [App Features — Current State](#6-app-features--current-state)
+7. [Data Models — Current State](#7-data-models--current-state)
+8. [Notification System Architecture](#8-notification-system-architecture)
+9. [Theme System](#9-theme-system)
+10. [Widget System](#10-widget-system)
+11. [Complete Bug History](#11-complete-bug-history)
+12. [Complete Audit History](#12-complete-audit-history)
+13. [Design Decisions](#13-design-decisions)
+14. [Environment & Setup Knowledge Base](#14-environment--setup-knowledge-base)
+15. [Workflow Rules](#15-workflow-rules)
+16. [Post-Launch Roadmap](#16-post-launch-roadmap)
+17. [Store Listing](#17-store-listing)
+18. [Image Assets](#18-image-assets)
+19. [File Transfer Script](#19-file-transfer-script)
+20. [Testing Status](#20-testing-status)
+21. [Key Commands](#21-key-commands)
 
 ---
 
@@ -37,7 +38,7 @@
 **Package:** com.zerennblish.DontForgetWhy
 **Stack:** React Native 0.81.5 + Expo SDK 54 + TypeScript (strict mode)
 **Platform:** Android (primary), iOS (secondary/future)
-**Monetization:** Free, no ads, no tracking. Potential future Pro features (~$1 one-time) for online content.
+**Monetization:** Free, no ads, no tracking. Potential future Pro features ($1.99 one-time) for online content.
 **GitHub:** https://github.com/ZerennBlish/DontForgetWhy
 **Contact:** baldguyandcompanygames@gmail.com
 
@@ -105,7 +106,106 @@
 
 ---
 
-## 4. COMPLETE VERSION HISTORY
+## 4. PROJECT STRUCTURE
+
+Codebase reorganized during Phase 1 housekeeping. All source files live under `src/` in categorized subfolders.
+
+```
+DontForgetWhy/
+├── App.tsx
+├── index.ts
+├── app.json
+├── package.json
+├── ROADMAP.md
+├── DFW-Complete-Technical-Handoff.md
+└── src/
+    ├── components/
+    │   ├── AlarmCard.tsx
+    │   ├── BackButton.tsx
+    │   ├── ErrorBoundary.tsx
+    │   ├── SoundPickerModal.tsx
+    │   ├── TimePicker.tsx
+    │   └── UndoToast.tsx
+    ├── data/
+    │   ├── alarmSounds.ts
+    │   ├── appOpenQuotes.ts
+    │   ├── guessWhyIcons.ts
+    │   ├── guessWhyMessages.ts
+    │   ├── memoryRanks.ts
+    │   ├── placeholders.ts
+    │   ├── reminderQuotes.ts
+    │   ├── riddles.ts
+    │   ├── snoozeMessages.ts
+    │   ├── timerPresets.ts
+    │   └── triviaQuestions.ts
+    ├── hooks/
+    │   ├── useCalendar.ts          # accepts initialDate + onSelectDate callback
+    │   └── useDaySelection.ts
+    ├── navigation/
+    │   └── types.ts                # navigation param types
+    ├── screens/
+    │   ├── AboutScreen.tsx
+    │   ├── AlarmFireScreen.tsx
+    │   ├── AlarmListScreen.tsx
+    │   ├── CreateAlarmScreen.tsx
+    │   ├── CreateReminderScreen.tsx
+    │   ├── DailyRiddleScreen.tsx
+    │   ├── ForgetLogScreen.tsx
+    │   ├── GamesScreen.tsx
+    │   ├── GuessWhyScreen.tsx
+    │   ├── MemoryMatchScreen.tsx
+    │   ├── MemoryScoreScreen.tsx
+    │   ├── NotepadScreen.tsx
+    │   ├── OnboardingScreen.tsx
+    │   ├── ReminderScreen.tsx
+    │   ├── SettingsScreen.tsx
+    │   ├── SudokuScreen.tsx
+    │   ├── TimerScreen.tsx
+    │   └── TriviaScreen.tsx
+    ├── services/
+    │   ├── alarmSound.ts
+    │   ├── forgetLog.ts
+    │   ├── guessWhyStats.ts
+    │   ├── memoryScore.ts
+    │   ├── noteStorage.ts
+    │   ├── notifications.ts
+    │   ├── pendingAlarm.ts
+    │   ├── quotes.ts
+    │   ├── reminderStorage.ts
+    │   ├── riddleOnline.ts
+    │   ├── settings.ts
+    │   ├── storage.ts
+    │   ├── timerStorage.ts
+    │   ├── triviaAI.ts
+    │   ├── triviaStorage.ts
+    │   └── widgetPins.ts
+    ├── theme/
+    │   ├── colors.ts               # theme definitions + custom theme generator
+    │   └── ThemeContext.tsx         # theme provider + useTheme hook
+    ├── types/
+    │   ├── alarm.ts
+    │   ├── note.ts
+    │   ├── reminder.ts
+    │   ├── timer.ts
+    │   └── trivia.ts
+    ├── utils/
+    │   ├── connectivity.ts
+    │   ├── fullScreenPermission.ts
+    │   ├── haptics.ts
+    │   ├── soundFeedback.ts
+    │   ├── soundModeUtils.ts
+    │   ├── sudoku.ts
+    │   └── time.ts                 # utils are pure/side-effect free
+    └── widget/
+        ├── DetailedWidget.tsx
+        ├── NotepadWidget.tsx
+        ├── updateWidget.ts
+        └── widgetTaskHandler.ts
+```
+
+---
+
+## 5. COMPLETE VERSION HISTORY
 
 | Date | Version | vCode | Summary | Status |
 |------|---------|-------|---------|--------|
@@ -136,7 +236,7 @@
 
 ---
 
-## 5. APP FEATURES — CURRENT STATE
+## 6. APP FEATURES — CURRENT STATE
 
 ### Core Utility
 - **Alarms** — reason field ("why"), 7 sound presets + custom system sounds, snooze (1/3/5/10/15 min), recurring (daily/weekly/monthly/yearly) + one-time, emoji icon from keyboard, per-alarm Guess Why toggle, private mode (completely blank card)
@@ -201,7 +301,7 @@
 
 ---
 
-## 6. DATA MODELS — CURRENT STATE
+## 7. DATA MODELS — CURRENT STATE
 
 ### Alarm
 ```typescript
@@ -254,7 +354,7 @@ interface UserTimer {
 
 ---
 
-## 7. NOTIFICATION SYSTEM ARCHITECTURE
+## 8. NOTIFICATION SYSTEM ARCHITECTURE
 
 ### Why Notifee (not expo-notifications)
 expo-notifications couldn't produce full-screen intents, DND bypass, sound looping, or alarm-style behavior. Replaced February 12 with @notifee/react-native.
@@ -291,7 +391,7 @@ All prior channel versions deleted on every app startup.
 
 ---
 
-## 8. THEME SYSTEM
+## 9. THEME SYSTEM
 
 ### 6 Preset Themes (WCAG AA Verified)
 | Theme | Mode | Background | Card | Accent |
@@ -314,7 +414,7 @@ charcoal→void, amoled→void, slate→neon, paper→frost, cream→sand, arcti
 
 ---
 
-## 9. WIDGET SYSTEM
+## 10. WIDGET SYSTEM
 
 ### Architecture
 - `index.ts` at project root: `registerWidgetTaskHandler(widgetTaskHandler)` + `registerRootComponent(App)`. Required because Expo's AppEntry.js doesn't support headless JS task registration.
@@ -333,7 +433,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 ---
 
-## 10. COMPLETE BUG HISTORY
+## 11. COMPLETE BUG HISTORY
 
 ### Summary Statistics
 - **~90+ unique bugs** found and fixed across the project lifetime
@@ -355,7 +455,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 **Widget renders transparent (Feb 12):** registerWidgetTaskHandler inside App.tsx instead of module-level entry point. Fix: created index.ts.
 
-**Alarms silent on silent/vibrate mode (Feb 26):** Entire MediaPlayer architecture change (see section 7).
+**Alarms silent on silent/vibrate mode (Feb 26):** Entire MediaPlayer architecture change (see section 8).
 
 ### Bug Categories (Grouped)
 
@@ -377,7 +477,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 ---
 
-## 11. COMPLETE AUDIT HISTORY
+## 12. COMPLETE AUDIT HISTORY
 
 | # | Date | Scope | Key Findings |
 |---|------|-------|-------------|
@@ -410,7 +510,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 ---
 
-## 12. DESIGN DECISIONS
+## 13. DESIGN DECISIONS
 
 ### Core Philosophy
 - **"Always the better way, even if harder."** Simple and better is fine. Simple and worse is never acceptable. (Zerenn, emphatically)
@@ -469,7 +569,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 ---
 
-## 13. ENVIRONMENT & SETUP KNOWLEDGE BASE
+## 14. ENVIRONMENT & SETUP KNOWLEDGE BASE
 
 ### Android & Native
 - Samsung full-screen intent permission resets on fresh install (Play Store preserves it)
@@ -518,7 +618,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 ---
 
-## 14. WORKFLOW RULES
+## 15. WORKFLOW RULES
 
 ### Build & Deploy
 1. Increment versionCode before every production build
@@ -571,7 +671,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 ---
 
-## 15. POST-LAUNCH ROADMAP
+## 16. POST-LAUNCH ROADMAP
 
 **Phase 1 — Housekeeping: ✅ COMPLETE**
 - [x] 1.1 Extract shared utility functions (soundModeUtils, useCalendar, useDaySelection)
@@ -618,7 +718,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 ---
 
-## 16. STORE LISTING
+## 17. STORE LISTING
 
 | Field | Value |
 |-------|-------|
@@ -641,7 +741,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 ---
 
-## 17. IMAGE ASSETS
+## 18. IMAGE ASSETS
 
 | File | Screen | Source |
 |------|--------|--------|
@@ -658,95 +758,121 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 ---
 
-## 18. FILE TRANSFER SCRIPT
+## 19. FILE TRANSFER SCRIPT
 
-Complete PowerShell script for copying project files to `C:\DFW-Context\project-files\`:
+PowerShell script for copying all project files flat into `C:\Users\baldy\OneDrive\Desktop\DFW\DFWFiles` for project knowledge uploads (82 files):
 
 ```powershell
-New-Item -ItemType Directory -Force -Path "C:\DFW-Context\project-files"
+$dest = "C:\Users\baldy\OneDrive\Desktop\DFW\DFWFiles"
+$root = "C:\DontForgetWhy"
 
-# Root files
-Copy-Item "C:\DontForgetWhy\App.tsx" "C:\DFW-Context\project-files\App.tsx"
-Copy-Item "C:\DontForgetWhy\app.json" "C:\DFW-Context\project-files\app.json"
-Copy-Item "C:\DontForgetWhy\package.json" "C:\DFW-Context\project-files\package.json"
-Copy-Item "C:\DontForgetWhy\index.ts" "C:\DFW-Context\project-files\index.ts"
+New-Item -ItemType Directory -Force -Path $dest
+Remove-Item "$dest\*" -Force -ErrorAction SilentlyContinue
 
-# Screens
-Copy-Item "C:\DontForgetWhy\src\screens\AlarmListScreen.tsx" "C:\DFW-Context\project-files\AlarmListScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\AlarmFireScreen.tsx" "C:\DFW-Context\project-files\AlarmFireScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\CreateAlarmScreen.tsx" "C:\DFW-Context\project-files\CreateAlarmScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\CreateReminderScreen.tsx" "C:\DFW-Context\project-files\CreateReminderScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\ReminderScreen.tsx" "C:\DFW-Context\project-files\ReminderScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\TimerScreen.tsx" "C:\DFW-Context\project-files\TimerScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\NotepadScreen.tsx" "C:\DFW-Context\project-files\NotepadScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\SettingsScreen.tsx" "C:\DFW-Context\project-files\SettingsScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\GamesScreen.tsx" "C:\DFW-Context\project-files\GamesScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\MemoryScoreScreen.tsx" "C:\DFW-Context\project-files\MemoryScoreScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\MemoryMatchScreen.tsx" "C:\DFW-Context\project-files\MemoryMatchScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\SudokuScreen.tsx" "C:\DFW-Context\project-files\SudokuScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\DailyRiddleScreen.tsx" "C:\DFW-Context\project-files\DailyRiddleScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\TriviaScreen.tsx" "C:\DFW-Context\project-files\TriviaScreen.tsx"
-Copy-Item "C:\DontForgetWhy\src\screens\GuessWhyScreen.tsx" "C:\DFW-Context\project-files\GuessWhyScreen.tsx"
+# Root files (6)
+Copy-Item "$root\app.json" "$dest\app.json"
+Copy-Item "$root\package.json" "$dest\package.json"
+Copy-Item "$root\index.ts" "$dest\index.ts"
+Copy-Item "$root\App.tsx" "$dest\App.tsx"
+Copy-Item "$root\DFW-Complete-Technical-Handoff.md" "$dest\DFW-Complete-Technical-Handoff.md"
+Copy-Item "$root\ROADMAP.md" "$dest\ROADMAP.md"
 
-# Components
-Copy-Item "C:\DontForgetWhy\src\components\AlarmCard.tsx" "C:\DFW-Context\project-files\AlarmCard.tsx"
-Copy-Item "C:\DontForgetWhy\src\components\BackButton.tsx" "C:\DFW-Context\project-files\BackButton.tsx"
-Copy-Item "C:\DontForgetWhy\src\components\TimePicker.tsx" "C:\DFW-Context\project-files\TimePicker.tsx"
-Copy-Item "C:\DontForgetWhy\src\components\SoundPickerModal.tsx" "C:\DFW-Context\project-files\SoundPickerModal.tsx"
-Copy-Item "C:\DontForgetWhy\src\components\UndoToast.tsx" "C:\DFW-Context\project-files\UndoToast.tsx"
+# Components (6)
+Copy-Item "$root\src\components\AlarmCard.tsx" "$dest\AlarmCard.tsx"
+Copy-Item "$root\src\components\BackButton.tsx" "$dest\BackButton.tsx"
+Copy-Item "$root\src\components\ErrorBoundary.tsx" "$dest\ErrorBoundary.tsx"
+Copy-Item "$root\src\components\SoundPickerModal.tsx" "$dest\SoundPickerModal.tsx"
+Copy-Item "$root\src\components\TimePicker.tsx" "$dest\TimePicker.tsx"
+Copy-Item "$root\src\components\UndoToast.tsx" "$dest\UndoToast.tsx"
 
-# Theme
-Copy-Item "C:\DontForgetWhy\src\theme\colors.ts" "C:\DFW-Context\project-files\colors.ts"
-Copy-Item "C:\DontForgetWhy\src\theme\ThemeContext.tsx" "C:\DFW-Context\project-files\ThemeContext.tsx"
+# Data (11)
+Copy-Item "$root\src\data\alarmSounds.ts" "$dest\alarmSounds.ts"
+Copy-Item "$root\src\data\appOpenQuotes.ts" "$dest\appOpenQuotes.ts"
+Copy-Item "$root\src\data\guessWhyIcons.ts" "$dest\guessWhyIcons.ts"
+Copy-Item "$root\src\data\guessWhyMessages.ts" "$dest\guessWhyMessages.ts"
+Copy-Item "$root\src\data\memoryRanks.ts" "$dest\memoryRanks.ts"
+Copy-Item "$root\src\data\placeholders.ts" "$dest\placeholders.ts"
+Copy-Item "$root\src\data\reminderQuotes.ts" "$dest\reminderQuotes.ts"
+Copy-Item "$root\src\data\riddles.ts" "$dest\riddles.ts"
+Copy-Item "$root\src\data\snoozeMessages.ts" "$dest\snoozeMessages.ts"
+Copy-Item "$root\src\data\timerPresets.ts" "$dest\timerPresets.ts"
+Copy-Item "$root\src\data\triviaQuestions.ts" "$dest\triviaQuestions.ts"
 
-# Services
-Copy-Item "C:\DontForgetWhy\src\services\storage.ts" "C:\DFW-Context\project-files\storage.ts"
-Copy-Item "C:\DontForgetWhy\src\services\notifications.ts" "C:\DFW-Context\project-files\notifications.ts"
-Copy-Item "C:\DontForgetWhy\src\services\settings.ts" "C:\DFW-Context\project-files\settings.ts"
-Copy-Item "C:\DontForgetWhy\src\services\timerStorage.ts" "C:\DFW-Context\project-files\timerStorage.ts"
-Copy-Item "C:\DontForgetWhy\src\services\reminderStorage.ts" "C:\DFW-Context\project-files\reminderStorage.ts"
-Copy-Item "C:\DontForgetWhy\src\services\noteStorage.ts" "C:\DFW-Context\project-files\noteStorage.ts"
-Copy-Item "C:\DontForgetWhy\src\services\pendingAlarm.ts" "C:\DFW-Context\project-files\pendingAlarm.ts"
-Copy-Item "C:\DontForgetWhy\src\services\alarmSound.ts" "C:\DFW-Context\project-files\alarmSound.ts"
-Copy-Item "C:\DontForgetWhy\src\services\widgetPins.ts" "C:\DFW-Context\project-files\widgetPins.ts"
-Copy-Item "C:\DontForgetWhy\src\services\guessWhyStats.ts" "C:\DFW-Context\project-files\guessWhyStats.ts"
+# Hooks (2)
+Copy-Item "$root\src\hooks\useCalendar.ts" "$dest\useCalendar.ts"
+Copy-Item "$root\src\hooks\useDaySelection.ts" "$dest\useDaySelection.ts"
 
-# Widgets
-Copy-Item "C:\DontForgetWhy\src\widget\DetailedWidget.tsx" "C:\DFW-Context\project-files\DetailedWidget.tsx"
-Copy-Item "C:\DontForgetWhy\src\widget\NotepadWidget.tsx" "C:\DFW-Context\project-files\NotepadWidget.tsx"
-Copy-Item "C:\DontForgetWhy\src\widget\widgetTaskHandler.ts" "C:\DFW-Context\project-files\widgetTaskHandler.ts"
-Copy-Item "C:\DontForgetWhy\src\widget\updateWidget.ts" "C:\DFW-Context\project-files\updateWidget.ts"
+# Navigation (1 — renamed to avoid collision)
+Copy-Item "$root\src\navigation\types.ts" "$dest\navTypes.ts"
 
-# Types
-Copy-Item "C:\DontForgetWhy\src\types\alarm.ts" "C:\DFW-Context\project-files\alarm.ts"
-Copy-Item "C:\DontForgetWhy\src\types\reminder.ts" "C:\DFW-Context\project-files\reminder.ts"
-Copy-Item "C:\DontForgetWhy\src\types\timer.ts" "C:\DFW-Context\project-files\timer.ts"
-Copy-Item "C:\DontForgetWhy\src\types\note.ts" "C:\DFW-Context\project-files\note.ts"
+# Screens (18)
+Copy-Item "$root\src\screens\AboutScreen.tsx" "$dest\AboutScreen.tsx"
+Copy-Item "$root\src\screens\AlarmFireScreen.tsx" "$dest\AlarmFireScreen.tsx"
+Copy-Item "$root\src\screens\AlarmListScreen.tsx" "$dest\AlarmListScreen.tsx"
+Copy-Item "$root\src\screens\CreateAlarmScreen.tsx" "$dest\CreateAlarmScreen.tsx"
+Copy-Item "$root\src\screens\CreateReminderScreen.tsx" "$dest\CreateReminderScreen.tsx"
+Copy-Item "$root\src\screens\DailyRiddleScreen.tsx" "$dest\DailyRiddleScreen.tsx"
+Copy-Item "$root\src\screens\ForgetLogScreen.tsx" "$dest\ForgetLogScreen.tsx"
+Copy-Item "$root\src\screens\GamesScreen.tsx" "$dest\GamesScreen.tsx"
+Copy-Item "$root\src\screens\GuessWhyScreen.tsx" "$dest\GuessWhyScreen.tsx"
+Copy-Item "$root\src\screens\MemoryMatchScreen.tsx" "$dest\MemoryMatchScreen.tsx"
+Copy-Item "$root\src\screens\MemoryScoreScreen.tsx" "$dest\MemoryScoreScreen.tsx"
+Copy-Item "$root\src\screens\NotepadScreen.tsx" "$dest\NotepadScreen.tsx"
+Copy-Item "$root\src\screens\OnboardingScreen.tsx" "$dest\OnboardingScreen.tsx"
+Copy-Item "$root\src\screens\ReminderScreen.tsx" "$dest\ReminderScreen.tsx"
+Copy-Item "$root\src\screens\SettingsScreen.tsx" "$dest\SettingsScreen.tsx"
+Copy-Item "$root\src\screens\SudokuScreen.tsx" "$dest\SudokuScreen.tsx"
+Copy-Item "$root\src\screens\TimerScreen.tsx" "$dest\TimerScreen.tsx"
+Copy-Item "$root\src\screens\TriviaScreen.tsx" "$dest\TriviaScreen.tsx"
 
-# Data
-Copy-Item "C:\DontForgetWhy\src\data\timerPresets.ts" "C:\DFW-Context\project-files\timerPresets.ts"
-Copy-Item "C:\DontForgetWhy\src\data\appOpenQuotes.ts" "C:\DFW-Context\project-files\appOpenQuotes.ts"
-Copy-Item "C:\DontForgetWhy\src\data\snoozeMessages.ts" "C:\DFW-Context\project-files\snoozeMessages.ts"
-Copy-Item "C:\DontForgetWhy\src\data\reminderQuotes.ts" "C:\DFW-Context\project-files\reminderQuotes.ts"
-Copy-Item "C:\DontForgetWhy\src\data\placeholders.ts" "C:\DFW-Context\project-files\placeholders.ts"
-Copy-Item "C:\DontForgetWhy\src\data\guessWhyIcons.ts" "C:\DFW-Context\project-files\guessWhyIcons.ts"
+# Services (16)
+Copy-Item "$root\src\services\alarmSound.ts" "$dest\alarmSound.ts"
+Copy-Item "$root\src\services\forgetLog.ts" "$dest\forgetLog.ts"
+Copy-Item "$root\src\services\guessWhyStats.ts" "$dest\guessWhyStats.ts"
+Copy-Item "$root\src\services\memoryScore.ts" "$dest\memoryScore.ts"
+Copy-Item "$root\src\services\noteStorage.ts" "$dest\noteStorage.ts"
+Copy-Item "$root\src\services\notifications.ts" "$dest\notifications.ts"
+Copy-Item "$root\src\services\pendingAlarm.ts" "$dest\pendingAlarm.ts"
+Copy-Item "$root\src\services\quotes.ts" "$dest\quotes.ts"
+Copy-Item "$root\src\services\reminderStorage.ts" "$dest\reminderStorage.ts"
+Copy-Item "$root\src\services\riddleOnline.ts" "$dest\riddleOnline.ts"
+Copy-Item "$root\src\services\settings.ts" "$dest\settings.ts"
+Copy-Item "$root\src\services\storage.ts" "$dest\storage.ts"
+Copy-Item "$root\src\services\timerStorage.ts" "$dest\timerStorage.ts"
+Copy-Item "$root\src\services\triviaAI.ts" "$dest\triviaAI.ts"
+Copy-Item "$root\src\services\triviaStorage.ts" "$dest\triviaStorage.ts"
+Copy-Item "$root\src\services\widgetPins.ts" "$dest\widgetPins.ts"
 
-# Utils / Hooks
-Copy-Item "C:\DontForgetWhy\src\utils\haptics.ts" "C:\DFW-Context\project-files\haptics.ts"
-Copy-Item "C:\DontForgetWhy\src\utils\soundFeedback.ts" "C:\DFW-Context\project-files\soundFeedback.ts"
-Copy-Item "C:\DontForgetWhy\src\utils\soundModeUtils.ts" "C:\DFW-Context\project-files\soundModeUtils.ts"
-Copy-Item "C:\DontForgetWhy\src\hooks\useCalendar.ts" "C:\DFW-Context\project-files\useCalendar.ts"
-Copy-Item "C:\DontForgetWhy\src\hooks\useDaySelection.ts" "C:\DFW-Context\project-files\useDaySelection.ts"
+# Theme (2)
+Copy-Item "$root\src\theme\colors.ts" "$dest\colors.ts"
+Copy-Item "$root\src\theme\ThemeContext.tsx" "$dest\ThemeContext.tsx"
 
-# Navigation
-Copy-Item "C:\DontForgetWhy\src\navigation\types.ts" "C:\DFW-Context\project-files\navTypes.ts"
+# Types (5)
+Copy-Item "$root\src\types\alarm.ts" "$dest\alarm.ts"
+Copy-Item "$root\src\types\note.ts" "$dest\note.ts"
+Copy-Item "$root\src\types\reminder.ts" "$dest\reminder.ts"
+Copy-Item "$root\src\types\timer.ts" "$dest\timer.ts"
+Copy-Item "$root\src\types\trivia.ts" "$dest\trivia.ts"
+
+# Utils (7)
+Copy-Item "$root\src\utils\connectivity.ts" "$dest\connectivity.ts"
+Copy-Item "$root\src\utils\fullScreenPermission.ts" "$dest\fullScreenPermission.ts"
+Copy-Item "$root\src\utils\haptics.ts" "$dest\haptics.ts"
+Copy-Item "$root\src\utils\soundFeedback.ts" "$dest\soundFeedback.ts"
+Copy-Item "$root\src\utils\soundModeUtils.ts" "$dest\soundModeUtils.ts"
+Copy-Item "$root\src\utils\sudoku.ts" "$dest\sudoku.ts"
+Copy-Item "$root\src\utils\time.ts" "$dest\time.ts"
+
+# Widget (4)
+Copy-Item "$root\src\widget\DetailedWidget.tsx" "$dest\DetailedWidget.tsx"
+Copy-Item "$root\src\widget\NotepadWidget.tsx" "$dest\NotepadWidget.tsx"
+Copy-Item "$root\src\widget\updateWidget.ts" "$dest\updateWidget.ts"
+Copy-Item "$root\src\widget\widgetTaskHandler.ts" "$dest\widgetTaskHandler.ts"
 ```
-
-**Deleted files (do NOT include):** `TimerWidget.tsx`, `NotepadWidgetCompact.tsx`, `noteIcons.ts`, `alarmSounds.ts`, `gameSounds.ts`, `SwipeableRow.tsx`
 
 ---
 
-## 19. TESTING STATUS (As of March 19, 2026)
+## 20. TESTING STATUS (As of March 19, 2026)
 
 | Item | Value |
 |------|-------|
@@ -769,7 +895,7 @@ Copy-Item "C:\DontForgetWhy\src\navigation\types.ts" "C:\DFW-Context\project-fil
 
 ---
 
-## 20. KEY COMMANDS
+## 21. KEY COMMANDS
 
 ```powershell
 # Dev server
