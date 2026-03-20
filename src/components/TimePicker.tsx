@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList } from 'react-native';
+import { View, Text, FlatList, useWindowDimensions, PixelRatio } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticSelection } from '../utils/haptics';
 
@@ -25,13 +25,6 @@ export interface TimePickerProps {
 
 const CYCLES = 100;
 
-function getItemStyle(dist: number, colors: any) {
-  if (dist === 0) return { fontSize: 40, fontWeight: '700' as const, color: colors.accent, opacity: 1 };
-  if (dist === 1) return { fontSize: 24, fontWeight: '500' as const, color: colors.textSecondary, opacity: 0.7 };
-  if (dist === 2) return { fontSize: 17, fontWeight: '400' as const, color: colors.textTertiary, opacity: 0.4 };
-  return { fontSize: 14, fontWeight: '400' as const, color: colors.textTertiary, opacity: 0.2 };
-}
-
 export default function TimePicker({
   hours,
   minutes,
@@ -52,7 +45,29 @@ export default function TimePicker({
   labels,
 }: TimePickerProps) {
   const { colors } = useTheme();
-  const pickerHeight = itemHeight * visibleItems;
+  const { width: screenWidth } = useWindowDimensions();
+
+  const availableWidth = screenWidth - 112; // modal overlay padding (32*2) + card padding (24*2)
+  const colWidth = showSeconds
+    ? Math.min(90, Math.floor(availableWidth / 3.8))
+    : Math.min(90, Math.floor(availableWidth / 3.2));
+  const pixelRatio = PixelRatio.get();
+  const narrowScreen = pixelRatio < 3;
+  const effectiveItemHeight = narrowScreen ? (showSeconds ? 80 : 68) : itemHeight;
+
+  const selectedFont = showSeconds && narrowScreen ? 34 : 40;
+  const adjacentFont = showSeconds && narrowScreen ? 18 : 24;
+  const dist2Font = showSeconds && narrowScreen ? 14 : 17;
+  const dist3Font = showSeconds && narrowScreen ? 11 : 14;
+
+  function getItemStyle(dist: number) {
+    if (dist === 0) return { fontSize: selectedFont, fontWeight: '700' as const, color: colors.accent, opacity: 1 };
+    if (dist === 1) return { fontSize: adjacentFont, fontWeight: '500' as const, color: colors.textSecondary, opacity: 0.7 };
+    if (dist === 2) return { fontSize: dist2Font, fontWeight: '400' as const, color: colors.textTertiary, opacity: 0.4 };
+    return { fontSize: dist3Font, fontWeight: '400' as const, color: colors.textTertiary, opacity: 0.2 };
+  }
+
+  const pickerHeight = effectiveItemHeight * visibleItems;
   const padItems = Math.floor(visibleItems / 2);
 
   const hoursRange = maxHours - minHours;
@@ -86,17 +101,17 @@ export default function TimePicker({
   useEffect(() => {
     const t = setTimeout(() => {
       hoursFLRef.current?.scrollToOffset({
-        offset: (hoursMid + (hours - minHours)) * itemHeight,
+        offset: (hoursMid + (hours - minHours)) * effectiveItemHeight,
         animated: false,
       });
       const minIdx = minuteStep > 1 ? Math.round(minutes / minuteStep) : minutes;
       minutesFLRef.current?.scrollToOffset({
-        offset: (minutesMid + minIdx) * itemHeight,
+        offset: (minutesMid + minIdx) * effectiveItemHeight,
         animated: false,
       });
       if (showSeconds) {
         secondsFLRef.current?.scrollToOffset({
-          offset: (secondsMid + seconds) * itemHeight,
+          offset: (secondsMid + seconds) * effectiveItemHeight,
           animated: false,
         });
       }
@@ -109,7 +124,7 @@ export default function TimePicker({
       lastHourRef.current = hours;
       setLocalHours(hours);
       hoursFLRef.current?.scrollToOffset({
-        offset: (hoursMid + (hours - minHours)) * itemHeight,
+        offset: (hoursMid + (hours - minHours)) * effectiveItemHeight,
         animated: false,
       });
     }
@@ -118,7 +133,7 @@ export default function TimePicker({
       setLocalMinutes(minutes);
       const minIdx = minuteStep > 1 ? Math.round(minutes / minuteStep) : minutes;
       minutesFLRef.current?.scrollToOffset({
-        offset: (minutesMid + minIdx) * itemHeight,
+        offset: (minutesMid + minIdx) * effectiveItemHeight,
         animated: false,
       });
     }
@@ -126,19 +141,19 @@ export default function TimePicker({
       lastSecondRef.current = seconds;
       setLocalSeconds(seconds);
       secondsFLRef.current?.scrollToOffset({
-        offset: (secondsMid + seconds) * itemHeight,
+        offset: (secondsMid + seconds) * effectiveItemHeight,
         animated: false,
       });
     }
-  }, [hours, minutes, seconds, showSeconds, hoursMid, minutesMid, secondsMid, minHours, minuteStep, itemHeight]);
+  }, [hours, minutes, seconds, showSeconds, hoursMid, minutesMid, secondsMid, minHours, minuteStep, effectiveItemHeight]);
 
   const getItemLayout = useCallback(
     (_: any, index: number) => ({
-      length: itemHeight,
-      offset: index * itemHeight,
+      length: effectiveItemHeight,
+      offset: index * effectiveItemHeight,
       index,
     }),
-    [itemHeight],
+    [effectiveItemHeight],
   );
 
   const hourKeyExtractor = useCallback((_: number, i: number) => `h-${i}`, []);
@@ -147,16 +162,16 @@ export default function TimePicker({
 
   const handleHoursScroll = useCallback(
     (e: any) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
+      const idx = Math.round(e.nativeEvent.contentOffset.y / effectiveItemHeight);
       const value = hoursData[Math.max(0, Math.min(idx, hoursData.length - 1))];
       setLocalHours(value);
     },
-    [hoursData, itemHeight],
+    [hoursData, effectiveItemHeight],
   );
 
   const handleHoursSnap = useCallback(
     (e: any) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
+      const idx = Math.round(e.nativeEvent.contentOffset.y / effectiveItemHeight);
       const value = hoursData[Math.max(0, Math.min(idx, hoursData.length - 1))];
       setLocalHours(value);
       onHoursChange(value);
@@ -165,21 +180,21 @@ export default function TimePicker({
         lastHourRef.current = value;
       }
     },
-    [hoursData, itemHeight, onHoursChange],
+    [hoursData, effectiveItemHeight, onHoursChange],
   );
 
   const handleMinutesScroll = useCallback(
     (e: any) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
+      const idx = Math.round(e.nativeEvent.contentOffset.y / effectiveItemHeight);
       const value = minutesData[Math.max(0, Math.min(idx, minutesData.length - 1))];
       setLocalMinutes(value);
     },
-    [minutesData, itemHeight],
+    [minutesData, effectiveItemHeight],
   );
 
   const handleMinutesSnap = useCallback(
     (e: any) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
+      const idx = Math.round(e.nativeEvent.contentOffset.y / effectiveItemHeight);
       const value = minutesData[Math.max(0, Math.min(idx, minutesData.length - 1))];
       setLocalMinutes(value);
       onMinutesChange(value);
@@ -188,21 +203,21 @@ export default function TimePicker({
         lastMinuteRef.current = value;
       }
     },
-    [minutesData, itemHeight, onMinutesChange],
+    [minutesData, effectiveItemHeight, onMinutesChange],
   );
 
   const handleSecondsScroll = useCallback(
     (e: any) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
+      const idx = Math.round(e.nativeEvent.contentOffset.y / effectiveItemHeight);
       const value = secondsData[Math.max(0, Math.min(idx, secondsData.length - 1))];
       setLocalSeconds(value);
     },
-    [secondsData, itemHeight],
+    [secondsData, effectiveItemHeight],
   );
 
   const handleSecondsSnap = useCallback(
     (e: any) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
+      const idx = Math.round(e.nativeEvent.contentOffset.y / effectiveItemHeight);
       const value = secondsData[Math.max(0, Math.min(idx, secondsData.length - 1))];
       setLocalSeconds(value);
       onSecondsChange?.(value);
@@ -211,58 +226,56 @@ export default function TimePicker({
         lastSecondRef.current = value;
       }
     },
-    [secondsData, itemHeight, onSecondsChange],
+    [secondsData, effectiveItemHeight, onSecondsChange],
   );
 
   const renderHour = useCallback(
     ({ item }: { item: number }) => {
       const d = Math.abs(item - localHours);
       const dist = Math.min(d, hoursRange - d);
-      const s = getItemStyle(dist, colors);
+      const s = getItemStyle(dist);
       return (
-        <View style={{ height: itemHeight, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: s.fontSize, fontWeight: s.fontWeight, color: s.color, opacity: s.opacity }}>
+        <View style={{ height: effectiveItemHeight, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ fontSize: s.fontSize, lineHeight: Math.round(s.fontSize * 1.15), fontWeight: s.fontWeight, color: s.color, opacity: s.opacity, textAlignVertical: 'center' }}>
             {padHours ? String(item).padStart(2, '0') : item}
           </Text>
         </View>
       );
     },
-    [localHours, hoursRange, itemHeight, padHours, colors],
+    [localHours, hoursRange, effectiveItemHeight, padHours, colors],
   );
 
   const renderMinute = useCallback(
     ({ item }: { item: number }) => {
       const d = Math.abs(item - localMinutes);
       const dist = Math.min(d, maxMinutes - d);
-      const s = getItemStyle(dist, colors);
+      const s = getItemStyle(dist);
       return (
-        <View style={{ height: itemHeight, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: s.fontSize, fontWeight: s.fontWeight, color: s.color, opacity: s.opacity }}>
+        <View style={{ height: effectiveItemHeight, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ fontSize: s.fontSize, lineHeight: Math.round(s.fontSize * 1.15), fontWeight: s.fontWeight, color: s.color, opacity: s.opacity, textAlignVertical: 'center' }}>
             {padMinutes ? String(item).padStart(2, '0') : item}
           </Text>
         </View>
       );
     },
-    [localMinutes, maxMinutes, itemHeight, padMinutes, colors],
+    [localMinutes, maxMinutes, effectiveItemHeight, padMinutes, colors],
   );
 
   const renderSecond = useCallback(
     ({ item }: { item: number }) => {
       const d = Math.abs(item - localSeconds);
       const dist = Math.min(d, maxSeconds - d);
-      const s = getItemStyle(dist, colors);
+      const s = getItemStyle(dist);
       return (
-        <View style={{ height: itemHeight, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: s.fontSize, fontWeight: s.fontWeight, color: s.color, opacity: s.opacity }}>
+        <View style={{ height: effectiveItemHeight, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ fontSize: s.fontSize, lineHeight: Math.round(s.fontSize * 1.15), fontWeight: s.fontWeight, color: s.color, opacity: s.opacity, textAlignVertical: 'center' }}>
             {String(item).padStart(2, '0')}
           </Text>
         </View>
       );
     },
-    [localSeconds, maxSeconds, itemHeight, colors],
+    [localSeconds, maxSeconds, effectiveItemHeight, colors],
   );
-
-  const colWidth = showSeconds ? 80 : 90;
 
   const renderColumn = (
     columnId: string,
@@ -282,7 +295,7 @@ export default function TimePicker({
         <View
           style={{
             position: 'absolute',
-            top: itemHeight * padItems,
+            top: effectiveItemHeight * padItems,
             left: 4,
             right: 4,
             height: 1,
@@ -295,7 +308,7 @@ export default function TimePicker({
         <View
           style={{
             position: 'absolute',
-            top: itemHeight * (padItems + 1),
+            top: effectiveItemHeight * (padItems + 1),
             left: 4,
             right: 4,
             height: 1,
@@ -308,10 +321,10 @@ export default function TimePicker({
         <View
           style={{
             position: 'absolute',
-            top: itemHeight * padItems,
+            top: effectiveItemHeight * padItems,
             left: 2,
             right: 2,
-            height: itemHeight,
+            height: effectiveItemHeight,
             backgroundColor: 'rgba(255,255,255,0.06)',
             borderRadius: 6,
             zIndex: 1,
@@ -325,9 +338,9 @@ export default function TimePicker({
           extraData={localValue}
           getItemLayout={getItemLayout}
           showsVerticalScrollIndicator={false}
-          snapToInterval={itemHeight}
+          snapToInterval={effectiveItemHeight}
           decelerationRate="fast"
-          contentContainerStyle={{ paddingVertical: padItems * itemHeight }}
+          contentContainerStyle={{ paddingVertical: padItems * effectiveItemHeight }}
           scrollEventThrottle={16}
           onScroll={onScroll}
           onMomentumScrollEnd={onSnap}
