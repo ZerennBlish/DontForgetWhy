@@ -970,6 +970,22 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     if (mode === 'one-time') {
       if (selectedDate) {
         dueDate = selectedDate;
+      } else if (selectedDays.length === 1) {
+        const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        const targetDayIdx = dayMap[selectedDays[0]];
+        const now = new Date();
+        let daysUntil = (targetDayIdx - now.getDay() + 7) % 7;
+        if (daysUntil === 0 && dueTime) {
+          const [ph, pmin] = dueTime.split(':').map(Number);
+          const selectedMinutes = ph * 60 + pmin;
+          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+          if (selectedMinutes <= currentMinutes) {
+            daysUntil = 7;
+          }
+        }
+        const target = new Date(now);
+        target.setDate(target.getDate() + daysUntil);
+        dueDate = getDateStr(target);
       } else if (dueTime) {
         const now = new Date();
         const [ph, pmin] = dueTime.split(':').map(Number);
