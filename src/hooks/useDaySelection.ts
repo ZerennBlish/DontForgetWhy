@@ -7,6 +7,7 @@ export function useDaySelection(initialDays: AlarmDay[]) {
 
   const handleToggleDay = (day: AlarmDay, mode: 'one-time' | 'recurring', clearDate?: () => void) => {
     if (mode === 'one-time') {
+      clearDate?.();
       setSelectedDays((prev) => prev.includes(day) ? [] : [day]);
     } else {
       clearDate?.();
