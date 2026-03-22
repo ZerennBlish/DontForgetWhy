@@ -792,7 +792,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           recurring,
           notificationId: null,
           notificationIds: [],
-          soundId: undefined,
+          soundId: existing?.soundId,
         };
 
         if (dueTime && !updated.completed) {

@@ -100,27 +100,6 @@ function isDoneEnabled(reminder: Reminder): boolean {
   return Date.now() >= cycleTs - SIX_HOURS;
 }
 
-function getAvailableAtTime(reminder: Reminder, timeFormat: '12h' | '24h'): string | null {
-  if (!reminder.recurring || !reminder.dueTime) return null;
-  if (hasCompletedToday(reminder)) return null;
-  const cycleTs = getNextCycleTimestamp(reminder);
-  if (cycleTs === null) return null;
-  const availableAt = new Date(cycleTs - SIX_HOURS);
-  const hh = availableAt.getHours().toString().padStart(2, '0');
-  const mm = availableAt.getMinutes().toString().padStart(2, '0');
-  return formatTime(`${hh}:${mm}`, timeFormat);
-}
-
-function getAvailableAtDate(reminder: Reminder): string | null {
-  if (!reminder.recurring || reminder.dueTime) return null;
-  if (!reminder.dueDate || (reminder.days && reminder.days.length > 0)) return null;
-  if (hasCompletedToday(reminder)) return null;
-  const [y, mo, d] = reminder.dueDate.split('-').map(Number);
-  const dueDate = new Date(y, mo - 1, d);
-  const dayBefore = new Date(dueDate);
-  dayBefore.setDate(dayBefore.getDate() - 1);
-  return dayBefore.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 function formatCompletionDates(history: CompletionEntry[]): string {
   if (!history || history.length === 0) return '';
@@ -420,7 +399,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     },
     checkmark: {
       fontSize: 16,
-      color: colors.textPrimary,
+      color: '#FFFFFF',
     },
     middle: {
       flex: 1,
@@ -605,7 +584,8 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     },
     clearHistoryText: {
       fontSize: 12,
-      color: colors.textTertiary,
+      fontWeight: '600',
+      color: '#EF4444',
     },
     historyText: {
       fontSize: 12,

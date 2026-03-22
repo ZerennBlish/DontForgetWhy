@@ -758,26 +758,30 @@ export default function NotepadScreen({ navigation, route }: Props) {
       gap: 6,
     },
     restoreBtn: {
-      backgroundColor: colors.activeBackground,
-      borderRadius: 8,
       paddingHorizontal: 12,
       paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     restoreText: {
-      color: colors.accent,
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
+      color: '#22C55E',
     },
     foreverBtn: {
-      backgroundColor: colors.card,
-      borderRadius: 8,
       paddingHorizontal: 12,
       paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     foreverText: {
-      color: colors.red,
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
+      color: '#EF4444',
     },
     fab: {
       position: 'absolute',
@@ -990,14 +994,16 @@ export default function NotepadScreen({ navigation, route }: Props) {
     },
   }), [colors, insets.bottom]);
 
-  const renderDeletedItem = (item: Note) => (
+  const renderDeletedItem = (item: Note) => {
+    const deletedTextColor = getTextColor(item.color);
+    return (
     <View style={[styles.card, { opacity: 0.7, backgroundColor: item.color, borderColor: item.color + '80' }]}>
       <View style={styles.cardContent}>
         <View style={styles.cardMiddle}>
-          <Text style={[styles.cardText, { color: colors.textTertiary }]} numberOfLines={2}>
+          <Text style={[styles.cardText, { color: deletedTextColor + 'AA' }]} numberOfLines={2}>
             {item.icon ? `${item.icon} ` : ''}{item.text}
           </Text>
-          <Text style={styles.deletedAgo}>
+          <Text style={[styles.deletedAgo, { color: deletedTextColor + '80' }]}>
             {formatDeletedAgo(item.deletedAt!)}
           </Text>
         </View>
@@ -1014,6 +1020,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
       </View>
     </View>
   );
+  };
 
   const renderActiveItem = (item: Note) => {
     const pinned = isNotePinned(item.id, pinnedIds);
