@@ -118,24 +118,31 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
       gap: 6,
     },
     pinBtn: {
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 6,
-      backgroundColor: colors.card,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     pinBtnActive: {
-      backgroundColor: colors.activeBackground,
+      backgroundColor: 'rgba(30, 30, 40, 0.85)',
     },
     pinBtnText: {
       fontSize: 12,
     },
     deleteBtn: {
-      paddingHorizontal: 4,
-      paddingVertical: 3,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     deleteText: {
       fontSize: 11,
-      color: colors.red,
+      fontWeight: '600',
+      color: '#EF4444',
     },
   }), [colors]);
 

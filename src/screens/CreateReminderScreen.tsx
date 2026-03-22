@@ -18,8 +18,6 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Reminder } from '../types/reminder';
 import type { AlarmDay } from '../types/alarm';
 import { WEEKDAYS, WEEKENDS } from '../types/alarm';
-import type { SoundMode } from '../utils/soundModeUtils';
-import { cycleSoundMode, soundModeToSoundId, soundIdToSoundMode, getSoundModeIcon, getSoundModeLabel } from '../utils/soundModeUtils';
 import { useCalendar } from '../hooks/useCalendar';
 import { useDaySelection } from '../hooks/useDaySelection';
 import {
@@ -39,7 +37,6 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshWidgets } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
-import { playChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
@@ -92,8 +89,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const prevModalHourRef = useRef(0);
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
 
-  // Sound mode
-  const [soundMode, setSoundMode] = useState<SoundMode>('sound');
 
   // Reminder-specific state
   const [existing, setExisting] = useState<Reminder | null>(null);
@@ -293,7 +288,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       if (found.recurring) {
         setMode('recurring');
       }
-      setSoundMode(soundIdToSoundMode(found.soundId));
       setEditReady(true);
     });
   }, [editId, timeFormat]);
@@ -753,24 +747,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       alignItems: 'center',
       gap: 10,
     },
-    soundRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 10,
-      marginBottom: 16,
-    },
-    soundModeIconBtn: {
-      width: 36,
-      height: 36,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 18,
-      backgroundColor: cardBg,
-    },
-    soundModeIconText: {
-      fontSize: 18,
-    },
     saveBtn: {
       backgroundColor: colors.accent,
       borderRadius: 20,
@@ -816,7 +792,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           recurring,
           notificationId: null,
           notificationIds: [],
-          soundId: soundModeToSoundId(soundMode),
+          soundId: undefined,
         };
 
         if (dueTime && !updated.completed) {
@@ -844,7 +820,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           notificationIds: [],
           pinned: false,
           completionHistory: [],
-          soundId: soundModeToSoundId(soundMode),
+          soundId: undefined,
         };
 
         if (dueTime) {
@@ -1398,40 +1374,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           <Text style={{ fontSize: 10, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{privateHint}</Text>
         )}
 
-        <View style={styles.soundRow}>
-          <View style={{ alignItems: 'center' }}>
-            <TouchableOpacity
-              onPress={() => {
-                setSoundMode((prev) => {
-                  const next = cycleSoundMode(prev);
-                  if (next === 'vibrate') { hapticMedium(); }
-                  if (next === 'sound') { hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); }
-                  return next;
-                });
-              }}
-              style={[
-                styles.soundModeIconBtn,
-                soundMode === 'sound' && { backgroundColor: colors.accent },
-              ]}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.soundModeIconText}>
-                {getSoundModeIcon(soundMode)}
-              </Text>
-            </TouchableOpacity>
-            <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
-              {getSoundModeLabel(soundMode)}
-            </Text>
-          </View>
-          {soundMode === 'sound' && (
-            <View style={{ alignItems: 'center' }}>
-              <View style={{ backgroundColor: colors.accent + '20', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 }}>
-                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent }}>Default Sound</Text>
-              </View>
-              <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>Select Sound</Text>
-            </View>
-          )}
-        </View>
 
       </ScrollView>
 

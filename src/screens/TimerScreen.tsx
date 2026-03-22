@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  Dimensions,
+  useWindowDimensions,
   ToastAndroid,
   TextInput,
   Alert,
@@ -34,8 +34,6 @@ import TimePicker from '../components/TimePicker';
 import SoundPickerModal from '../components/SoundPickerModal';
 import type { SystemSound } from '../components/SoundPickerModal';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const PRESET_CARD_WIDTH = (SCREEN_WIDTH - 32 - 16) / 3;
 
 function formatCountdown(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -73,6 +71,8 @@ export default function TimerScreen({
 }: TimerScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const presetCardWidth = (screenWidth - 32 - 16) / 3;
   const [presets, setPresets] = useState<TimerPreset[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
@@ -181,7 +181,7 @@ export default function TimerScreen({
       gap: 8,
     },
     presetCard: {
-      width: PRESET_CARD_WIDTH,
+      width: presetCardWidth,
       backgroundColor: colors.card + 'BF',
       borderRadius: 10,
       padding: 10,
@@ -405,7 +405,7 @@ export default function TimerScreen({
       width: 1,
       height: 1,
     },
-  }), [colors, insets.bottom]);
+  }), [colors, insets.bottom, presetCardWidth]);
 
   useEffect(() => {
     loadPresets().then(setPresets);

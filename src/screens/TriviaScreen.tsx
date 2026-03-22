@@ -671,6 +671,7 @@ function makeStyles(colors: any, insets: any) {
     categoryGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
+      justifyContent: 'center',
       paddingHorizontal: 12,
       gap: 12,
     },

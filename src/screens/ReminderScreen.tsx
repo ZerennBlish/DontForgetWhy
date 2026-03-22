@@ -299,7 +299,18 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     list = list.filter((r) => !r.deletedAt);
 
     // Filter
-    if (reminderFilter === 'active') list = list.filter((r) => !r.completed);
+    if (reminderFilter === 'active') list = list.filter((r) => {
+      if (!r.completed) return true;
+      // Completed one-time reminders: show until 12am the day after completion
+      if (r.completed && !r.recurring && r.completedAt) {
+        const completedDate = new Date(r.completedAt);
+        const hideAfter = new Date(completedDate);
+        hideAfter.setDate(hideAfter.getDate() + 1);
+        hideAfter.setHours(0, 0, 0, 0);
+        return Date.now() < hideAfter.getTime();
+      }
+      return false;
+    });
     else if (reminderFilter === 'completed') list = list.filter((r) =>
       r.completed || (r.recurring && r.completionHistory && r.completionHistory.length > 0)
     );
@@ -391,7 +402,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       borderColor: colors.border,
     },
     cardCompleted: {
-      opacity: 0.5,
+      opacity: 0.45,
     },
     checkbox: {
       width: 32,
@@ -404,8 +415,8 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       marginRight: 12,
     },
     checkboxDone: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent,
+      backgroundColor: '#22C55E',
+      borderColor: '#22C55E',
     },
     checkmark: {
       fontSize: 16,
@@ -459,11 +470,13 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     pinBtn: {
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 8,
-      backgroundColor: colors.card,
+      borderRadius: 20,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     pinBtnActive: {
-      backgroundColor: colors.activeBackground,
+      backgroundColor: 'rgba(30, 30, 40, 0.85)',
     },
     pinBtnText: {
       fontSize: 13,
@@ -577,35 +590,18 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       fontSize: 13,
       fontWeight: '600',
     },
-    doneBtn: {
-      paddingHorizontal: 6,
-      paddingVertical: 4,
-    },
-    doneText: {
-      fontSize: 12,
-      color: colors.accent,
-    },
-    doneTextDisabled: {
-      fontSize: 12,
-      color: colors.textTertiary,
-      opacity: 0.4,
-    },
-    doneTodayText: {
-      fontSize: 10,
-      color: colors.accent,
-      opacity: 0.6,
-    },
-    availableAtText: {
-      fontSize: 10,
-      color: colors.textTertiary,
-    },
     deleteBtn: {
-      paddingHorizontal: 6,
-      paddingVertical: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     deleteText: {
       fontSize: 12,
-      color: colors.red,
+      fontWeight: '600',
+      color: '#EF4444',
     },
     clearHistoryText: {
       fontSize: 12,
@@ -625,56 +621,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     return due.getTime() < Date.now();
   };
 
-  const renderDoneButton = (item: Reminder) => {
-    // One-time completed: no Done button
-    if (item.completed && !item.recurring) return null;
-
-    // Recurring: always show Done button, but check 6h window + daily limit
-    if (item.recurring) {
-      const completedToday = hasCompletedToday(item);
-      if (completedToday) {
-        return (
-          <View style={styles.doneBtn}>
-            <Text style={styles.doneTextDisabled}>Done</Text>
-            <Text style={styles.doneTodayText}>{'\u2713'} today</Text>
-          </View>
-        );
-      }
-      const enabled = isDoneEnabled(item);
-      if (enabled) {
-        return (
-          <TouchableOpacity
-            onPress={() => handleToggleComplete(item.id)}
-            style={styles.doneBtn}
-            activeOpacity={0.6}
-          >
-            <Text style={styles.doneText}>Done</Text>
-          </TouchableOpacity>
-        );
-      }
-      // Disabled state — outside 6h window or date-only outside date window
-      const availableAt = getAvailableAtTime(item, timeFormat);
-      const availableDate = getAvailableAtDate(item);
-      return (
-        <View style={styles.doneBtn}>
-          <Text style={styles.doneTextDisabled}>Done</Text>
-          {availableAt && <Text style={styles.availableAtText}>at {availableAt}</Text>}
-          {!availableAt && availableDate && <Text style={styles.availableAtText}>on {availableDate}</Text>}
-        </View>
-      );
-    }
-
-    // One-time not completed: show Done button
-    return (
-      <TouchableOpacity
-        onPress={() => handleToggleComplete(item.id)}
-        style={styles.doneBtn}
-        activeOpacity={0.6}
-      >
-        <Text style={styles.doneText}>Done</Text>
-      </TouchableOpacity>
-    );
-  };
 
   const renderItem = ({ item }: { item: Reminder }) => {
     if (item.deletedAt) {
@@ -731,11 +677,11 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     return (
         <View style={[styles.card, item.completed && styles.cardCompleted]}>
           <TouchableOpacity
-            style={[styles.checkbox, item.completed && styles.checkboxDone]}
+            style={[styles.checkbox, (item.completed || (item.recurring && hasCompletedToday(item))) && styles.checkboxDone]}
             onPress={() => handleToggleComplete(item.id)}
             activeOpacity={0.7}
           >
-            {item.completed && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+            {(item.completed || (item.recurring && hasCompletedToday(item))) && <Text style={styles.checkmark}>{'\u2713'}</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -797,7 +743,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
                 </Text>
               </TouchableOpacity>
             </View>
-            {renderDoneButton(item)}
             <TouchableOpacity
               onPress={handleDeletePress}
               style={styles.deleteBtn}

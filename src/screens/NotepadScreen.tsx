@@ -669,17 +669,12 @@ export default function NotepadScreen({ navigation, route }: Props) {
       color: colors.textPrimary,
     },
     card: {
-      backgroundColor: colors.card + 'BF',
       borderRadius: 16,
       flexDirection: 'row',
       alignItems: 'stretch',
-      borderWidth: 1,
-      borderColor: colors.border,
+      borderWidth: 1.5,
       overflow: 'hidden',
       marginBottom: 10,
-    },
-    cardStripe: {
-      width: 4,
     },
     cardContent: {
       flex: 1,
@@ -728,22 +723,29 @@ export default function NotepadScreen({ navigation, route }: Props) {
     pinBtn: {
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 8,
-      backgroundColor: colors.card,
+      borderRadius: 20,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     pinBtnActive: {
-      backgroundColor: colors.activeBackground,
+      backgroundColor: 'rgba(30, 30, 40, 0.85)',
     },
     pinBtnText: {
       fontSize: 13,
     },
     deleteBtn: {
-      paddingHorizontal: 6,
-      paddingVertical: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     deleteText: {
       fontSize: 12,
-      color: colors.red,
+      fontWeight: '600',
+      color: '#EF4444',
     },
     deletedAgo: {
       fontSize: 12,
@@ -989,8 +991,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
   }), [colors, insets.bottom]);
 
   const renderDeletedItem = (item: Note) => (
-    <View style={[styles.card, { opacity: 0.7 }]}>
-      <View style={[styles.cardStripe, { backgroundColor: item.color }]} />
+    <View style={[styles.card, { opacity: 0.7, backgroundColor: item.color, borderColor: item.color + '80' }]}>
       <View style={styles.cardContent}>
         <View style={styles.cardMiddle}>
           <Text style={[styles.cardText, { color: colors.textTertiary }]} numberOfLines={2}>
@@ -1016,12 +1017,12 @@ export default function NotepadScreen({ navigation, route }: Props) {
 
   const renderActiveItem = (item: Note) => {
     const pinned = isNotePinned(item.id, pinnedIds);
-    const cardFontColor = item.fontColor || undefined;
+    const cardFontColor = item.fontColor || getTextColor(item.color);
     const linkColor = getTextColor(item.color) === '#FFFFFF' ? '#48DBFB' : '#0066CC';
     const textStyle = [styles.cardText, cardFontColor ? { color: cardFontColor } : undefined];
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, { backgroundColor: item.color, borderColor: item.color + '80' }]}
         onPress={() => { hapticLight(); openEditorWithNote(item); }}
         onLongPress={async () => {
           hapticMedium();
@@ -1034,7 +1035,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
         }}
         activeOpacity={0.7}
       >
-        <View style={[styles.cardStripe, { backgroundColor: item.color }]} />
         <View style={styles.cardContent}>
           <View style={styles.cardMiddle}>
             <View style={styles.cardTextRow}>
@@ -1044,7 +1044,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
               </Text>
             </View>
             <View style={styles.cardMeta}>
-              <Text style={styles.cardTime}>{getRelativeTime(item.updatedAt)}</Text>
+              <Text style={[styles.cardTime, { color: (cardFontColor || getTextColor(item.color)) + '99' }]}>{getRelativeTime(item.updatedAt)}</Text>
               {pinned && <Text style={styles.cardPin}>{'\u{1F4CC}'}</Text>}
             </View>
           </View>
