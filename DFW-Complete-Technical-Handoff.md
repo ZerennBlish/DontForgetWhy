@@ -1,6 +1,6 @@
 # Don't Forget Why — Complete Technical Handoff
-## Compiled: March 21, 2026
-## Covers: February 8 – March 21, 2026 (entire project history)
+## Compiled: March 22, 2026
+## Covers: February 8 – March 22, 2026 (entire project history)
 
 ---
 
@@ -103,6 +103,18 @@
 - **WSL:** Claude Code only
 - Do NOT run git in PowerShell while Claude Code works in WSL on same repo
 - Do NOT run dev server from WSL (gives internal IP phone can't reach)
+
+### Emulator Testing Matrix
+- 6 AVDs configured on both desktop and laptop machines
+- Devices: Pixel 7 (baseline), Galaxy S25 FE (custom profile, 1080x2340 19.5:9), Pixel 5 (smaller 6.0"), Moto G Power (custom profile, 720x1600 budget), Galaxy S23 Ultra (custom profile, 1440x3088 QHD+), Pixel Tablet (2560x1600)
+- All running API 35 (Android 15 VanillaIceCream) x86_64 system images
+- EAS build profile "development-emulator" added to eas.json with env `ORG_GRADLE_PROJECT_reactNativeArchitectures=x86_64`
+- Emulator dev build APK stored at `C:\DontForgetWhy\DFW-emulator.apk`
+- ARM dev build for physical devices, x86_64 build for emulators — separate APKs
+- All emulators connect to same dev server simultaneously for side-by-side testing
+- Android Studio Panda 2 (2025.3.2) on both machines
+- Windows Hypervisor Platform enabled on both machines for hardware acceleration
+- adb path: `$env:LOCALAPPDATA\Android\Sdk\platform-tools`
 
 ---
 
@@ -234,7 +246,8 @@ DontForgetWhy/
 | Mar 19 | 1.3.4 | 11 | Phase 1 housekeeping complete | Published |
 | Mar 19 | 1.3.5 | 12 | Alarm filter fix, fire screen re-trigger fix, day chip fix, dedupe fix | Shipping |
 | Mar 21 | 1.3.6 | 13 | TimePicker responsive rewrite. Day chip clears calendar date (useDaySelection fix). | Pulled from review — superseded by 1.3.7 |
-| Mar 21 | 1.3.7 | 14 | TimePicker responsive rewrite. Day chip clears date. Reminder one-time day chip scheduling (three-tier logic). | In production review |
+| Mar 21 | 1.3.7 | 14 | TimePicker responsive rewrite. Day chip clears date. Reminder one-time day chip scheduling (three-tier logic). | Submitted to production review |
+| Mar 22 | 1.3.8 | 15 | Emoji crash fix, trivia centering, timer layout, note card colors, capsule buttons, reminder UX, dead sound picker removed. Emulator testing matrix. | Built and ready to upload |
 
 ---
 
@@ -529,7 +542,9 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 | 30 | Mar 21 | TimePicker rewrite + useDaySelection fix | Codex: 1 HIGH (reminder day chip regression — CreateReminderScreen save logic ignores selectedDays), 1 MEDIUM (fontScale not in render deps — portrait-locked so safe), 2 LOW (stale props on remount, label missing textAlignVertical). Gemini: PASS. |
 | 30b | Mar 21 | CreateReminderScreen three-tier fix | Codex: MEDIUM (Save Anyway still allows past dates — pre-existing, not regression). Gemini: PASS. |
 
-**31 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+| 31 | Mar 22 | v1.3.8 full (emulator testing fixes) | Codex: soundId regression on edit (fixed), midnight stale state (accepted — reload on focus), emoji ZWJ limitation (accepted), dead code getAvailableAtTime/getAvailableAtDate (removed). Gemini: deleted note text unreadable (fixed), Clear button dark-on-dark (fixed), checkmark color (fixed), Restore/Forever buttons missing capsules (fixed), emoji ZWJ (accepted). |
+
+**32 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
 ---
 
@@ -599,6 +614,51 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - Both CreateAlarmScreen and CreateReminderScreen now have identical three-tier one-time scheduling: (1) selectedDate, (2) selectedDays single day calculation, (3) today/tomorrow fallback
 - Same UI = same behavior = same logic across both screens
 
+### v1.3.8 Bug Fixes (found via emulator testing matrix)
+
+**Bug: NotepadScreen emoji crash (CRITICAL)**
+- Found: Mar 22 via emulator testing
+- Cause: `Intl.Segmenter` does not exist in Hermes. The emoji icon picker's `onChangeText` handler crashed with "Cannot read property 'prototype' of undefined" on every phone when selecting an emoji.
+- Fix: Replaced `Intl.Segmenter` with spread syntax `[...t]`
+- Known limitation: compound ZWJ emoji (flags, families) may save only the last code point — accepted as edge case for note icon picker
+- Version: v1.3.8
+
+**Bug: TriviaScreen category grid off-center (all devices)**
+- Found: Mar 22 via emulator testing
+- Cause: `categoryGrid` style had no `justifyContent`, defaulting to flex-start
+- Fix: Added `justifyContent: 'center'`
+- Version: v1.3.8
+
+**Bug: TimerScreen intermittent preset layout**
+- Found: Mar 22 via emulator testing
+- Cause: `SCREEN_WIDTH` and `PRESET_CARD_WIDTH` calculated at module load time via static `Dimensions.get('window').width`. Same class of bug as the v1.3.7 TimePicker fix.
+- Fix: Replaced with `useWindowDimensions()` hook inside the component
+- Version: v1.3.8
+
+**Bug: CreateReminderScreen dead sound picker removed**
+- Found: Mar 22 during audit/testing
+- Cause: Sound mode picker (silent/vibrate/sound) did nothing — reminders always use default notification sound
+- Fix: Removed `soundMode` state, UI, styles, and unused imports. Save logic changed to `soundId: undefined` for new reminders, preserved existing `soundId` on edit (audit fix — prevents overwriting legacy silent/vibrate reminders)
+- Version: v1.3.8
+
+**Bug: Note card full background color**
+- Found: Mar 22 via emulator testing
+- Cause: Cards used theme card color with 4px stripe — didn't match NotepadWidget behavior (which already used note color as card background)
+- Fix: Cards now use the note's chosen color as full background. Removed `cardStripe`. Auto-picks white or dark font via `getTextColor()` when user hasn't set a font color. Timestamp color adjusts for readability.
+- Version: v1.3.8
+
+**Bug: Capsule buttons (all screens)**
+- Found: Mar 22 via emulator testing
+- Cause: Delete and Pin buttons disappeared on colored backgrounds or matching themes
+- Fix: All Delete and Pin buttons wrapped in dark gray capsule (`rgba(30,30,40,0.7)`) with subtle white border. Applied uniformly to NotepadScreen, AlarmCard, and ReminderScreen. Restore and Forever buttons on deleted notes also updated.
+- Version: v1.3.8
+
+**Bug: Reminder Done UX cleanup**
+- Found: Mar 22 via emulator testing
+- Cause: Redundant `renderDoneButton` and "Done" text button alongside circle checkbox
+- Fix: Removed redundant done button. Circle checkbox on left is now the only done toggle. Checkbox turns green (#22C55E) when completed. White checkmark on green. Completed one-time reminders stay visible but faded (opacity 0.45) on active list until 12am the next day. Recurring reminders show green checkbox when completed today.
+- Version: v1.3.8
+
 ### Process
 - PrimeTestLab: provides install numbers, not real QA. All real bugs found by Zerenn and his buddy.
 - Firebase over Azure for backend ($300 credits, simpler DX, Google ecosystem alignment).
@@ -652,6 +712,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - Can't queue new build while one running — must cancel first
 - `npm ci` lock file sync: WSL package install → run `npm install` from PowerShell → commit package-lock.json
 - Builds on Expo cloud — local specs don't affect build speed
+- `development-emulator` profile in eas.json: `developmentClient: true`, `distribution: "internal"`, `buildType: "apk"`, env `ORG_GRADLE_PROJECT_reactNativeArchitectures=x86_64`. Used for emulator-only dev builds (x86_64 arch, separate from ARM physical device builds).
 
 ---
 
@@ -752,6 +813,10 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - `DFW-Roadmap.html` — standalone interactive HTML tracker (localStorage, runs locally in Chrome)
 - Google Drive copy — backup for cross-session Opus access
 - Claude Code prompts include ROADMAP.md updates alongside code changes
+
+**Standalone HTML Tools (localStorage + JSON save/load for cross-machine sync):**
+- `DFW-Roadmap-v2.html` — interactive roadmap with phase tracking, feature ideas backlog, changelog, Pro vs Free breakdown. Tasks can be added to any phase. Save/Load JSON for transfer between machines.
+- `DFW-Testing-Checklist.html` — 10 sections, 75 test cases across 6 device profiles (450 total checkboxes). Filter by status or device. Export text report. Save/Load JSON.
 
 ---
 
@@ -909,17 +974,22 @@ Copy-Item "$root\src\widget\widgetTaskHandler.ts" "$dest\widgetTaskHandler.ts"
 
 ---
 
-## 20. TESTING STATUS (As of March 21, 2026)
+## 20. TESTING STATUS (As of March 22, 2026)
 
 | Item | Value |
 |------|-------|
-| Current version | v1.3.7 (versionCode 14) |
-| Production status | v1.3.5 live on Play Store, v1.3.7 in production review |
+| Current version | v1.3.8 (versionCode 15) |
+| Production status | v1.3.7 submitted to production review, v1.3.8 built and ready to upload |
 | Install count | 48+ |
 | Phase 1 housekeeping | ✅ COMPLETE |
-| Audit status | Audit 30 + 30b complete, all findings resolved |
+| Audit status | Audit 31 complete, all findings resolved |
 | Jest tests | 222 passing on testing-setup branch |
-| EAS build credits | ~43 remaining |
+| EAS build credits | ~37 remaining (reset April 12) |
+
+### P2 Polish (deferred to post-launch)
+- **Tablet responsive pass:** Onboarding layout (content crammed low, excess whitespace), Sudoku board too small, Trivia cards phone-sized on tablet
+- **AlarmFireScreen dismiss flash:** Navigation resets to AlarmList then calls `BackHandler.exitApp()` with 100ms delay — causes visible flash or app staying open. Investigate: exitApp without nav reset, moveTaskToBack native module, Notifee finish method
+- **TimerScreen timer preset layout was intermittent** — fixed in v1.3.8 but monitor for recurrence
 
 ### Git Branches
 | Branch | Purpose | Status |
