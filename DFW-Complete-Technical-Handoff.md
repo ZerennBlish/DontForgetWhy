@@ -1,6 +1,6 @@
 # Don't Forget Why — Complete Technical Handoff
-## Compiled: March 19, 2026
-## Covers: February 8 – March 19, 2026 (entire project history)
+## Compiled: March 21, 2026
+## Covers: February 8 – March 21, 2026 (entire project history)
 
 ---
 
@@ -233,6 +233,8 @@ DontForgetWhy/
 | Mar 19 | 1.3.3 | 10 | Recurring alarm fix + chirp fix | Published |
 | Mar 19 | 1.3.4 | 11 | Phase 1 housekeeping complete | Published |
 | Mar 19 | 1.3.5 | 12 | Alarm filter fix, fire screen re-trigger fix, day chip fix, dedupe fix | Shipping |
+| Mar 21 | 1.3.6 | 13 | TimePicker responsive rewrite. Day chip clears calendar date (useDaySelection fix). | Pulled from review — superseded by 1.3.7 |
+| Mar 21 | 1.3.7 | 14 | TimePicker responsive rewrite. Day chip clears date. Reminder one-time day chip scheduling (three-tier logic). | In production review |
 
 ---
 
@@ -475,6 +477,24 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 **Game (~6 bugs):** Guess Why icon substring matching (fixed 3 times), short notes unwinnable, memory rank float gaps, Sudoku shows wrong answers in red, trivia crash (Kids+Hard=0 questions), Sudoku stats display wrong
 
+**Bug: TimePicker columns clip on narrow screens (S25 FE)**
+- Found: Mar 21 by Zerenn's son on Samsung Galaxy S25 FE (1080x2340, 19.5:9)
+- Cause: Hardcoded colWidth (80/90px) and itemHeight (56px) didn't scale for lower pixel density screens
+- Fix: Full TimePicker.tsx rewrite — responsive colWidth from useWindowDimensions, font scaling via fontScale = colWidth/90, itemHeight increased to 96px for all devices
+- Version: v1.3.7
+
+**Bug: Day chip doesn't clear calendar date in one-time mode**
+- Found: Mar 21 by Zerenn during testing
+- Cause: useDaySelection.ts handleToggleDay only called clearDate in recurring mode, not one-time mode
+- Fix: Added clearDate?.() call in one-time branch of handleToggleDay
+- Version: v1.3.7
+
+**Bug: Reminder one-time day chip silently misschedules**
+- Found: Mar 21 by Audit 30 (Codex)
+- Cause: CreateReminderScreen save logic only read selectedDate, ignored selectedDays. When clearDate fired from day chip tap, selectedDate became null and reminder fell back to today/tomorrow instead of the selected day
+- Fix: Added same three-tier scheduling logic from CreateAlarmScreen to CreateReminderScreen: (1) selectedDate, (2) selectedDays one-day-of-week calculation, (3) today/tomorrow fallback
+- Version: v1.3.7
+
 ---
 
 ## 12. COMPLETE AUDIT HISTORY
@@ -506,7 +526,10 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 | 28 | Mar 19 | Phase 1 housekeeping | **0 findings.** All clean. |
 | 29 | Mar 19 | Bug fixes v1.3.5 | Duplicate notification IDs in dedupe (valid warning, fixed) |
 
-**29 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+| 30 | Mar 21 | TimePicker rewrite + useDaySelection fix | Codex: 1 HIGH (reminder day chip regression — CreateReminderScreen save logic ignores selectedDays), 1 MEDIUM (fontScale not in render deps — portrait-locked so safe), 2 LOW (stale props on remount, label missing textAlignVertical). Gemini: PASS. |
+| 30b | Mar 21 | CreateReminderScreen three-tier fix | Codex: MEDIUM (Save Anyway still allows past dates — pre-existing, not regression). Gemini: PASS. |
+
+**31 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
 ---
 
@@ -561,6 +584,20 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - **expo-av for sound preview:** Failed silently in release builds. Replaced with Notifee.
 - **Category system:** Redundant after icon picker added.
 - **Compact widgets (TimerWidget, NotepadWidgetCompact):** Structurally identical to detailed after redesign. Both remaining widgets resizable.
+
+### Responsive Layout
+
+**TimePicker Responsive Design (v1.3.7)**
+- Column width: responsive via useWindowDimensions, capped at 80px (3-col) / 90px (2-col)
+- Font scaling: proportional via fontScale = colWidth / 90, applied to all getItemStyle sizes
+- Row height: 96px universal (increased from original 56px to prevent scroll drift on lower density screens)
+- Lesson learned: proportional scaling (continuous formula) beats breakpoints (conditional branching) for cross-device compatibility
+- Samsung FE line has known React Native layout issues due to lower pixel density at similar dp width as flagships
+
+### Day Chip / Calendar Date Mutual Exclusivity
+- Tapping a day chip in one-time mode clears selectedDate (via clearDate callback)
+- Both CreateAlarmScreen and CreateReminderScreen now have identical three-tier one-time scheduling: (1) selectedDate, (2) selectedDays single day calculation, (3) today/tomorrow fallback
+- Same UI = same behavior = same logic across both screens
 
 ### Process
 - PrimeTestLab: provides install numbers, not real QA. All real bugs found by Zerenn and his buddy.
@@ -872,19 +909,17 @@ Copy-Item "$root\src\widget\widgetTaskHandler.ts" "$dest\widgetTaskHandler.ts"
 
 ---
 
-## 20. TESTING STATUS (As of March 19, 2026)
+## 20. TESTING STATUS (As of March 21, 2026)
 
 | Item | Value |
 |------|-------|
-| Latest version shipping | v1.3.5 (versionCode 12) |
-| Install count | 48 (12 minimum — 4x exceeded) |
-| 14-day window | Started ~March 6, ends ~March 20 |
-| Updates during window | 6 (v1.3.0 through v1.3.5) |
+| Current version | v1.3.7 (versionCode 14) |
+| Production status | v1.3.5 live on Play Store, v1.3.7 in production review |
+| Install count | 48+ |
 | Phase 1 housekeeping | ✅ COMPLETE |
+| Audit status | Audit 30 + 30b complete, all findings resolved |
 | Jest tests | 222 passing on testing-setup branch |
 | EAS build credits | ~43 remaining |
-| Next step | Apply for production access when window ends |
-| Estimated production unlock | ~March 27 |
 
 ### Git Branches
 | Branch | Purpose | Status |
