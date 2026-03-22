@@ -10,6 +10,16 @@
         "buildType": "apk"
       }
     },
+    "development-emulator": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "x86_64"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "android": {

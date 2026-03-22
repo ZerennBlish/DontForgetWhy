@@ -1288,8 +1288,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
                   autoCorrect={false}
                   onChangeText={(t) => {
                     if (t) {
-                      const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
-                      const graphemes = Array.from(segmenter.segment(t), s => s.segment);
+                      const graphemes = [...t];
                       setEditorIcon(graphemes[graphemes.length - 1] || '');
                     }
                     setShowEmojiPicker(false);
