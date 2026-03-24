@@ -715,6 +715,17 @@ function AppNavigator() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active' && isNavigationReady.current && navigationRef.current) {
+        // Safety net: if app resumes on a stale AlarmFire screen (e.g., after
+        // exitApp didn't kill the process), reset to AlarmList.
+        const currentRoute = navigationRef.current.getCurrentRoute?.();
+        if (currentRoute?.name === 'AlarmFire') {
+          const hasPending = getPendingAlarm();
+          if (!hasPending) {
+            navigationRef.current.reset({ index: 0, routes: [{ name: 'AlarmList' }] });
+            return; // skip other foreground checks — we just reset
+          }
+        }
+
         consumePendingAlarm();
         // Check for pending note action from widget
         getPendingNoteAction().then((noteAction) => {

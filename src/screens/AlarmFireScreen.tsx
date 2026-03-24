@@ -236,9 +236,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   }, [alarm, isTimer, timerNotificationId, timerId, notificationId]);
 
   const exitToLockScreen = useCallback(() => {
-    navigation.reset({ index: 0, routes: [{ name: 'AlarmList' }] });
-    setTimeout(() => BackHandler.exitApp(), 100);
-  }, [navigation]);
+    BackHandler.exitApp();
+  }, []);
 
   const handleDismiss = useCallback(async () => {
     console.log('[AlarmFire] handleDismiss — isTimer:', isTimer, 'alarmId:', alarm?.id);

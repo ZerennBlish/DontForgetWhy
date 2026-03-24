@@ -997,7 +997,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const renderDeletedItem = (item: Note) => {
     const deletedTextColor = getTextColor(item.color);
     return (
-    <View style={[styles.card, { opacity: 0.7, backgroundColor: item.color, borderColor: item.color + '80' }]}>
+    <View style={[styles.card, { opacity: 0.7, backgroundColor: item.color, borderColor: getTextColor(item.color) === '#FFFFFF' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)' }]}>
       <View style={styles.cardContent}>
         <View style={styles.cardMiddle}>
           <Text style={[styles.cardText, { color: deletedTextColor + 'AA' }]} numberOfLines={2}>
@@ -1029,7 +1029,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     const textStyle = [styles.cardText, cardFontColor ? { color: cardFontColor } : undefined];
     return (
       <TouchableOpacity
-        style={[styles.card, { backgroundColor: item.color, borderColor: item.color + '80' }]}
+        style={[styles.card, { backgroundColor: item.color, borderColor: getTextColor(item.color) === '#FFFFFF' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)' }]}
         onPress={() => { hapticLight(); openEditorWithNote(item); }}
         onLongPress={async () => {
           hapticMedium();

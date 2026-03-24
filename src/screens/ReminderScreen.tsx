@@ -420,6 +420,12 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       color: colors.textTertiary,
       fontStyle: 'italic',
     },
+    reminderSecondaryText: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
     dueRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -604,15 +610,25 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   const renderItem = ({ item }: { item: Reminder }) => {
     if (item.deletedAt) {
-      const deletedDisplayText = item.private
+      const deletedPrimary = item.private
         ? (item.nickname || '\u{1F512} Private')
-        : item.text ? `${item.icon} ${item.text}` : item.icon;
+        : item.nickname
+          ? `${item.icon} ${item.nickname}`
+          : item.text ? `${item.icon} ${item.text}` : item.icon;
+      const deletedSecondary = !item.private && item.nickname && item.text
+        ? item.text
+        : null;
       return (
         <View style={[styles.card, { opacity: 0.7 }]}>
           <View style={styles.middle}>
             <Text style={[styles.reminderText, { color: colors.textTertiary }]} numberOfLines={2}>
-              {deletedDisplayText}
+              {deletedPrimary}
             </Text>
+            {deletedSecondary && (
+              <Text style={[styles.reminderSecondaryText, { color: colors.textTertiary }]} numberOfLines={2}>
+                {deletedSecondary}
+              </Text>
+            )}
             <Text style={styles.deletedAgo}>
               {formatDeletedAgo(item.deletedAt)}
             </Text>
@@ -632,9 +648,15 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     }
 
     const pinned = isReminderPinned(item.id, pinnedIds);
-    const displayText = item.private
+    const displayPrimary = item.private
       ? (item.nickname || '\u{1F512} Private')
-      : item.text ? `${item.icon} ${item.text}` : item.icon;
+      : item.nickname
+        ? `${item.icon} ${item.nickname}`
+        : item.text ? `${item.icon} ${item.text}` : item.icon;
+
+    const displaySecondary = !item.private && item.nickname && item.text
+      ? item.text
+      : null;
 
     // In Completed filter, recurring reminders show differently
     const isRecurringInCompleted = reminderFilter === 'completed' && item.recurring && !item.completed;
@@ -676,8 +698,13 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
               ]}
               numberOfLines={2}
             >
-              {displayText}
+              {displayPrimary}
             </Text>
+            {displaySecondary && !item.completed && (
+              <Text style={styles.reminderSecondaryText} numberOfLines={2}>
+                {displaySecondary}
+              </Text>
+            )}
             {!item.completed && (item.dueDate || item.dueTime) && (
               <View style={styles.dueRow}>
                 <Text style={[
