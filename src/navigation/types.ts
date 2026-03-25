@@ -3,8 +3,8 @@ import { Alarm } from '../types/alarm';
 export type RootStackParamList = {
   Onboarding: { startSlide?: number } | undefined;
   AlarmList: { initialTab?: number } | undefined;
-  CreateAlarm: { alarm?: Alarm } | undefined;
-  CreateReminder: { reminderId?: string } | undefined;
+  CreateAlarm: { alarm?: Alarm; initialDate?: string } | undefined;
+  CreateReminder: { reminderId?: string; initialDate?: string } | undefined;
   AlarmFire: {
     alarm?: Alarm;
     fromNotification?: boolean;
@@ -28,4 +28,5 @@ export type RootStackParamList = {
   About: undefined;
   Trivia: undefined;
   Notepad: { noteId?: string; newNote?: boolean } | undefined;
+  Calendar: undefined;
 };

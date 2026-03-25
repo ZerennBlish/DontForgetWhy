@@ -795,6 +795,14 @@ export default function AlarmListScreen({ navigation, route }: Props) {
             )}
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={() => { hapticLight(); navigation.navigate('Calendar'); }}
+            activeOpacity={0.7}
+            style={styles.navCard}
+          >
+            <Text style={styles.navCardIcon}>{'\u{1F4C5}'}</Text>
+            <Text style={styles.navCardText}>Calendar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => { hapticLight(); navigation.navigate('Games'); }}
             activeOpacity={0.7}
             style={styles.navCard}

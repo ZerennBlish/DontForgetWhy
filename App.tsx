@@ -21,6 +21,7 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
 import NotepadScreen from './src/screens/NotepadScreen';
+import CalendarScreen from './src/screens/CalendarScreen';
 import { loadAlarms, disableAlarm, deleteAlarm, purgeDeletedAlarms, updateSingleAlarm } from './src/services/storage';
 import { getReminders, updateReminder, purgeDeletedReminders } from './src/services/reminderStorage';
 import { purgeDeletedNotes, getPendingNoteAction } from './src/services/noteStorage';
@@ -954,6 +955,11 @@ function AppNavigator() {
           <Stack.Screen
             name="Notepad"
             component={NotepadScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="Calendar"
+            component={CalendarScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen
