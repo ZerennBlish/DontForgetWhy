@@ -1,6 +1,6 @@
 # Don't Forget Why — Complete Technical Handoff
-## Compiled: March 22, 2026
-## Covers: February 8 – March 22, 2026 (entire project history)
+## Compiled: March 24, 2026
+## Covers: February 8 – March 24, 2026 (entire project history)
 
 ---
 
@@ -90,7 +90,9 @@
 - All three branches available. Claude Code operational.
 
 ### Phone
-- Samsung Galaxy S23 Ultra, dev build + closed testing build installed
+- Samsung Galaxy S23 Ultra, production Play Store build only
+- Dev builds cannot install over production (signature mismatch) — test on emulators
+- Phone gets updates through Play Store
 
 ### Accounts
 - **GitHub:** ZerennBlish
@@ -114,7 +116,7 @@
 - All emulators connect to same dev server simultaneously for side-by-side testing
 - Android Studio Panda 2 (2025.3.2) on both machines
 - Windows Hypervisor Platform enabled on both machines for hardware acceleration
-- adb path: `$env:LOCALAPPDATA\Android\Sdk\platform-tools`
+- adb path: `$env:LOCALAPPDATA\Android\Sdk\platform-tools` (may need full path in PowerShell: `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"`)
 
 ---
 
@@ -248,6 +250,7 @@ DontForgetWhy/
 | Mar 21 | 1.3.6 | 13 | TimePicker responsive rewrite. Day chip clears calendar date (useDaySelection fix). | Pulled from review — superseded by 1.3.7 |
 | Mar 21 | 1.3.7 | 14 | TimePicker responsive rewrite. Day chip clears date. Reminder one-time day chip scheduling (three-tier logic). | Submitted to production review |
 | Mar 22 | 1.3.8 | 15 | Emoji crash fix, trivia centering, timer layout, note card colors, capsule buttons, reminder UX, dead sound picker removed. Emulator testing matrix. | Built and ready to upload |
+| Mar 24 | 1.3.9 | 16 | Notification action buttons (Dismiss/Snooze on alarm, Dismiss on timer), dismiss flash fix, note card borders, reminder two-line layout, safety net fix. Store screenshots updated (8 professional graphics). App live in production on Google Play. | Production |
 
 ---
 
@@ -255,8 +258,10 @@ DontForgetWhy/
 
 ### Core Utility
 - **Alarms** — reason field ("why"), 7 sound presets + custom system sounds, snooze (1/3/5/10/15 min), recurring (daily/weekly/monthly/yearly) + one-time, emoji icon from keyboard, per-alarm Guess Why toggle, private mode (completely blank card)
+  - Notification action buttons: "Snooze" and "Dismiss" buttons on alarm notification banners for in-app dismissal without opening fire screen
 - **Reminders** — due dates, 5 recurring patterns (daily/weekly/monthly/yearly/one-time), 6-hour completion window, date-only mode, completion history, sound mode (sound/vibrate/silent), emoji icon
 - **Timers** — 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule
+  - Notification action buttons: "Dismiss" button on timer completion notification
 - **Notepad** — 500-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji picker, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4)
 - **DND bypass** — Notifee full-screen intent + Samsung onboarding
 - **Full-screen alarm fire** — lightbulb background, snooze shame (4 tiers × 7 messages), shows 🔇 when silenced
@@ -274,6 +279,15 @@ DontForgetWhy/
 - Sound chirp via expo-av on Sound transition (with `Audio.setAudioModeAsync` for reliability)
 - Global Silence All in Settings with duration picker
 - Two-layer enforcement: schedule-time channel swap + fire-time MediaPlayer skip
+
+### Notification Action Buttons (v1.3.9)
+- Alarm notifications display "Snooze" and "Dismiss" inline action buttons
+- Timer-done notifications display "Dismiss" only (no snooze for timers)
+- NOT added to: timer countdown, reminder, or preview notifications
+- Handlers in both index.ts (background) and App.tsx (foreground) process ACTION_PRESS events
+- Dismiss: stops sound, cancels notification + countdown, soft-deletes one-time alarms, cleans up timer state, marks notification as handled
+- Snooze: stops sound, sets snoozing flag (enforced — aborts on failure), cancels notification, schedules snooze, persists snooze notification ID via updateSingleAlarm, marks as handled
+- Solves "pulled out of app" problem — users handle alarms/timers from notification banner without leaving current app
 
 ### Time Input System
 - Global preference: Scroll (rolodex) vs Type (text inputs) in Settings
@@ -389,6 +403,28 @@ Notifee v9.1.8 strips `audioAttributes` from JS `createChannel()`. Native config
 - `cancelDisplayedNotification(id)` — kills display only, trigger survives (used for recurring alarms)
 - `snoozing_{alarmId}` AsyncStorage flag — prevents DISMISSED handler from deleting one-time alarms during snooze
 - Persistent notification dedupe via AsyncStorage for cold-start `getInitialNotification()` path (module-level Map doesn't survive process death)
+
+### Notification Action Buttons
+- Added in v1.3.9 to alarm and timer-done notification payloads
+- Alarm actions: `[{ title: 'Snooze', pressAction: { id: 'snooze' } }, { title: 'Dismiss', pressAction: { id: 'dismiss' } }]`
+- Timer actions: `[{ title: 'Dismiss', pressAction: { id: 'dismiss' } }]`
+- Handled via `EventType.ACTION_PRESS` in both `index.ts` (background) and `App.tsx` (foreground)
+- Snooze flag enforcement: uses try/catch with early return (not .catch(() => {})) — matches AlarmFireScreen pattern to protect one-time alarms
+- Snooze notification ID persisted back to alarm.notificationIds via updateSingleAlarm — matches AlarmFireScreen pattern
+- Timer dismiss also cancels countdown chronometer notification via cancelTimerCountdownNotification(timerId)
+
+### Android Full-Screen Intent Behavior
+- fullScreenAction only launches full-screen activity when screen is OFF or on lock screen
+- When screen is ON (home screen or inside another app), Android downgrades to heads-up notification banner
+- This is Android design (starting Android 10), not a bug
+- Notification action buttons solve the UX problem — users dismiss/snooze from the banner
+
+### Safety Net — Stale AlarmFire Screen
+- Added in v1.3.9 to App.tsx AppState 'active' handler
+- When app resumes on AlarmFire with no pending alarm data AND no displayed alarm/timer notifications, resets to AlarmList
+- Uses notifee.getDisplayedNotifications() with channel ID prefix matching (startsWith('alarm') || startsWith('timer') excluding 'timer-progress')
+- Prevents stale fire screen after exitApp didn't kill the process
+- Initial version was too aggressive (only checked getPendingAlarm) — fixed after Audit 32 found it would kill live alarm screens
 
 ### Notification Channel IDs (Current)
 | Channel | ID |
@@ -508,6 +544,50 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - Fix: Added same three-tier scheduling logic from CreateAlarmScreen to CreateReminderScreen: (1) selectedDate, (2) selectedDays one-day-of-week calculation, (3) today/tomorrow fallback
 - Version: v1.3.7
 
+### v1.3.9 Bug Fixes (found via emulator testing and P2 polish)
+
+**Bug: AlarmFireScreen dismiss flash**
+- Found: Mar 22 (deferred), fixed Mar 24
+- Cause: `exitToLockScreen()` did `navigation.reset({ index: 0, routes: [{ name: 'AlarmList' }] })` then `setTimeout(() => BackHandler.exitApp(), 100)` — AlarmList rendered and flashed on screen for ~100ms before exit. Disrupted users in other apps (e.g., disconnected from online games).
+- Fix: `exitToLockScreen()` now calls `BackHandler.exitApp()` immediately with no navigation reset and no setTimeout. Safety net in App.tsx handles stale fire screen on next app open.
+- Version: v1.3.9
+
+**Bug: Note card borders invisible on dark themes**
+- Found: Mar 24 during store screenshot creation
+- Cause: Note cards used `borderColor: item.color + '80'` (semi-transparent version of note's own color). Black/dark notes on dark themes had invisible borders, cards blended into background.
+- Fix: Contrast-based border using `getTextColor()` — dark notes get light border (`rgba(255, 255, 255, 0.25)`), light notes get dark border (`rgba(0, 0, 0, 0.2)`). Applied to both active and deleted card renders.
+- Version: v1.3.9
+
+**Bug: Reminder cards don't show nickname**
+- Found: Mar 24 during store screenshot creation
+- Cause: Reminder cards only showed `${item.icon} ${item.text}` on one line. Nickname field was ignored in card display.
+- Fix: Two-line layout — if nickname exists, shows `icon nickname` as primary line and `text` as secondary line underneath (13px, textTertiary color). Falls back to single line when no nickname. Applied to both active and deleted renders. New style: `reminderSecondaryText`.
+- Version: v1.3.9
+
+**Bug: Safety net kills live alarm screens (Audit 32 finding)**
+- Found: Mar 24 by Codex Audit 32
+- Cause: Initial safety net only checked `getPendingAlarm()` which is a transient buffer consumed after first navigation. Any AppState 'active' trigger (notification shade, app switch) during a live alarm would see no pending data and reset to AlarmList, killing the alarm.
+- Fix: Now also checks `notifee.getDisplayedNotifications()` for active alarm/timer notifications before resetting. Only resets if BOTH no pending data AND no displayed notifications.
+- Version: v1.3.9
+
+**Bug: Timer notification action dismiss doesn't cancel countdown (Audit 32 finding)**
+- Found: Mar 24 by Codex Audit 32
+- Cause: ACTION_PRESS dismiss handler only cancelled the timer-done notification, leaving the countdown chronometer notification in the shade.
+- Fix: Added `cancelTimerCountdownNotification(timerId)` call in both background and foreground ACTION_PRESS handlers.
+- Version: v1.3.9
+
+**Bug: Notification snooze doesn't enforce flag write (Audit 32 finding)**
+- Found: Mar 24 by Codex Audit 32
+- Cause: Snooze action handlers used `.catch(() => {})` for the snoozing flag AsyncStorage write and continued regardless. If write failed, DISMISSED handler would soft-delete one-time alarms during snooze.
+- Fix: Changed to try/catch with early return on failure, matching AlarmFireScreen pattern.
+- Version: v1.3.9
+
+**Bug: Notification snooze doesn't persist snooze notification ID (Audit 32 finding)**
+- Found: Mar 24 by Codex Audit 32
+- Cause: ACTION_PRESS snooze handlers didn't save the returned snooze notification ID back to alarm.notificationIds. Later delete/disable flows wouldn't cancel the snoozed notification.
+- Fix: Added `updateSingleAlarm()` call to persist snooze notification ID, matching AlarmFireScreen pattern.
+- Version: v1.3.9
+
 ---
 
 ## 12. COMPLETE AUDIT HISTORY
@@ -544,7 +624,10 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 | 31 | Mar 22 | v1.3.8 full (emulator testing fixes) | Codex: soundId regression on edit (fixed), midnight stale state (accepted — reload on focus), emoji ZWJ limitation (accepted), dead code getAvailableAtTime/getAvailableAtDate (removed). Gemini: deleted note text unreadable (fixed), Clear button dark-on-dark (fixed), checkmark color (fixed), Restore/Forever buttons missing capsules (fixed), emoji ZWJ (accepted). |
 
-**32 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+| 32 | Mar 24 | P2 polish (3 fixes) | Codex: 2 HIGH (safety net too aggressive — kills live alarms, early return blocks displayed-notification fallback), 1 LOW (completed reminders hide secondary text — design choice). Gemini: All PASS. |
+| 32b | Mar 24 | Notification actions + safety net fix | Codex: 3 HIGH (timer countdown not cancelled on dismiss, snooze flag not enforced, snooze notif ID not persisted), 1 MEDIUM (safety net async race — accepted), 2 LOW (redundant cleanup, unused imports). Gemini: All PASS with 1 LOW redundant stopAlarmSound. All HIGH findings fixed. |
+
+**34 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
 ---
 
@@ -579,6 +662,8 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - Emojis from keyboard, not hardcoded grid (infinite set vs curated list).
 - "Coming soon" text removed from disabled online toggle (made entire game look unfinished).
 - Icon orders matter — reordered by frequency/importance. "The devil is in the details."
+- Notification action buttons: "Dismiss" and "Snooze" directly on alarm notification banners. Timer notifications get "Dismiss" only (snooze on a timer is nonsensical). Solves the "COD problem" — users in online games can handle alerts without being pulled out of their app.
+- Android renders notification action buttons left-aligned with OS-controlled spacing. Not customizable — text labels are what we control.
 
 ### Themes
 - 6 distinct themes beats 8 similar ones. Each in different hue family.
@@ -663,6 +748,8 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - PrimeTestLab: provides install numbers, not real QA. All real bugs found by Zerenn and his buddy.
 - Firebase over Azure for backend ($300 credits, simpler DX, Google ecosystem alignment).
 - Pro tier ($1.99 one-time): "pay to add premium stuff" not "pay to remove annoyances." Free tier keeps everything permanently.
+- Store screenshots: professional graphics created with ChatGPT image generation, composited with real app screenshots in Canva to avoid AI text reproduction errors. 8 images with personality-driven taglines matching app's sarcastic brand.
+- Google Play App Information Request: standard vetting for new developer accounts. Requires SDK description, permission justifications, and video demo. Not a rejection — approval follows within days.
 
 ---
 
@@ -676,6 +763,8 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - `getInitialNotification()` persists across process restarts — need persistent dedupe
 - Android widgets: no position:absolute, no double-tap/long-press/swipe, no dialogs, headless JS only
 - 180dp ≈ 3 cells on S23 Ultra
+- Android full-screen intent only fires when screen is OFF or on lock screen. Screen ON = heads-up banner only (Android 10+). Not a bug.
+- Dev builds and production builds have different signing keys (signature mismatch). Cannot install dev build over Play Store production build without uninstalling. Test on emulators for dev, phone gets updates through Play Store.
 - expo-av can't play `content://` URIs — needs bundled `require()` assets
 - expo-clipboard is pure JS (no build needed)
 - Native module changes require uninstall/reinstall (OTA doesn't replace native binaries)
@@ -706,6 +795,9 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - ADB: `C:\platform-tools\platform-tools\adb.exe`. `adb logcat | findstr "Term"` for native debugging.
 - Metro cache causes stale JS bundle → `npx expo start --dev-client --clear`
 - react-native-worklets MUST stay at 0.5.1
+- adb may not be in PATH. Full path: `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices`. Set permanent: `[Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:LOCALAPPDATA\Android\Sdk\platform-tools", "User")`
+- Download dev builds from expo.dev on phone browser to skip adb install
+- JS-only changes don't require new builds — dev server hot-reloads. Only native dependency changes need new APK.
 
 ### EAS Build
 - Starter plan: $19/month, ~$1/build. Credits reset on 12th.
@@ -779,11 +871,17 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - [x] 1.4 Timer storage race condition (async mutex)
 
 **Phase 2 — Note Enhancements + Custom Backgrounds** (Build: expo-image-picker + @shopify/react-native-skia)
+- [x] 2.0a Note card borders — contrast-based, visible on all themes (v1.3.9)
+- [x] 2.0b Reminder two-line layout — nickname primary, reason-why secondary (v1.3.9)
+- [x] 2.0c AlarmFireScreen dismiss flash fix (v1.3.9)
+- [x] 2.0d Notification action buttons — Dismiss/Snooze on alarms, Dismiss on timers (v1.3.9)
+- [x] 2.0e Safety net for stale AlarmFire screen (v1.3.9)
 - 2.1 Note image attachments
 - 2.2 Notepad drawing/sketch mode (Skia, S Pen pressure + finger)
 - 2.3 Custom photo background underlay on main screens
 - 2.4 Full-bleed per-alarm photo on Alarm Fire screen with photo-aware roasts
 - 2.5 App text color picker in Settings (global readability solution)
+- 2.6 Tablet responsive pass (Onboarding, Sudoku, Trivia)
 
 **Phase 3 — Voice Roasts** (ElevenLabs pre-recorded, bundled via expo-av)
 - 3.1 Alarm fire voice lines
@@ -808,6 +906,15 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - 8.4 iOS port
 - 8.5 Reminder-fire flow with Guess Why support
 
+**Deferred — Expo SDK 55 Upgrade (after P3)**
+- expo-av removed in SDK 55 → migrate to expo-audio (aligns with P3 voice work)
+- New Architecture mandatory → verify react-native-worklets 0.5.1 compatibility
+- Verify Notifee New Architecture support
+- expo-clipboard content property removed → use getStringAsync()
+- Edge-to-edge resolved automatically (fixes current Play Store warning)
+- React Native 0.83 + React 19.2 included
+- Expo recommends: enable New Arch on SDK 54 first to isolate bugs before upgrading
+
 **Roadmap Tracking**
 - `ROADMAP.md` in repo root — living roadmap, source of truth
 - `DFW-Roadmap.html` — standalone interactive HTML tracker (localStorage, runs locally in Chrome)
@@ -830,7 +937,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 | Full description | Feature overview + "Built by Bald Guy & Company Games" |
 | App icon | Clock icon, 512×512 |
 | Feature graphic | 1024×500, clock + lightbulb + neon elements, Midnight palette |
-| Screenshots | 8 images, Midnight theme, device mockups, benefit-driven captions |
+| Screenshots | 8 professional graphics with phone mockups and personality taglines. Created Mar 24 via ChatGPT image gen + Canva compositing. Themes: dark (Midnight) for most, light (Frost) for Reminders, green (Trivia), brown (Memory Match). |
 | Privacy policy | https://zerennblish.github.io/DontForgetWhy/privacy-policy.html |
 | Countries | All |
 | Content rating | 13+ |
@@ -974,28 +1081,32 @@ Copy-Item "$root\src\widget\widgetTaskHandler.ts" "$dest\widgetTaskHandler.ts"
 
 ---
 
-## 20. TESTING STATUS (As of March 22, 2026)
+## 20. TESTING STATUS (As of March 24, 2026)
 
 | Item | Value |
 |------|-------|
-| Current version | v1.3.8 (versionCode 15) |
-| Production status | v1.3.7 submitted to production review, v1.3.8 built and ready to upload |
+| Current version | v1.3.9 (versionCode 16) |
+| Production status | v1.3.8 live, v1.3.9 uploaded and in review |
 | Install count | 48+ |
 | Phase 1 housekeeping | ✅ COMPLETE |
-| Audit status | Audit 31 complete, all findings resolved |
+| Phase 2 polish | 5/11 items complete (v1.3.9) |
+| Audit status | Audit 32 complete, all findings resolved |
 | Jest tests | 222 passing on testing-setup branch |
-| EAS build credits | ~37 remaining (reset April 12) |
+| EAS build credits | ~34 remaining (reset April 12) |
 
-### P2 Polish (deferred to post-launch)
-- **Tablet responsive pass:** Onboarding layout (content crammed low, excess whitespace), Sudoku board too small, Trivia cards phone-sized on tablet
-- **AlarmFireScreen dismiss flash:** Navigation resets to AlarmList then calls `BackHandler.exitApp()` with 100ms delay — causes visible flash or app staying open. Investigate: exitApp without nav reset, moveTaskToBack native module, Notifee finish method
-- **TimerScreen timer preset layout was intermittent** — fixed in v1.3.8 but monitor for recurrence
+### P2 Polish Status
+- ✅ Note card borders (v1.3.9)
+- ✅ Reminder two-line layout (v1.3.9)
+- ✅ AlarmFireScreen dismiss flash (v1.3.9)
+- ✅ Notification action buttons (v1.3.9)
+- ✅ Safety net for stale AlarmFire (v1.3.9)
+- **Remaining:** Tablet responsive pass (Onboarding, Sudoku, Trivia), photos, drawing, backgrounds, text color picker
 
 ### Git Branches
 | Branch | Purpose | Status |
 |--------|---------|--------|
-| `main` | Production. All current work. | Active, clean |
-| `dev` | Post-launch features only. | Untouched — do not touch until production approved |
+| `main` | Production. v1.3.9. | Active, clean |
+| `dev` | P2 feature work. Merged from main after v1.3.9. | Active — all new work goes here |
 | `testing-setup` | Jest suite (222 tests). | Reconciled with main (Phase 1.2) |
 
 ---
