@@ -5,21 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Modal,
-  TextInput,
-  ScrollView,
   ToastAndroid,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   Image,
-  Alert,
   Linking,
   AppState,
-  Share,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import * as Print from 'expo-print';
 import { v4 as uuidv4 } from 'uuid';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -47,24 +38,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { refreshWidgets } from '../widget/updateWidget';
 import UndoToast from '../components/UndoToast';
 import BackButton from '../components/BackButton';
-import { NOTE_COLORS, NOTE_FONT_COLORS, CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
+import NoteEditorModal from '../components/NoteEditorModal';
+import { CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
 import type { Note } from '../types/note';
-import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
-import type { ColorFormatsObject } from 'reanimated-color-picker';
 import type { RootStackParamList } from '../navigation/types';
 
-const MAX_NOTE_LENGTH = 500;
 const MAX_NOTE_PINS = 4;
 let welcomeNoteCreating = false;
-
-const EDITOR_PLACEHOLDERS = [
-  'Type something before you forget... again.',
-  'Your brain called. It wants backup.',
-  'Future you will thank present you. Maybe.',
-  'Quick, write it down before it\'s gone forever.',
-  'If you\'re reading this, you already forgot something.',
-  'Your memory has left the chat.',
-];
 
 const SAVE_TOASTS = [
   'Got it. Try not to forget this one too.',
@@ -184,20 +164,8 @@ export default function NotepadScreen({ navigation, route }: Props) {
   // Editor modal state
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
-  const [editorText, setEditorText] = useState('');
-  const [editorColor, setEditorColor] = useState(NOTE_COLORS[0]);
-  const [editorIcon, setEditorIcon] = useState('');
-  const [editorFontColor, setEditorFontColor] = useState<string | null>(null);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isViewMode, setIsViewMode] = useState(false);
-  const [editorPlaceholder, setEditorPlaceholder] = useState(EDITOR_PLACEHOLDERS[0]);
-  const [showBgPicker, setShowBgPicker] = useState(false);
-  const [showFontPicker, setShowFontPicker] = useState(false);
   const [customBgColor, setCustomBgColor] = useState<string | null>(null);
   const [customFontColor, setCustomFontColor] = useState<string | null>(null);
-  const pickedBgRef = useRef('#4A90D9');
-  const pickedFontRef = useRef('#FF6B6B');
 
   // Undo toast state
   const [deletedNote, setDeletedNote] = useState<Note | null>(null);
@@ -205,8 +173,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const [showUndo, setShowUndo] = useState(false);
   const [undoKey, setUndoKey] = useState(0);
 
-  const textInputRef = useRef<TextInput>(null);
-  const emojiInputRef = useRef<TextInput>(null);
   const handledActionRef = useRef('');
   useEffect(() => {
     (async () => {
@@ -232,8 +198,8 @@ export default function NotepadScreen({ navigation, route }: Props) {
           AsyncStorage.setItem(CUSTOM_FONT_COLOR_KEY, oldFc);
         }
       }
-      if (resolvedBg && validHex.test(resolvedBg)) { setCustomBgColor(resolvedBg); pickedBgRef.current = resolvedBg; }
-      if (resolvedFc && validHex.test(resolvedFc)) { setCustomFontColor(resolvedFc); pickedFontRef.current = resolvedFc; }
+      if (resolvedBg && validHex.test(resolvedBg)) { setCustomBgColor(resolvedBg); }
+      if (resolvedFc && validHex.test(resolvedFc)) { setCustomFontColor(resolvedFc); }
     })();
   }, []);
 
@@ -347,123 +313,62 @@ export default function NotepadScreen({ navigation, route }: Props) {
 
   const openNewEditor = () => {
     setEditingNote(null);
-    setEditorText('');
-    setEditorColor(colors.background);
-    setEditorIcon('');
-    setEditorFontColor(null);
-    setShowColorPicker(false);
-    setShowEmojiPicker(false);
-    setEditorPlaceholder(EDITOR_PLACEHOLDERS[Math.floor(Math.random() * EDITOR_PLACEHOLDERS.length)]);
-    setIsViewMode(false);
     setEditorVisible(true);
   };
 
   const openEditorWithNote = (note: Note) => {
     setEditingNote(note);
-    setEditorText(note.text);
-    setEditorColor(note.color);
-    setEditorIcon(note.icon);
-    setEditorFontColor(note.fontColor ?? null);
-    setShowColorPicker(false);
-    setShowEmojiPicker(false);
-    setEditorPlaceholder(EDITOR_PLACEHOLDERS[Math.floor(Math.random() * EDITOR_PLACEHOLDERS.length)]);
-    setIsViewMode(true);
     setEditorVisible(true);
   };
 
   const closeEditor = () => {
-    Keyboard.dismiss();
     setEditorVisible(false);
     setEditingNote(null);
-    setShowColorPicker(false);
-    setShowEmojiPicker(false);
     handledActionRef.current = '';
   };
 
-  const hasUnsavedChanges = (): boolean => {
-    if (editingNote) {
-      return (
-        editorText !== editingNote.text ||
-        editorColor !== editingNote.color ||
-        editorIcon !== editingNote.icon ||
-        editorFontColor !== (editingNote.fontColor ?? null)
-      );
-    }
-    return editorText.trim().length > 0;
-  };
-
-  const confirmClose = () => {
-    if (!hasUnsavedChanges()) {
-      closeEditor();
-      return;
-    }
-    Keyboard.dismiss();
-    Alert.alert(
-      'Leaving Already?',
-      "You've got unsaved changes. Walk away and they're gone forever. Just like your memory.",
-      [
-        { text: 'Go Back to Editing', style: 'cancel' },
-        { text: 'Abandon Note', style: 'destructive', onPress: closeEditor },
-      ],
-    );
-  };
-
-  const handleSave = async () => {
-    hapticMedium();
-    const trimmed = editorText.trim();
-    if (!trimmed) {
-      ToastAndroid.show('Write something down before you forget. Oh wait, too late.', ToastAndroid.LONG);
-      return;
-    }
-
+  const handleEditorSave = async (data: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string }) => {
     const now = new Date().toISOString();
-    const isNew = !editingNote;
-
-    if (editingNote) {
-      const updated: Note = {
-        ...editingNote,
-        text: trimmed,
-        color: editorColor,
-        fontColor: editorFontColor,
-        icon: editorIcon,
-        updatedAt: now,
-      };
-      await updateNote(updated);
-    } else {
+    if (data.isNew) {
       const newNote: Note = {
         id: uuidv4(),
-        text: trimmed,
-        color: editorColor,
-        fontColor: editorFontColor,
-        icon: editorIcon,
+        text: data.text,
+        color: data.color,
+        fontColor: data.fontColor,
+        icon: data.icon,
         pinned: false,
         createdAt: now,
         updatedAt: now,
       };
       await addNote(newNote);
+    } else if (data.noteId) {
+      const existing = notes.find(n => n.id === data.noteId);
+      if (existing) {
+        await updateNote({ ...existing, text: data.text, color: data.color, fontColor: data.fontColor, icon: data.icon, updatedAt: now });
+      }
     }
-
     await loadData();
     refreshWidgets();
     closeEditor();
     ToastAndroid.show(
-      isNew ? SAVE_TOASTS[Math.floor(Math.random() * SAVE_TOASTS.length)] : 'Note updated',
+      data.isNew ? SAVE_TOASTS[Math.floor(Math.random() * SAVE_TOASTS.length)] : 'Note updated',
       ToastAndroid.SHORT,
     );
   };
 
-  const handleDeleteFromEditor = async () => {
-    if (!editingNote) return;
+  const handleEditorDelete = async (noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
     hapticHeavy();
-    const wasPinned = isNotePinned(editingNote.id, pinnedIds);
-    setDeletedNote(editingNote);
+    const wasPinned = isNotePinned(noteId, pinnedIds);
+    setDeletedNote(note);
     setDeletedNotePinned(wasPinned);
-    await unpinNote(editingNote.id);
-    await deleteNote(editingNote.id);
+    await unpinNote(noteId);
+    await deleteNote(noteId);
     await loadData();
     refreshWidgets();
     closeEditor();
-    setUndoKey((k) => k + 1);
+    setUndoKey(k => k + 1);
     setShowUndo(true);
   };
 
@@ -805,193 +710,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
       fontWeight: '300',
       marginTop: -2,
     },
-    // --- Editor modal styles ---
-    editorContainer: {
-      flex: 1,
-    },
-    editorTopBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingTop: 54,
-      paddingHorizontal: 16,
-      paddingBottom: 8,
-      gap: 10,
-    },
-    editorTopSpacer: {
-      flex: 1,
-    },
-    editorTopBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.card,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    editorTopBtnActive: {
-      borderColor: colors.accent,
-      backgroundColor: colors.activeBackground,
-    },
-    editorTopBtnEmoji: {
-      fontSize: 18,
-    },
-    editorColorIndicator: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-    },
-    editorTrashBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.card,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.red + '40',
-    },
-    editorTrashIcon: {
-      fontSize: 18,
-    },
-    editorInputArea: {
-      flex: 1,
-      paddingHorizontal: 20,
-      paddingTop: 8,
-    },
-    editorInput: {
-      flex: 1,
-      fontSize: 18,
-      color: colors.textPrimary,
-      textAlignVertical: 'top',
-      lineHeight: 28,
-    },
-    charCount: {
-      fontSize: 11,
-      color: colors.textTertiary,
-      textAlign: 'right',
-      paddingHorizontal: 20,
-      paddingBottom: 4,
-    },
-    pickerOverlay: {
-      backgroundColor: colors.card,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 12 + insets.bottom,
-      maxHeight: 280,
-    },
-    pickerTitle: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textTertiary,
-      marginBottom: 10,
-    },
-    colorRow: {
-      flexDirection: 'row',
-      gap: 12,
-      flexWrap: 'wrap',
-    },
-    colorDot: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    colorDotSelected: {
-      borderWidth: 3,
-      borderColor: colors.textPrimary,
-    },
-    colorCheck: {
-      fontSize: 16,
-      color: '#FFFFFF',
-      fontWeight: '700',
-    },
-    fontColorRow: {
-      flexDirection: 'row',
-      gap: 10,
-      flexWrap: 'wrap',
-      marginTop: 12,
-    },
-    fontColorDot: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    fontColorDotSelected: {
-      borderWidth: 2.5,
-      borderColor: colors.textPrimary,
-    },
-    fontColorCheck: {
-      fontSize: 12,
-      fontWeight: '700',
-    },
-    pickerRowLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      marginBottom: 6,
-    },
-    cpOverlay: {
-      flex: 1,
-      backgroundColor: colors.modalOverlay,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 24,
-    },
-    cpCard: {
-      backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 24,
-      width: '100%',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    cpTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.textPrimary,
-      textAlign: 'center',
-      marginBottom: 20,
-    },
-    cpWrapper: {
-      gap: 16,
-    },
-    cpBtns: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 20,
-    },
-    cpCancelBtn: {
-      flex: 1,
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    cpCancelText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textTertiary,
-    },
-    cpSaveBtn: {
-      flex: 1,
-      backgroundColor: colors.accent,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    cpSaveText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
   }), [colors, insets.bottom]);
 
   const renderDeletedItem = (item: Note) => {
@@ -1111,9 +829,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
     );
   };
 
-  const noteTextColor = getTextColor(editorColor);
-  const resolvedFontColor = editorFontColor || noteTextColor;
-
   return (
     <View style={styles.outerContainer}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -1197,440 +912,17 @@ export default function NotepadScreen({ navigation, route }: Props) {
         />
       </View>
 
-      {/* Editor Modal */}
-      <Modal
+      <NoteEditorModal
         visible={editorVisible}
-        animationType="slide"
-        onRequestClose={confirmClose}
-        statusBarTranslucent
-      >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-        <ScrollView style={[styles.editorContainer, { backgroundColor: editorColor }]} contentContainerStyle={{ flex: 1 }} keyboardShouldPersistTaps="handled" scrollEnabled={false}>
-
-          {/* Top bar: back, spacer, emoji btn, color btn, trash btn */}
-          <View style={styles.editorTopBar}>
-            <BackButton onPress={confirmClose} />
-            {isViewMode ? (
-              <>
-                <View style={styles.editorTopSpacer} />
-                <TouchableOpacity
-                  style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }]}
-                  onPress={() => { hapticLight(); setIsViewMode(false); }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ fontSize: 16 }}>{'\u270F\uFE0F'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }]}
-                  onPress={() => {
-                    hapticLight();
-                    Alert.alert('Share Note', '', [
-                      {
-                        text: 'Share',
-                        onPress: () => {
-                          if (!editorText.trim()) {
-                            ToastAndroid.show('Nothing to share', ToastAndroid.SHORT);
-                            return;
-                          }
-                          const content = editorIcon ? `${editorIcon} ${editorText}` : editorText;
-                          Share.share({ message: content });
-                        },
-                      },
-                      {
-                        text: 'Print',
-                        onPress: () => {
-                          if (!editorText.trim()) {
-                            ToastAndroid.show('Nothing to print', ToastAndroid.SHORT);
-                            return;
-                          }
-                          const iconHtml = editorIcon ? `<div style="font-size:48px;margin-bottom:16px;">${editorIcon}</div>` : '';
-                          const html = `<html><head><style>@page { size: letter; margin: 0.75in; }</style></head><body style="background:${editorColor};color:${noteTextColor};font-family:system-ui;padding:40px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:${noteTextColor};margin:0;">${editorText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre></body></html>`;
-                          Print.printAsync({ html });
-                        },
-                      },
-                      { text: 'Cancel', style: 'cancel' },
-                    ]);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ fontSize: 16 }}>{'\u{1F4E4}'}</Text>
-                </TouchableOpacity>
-                {editingNote && (
-                  <TouchableOpacity
-                    style={[styles.editorTrashBtn, { backgroundColor: noteTextColor + '15', borderColor: colors.red + '40' }]}
-                    onPress={handleDeleteFromEditor}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.editorTrashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={{ flex: 1, backgroundColor: colors.accent, borderRadius: 14, height: 28, alignItems: 'center', justifyContent: 'center' }}
-                  onPress={handleSave}
-                  activeOpacity={0.8}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: getTextColor(colors.accent) }}>Save</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }, showEmojiPicker && styles.editorTopBtnActive]}
-                  onPress={() => {
-                    hapticLight();
-                    Keyboard.dismiss();
-                    setShowColorPicker(false);
-                    setShowEmojiPicker((v) => !v);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.editorTopBtnEmoji}>{editorIcon || '\u{1F600}'}</Text>
-                </TouchableOpacity>
-                <TextInput
-                  ref={emojiInputRef}
-                  style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}
-                  autoCorrect={false}
-                  onChangeText={(t) => {
-                    if (t) {
-                      const graphemes = [...t];
-                      setEditorIcon(graphemes[graphemes.length - 1] || '');
-                    }
-                    setShowEmojiPicker(false);
-                    if (emojiInputRef.current) {
-                      emojiInputRef.current.setNativeProps({ text: '' });
-                      emojiInputRef.current.blur();
-                    }
-                  }}
-                />
-                <TouchableOpacity
-                  style={[styles.editorTopBtn, { backgroundColor: noteTextColor + '15', borderColor: noteTextColor + '25' }, showColorPicker && styles.editorTopBtnActive]}
-                  onPress={() => {
-                    hapticLight();
-                    Keyboard.dismiss();
-                    setShowEmojiPicker(false);
-                    setShowColorPicker((v) => !v);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.editorColorIndicator, { backgroundColor: editorColor, borderWidth: 2, borderColor: noteTextColor + '40' }]} />
-                </TouchableOpacity>
-                {editingNote && (
-                  <TouchableOpacity
-                    style={[styles.editorTrashBtn, { backgroundColor: noteTextColor + '15', borderColor: colors.red + '40' }]}
-                    onPress={handleDeleteFromEditor}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.editorTrashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-          </View>
-
-          {/* Emoji quick-pick row */}
-          {showEmojiPicker && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 8, paddingVertical: 8 }}>
-              {['\u{1F4DD}', '\u{1F4CC}', '\u{1F4A1}', '\u2B50', '\u2764\uFE0F', '\u{1F3AF}', '\u{1F4C5}', '\u{1F514}'].map((emoji) => (
-                <TouchableOpacity
-                  key={emoji}
-                  onPress={() => {
-                    hapticLight();
-                    if (editorIcon === emoji) {
-                      setEditorIcon('');
-                    } else {
-                      setEditorIcon(emoji);
-                      setShowEmojiPicker(false);
-                    }
-                  }}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: editorIcon === emoji ? noteTextColor + '25' : noteTextColor + '10',
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ fontSize: 18 }}>{emoji}</Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity
-                onPress={() => { hapticLight(); emojiInputRef.current?.focus(); }}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: noteTextColor + '10',
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={{ fontSize: 18, color: noteTextColor + '80' }}>+</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Hero text area */}
-          {isViewMode ? (
-            <ScrollView style={styles.editorInputArea} contentContainerStyle={{ paddingBottom: 20 }}>
-              {editorIcon ? <Text style={{ fontSize: 28, marginBottom: 8 }}>{editorIcon}</Text> : null}
-              <Text style={[styles.editorInput, { color: resolvedFontColor }]}>
-                {renderLinkedText(editorText, [styles.editorInput, { color: resolvedFontColor }], getTextColor(editorColor) === '#FFFFFF' ? '#48DBFB' : '#0066CC')}
-              </Text>
-            </ScrollView>
-          ) : (
-            <View style={styles.editorInputArea}>
-              <TextInput
-                ref={textInputRef}
-                style={[styles.editorInput, { color: resolvedFontColor }]}
-                value={editorText}
-                onChangeText={setEditorText}
-                placeholder={editorPlaceholder}
-                placeholderTextColor={resolvedFontColor + '80'}
-                multiline
-                maxLength={MAX_NOTE_LENGTH}
-                textAlignVertical="top"
-                autoFocus={!editingNote}
-                onFocus={() => {
-                  setShowColorPicker(false);
-                  setShowEmojiPicker(false);
-                }}
-              />
-            </View>
-          )}
-
-          {!isViewMode && (
-            <Text style={[
-              styles.charCount,
-              { color: resolvedFontColor + '99' },
-              editorText.length >= 490 ? { color: colors.red } :
-              editorText.length >= 450 ? { color: colors.orange } : undefined,
-            ]}>{editorText.length}/{MAX_NOTE_LENGTH}</Text>
-          )}
-
-          {/* Color picker overlay */}
-          {showColorPicker && (
-            <View style={[styles.pickerOverlay, { backgroundColor: editorColor, borderTopColor: noteTextColor + '20' }]}>
-              <Text style={[styles.pickerRowLabel, { color: noteTextColor + '99' }]}>Background</Text>
-              <View style={styles.colorRow}>
-                {NOTE_COLORS.filter((c) => c !== 'custom').map((c) => (
-                  <TouchableOpacity
-                    key={c}
-                    style={[
-                      styles.colorDot,
-                      { backgroundColor: c },
-                      editorColor === c && styles.colorDotSelected,
-                    ]}
-                    onPress={() => { hapticLight(); setEditorColor(c); }}
-                    activeOpacity={0.7}
-                  >
-                    {editorColor === c && <Text style={[styles.colorCheck, { color: getTextColor(c) }]}>{'\u2713'}</Text>}
-                  </TouchableOpacity>
-                ))}
-                {/* Custom color slot */}
-                {(() => {
-                  const isCustomBgSelected = !!customBgColor && editorColor === customBgColor && !NOTE_COLORS.slice(0, -1).includes(editorColor);
-                  return (
-                    <TouchableOpacity
-                      style={[
-                        styles.colorDot,
-                        customBgColor
-                          ? { backgroundColor: customBgColor }
-                          : { borderWidth: 2, borderColor: noteTextColor + '30', borderStyle: 'dashed' as const },
-                        isCustomBgSelected && styles.colorDotSelected,
-                      ]}
-                      onPress={() => {
-                        hapticLight();
-                        if (customBgColor) {
-                          setEditorColor(customBgColor);
-                        } else {
-                          pickedBgRef.current = '#4A90D9';
-                          setShowBgPicker(true);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      {isCustomBgSelected && <Text style={[styles.colorCheck, { color: getTextColor(customBgColor!) }]}>{'\u2713'}</Text>}
-                    </TouchableOpacity>
-                  );
-                })()}
-                {/* Picker button */}
-                <TouchableOpacity
-                  style={[styles.colorDot, { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: noteTextColor + '40', backgroundColor: 'transparent' }]}
-                  onPress={() => {
-                    hapticLight();
-                    pickedBgRef.current = customBgColor || '#4A90D9';
-                    setShowBgPicker(true);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: noteTextColor + '80' }}>+</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={[styles.pickerRowLabel, { color: resolvedFontColor, marginTop: 14 }]}>A  Text Color</Text>
-              <View style={styles.fontColorRow}>
-                {NOTE_FONT_COLORS.filter((fc) => fc !== 'custom').map((fc) => {
-                  const isAuto = fc === 'auto';
-                  const isSelected = isAuto ? !editorFontColor : editorFontColor === fc;
-                  const dotBg = isAuto ? undefined : fc;
-                  return (
-                    <TouchableOpacity
-                      key={fc}
-                      style={[
-                        styles.fontColorDot,
-                        isAuto ? { borderWidth: 1.5, borderColor: noteTextColor + '50', overflow: 'hidden' as const } : { backgroundColor: dotBg },
-                        isSelected && styles.fontColorDotSelected,
-                      ]}
-                      onPress={() => { hapticLight(); setEditorFontColor(isAuto ? null : fc); }}
-                      activeOpacity={0.7}
-                    >
-                      {isAuto ? (
-                        <View style={{ flexDirection: 'row', flex: 1, width: '100%', height: '100%' }}>
-                          <View style={{ flex: 1, backgroundColor: '#1A1A2E' }} />
-                          <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />
-                        </View>
-                      ) : isSelected ? (
-                        <Text style={[styles.fontColorCheck, { color: getTextColor(fc) }]}>{'\u2713'}</Text>
-                      ) : null}
-                    </TouchableOpacity>
-                  );
-                })}
-                {/* Custom font color slot */}
-                {(() => {
-                  const isCustomFcSelected = !!customFontColor && editorFontColor === customFontColor && !NOTE_FONT_COLORS.slice(0, -1).filter(x => x !== 'auto').includes(editorFontColor!);
-                  return (
-                    <TouchableOpacity
-                      style={[
-                        styles.fontColorDot,
-                        customFontColor
-                          ? { backgroundColor: customFontColor }
-                          : { borderWidth: 1.5, borderColor: noteTextColor + '30', borderStyle: 'dashed' as const },
-                        isCustomFcSelected && styles.fontColorDotSelected,
-                      ]}
-                      onPress={() => {
-                        hapticLight();
-                        if (customFontColor) {
-                          setEditorFontColor(customFontColor);
-                        } else {
-                          pickedFontRef.current = '#FF6B6B';
-                          setShowFontPicker(true);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      {isCustomFcSelected && <Text style={[styles.fontColorCheck, { color: getTextColor(customFontColor!) }]}>{'\u2713'}</Text>}
-                    </TouchableOpacity>
-                  );
-                })()}
-                {/* Font picker button */}
-                <TouchableOpacity
-                  style={[styles.fontColorDot, { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: noteTextColor + '40', backgroundColor: 'transparent' }]}
-                  onPress={() => {
-                    hapticLight();
-                    pickedFontRef.current = customFontColor || '#FF6B6B';
-                    setShowFontPicker(true);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: noteTextColor + '80' }}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-
-        </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Custom BG Color Picker Modal */}
-      <Modal transparent visible={showBgPicker} animationType="fade">
-        <View style={styles.cpOverlay}>
-          <View style={styles.cpCard}>
-            <Text style={styles.cpTitle}>Pick Background Color</Text>
-            <ColorPicker
-              value={pickedBgRef.current}
-              onCompleteJS={(result: ColorFormatsObject) => { pickedBgRef.current = result.hex; }}
-            >
-              <View style={styles.cpWrapper}>
-                <Preview hideInitialColor />
-                <Panel1 />
-                <HueSlider />
-              </View>
-            </ColorPicker>
-            <View style={styles.cpBtns}>
-              <TouchableOpacity
-                onPress={() => { hapticLight(); setShowBgPicker(false); }}
-                style={styles.cpCancelBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.cpCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  hapticMedium();
-                  const hex = pickedBgRef.current;
-                  setCustomBgColor(hex);
-                  setEditorColor(hex);
-                  AsyncStorage.setItem(CUSTOM_BG_COLOR_KEY, hex);
-                  setShowBgPicker(false);
-                }}
-                style={styles.cpSaveBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.cpSaveText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Custom Font Color Picker Modal */}
-      <Modal transparent visible={showFontPicker} animationType="fade">
-        <View style={styles.cpOverlay}>
-          <View style={styles.cpCard}>
-            <Text style={styles.cpTitle}>Pick Text Color</Text>
-            <ColorPicker
-              value={pickedFontRef.current}
-              onCompleteJS={(result: ColorFormatsObject) => { pickedFontRef.current = result.hex; }}
-            >
-              <View style={styles.cpWrapper}>
-                <Preview hideInitialColor />
-                <Panel1 />
-                <HueSlider />
-              </View>
-            </ColorPicker>
-            <View style={styles.cpBtns}>
-              <TouchableOpacity
-                onPress={() => { hapticLight(); setShowFontPicker(false); }}
-                style={styles.cpCancelBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.cpCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  hapticMedium();
-                  const hex = pickedFontRef.current;
-                  setCustomFontColor(hex);
-                  setEditorFontColor(hex);
-                  AsyncStorage.setItem(CUSTOM_FONT_COLOR_KEY, hex);
-                  setShowFontPicker(false);
-                }}
-                style={styles.cpSaveBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.cpSaveText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        note={editingNote}
+        customBgColor={customBgColor}
+        customFontColor={customFontColor}
+        onSave={handleEditorSave}
+        onDelete={handleEditorDelete}
+        onClose={closeEditor}
+        onCustomBgColorChange={(c) => { setCustomBgColor(c); AsyncStorage.setItem(CUSTOM_BG_COLOR_KEY, c); }}
+        onCustomFontColorChange={(c) => { setCustomFontColor(c); AsyncStorage.setItem(CUSTOM_FONT_COLOR_KEY, c); }}
+      />
     </View>
   );
 }
