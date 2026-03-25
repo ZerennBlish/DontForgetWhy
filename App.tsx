@@ -184,42 +184,6 @@ function AppNavigator() {
       return true;
     }
 
-    // Fallback: check displayed notifications for an active alarm/timer
-    // that hasn't been handled yet. Alarm notifications are ongoing and
-    // only cancelled by Dismiss/Snooze, so a displayed one means an
-    // active alarm that needs the fire screen.
-    try {
-      const currentRoute = navigationRef.current?.getCurrentRoute?.()?.name;
-      if (currentRoute === 'AlarmFire') return false;
-
-      const displayed = await notifee.getDisplayedNotifications();
-      for (const d of displayed) {
-        const dAlarmId = d.notification?.data?.alarmId as string | undefined;
-        const dTimerId = d.notification?.data?.timerId as string | undefined;
-        const dNotifId = d.notification?.id;
-
-        if (dAlarmId && dNotifId && !wasNotifHandled(dNotifId)) {
-          console.log('[NOTIF] consumePendingAlarm fallback — found displayed alarm:', dAlarmId);
-          await navigateToAlarmFire({ alarmId: dAlarmId, notificationId: dNotifId });
-          return true;
-        }
-        if (dTimerId && dNotifId && !wasNotifHandled(dNotifId)) {
-          const tIcon = (d.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
-          const tLabel = (d.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
-          let fbTimerSoundId: string | undefined;
-          try {
-            const timers = await loadActiveTimers();
-            fbTimerSoundId = timers.find(t => t.id === dTimerId)?.soundId;
-          } catch {}
-          console.log('[NOTIF] consumePendingAlarm fallback — found displayed timer:', dTimerId);
-          await navigateToAlarmFire({ timerId: dTimerId, notificationId: dNotifId, timerLabel: tLabel, timerIcon: tIcon, timerSoundId: fbTimerSoundId });
-          return true;
-        }
-      }
-    } catch (e) {
-      console.error('[NOTIF] consumePendingAlarm fallback error:', e);
-    }
-
     return false;
   }, [navigateToAlarmFire]);
 
@@ -497,38 +461,29 @@ function AppNavigator() {
       const timerId = detail.notification?.data?.timerId as string | undefined;
       console.log('[NOTIF] onForegroundEvent type:', type, 'notifId:', notifId, 'alarmId:', alarmId, 'timerId:', timerId);
 
-      // Navigate to AlarmFireScreen on PRESS or DELIVERED only.
-      // DELIVERED (3) = notification displayed (fullScreenAction fires this).
-      // PRESS (1) = user tapped the notification.
-      const isNavigationEvent =
-        type === EventType.PRESS ||
-        type === EventType.DELIVERED;
-
-      if (isNavigationEvent) {
-        // For DELIVERED, filter: only alarm/timer notifications that should
-        // navigate to AlarmFireScreen. Skip reminders, sound previews, etc.
-        //
-        // Timer completion uses ID timer-done-{timerId} (separate from the
-        // countdown chronometer countdown-{timerId}). We distinguish them
-        // by data.timerId: the countdown has no data field, so timerId is
-        // undefined; the completion trigger has data: { timerId }.
-        if (type === EventType.DELIVERED) {
-          const isAlarmOrTimerCompletion = !!(alarmId || timerId);
-          if (!isAlarmOrTimerCompletion) {
-            // Still handle yearly reminder reschedule for non-alarm DELIVERED
-            const rid = detail.notification?.data?.reminderId as string | undefined;
-            if (rid) rescheduleYearlyReminder(rid).catch(() => {});
-            return;
-          }
-          // Play alarm sound immediately on DELIVERED so it starts the
-          // instant the notification fires, regardless of screen state.
-          playAlarmSoundForNotification(alarmId, timerId).catch(() => {});
+      // ── DELIVERED: play alarm sound only, no navigation ────────────
+      // When the app is in the foreground, DELIVERED just starts sound.
+      // The user interacts via notification action buttons (Dismiss/Snooze).
+      // Tapping the notification body (PRESS) optionally opens AlarmFireScreen.
+      if (type === EventType.DELIVERED) {
+        const isAlarmOrTimerCompletion = !!(alarmId || timerId);
+        if (!isAlarmOrTimerCompletion) {
+          // Still handle yearly reminder reschedule for non-alarm DELIVERED
+          const rid = detail.notification?.data?.reminderId as string | undefined;
+          if (rid) rescheduleYearlyReminder(rid).catch(() => {});
+          return;
         }
+        // Play alarm sound immediately — no navigation, no setPendingAlarm,
+        // no markNotifHandled. PRESS can still navigate if user taps later.
+        playAlarmSoundForNotification(alarmId, timerId).catch(() => {});
+        return;
+      }
 
+      // ── PRESS: user tapped notification body — navigate to AlarmFireScreen ─
+      if (type === EventType.PRESS) {
         if (!navigationRef.current || !isNavigationReady.current) {
           // Navigation isn't ready yet — store alarm/timer data as pending
           // so onNavigationReady or AppState handler can consume it.
-          // Without this, the event is lost and AlarmFireScreen never shows.
           if (timerId && notifId) {
             const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
             const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
@@ -541,14 +496,14 @@ function AppNavigator() {
           } else if (alarmId) {
             setPendingAlarm({ alarmId, notificationId: notifId });
           }
-          console.log('[NOTIF] FOREGROUND — navigation not ready, stored as pending for onNavigationReady');
+          console.log('[NOTIF] FOREGROUND PRESS — navigation not ready, stored as pending');
           return;
         }
 
         // If AlarmFireScreen is already the active route, don't stack another
         const currentRoute = navigationRef.current?.getCurrentRoute?.()?.name;
         if (currentRoute === 'AlarmFire') {
-          console.log('[NOTIF] FOREGROUND — already on AlarmFireScreen, skipping');
+          console.log('[NOTIF] FOREGROUND PRESS — already on AlarmFireScreen, skipping');
           return;
         }
 
@@ -557,22 +512,10 @@ function AppNavigator() {
 
         // Skip if AlarmFireScreen already handled this notification
         if (wasNotifHandled(notifId)) {
-          console.log('[NOTIF] FOREGROUND — skipping already-handled:', notifId);
+          console.log('[NOTIF] FOREGROUND PRESS — skipping already-handled:', notifId);
           return;
         }
 
-        // DO NOT mark as handled here — each branch handles its own marking.
-        // Timer marks before direct navigation; alarm relies on
-        // navigateToAlarmFire's internal mark. Marking prematurely here
-        // would cause navigateToAlarmFire to see it as already handled
-        // and skip the alarm navigation entirely.
-
-        // DO NOT cancel notifications here — AlarmFireScreen's Dismiss/Snooze
-        // handlers cancel notifications and stop alarm sound when the user acts.
-
-        // Timer completion notifications have data.timerId set.
-        // The countdown chronometer (same ID prefix) has NO data, so
-        // timerId is undefined and this branch is skipped for it.
         if (timerId && notifId) {
           markNotifHandled(notifId);
           const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
@@ -583,7 +526,7 @@ function AppNavigator() {
             fgTimerSoundId = timers.find(t => t.id === timerId)?.soundId;
           } catch {}
 
-          console.log('[NOTIF] FOREGROUND — navigating to AlarmFire (timer)');
+          console.log('[NOTIF] FOREGROUND PRESS — navigating to AlarmFire (timer)');
           navigationRef.current.navigate('AlarmFire', {
             isTimer: true,
             timerLabel: tLabel,
@@ -595,8 +538,7 @@ function AppNavigator() {
             fromNotification: true,
           });
         } else if (alarmId) {
-          // navigateToAlarmFire checks wasNotifHandled + marks internally
-          console.log('[NOTIF] FOREGROUND — navigating to AlarmFire (alarm), notifId:', notifId);
+          console.log('[NOTIF] FOREGROUND PRESS — navigating to AlarmFire (alarm), notifId:', notifId);
           await navigateToAlarmFire({ alarmId, notificationId: notifId });
         }
       }
@@ -722,12 +664,10 @@ function AppNavigator() {
       }
 
       // Yearly reminder auto-reschedule: when a reminder notification
-      // fires (DELIVERED) or is dismissed, reschedule yearly recurring
-      // reminders for next year. This catches the case where the user
-      // doesn't tap Done in-app — the one-time trigger is consumed and
-      // we must schedule the next occurrence automatically.
+      // is dismissed, reschedule yearly recurring reminders for next year.
+      // (DELIVERED case is handled in the DELIVERED block above.)
       const reminderId = detail.notification?.data?.reminderId as string | undefined;
-      if (reminderId && (type === EventType.DELIVERED || type === EventType.DISMISSED)) {
+      if (reminderId && type === EventType.DISMISSED) {
         rescheduleYearlyReminder(reminderId).catch(() => {});
       }
     });

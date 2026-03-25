@@ -22,6 +22,7 @@ import {
   scheduleSnooze,
 } from '../services/notifications';
 import { deleteAlarm, updateSingleAlarm } from '../services/storage';
+import { loadActiveTimers, saveActiveTimers } from '../services/timerStorage';
 import { loadSettings, getSilenceAll } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -247,6 +248,16 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       if (notificationId) {
         await persistNotifHandled(notificationId);
       }
+      // Timer cleanup: remove from active timers storage so it doesn't
+      // linger in the timer list after dismissal from AlarmFireScreen.
+      if (isTimer && timerId) {
+        try {
+          const timers = await loadActiveTimers();
+          const updated = timers.filter((t) => t.id !== timerId);
+          await saveActiveTimers(updated);
+          refreshWidgets();
+        } catch {}
+      }
       // Soft-delete one-time alarms after firing so they disappear from
       // the active list and move to the deleted/history view.
       if (!isTimer && alarm?.mode === 'one-time') {
@@ -262,7 +273,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     } catch {}
     console.log('[AlarmFire] handleDismiss — complete, exiting');
     exitToLockScreen();
-  }, [cancelAllNotifications, exitToLockScreen, alarm, isTimer]);
+  }, [cancelAllNotifications, exitToLockScreen, alarm, isTimer, timerId]);
 
   // Intercept hardware back button — treat as Dismiss to stop sound/vibration
   useEffect(() => {
