@@ -292,10 +292,13 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           left: 0,
           right: 0,
           zIndex: 10,
+          flexDirection: 'row',
+          alignItems: 'center',
           paddingTop: insets.top + 8,
-          paddingHorizontal: 20,
+          paddingHorizontal: 16,
           paddingBottom: 10,
           backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          gap: 12,
         },
         title: {
           fontSize: 28,
@@ -1112,10 +1115,16 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       <Text style={styles.title}>
         {'\u{1F4A1}'} Daily Riddle
       </Text>
-      <Text style={styles.dateText}>{getFormattedDate()}</Text>
+    </View>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Text style={[styles.dateText, { paddingHorizontal: 20 }]}>{getFormattedDate()}</Text>
 
       {stats.streak > 0 && (
-        <View style={styles.streakRow}>
+        <View style={[styles.streakRow, { paddingHorizontal: 20 }]}>
           <Text style={styles.streakText}>
             {'\u{1F525}'} {stats.streak} day streak
           </Text>
@@ -1123,7 +1132,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       )}
 
       {stats.totalPlayed > 0 && (
-        <View style={styles.statsRow}>
+        <View style={[styles.statsRow, { paddingHorizontal: 20 }]}>
           <Text style={styles.statText}>
             Played: {stats.totalPlayed}
           </Text>
@@ -1135,12 +1144,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           </Text>
         </View>
       )}
-    </View>
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      keyboardShouldPersistTaps="handled"
-    >
 
       {/* Mode toggle */}
       <View style={styles.modeToggle}>

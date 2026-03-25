@@ -64,6 +64,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const existingAlarm = route.params?.alarm;
+  const initialDate = route.params?.initialDate;
   const isEditing = !!existingAlarm;
 
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
@@ -269,10 +270,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     return hints[Math.floor(Math.random() * hints.length)];
   });
   const [mode, setMode] = useState<'recurring' | 'one-time'>(
-    existingAlarm?.mode || 'one-time'
+    existingAlarm?.mode || (initialDate ? 'one-time' : 'one-time')
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(
-    existingAlarm?.date || null
+    existingAlarm?.date || initialDate || null
   );
 
   const {
@@ -289,8 +290,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     handleSelectDate, toggleCalendar,
     calDays, calFirstDay, MONTH_NAMES,
   } = useCalendar({
-    initialMonth: existingAlarm?.date ? existingAlarm.date.split('-').map(Number)[1] - 1 : undefined,
-    initialYear: existingAlarm?.date ? existingAlarm.date.split('-').map(Number)[0] : undefined,
+    initialMonth: (existingAlarm?.date || initialDate) ? (existingAlarm?.date || initialDate)!.split('-').map(Number)[1] - 1 : undefined,
+    initialYear: (existingAlarm?.date || initialDate) ? (existingAlarm?.date || initialDate)!.split('-').map(Number)[0] : undefined,
     onSelectDate: (dateStr) => {
       setSelectedDate(dateStr);
       if (mode === 'recurring') {

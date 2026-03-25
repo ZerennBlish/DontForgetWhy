@@ -142,15 +142,20 @@ function getItemsForDate(
     if (!alarm.enabled) continue;
     if (alarm.mode === 'one-time' && alarm.date === dateStr) {
       items.push({ type: 'alarm', data: alarm });
-    } else if (alarm.mode === 'recurring' && alarm.days.includes(weekday)) {
-      items.push({ type: 'alarm', data: alarm });
+    } else if (alarm.mode === 'recurring') {
+      if (alarm.days.length === 0 || alarm.days.includes(weekday)) {
+        items.push({ type: 'alarm', data: alarm });
+      }
     }
   }
 
   for (const reminder of reminderList) {
     if (reminder.completed) continue;
-    if (reminder.recurring && reminder.days && reminder.days.length > 0) {
-      if (reminder.days.includes(weekday)) {
+    if (reminder.recurring) {
+      if (!reminder.days || reminder.days.length === 0) {
+        // Daily recurring — appears every day
+        items.push({ type: 'reminder', data: reminder });
+      } else if (reminder.days.includes(weekday)) {
         items.push({ type: 'reminder', data: reminder });
       }
     } else if (reminder.dueDate && reminder.dueDate.slice(0, 10) === dateStr) {
@@ -159,7 +164,9 @@ function getItemsForDate(
   }
 
   for (const note of noteList) {
-    if (note.createdAt.slice(0, 10) === dateStr) {
+    const nd = new Date(note.createdAt);
+    const localDate = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`;
+    if (localDate === dateStr) {
       items.push({ type: 'note', data: note });
     }
   }
@@ -296,10 +303,10 @@ export default function CalendarScreen({ navigation }: Props) {
 
     // Recurring alarms
     for (const alarm of alarms) {
-      if (alarm.mode === 'recurring' && alarm.enabled && alarm.days.length > 0) {
+      if (alarm.mode === 'recurring' && alarm.enabled) {
         for (const day of daysInMonth) {
           const weekday = WEEKDAY_MAP[day.getDay()];
-          if (alarm.days.includes(weekday)) {
+          if (alarm.days.length === 0 || alarm.days.includes(weekday)) {
             const ds = toDateString(day);
             ensure(ds);
             if (!hasDot(ds, 'alarm')) {
@@ -314,14 +321,25 @@ export default function CalendarScreen({ navigation }: Props) {
     for (const reminder of reminders) {
       if (reminder.completed) continue;
 
-      if (reminder.recurring && reminder.days && reminder.days.length > 0) {
-        for (const day of daysInMonth) {
-          const weekday = WEEKDAY_MAP[day.getDay()];
-          if (reminder.days.includes(weekday)) {
+      if (reminder.recurring) {
+        if (!reminder.days || reminder.days.length === 0) {
+          // Daily recurring — dot on every day
+          for (const day of daysInMonth) {
             const ds = toDateString(day);
             ensure(ds);
             if (!hasDot(ds, 'reminder')) {
               marks[ds].dots.push({ key: 'reminder', color: DOT_REMINDER });
+            }
+          }
+        } else {
+          for (const day of daysInMonth) {
+            const weekday = WEEKDAY_MAP[day.getDay()];
+            if (reminder.days.includes(weekday)) {
+              const ds = toDateString(day);
+              ensure(ds);
+              if (!hasDot(ds, 'reminder')) {
+                marks[ds].dots.push({ key: 'reminder', color: DOT_REMINDER });
+              }
             }
           }
         }
@@ -336,9 +354,10 @@ export default function CalendarScreen({ navigation }: Props) {
       }
     }
 
-    // Notes
+    // Notes — use local date, not UTC slice
     for (const note of notes) {
-      const ds = note.createdAt.slice(0, 10);
+      const nd = new Date(note.createdAt);
+      const ds = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`;
       if (ds.startsWith(`${year}-${String(month).padStart(2, '0')}`)) {
         ensure(ds);
         if (!hasDot(ds, 'note')) {

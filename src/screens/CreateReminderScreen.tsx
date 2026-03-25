@@ -68,6 +68,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const editId = route.params?.reminderId;
+  const initialDate = route.params?.initialDate;
 
   // Time-related state — mirrors CreateAlarmScreen order exactly
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
@@ -109,7 +110,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     ];
     return hints[Math.floor(Math.random() * hints.length)];
   });
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(initialDate || null);
   const iconInputRef = useRef<TextInput>(null);
   const [mode, setMode] = useState<'one-time' | 'recurring'>('one-time');
   const [placeholder] = useState(getRandomPlaceholder);
@@ -128,6 +129,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     setCalendarMonth: setCalMonth, setCalendarYear: setCalYear,
     calDays, calFirstDay, MONTH_NAMES,
   } = useCalendar({
+    initialMonth: initialDate ? initialDate.split('-').map(Number)[1] - 1 : undefined,
+    initialYear: initialDate ? initialDate.split('-').map(Number)[0] : undefined,
     onSelectDate: (dateStr) => {
       setSelectedDate(dateStr);
       if (mode === 'recurring') {

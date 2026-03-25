@@ -185,7 +185,12 @@ export default function NoteEditorModal({
         editorFontColor !== (note.fontColor ?? null)
       );
     }
-    return editorText.trim().length > 0;
+    return (
+      editorText.trim().length > 0 ||
+      editorColor !== colors.background ||
+      editorIcon !== '' ||
+      editorFontColor !== null
+    );
   };
 
   const confirmClose = () => {
