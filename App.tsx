@@ -21,11 +21,11 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
 import NotepadScreen from './src/screens/NotepadScreen';
-import { loadAlarms, disableAlarm, deleteAlarm, purgeDeletedAlarms } from './src/services/storage';
+import { loadAlarms, disableAlarm, deleteAlarm, purgeDeletedAlarms, updateSingleAlarm } from './src/services/storage';
 import { getReminders, updateReminder, purgeDeletedReminders } from './src/services/reminderStorage';
 import { purgeDeletedNotes, getPendingNoteAction } from './src/services/noteStorage';
 import { getOnboardingComplete } from './src/services/settings';
-import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
+import { setupNotificationChannel, cancelTimerCountdownNotification, scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications, scheduleSnooze } from './src/services/notifications';
 import { refreshHapticsSetting } from './src/utils/haptics';
 import { refreshWidgets } from './src/widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
@@ -601,6 +601,102 @@ function AppNavigator() {
         }
       }
 
+      if (type === EventType.ACTION_PRESS) {
+        const actionId = detail.pressAction?.id;
+
+        console.log('[NOTIF] FOREGROUND ACTION_PRESS —', actionId, 'alarmId:', alarmId, 'timerId:', timerId);
+
+        if (actionId === 'dismiss') {
+          stopAlarmSound();
+
+          if (notifId) {
+            await notifee.cancelNotification(notifId).catch(() => {});
+          }
+
+          if (alarmId) {
+            try {
+              const alarms = await loadAlarms();
+              const alarm = alarms.find((a) => a.id === alarmId);
+              if (alarm?.mode === 'one-time') {
+                const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+                if (snoozingFlag) {
+                  await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+                } else {
+                  await deleteAlarm(alarmId);
+                  await refreshWidgets();
+                }
+              }
+            } catch {}
+          }
+
+          // Timer cleanup: cancel countdown notification and remove from active timers
+          if (timerId) {
+            try {
+              await cancelTimerCountdownNotification(timerId);
+            } catch {}
+            try {
+              const timers = await loadActiveTimers();
+              const updated = timers.filter((t) => t.id !== timerId);
+              await saveActiveTimers(updated);
+              await refreshWidgets();
+            } catch {}
+          }
+
+          if (notifId) {
+            markNotifHandled(notifId);
+            await persistNotifHandled(notifId);
+          }
+        }
+
+        if (actionId === 'snooze' && alarmId) {
+          stopAlarmSound();
+
+          // Set snoozing flag BEFORE cancelling notification (prevents one-time alarm deletion)
+          // Abort if flag write fails — a failed snooze is better than a deleted alarm
+          try {
+            await AsyncStorage.setItem(`snoozing_${alarmId}`, '1');
+          } catch (e) {
+            console.error('[NOTIF] snooze flag failed, aborting snooze:', e);
+            return;
+          }
+
+          if (notifId) {
+            await notifee.cancelNotification(notifId).catch(() => {});
+          }
+
+          // Schedule snooze notification and persist the new notification ID
+          try {
+            const alarms = await loadAlarms();
+            const alarm = alarms.find((a) => a.id === alarmId);
+            if (alarm) {
+              const snoozeNotifId = await scheduleSnooze(alarm);
+              try {
+                await updateSingleAlarm(alarmId, (a) => ({
+                  ...a,
+                  notificationIds: [
+                    ...(a.notificationIds || []),
+                    snoozeNotifId,
+                  ],
+                }));
+              } catch {}
+            }
+          } catch (e) {
+            console.error('[NOTIF] foreground snooze failed:', e);
+          }
+
+          if (notifId) {
+            markNotifHandled(notifId);
+            await persistNotifHandled(notifId);
+          }
+        }
+
+        // If fire screen is showing, close it since alarm was handled via notification action
+        if (navigationRef.current?.getCurrentRoute?.()?.name === 'AlarmFire') {
+          stopAlarmSound();
+          navigationRef.current.reset({ index: 0, routes: [{ name: 'AlarmList' }] });
+        }
+      }
+
       if (type === EventType.DISMISSED) {
         console.log('[NOTIF] FOREGROUND DISMISSED — alarmId:', alarmId, 'timerId:', timerId);
         if (alarmId || timerId) {
@@ -716,13 +812,26 @@ function AppNavigator() {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active' && isNavigationReady.current && navigationRef.current) {
         // Safety net: if app resumes on a stale AlarmFire screen (e.g., after
-        // exitApp didn't kill the process), reset to AlarmList.
+        // exitApp didn't kill the process), reset to AlarmList — but only if
+        // there are no active alarm/timer notifications displayed (which would
+        // mean the fire screen is legitimate and still in use).
         const currentRoute = navigationRef.current.getCurrentRoute?.();
         if (currentRoute?.name === 'AlarmFire') {
           const hasPending = getPendingAlarm();
           if (!hasPending) {
-            navigationRef.current.reset({ index: 0, routes: [{ name: 'AlarmList' }] });
-            return; // skip other foreground checks — we just reset
+            notifee.getDisplayedNotifications().then((displayed) => {
+              const hasAlarmNotif = displayed.some(
+                (n) => {
+                  const ch = n.notification?.android?.channelId || '';
+                  return ch.startsWith('alarm') ||
+                    (ch.startsWith('timer') && ch !== 'timer-progress');
+                }
+              );
+              if (!hasAlarmNotif && navigationRef.current) {
+                navigationRef.current.reset({ index: 0, routes: [{ name: 'AlarmList' }] });
+              }
+            }).catch(() => {});
+            return;
           }
         }
 

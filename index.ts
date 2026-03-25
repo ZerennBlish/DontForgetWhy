@@ -4,12 +4,12 @@ import notifee, { EventType } from '@notifee/react-native';
 
 import App from './App';
 import { widgetTaskHandler } from './src/widget/widgetTaskHandler';
-import { loadAlarms, deleteAlarm } from './src/services/storage';
+import { loadAlarms, deleteAlarm, updateSingleAlarm } from './src/services/storage';
 import { getReminders, updateReminder } from './src/services/reminderStorage';
-import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications } from './src/services/notifications';
+import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications, scheduleSnooze, cancelTimerCountdownNotification } from './src/services/notifications';
 import { refreshWidgets } from './src/widget/updateWidget';
-import { setPendingAlarm } from './src/services/pendingAlarm';
-import { loadActiveTimers } from './src/services/timerStorage';
+import { setPendingAlarm, markNotifHandled, persistNotifHandled } from './src/services/pendingAlarm';
+import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
 
@@ -114,6 +114,102 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
         notificationId: notifId,
       });
       console.log('[NOTIF] BACKGROUND — stored pending alarm data for App.tsx');
+    }
+  }
+
+  if (type === EventType.ACTION_PRESS) {
+    const actionId = detail.pressAction?.id;
+    const notifId2 = detail.notification?.id;
+
+    console.log('[NOTIF] BACKGROUND ACTION_PRESS —', actionId, 'alarmId:', alarmId, 'timerId:', timerId);
+
+    if (actionId === 'dismiss') {
+      stopAlarmSound();
+
+      // Cancel the notification
+      if (notifId2) {
+        await notifee.cancelNotification(notifId2).catch(() => {});
+      }
+
+      // One-time alarm: soft-delete (same logic as existing DISMISSED handler)
+      if (alarmId) {
+        try {
+          const alarms = await loadAlarms();
+          const alarm = alarms.find((a) => a.id === alarmId);
+          if (alarm?.mode === 'one-time') {
+            const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+            if (snoozingFlag) {
+              await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+            } else {
+              await deleteAlarm(alarmId);
+              await refreshWidgets();
+            }
+          }
+        } catch {}
+      }
+
+      // Timer cleanup: cancel countdown notification and remove from active timers
+      if (timerId) {
+        try {
+          await cancelTimerCountdownNotification(timerId);
+        } catch {}
+        try {
+          const timers = await loadActiveTimers();
+          const updated = timers.filter((t) => t.id !== timerId);
+          await saveActiveTimers(updated);
+          await refreshWidgets();
+        } catch {}
+      }
+
+      // Mark as handled so fire screen doesn't reopen
+      if (notifId2) {
+        markNotifHandled(notifId2);
+        await persistNotifHandled(notifId2);
+      }
+    }
+
+    if (actionId === 'snooze' && alarmId) {
+      stopAlarmSound();
+
+      // Set snoozing flag BEFORE cancelling notification (prevents one-time alarm deletion)
+      // Abort if flag write fails — a failed snooze is better than a deleted alarm
+      try {
+        await AsyncStorage.setItem(`snoozing_${alarmId}`, '1');
+      } catch (e) {
+        console.error('[NOTIF] snooze flag failed, aborting snooze:', e);
+        return;
+      }
+
+      // Cancel the notification
+      if (notifId2) {
+        await notifee.cancelNotification(notifId2).catch(() => {});
+      }
+
+      // Schedule snooze notification and persist the new notification ID
+      try {
+        const alarms = await loadAlarms();
+        const alarm = alarms.find((a) => a.id === alarmId);
+        if (alarm) {
+          const snoozeNotifId = await scheduleSnooze(alarm);
+          try {
+            await updateSingleAlarm(alarmId, (a) => ({
+              ...a,
+              notificationIds: [
+                ...(a.notificationIds || []),
+                snoozeNotifId,
+              ],
+            }));
+          } catch {}
+        }
+      } catch (e) {
+        console.error('[NOTIF] background snooze failed:', e);
+      }
+
+      // Mark as handled
+      if (notifId2) {
+        markNotifHandled(notifId2);
+        await persistNotifHandled(notifId2);
+      }
     }
   }
 

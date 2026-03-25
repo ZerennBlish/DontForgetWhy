@@ -393,6 +393,16 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
         id: 'default',
       },
       category: AndroidCategory.ALARM,
+      actions: [
+        {
+          title: 'Snooze',
+          pressAction: { id: 'snooze' },
+        },
+        {
+          title: 'Dismiss',
+          pressAction: { id: 'dismiss' },
+        },
+      ],
     },
   };
 
@@ -521,6 +531,16 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
         autoCancel: false,
         pressAction: { id: 'default' },
         category: AndroidCategory.ALARM,
+        actions: [
+          {
+            title: 'Snooze',
+            pressAction: { id: 'snooze' },
+          },
+          {
+            title: 'Dismiss',
+            pressAction: { id: 'dismiss' },
+          },
+        ],
       },
     },
     trigger,
@@ -600,6 +620,12 @@ export async function scheduleTimerNotification(
           id: 'default',
         },
         category: AndroidCategory.ALARM,
+        actions: [
+          {
+            title: 'Dismiss',
+            pressAction: { id: 'dismiss' },
+          },
+        ],
       },
     },
     trigger,
