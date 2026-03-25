@@ -1,6 +1,6 @@
 # Don't Forget Why — Complete Technical Handoff
-## Compiled: March 24, 2026
-## Covers: February 8 – March 24, 2026 (entire project history)
+## Compiled: March 25, 2026
+## Covers: February 8 – March 25, 2026 (entire project history)
 
 ---
 
@@ -137,6 +137,7 @@ DontForgetWhy/
     │   ├── AlarmCard.tsx
     │   ├── BackButton.tsx
     │   ├── ErrorBoundary.tsx
+    │   ├── NoteEditorModal.tsx
     │   ├── SoundPickerModal.tsx
     │   ├── TimePicker.tsx
     │   └── UndoToast.tsx
@@ -161,6 +162,8 @@ DontForgetWhy/
     │   ├── AboutScreen.tsx
     │   ├── AlarmFireScreen.tsx
     │   ├── AlarmListScreen.tsx
+    │   ├── AlarmsTab.tsx
+    │   ├── CalendarScreen.tsx
     │   ├── CreateAlarmScreen.tsx
     │   ├── CreateReminderScreen.tsx
     │   ├── DailyRiddleScreen.tsx
@@ -251,6 +254,8 @@ DontForgetWhy/
 | Mar 21 | 1.3.7 | 14 | TimePicker responsive rewrite. Day chip clears date. Reminder one-time day chip scheduling (three-tier logic). | Submitted to production review |
 | Mar 22 | 1.3.8 | 15 | Emoji crash fix, trivia centering, timer layout, note card colors, capsule buttons, reminder UX, dead sound picker removed. Emulator testing matrix. | Built and ready to upload |
 | Mar 24 | 1.3.9 | 16 | Notification action buttons (Dismiss/Snooze on alarm, Dismiss on timer), dismiss flash fix, note card borders, reminder two-line layout, safety net fix. Store screenshots updated (8 professional graphics). App live in production on Google Play. | Production |
+| Mar 25 | 1.4.0 | 17 | Timer dismiss race condition hotfix: foreground DELIVERED now sound-only (no auto-navigation), timer cleanup in handleDismiss. | Production (live) |
+| Mar 25 | 1.5.0 | 18 | Calendar feature, AlarmListScreen refactor (AlarmsTab extraction), NotepadScreen refactor (NoteEditorModal extraction), dark capsule button uniformity, floating headers (editor/settings/riddle), BackButton visibility fix, 999 char note limit, initialDate prefill for create screens, daily recurring calendar mapping, timezone bucketing fix. Audit 33 complete. | Dev branch (not yet shipped) |
 
 ---
 
@@ -262,7 +267,8 @@ DontForgetWhy/
 - **Reminders** — due dates, 5 recurring patterns (daily/weekly/monthly/yearly/one-time), 6-hour completion window, date-only mode, completion history, sound mode (sound/vibrate/silent), emoji icon
 - **Timers** — 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule
   - Notification action buttons: "Dismiss" button on timer completion notification
-- **Notepad** — 500-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji picker, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4)
+- **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji picker, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4)
+- **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing).
 - **DND bypass** — Notifee full-screen intent + Samsung onboarding
 - **Full-screen alarm fire** — lightbulb background, snooze shame (4 tiers × 7 messages), shows 🔇 when silenced
 - **Native MediaPlayer sound** — plays through STREAM_ALARM regardless of ringer mode. Notification channels are SILENT. MediaPlayer handles all audio.
@@ -288,6 +294,7 @@ DontForgetWhy/
 - Dismiss: stops sound, cancels notification + countdown, soft-deletes one-time alarms, cleans up timer state, marks notification as handled
 - Snooze: stops sound, sets snoozing flag (enforced — aborts on failure), cancels notification, schedules snooze, persists snooze notification ID via updateSingleAlarm, marks as handled
 - Solves "pulled out of app" problem — users handle alarms/timers from notification banner without leaving current app
+- **v1.4.0 behavior change:** Foreground DELIVERED events now play sound only — no auto-navigation to AlarmFireScreen. Users interact via notification action buttons or tap notification body to optionally open fire screen. Eliminates race condition where timer dismiss failed due to competing DELIVERED navigation.
 
 ### Time Input System
 - Global preference: Scroll (rolodex) vs Type (text inputs) in Settings
@@ -397,6 +404,12 @@ Notifee v9.1.8 strips `audioAttributes` from JS `createChannel()`. Native config
 - Sound stopped on: dismiss, swipe (DISMISSED event), snooze, unmount, back button
 - Sound resolution: check silent → custom URI → default timer sound → system default
 - Invalid custom URI: catch block retries with null (system default fallback)
+
+### Foreground DELIVERED Behavior (v1.4.0+)
+- DELIVERED in foreground: plays alarm sound via playAlarmSoundForNotification() then returns. No navigation, no setPendingAlarm, no markNotifHandled.
+- PRESS in foreground: full navigation to AlarmFireScreen (opt-in by user tapping notification body)
+- ACTION_PRESS: unchanged — Dismiss/Snooze handlers with full cleanup
+- consumePendingAlarm: no longer scans displayed notifications. Only reads module-level getPendingAlarm() for background/killed app scenarios.
 
 ### Key Distinctions
 - `cancelNotification(id)` — kills display AND recurring trigger
@@ -627,7 +640,19 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 | 32 | Mar 24 | P2 polish (3 fixes) | Codex: 2 HIGH (safety net too aggressive — kills live alarms, early return blocks displayed-notification fallback), 1 LOW (completed reminders hide secondary text — design choice). Gemini: All PASS. |
 | 32b | Mar 24 | Notification actions + safety net fix | Codex: 3 HIGH (timer countdown not cancelled on dismiss, snooze flag not enforced, snooze notif ID not persisted), 1 MEDIUM (safety net async race — accepted), 2 LOW (redundant cleanup, unused imports). Gemini: All PASS with 1 LOW redundant stopAlarmSound. All HIGH findings fixed. |
 
-**34 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+### Audit 33 — March 25, 2026 (Codex + Gemini)
+**Scope:** Foreground notification refactor, calendar feature, AlarmsTab extraction, NoteEditorModal extraction, UI polish (dark capsules, floating headers, BackButton)
+
+**Findings:**
+- HIGH: Daily recurring alarms/reminders (empty days array) missing from Calendar — recurring items with no days = daily, needed mapping to every day of month. Fixed.
+- HIGH: Calendar create buttons navigated with initialDate but CreateAlarmScreen/CreateReminderScreen never consumed it. Fixed — CreateAlarm reads initialDate, sets one-time mode + date; CreateReminder reads initialDate, sets dueDate.
+- HIGH: Floating header overlap on Settings (vertically stacked header exceeded 58px padding) and DailyRiddle (multi-line header with stats). Fixed — Settings made single-row, DailyRiddle stats moved into scrollable content.
+- MEDIUM: Notes timezone bucketing used UTC slice (createdAt.slice(0,10)) instead of local date. Fixed — parses Date object, extracts local YYYY-MM-DD.
+- LOW: New note unsaved changes detection only checked text, missed icon/color/font-only edits. Fixed — checks all fields against defaults.
+
+**Passed:** Foreground notification refactor (both auditors), consumePendingAlarm cleanup, timer dismissal state management, refactor integrity (AlarmsTab + NoteEditorModal), calendar date mapping (after fix).
+
+**35 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
 ---
 
@@ -750,6 +775,14 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - Pro tier ($1.99 one-time): "pay to add premium stuff" not "pay to remove annoyances." Free tier keeps everything permanently.
 - Store screenshots: professional graphics created with ChatGPT image generation, composited with real app screenshots in Canva to avoid AI text reproduction errors. 8 images with personality-driven taglines matching app's sarcastic brand.
 - Google Play App Information Request: standard vetting for new developer accounts. Requires SDK description, permission justifications, and video demo. Not a rejection — approval follows within days.
+
+**Calendar as separate screen, not tab (Mar 25):** AlarmListScreen was already 1000+ lines with 3 tabs. Adding a 4th tab with all the calendar logic would push it past 1300 lines and create editing risk. Calendar nav card on main screen provides one-tap access with clean code separation.
+
+**Floating headers limited to 3 screens (Mar 25):** Initially planned app-wide FloatingHeader component for all 15 screens with BackButton. Reverted after realizing only 3 screens (NoteEditorModal, SettingsScreen, DailyRiddleScreen) have content that actually scrolls past the header. Applied position: 'absolute' directly in those 3 screens instead. Avoids unnecessary visual noise (semi-transparent bar) on non-scrolling screens.
+
+**Calendar is free, not Pro (Mar 25):** Calendar visualizes existing alarms/reminders/notes — it's the universal mental model for "what did I forget." Paywalling it would undermine the app's core "don't forget" promise. Pro tier reserved for enhancements (voice, photos, online features), not core functionality.
+
+**Dark capsule button uniformity (Mar 25):** All tappable buttons use rgba(30,30,40,0.7) background with rgba(255,255,255,0.15) border. Ensures visibility on any background (light notes, dark notes, any theme). Applied to BackButton, NoteEditorModal toolbar, note card actions. Eliminates mixed styling where some buttons used translucent theme colors.
 
 ---
 
@@ -876,12 +909,17 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - [x] 2.0c AlarmFireScreen dismiss flash fix (v1.3.9)
 - [x] 2.0d Notification action buttons — Dismiss/Snooze on alarms, Dismiss on timers (v1.3.9)
 - [x] 2.0e Safety net for stale AlarmFire screen (v1.3.9)
+- [x] 2.0f Calendar feature — month view with dot indicators, Day/Week/Month tabs, type filters, create buttons with date prefill (v1.5.0)
+- [x] 2.0g AlarmListScreen split — AlarmsTab extraction (v1.5.0)
+- [x] 2.0h NotepadScreen split — NoteEditorModal extraction (v1.5.0)
+- [x] 2.0i UI polish — dark capsule buttons, floating headers (editor/settings/riddle), BackButton visibility (v1.5.0)
 - 2.1 Note image attachments
 - 2.2 Notepad drawing/sketch mode (Skia, S Pen pressure + finger)
 - 2.3 Custom photo background underlay on main screens
 - 2.4 Full-bleed per-alarm photo on Alarm Fire screen with photo-aware roasts
 - 2.5 App text color picker in Settings (global readability solution)
 - 2.6 Tablet responsive pass (Onboarding, Sudoku, Trivia)
+- 2.7 Calendar widget
 
 **Phase 3 — Voice Roasts** (ElevenLabs pre-recorded, bundled via expo-av)
 - 3.1 Alarm fire voice lines
@@ -1085,12 +1123,12 @@ Copy-Item "$root\src\widget\widgetTaskHandler.ts" "$dest\widgetTaskHandler.ts"
 
 | Item | Value |
 |------|-------|
-| Current version | v1.3.9 (versionCode 16) |
+| Current version | v1.5.0 (versionCode 18) |
 | Production status | v1.3.8 live, v1.3.9 uploaded and in review |
 | Install count | 48+ |
 | Phase 1 housekeeping | ✅ COMPLETE |
 | Phase 2 polish | 5/11 items complete (v1.3.9) |
-| Audit status | Audit 32 complete, all findings resolved |
+| Audit status | Audit 33 complete, all findings resolved |
 | Jest tests | 222 passing on testing-setup branch |
 | EAS build credits | ~34 remaining (reset April 12) |
 
