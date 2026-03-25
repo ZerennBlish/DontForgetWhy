@@ -57,12 +57,19 @@ export default function SettingsScreen({ navigation }: Props) {
       backgroundColor: 'transparent',
     },
     scrollContent: {
+      paddingTop: insets.top + 58,
       paddingBottom: 40 + insets.bottom,
     },
     header: {
-      paddingTop: 60,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+      paddingTop: insets.top + 8,
       paddingHorizontal: 20,
-      paddingBottom: 24,
+      paddingBottom: 10,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
     },
     title: {
       fontSize: 28,
@@ -442,11 +449,11 @@ export default function SettingsScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/gear.png')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+    <View style={styles.header}>
+      <BackButton onPress={() => navigation.goBack()} />
+      <Text style={styles.title}>Settings</Text>
+    </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <View style={styles.header}>
-        <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.title}>Settings</Text>
-      </View>
 
       {hasPermissionIssues && (
         <TouchableOpacity

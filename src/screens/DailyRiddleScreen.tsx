@@ -283,12 +283,19 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           backgroundColor: 'transparent',
         },
         scrollContent: {
+          paddingTop: insets.top + 58,
           paddingBottom: 60 + insets.bottom,
         },
         header: {
-          paddingTop: 60,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          paddingTop: insets.top + 8,
           paddingHorizontal: 20,
-          paddingBottom: 20,
+          paddingBottom: 10,
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
         },
         title: {
           fontSize: 28,
@@ -1100,40 +1107,40 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/door.png')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
+    <View style={styles.header}>
+      <BackButton onPress={() => navigation.goBack()} />
+      <Text style={styles.title}>
+        {'\u{1F4A1}'} Daily Riddle
+      </Text>
+      <Text style={styles.dateText}>{getFormattedDate()}</Text>
+
+      {stats.streak > 0 && (
+        <View style={styles.streakRow}>
+          <Text style={styles.streakText}>
+            {'\u{1F525}'} {stats.streak} day streak
+          </Text>
+        </View>
+      )}
+
+      {stats.totalPlayed > 0 && (
+        <View style={styles.statsRow}>
+          <Text style={styles.statText}>
+            Played: {stats.totalPlayed}
+          </Text>
+          <Text style={styles.statText}>
+            Correct: {stats.totalCorrect}
+          </Text>
+          <Text style={styles.statText}>
+            Seen: {stats.seenRiddleIds.length}/{RIDDLES.length}
+          </Text>
+        </View>
+      )}
+    </View>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.header}>
-        <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.title}>
-          {'\u{1F4A1}'} Daily Riddle
-        </Text>
-        <Text style={styles.dateText}>{getFormattedDate()}</Text>
-
-        {stats.streak > 0 && (
-          <View style={styles.streakRow}>
-            <Text style={styles.streakText}>
-              {'\u{1F525}'} {stats.streak} day streak
-            </Text>
-          </View>
-        )}
-
-        {stats.totalPlayed > 0 && (
-          <View style={styles.statsRow}>
-            <Text style={styles.statText}>
-              Played: {stats.totalPlayed}
-            </Text>
-            <Text style={styles.statText}>
-              Correct: {stats.totalCorrect}
-            </Text>
-            <Text style={styles.statText}>
-              Seen: {stats.seenRiddleIds.length}/{RIDDLES.length}
-            </Text>
-          </View>
-        )}
-      </View>
 
       {/* Mode toggle */}
       <View style={styles.modeToggle}>

@@ -1,6 +1,5 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { useTheme } from '../theme/ThemeContext';
 import { hapticLight } from '../utils/haptics';
 
 interface BackButtonProps {
@@ -8,17 +7,15 @@ interface BackButtonProps {
 }
 
 export default function BackButton({ onPress }: BackButtonProps) {
-  const { colors } = useTheme();
-
   return (
     <TouchableOpacity
-      style={[styles.circle, { backgroundColor: colors.card, borderColor: colors.border }]}
+      style={styles.circle}
       onPress={() => { hapticLight(); onPress(); }}
       activeOpacity={0.7}
       accessibilityLabel="Go back"
       accessibilityRole="button"
     >
-      <Text style={[styles.arrow, { color: colors.textPrimary }]}>{'\u2039'}</Text>
+      <Text style={styles.arrow}>{'\u2039'}</Text>
     </TouchableOpacity>
   );
 }
@@ -30,10 +27,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    backgroundColor: 'rgba(30, 30, 40, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   arrow: {
     fontSize: 22,
     marginTop: -2,
+    color: '#FFFFFF',
   },
 });
