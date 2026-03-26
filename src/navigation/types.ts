@@ -28,5 +28,5 @@ export type RootStackParamList = {
   About: undefined;
   Trivia: undefined;
   Notepad: { noteId?: string; newNote?: boolean } | undefined;
-  Calendar: undefined;
+  Calendar: { initialDate?: string } | undefined;
 };

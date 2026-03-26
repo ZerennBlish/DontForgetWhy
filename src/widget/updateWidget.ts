@@ -2,7 +2,8 @@ import React from 'react';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import { DetailedWidget } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
-import { getDetailedAlarms, getDetailedPresets, getCompactReminders, getWidgetNotes, getWidgetTheme } from './widgetTaskHandler';
+import { CalendarWidget } from './CalendarWidget';
+import { getDetailedAlarms, getDetailedPresets, getCompactReminders, getWidgetNotes, getCalendarWidgetData, getWidgetTheme } from './widgetTaskHandler';
 
 export async function refreshWidgets(): Promise<void> {
   const theme = await getWidgetTheme();
@@ -30,5 +31,16 @@ export async function refreshWidgets(): Promise<void> {
     });
   } catch (error) {
     console.warn('[refreshNotepadWidget]', error);
+  }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'CalendarWidget',
+      renderWidget: async () => {
+        const data = await getCalendarWidgetData();
+        return React.createElement(CalendarWidget, { ...data, theme });
+      },
+    });
+  } catch (error) {
+    console.warn('[refreshCalendarWidget]', error);
   }
 }

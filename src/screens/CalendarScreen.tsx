@@ -177,7 +177,8 @@ function getItemsForDate(
 function getItemSortTime(item: DayItem): string {
   if (item.type === 'alarm') return item.data.time;
   if (item.type === 'reminder') return item.data.dueTime || '\xff';
-  return item.data.createdAt.slice(11, 16) || '\xff';
+  const d = new Date(item.data.createdAt);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function sortItems(items: DayItem[]): DayItem[] {
@@ -236,7 +237,7 @@ const dayCellStyles = StyleSheet.create({
   },
 });
 
-export default function CalendarScreen({ navigation }: Props) {
+export default function CalendarScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -244,11 +245,20 @@ export default function CalendarScreen({ navigation }: Props) {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const today = toDateString(new Date());
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [currentMonth, setCurrentMonth] = useState(today.slice(0, 7) + '-01');
+  const initialDate = route.params?.initialDate || today;
+  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [currentMonth, setCurrentMonth] = useState(initialDate.slice(0, 7) + '-01');
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [filterType, setFilterType] = useState<FilterType>('all');
+
+  useEffect(() => {
+    const incoming = route.params?.initialDate;
+    if (incoming) {
+      setSelectedDate(incoming);
+      setCurrentMonth(incoming.slice(0, 7) + '-01');
+    }
+  }, [route.params?.initialDate]);
 
   useEffect(() => {
     setFilterType('all');
@@ -382,9 +392,9 @@ export default function CalendarScreen({ navigation }: Props) {
     return items.map((item) => ({ rowType: 'event' as const, item }));
   }, [alarms, reminders, notes, selectedDate]);
 
-  // ── Week view items ──
+  // ── Week view items (always current week — the week containing today) ──
   const weekRows = useMemo<ListRow[]>(() => {
-    const { start, end } = getWeekRange(selectedDate);
+    const { start, end } = getWeekRange(today);
     const dates = getDatesInRange(start, end);
     const rows: ListRow[] = [];
     for (const ds of dates) {
@@ -399,7 +409,7 @@ export default function CalendarScreen({ navigation }: Props) {
       }
     }
     return rows;
-  }, [alarms, reminders, notes, selectedDate, filterType]);
+  }, [alarms, reminders, notes, today, filterType]);
 
   // ── Month view items ──
   const monthRows = useMemo<ListRow[]>(() => {
@@ -430,22 +440,22 @@ export default function CalendarScreen({ navigation }: Props) {
         container: {
           flex: 1,
           backgroundColor: colors.background,
-          paddingTop: insets.top,
         },
         header: {
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-        },
-        backWrap: {
           position: 'absolute',
+          top: insets.top + 12,
           left: 16,
+          zIndex: 10,
+          backgroundColor: 'rgba(18, 18, 32, 0.85)',
+          borderRadius: 20,
+          padding: 4,
         },
         title: {
           fontSize: 22,
           fontWeight: '700',
           color: colors.textPrimary,
+          textAlign: 'center',
+          paddingVertical: 12,
         },
         calendarWrap: {
           paddingHorizontal: 8,
@@ -562,6 +572,7 @@ export default function CalendarScreen({ navigation }: Props) {
           paddingBottom: 6,
         },
         listContent: {
+          paddingTop: insets.top,
           paddingHorizontal: 16,
           paddingBottom: insets.bottom + 16,
         },
@@ -806,32 +817,34 @@ export default function CalendarScreen({ navigation }: Props) {
       return `Events for ${formatDisplayDate(selectedDate)}`;
     }
     if (viewMode === 'week') {
-      const { start, end } = getWeekRange(selectedDate);
+      const { start, end } = getWeekRange(today);
       return formatWeekHeader(start, end);
     }
     return formatMonthHeader(currentMonth);
-  }, [viewMode, selectedDate, currentMonth]);
+  }, [viewMode, selectedDate, currentMonth, today]);
 
   // ── List header (calendar + controls) ──
   const listHeader = useMemo(
     () => (
       <>
-        <View style={styles.header}>
-          <View style={styles.backWrap}>
-            <BackButton onPress={() => navigation.goBack()} />
-          </View>
-          <Text style={styles.title}>{'\uD83D\uDCC5'} Calendar</Text>
-        </View>
+        <Text style={styles.title}>{'\uD83D\uDCC5'} Calendar</Text>
         <View style={styles.calendarWrap}>
           <Calendar
-            key={colors.background}
+            key={`${colors.background}-${currentMonth}`}
+            current={currentMonth}
             markingType="multi-dot"
             markedDates={markedDates}
             theme={calendarTheme}
             dayComponent={renderDay}
-            onDayPress={(day: { dateString: string }) =>
-              setSelectedDate(day.dateString)
-            }
+            onDayPress={(day: { dateString: string }) => {
+              setSelectedDate(day.dateString);
+              if (viewMode === 'week') {
+                const { start, end } = getWeekRange(today);
+                if (day.dateString < start || day.dateString > end) {
+                  setViewMode('day');
+                }
+              }
+            }}
             onMonthChange={(month: { dateString: string }) =>
               setCurrentMonth(month.dateString)
             }
@@ -958,6 +971,9 @@ export default function CalendarScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <BackButton onPress={() => navigation.goBack()} />
+      </View>
       <FlatList
         data={listData}
         renderItem={renderRow}

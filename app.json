@@ -61,6 +61,15 @@
             "resizeMode": "horizontal|vertical",
             "description": "Quick notes at a glance",
             "updatePeriodMillis": 1800000
+          },
+          {
+            "name": "CalendarWidget",
+            "label": "DFW Calendar",
+            "minWidth": "250dp",
+            "minHeight": "280dp",
+            "resizeMode": "horizontal|vertical",
+            "description": "Monthly calendar with event indicators",
+            "updatePeriodMillis": 1800000
           }
         ]
       }]

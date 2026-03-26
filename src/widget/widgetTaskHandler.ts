@@ -26,6 +26,8 @@ import { DetailedWidget } from './DetailedWidget';
 import type { DetailedAlarm, DetailedPreset, DetailedReminder } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
 import type { WidgetNote, WidgetTheme } from './NotepadWidget';
+import { CalendarWidget } from './CalendarWidget';
+import type { CalendarDayData } from './CalendarWidget';
 import { themes, generateCustomThemeDual } from '../theme/colors';
 import { getNotes } from '../services/noteStorage';
 import { getPinnedNotes } from '../services/widgetPins';
@@ -37,6 +39,17 @@ const ALARMS_KEY = 'alarms';
 const DAY_INDEX: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
 };
+
+const CALENDAR_WEEKDAY: Record<number, AlarmDay> = {
+  0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat',
+};
+
+function toWidgetDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 // ── Helpers ──
 
@@ -122,6 +135,7 @@ async function loadWidgetAlarms(): Promise<Alarm[]> {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
+    const DAY_NAMES: AlarmDay[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return parsed.filter(
       (item: unknown): item is Alarm =>
         item !== null &&
@@ -129,7 +143,24 @@ async function loadWidgetAlarms(): Promise<Alarm[]> {
         typeof (item as Record<string, unknown>).id === 'string' &&
         typeof (item as Record<string, unknown>).time === 'string' &&
         typeof (item as Record<string, unknown>).enabled === 'boolean',
-    ).filter((a) => !a.deletedAt);
+    ).filter((a) => !a.deletedAt).map((alarm) => {
+      // Normalize legacy alarms (mirrors storage.ts migrateAlarm)
+      let mode: Alarm['mode'] = alarm.mode || 'recurring';
+      if (!alarm.mode && (alarm as unknown as { recurring?: boolean }).recurring === false) {
+        mode = 'one-time';
+      }
+      let days: AlarmDay[];
+      if (!Array.isArray(alarm.days)) {
+        days = [];
+      } else if (alarm.days.length > 0 && typeof alarm.days[0] === 'number') {
+        days = (alarm.days as unknown as number[])
+          .map((n) => DAY_NAMES[n])
+          .filter((d): d is AlarmDay => d !== undefined);
+      } else {
+        days = alarm.days;
+      }
+      return { ...alarm, mode, days, date: alarm.date ?? null };
+    });
   } catch {
     return [];
   }
@@ -417,6 +448,84 @@ export async function getWidgetNotes(): Promise<WidgetNote[]> {
   return result;
 }
 
+// ── Calendar widget data ──
+
+export async function getCalendarWidgetData(): Promise<{
+  monthLabel: string;
+  weeks: CalendarDayData[][];
+}> {
+  let alarmList: Alarm[] = [];
+  let reminderList: Reminder[] = [];
+  let noteList: { createdAt: string }[] = [];
+
+  try { alarmList = await loadWidgetAlarms(); } catch {}
+  try { reminderList = await loadWidgetReminders(); } catch {}
+  try {
+    const allNotes = await getNotes();
+    noteList = allNotes.filter((n) => !n.deletedAt);
+  } catch {}
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const todayStr = toWidgetDateString(now);
+  const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const firstDay = new Date(year, month, 1);
+  const startDow = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+
+  const days: CalendarDayData[] = [];
+  for (let i = 0; i < totalCells; i++) {
+    const d = new Date(year, month, 1 + (i - startDow));
+    const dateStr = toWidgetDateString(d);
+    const isCurrentMonth = d.getMonth() === month && d.getFullYear() === year;
+    const weekday = CALENDAR_WEEKDAY[d.getDay()];
+
+    let hasAlarm = false;
+    for (const alarm of alarmList) {
+      if (!alarm.enabled) continue;
+      if (alarm.mode === 'one-time' && alarm.date === dateStr) { hasAlarm = true; break; }
+      if (alarm.mode === 'recurring' && (alarm.days.length === 0 || alarm.days.includes(weekday))) { hasAlarm = true; break; }
+    }
+
+    let hasReminder = false;
+    for (const reminder of reminderList) {
+      if (reminder.completed) continue;
+      if (reminder.recurring) {
+        if (!reminder.days || reminder.days.length === 0) { hasReminder = true; break; }
+        if (reminder.days.includes(weekday)) { hasReminder = true; break; }
+      } else if (reminder.dueDate && reminder.dueDate.slice(0, 10) === dateStr) { hasReminder = true; break; }
+    }
+
+    let hasNote = false;
+    for (const note of noteList) {
+      const nd = new Date(note.createdAt);
+      const noteDate = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`;
+      if (noteDate === dateStr) { hasNote = true; break; }
+    }
+
+    days.push({
+      date: dateStr,
+      day: d.getDate(),
+      isCurrentMonth,
+      isToday: dateStr === todayStr,
+      isPast: dateStr < todayStr,
+      hasAlarm,
+      hasReminder,
+      hasNote,
+    });
+  }
+
+  const weeks: CalendarDayData[][] = [];
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7));
+  }
+
+  return { monthLabel, weeks };
+}
+
 // ── Rendering ──
 
 async function renderDetailedWidget(props: WidgetTaskHandlerProps) {
@@ -433,7 +542,13 @@ async function renderNotepadWidget(props: WidgetTaskHandlerProps): Promise<void>
   props.renderWidget(React.createElement(NotepadWidget, { notes, theme }));
 }
 
-// ── Refresh both widgets (called after timer start from widget) ──
+async function renderCalendarWidget(props: WidgetTaskHandlerProps): Promise<void> {
+  const data = await getCalendarWidgetData();
+  const theme = await getWidgetTheme();
+  props.renderWidget(React.createElement(CalendarWidget, { ...data, theme }));
+}
+
+// ── Refresh all widgets (called after timer start from widget) ──
 
 async function refreshAllWidgets(): Promise<void> {
   const theme = await getWidgetTheme();
@@ -461,6 +576,17 @@ async function refreshAllWidgets(): Promise<void> {
   } catch {
     // notepad widget may not be placed
   }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'CalendarWidget',
+      renderWidget: async () => {
+        const data = await getCalendarWidgetData();
+        return React.createElement(CalendarWidget, { ...data, theme });
+      },
+    });
+  } catch {
+    // calendar widget may not be placed
+  }
 }
 
 // ── Task handler ──
@@ -476,6 +602,8 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         await renderDetailedWidget(props);
       } else if (widgetInfo.widgetName === 'NotepadWidget') {
         await renderNotepadWidget(props);
+      } else if (widgetInfo.widgetName === 'CalendarWidget') {
+        await renderCalendarWidget(props);
       }
       break;
     case 'WIDGET_CLICK': {
@@ -526,6 +654,19 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
       if (action?.startsWith('OPEN_NOTE__')) {
         const noteId = action.replace('OPEN_NOTE__', '');
         await setPendingNoteAction({ type: 'edit', noteId });
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'OPEN_CALENDAR') {
+        await AsyncStorage.setItem('pendingCalendarAction', JSON.stringify({ date: null, timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action?.startsWith('OPEN_CALENDAR_DAY__')) {
+        const date = action.replace('OPEN_CALENDAR_DAY__', '');
+        await AsyncStorage.setItem('pendingCalendarAction', JSON.stringify({ date, timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }

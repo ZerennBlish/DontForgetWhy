@@ -105,6 +105,7 @@ function AppNavigator() {
     alarmListParams: RootStackParamList['AlarmList'] | null;
     createAlarmParams: RootStackParamList['CreateAlarm'] | null;
     createReminderParams: RootStackParamList['CreateReminder'] | null;
+    calendarParams: RootStackParamList['Calendar'] | null;
   } | null>(null);
 
   const navigationRef = useRef<any>(null);
@@ -379,11 +380,26 @@ function AppNavigator() {
           } catch {}
         }
 
+        // 7. Check for pending calendar action from widget deep-link
+        let calendarParams: RootStackParamList['Calendar'] | null = null;
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingCalendarAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingCalendarAction');
+              const parsed = JSON.parse(raw) as { date: string | null; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                calendarParams = parsed.date ? { initialDate: parsed.date } : {};
+              }
+            }
+          } catch {}
+        }
+
         console.log('[NOTIF] INIT — complete. alarmFireParams:', alarmFireParams ? 'SET' : 'null');
-        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams });
+        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams, calendarParams });
       } catch (e) {
         console.error('[NOTIF] INIT — fatal error:', e);
-        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: null, createAlarmParams: null, createReminderParams: null });
+        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: null, createAlarmParams: null, createReminderParams: null, calendarParams: null });
       }
     })();
   }, []);
@@ -740,6 +756,17 @@ function AppNavigator() {
       }
     }).catch(() => {});
 
+    // Check for pending calendar action from widget
+    AsyncStorage.getItem('pendingCalendarAction').then((raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingCalendarAction');
+        const parsed = JSON.parse(raw) as { date: string | null; timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          navigationRef.current.navigate('Calendar', parsed.date ? { initialDate: parsed.date } : undefined);
+        }
+      }
+    }).catch(() => {});
+
     // pendingTabAction is now handled directly by AlarmListScreen
   }, [navigateToAlarmFire]);
 
@@ -821,6 +848,16 @@ function AppNavigator() {
             }
           }
         }).catch(() => {});
+        // Check for pending calendar action from widget
+        AsyncStorage.getItem('pendingCalendarAction').then((raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingCalendarAction');
+            const parsed = JSON.parse(raw) as { date: string | null; timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              navigationRef.current.navigate('Calendar', parsed.date ? { initialDate: parsed.date } : undefined);
+            }
+          }
+        }).catch(() => {});
         // pendingTabAction is now handled directly by AlarmListScreen
       }
     });
@@ -833,7 +870,7 @@ function AppNavigator() {
   // This prevents any flash of the wrong screen.
   if (!initState) return null;
 
-  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams } = initState;
+  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams, calendarParams } = initState;
 
   // For TRUE cold start: set initialState so the navigator renders
   // AlarmFireScreen or NotepadScreen on the very first frame. AlarmList
@@ -860,6 +897,12 @@ function AppNavigator() {
     routes: [
       { name: 'AlarmList' as const },
       { name: 'CreateReminder' as const, params: createReminderParams },
+    ],
+    index: 1,
+  } : calendarParams ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'Calendar' as const, params: calendarParams },
     ],
     index: 1,
   } : alarmListParams ? {
