@@ -28,6 +28,9 @@ import type { Note } from '../types/note';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import BackButton from './BackButton';
+import DrawingCanvas from './DrawingCanvas';
+import type { StrokeData } from './DrawingCanvas';
+import { loadDrawingData } from '../services/noteImageStorage';
 
 const MAX_NOTE_LENGTH = 999;
 
@@ -163,6 +166,9 @@ export default function NoteEditorModal({
   const [showFontPicker, setShowFontPicker] = useState(false);
   const [editorImages, setEditorImages] = useState<string[]>([]);
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+  const [showDrawing, setShowDrawing] = useState(false);
+  const [editingDrawingData, setEditingDrawingData] = useState<{ strokes: StrokeData[]; bgColor: string } | null>(null);
+  const [editingImageUri, setEditingImageUri] = useState<string | null>(null);
 
   const pickedBgRef = useRef(customBgColor || '#4A90D9');
   const pickedFontRef = useRef(customFontColor || '#FF6B6B');
@@ -174,6 +180,9 @@ export default function NoteEditorModal({
       setShowBgPicker(false);
       setShowFontPicker(false);
       setLightboxUri(null);
+      setShowDrawing(false);
+      setEditingDrawingData(null);
+      setEditingImageUri(null);
       return;
     }
     if (note) {
@@ -297,22 +306,22 @@ export default function NoteEditorModal({
     },
     topBarCenter: {
       flex: 1,
-      alignItems: 'center',
+      alignItems: 'flex-start',
     },
     topBarRight: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'flex-end',
-      gap: 8,
+      gap: 6,
     },
     topBarContentPad: {
       height: insets.top + 58,
     },
     editorTopBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: 'rgba(30, 30, 40, 0.7)',
       justifyContent: 'center',
       alignItems: 'center',
@@ -332,9 +341,9 @@ export default function NoteEditorModal({
       borderRadius: 10,
     },
     editorTrashBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: 'rgba(30, 30, 40, 0.7)',
       justifyContent: 'center',
       alignItems: 'center',
@@ -655,7 +664,7 @@ export default function NoteEditorModal({
               <>
                 <View style={styles.topBarCenter}>
                   <TouchableOpacity
-                    style={{ backgroundColor: 'rgba(30, 30, 40, 0.7)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 6, minWidth: 80, alignItems: 'center', justifyContent: 'center' }}
+                    style={{ backgroundColor: 'rgba(30, 30, 40, 0.7)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, minWidth: 70, alignItems: 'center', justifyContent: 'center', marginRight: 4 }}
                     onPress={handleSave}
                     activeOpacity={0.7}
                   >
@@ -663,6 +672,22 @@ export default function NoteEditorModal({
                   </TouchableOpacity>
                 </View>
                 <View style={styles.topBarRight}>
+                  <TouchableOpacity
+                    style={styles.editorTopBtn}
+                    onPress={() => {
+                      hapticLight();
+                      Keyboard.dismiss();
+                      setShowColorPicker(false);
+                      if (editorImages.length >= 3) {
+                        ToastAndroid.show('3 attachments max. Delete one first.', ToastAndroid.SHORT);
+                        return;
+                      }
+                      setShowDrawing(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.editorTopBtnEmoji}>{'\u{1F58C}\uFE0F'}</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.editorTopBtn}
                     onPress={pickImage}
@@ -729,7 +754,22 @@ export default function NoteEditorModal({
           {editorImages.length > 0 && (
             <View style={styles.thumbnailRow}>
               {editorImages.map((uri, idx) => (
-                <TouchableOpacity key={`${uri}-${idx}`} onPress={() => setLightboxUri(uri)} activeOpacity={0.8}>
+                <TouchableOpacity key={`${uri}-${idx}`} onPress={async () => {
+                  const drawingData = await loadDrawingData(uri);
+                  if (drawingData) {
+                    Alert.alert('Drawing', '', [
+                      { text: 'View', onPress: () => setLightboxUri(uri) },
+                      { text: 'Edit', onPress: () => {
+                        setEditingDrawingData(drawingData);
+                        setEditingImageUri(uri);
+                        setShowDrawing(true);
+                      }},
+                      { text: 'Cancel', style: 'cancel' },
+                    ]);
+                  } else {
+                    setLightboxUri(uri);
+                  }
+                }} activeOpacity={0.8}>
                   <Image source={{ uri }} style={styles.thumbnail} resizeMethod="resize" />
                   {!isViewMode && (
                     <TouchableOpacity
@@ -985,6 +1025,31 @@ export default function NoteEditorModal({
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* Drawing Canvas */}
+      <DrawingCanvas
+        visible={showDrawing}
+        onSave={(imageUri: string) => {
+          if (editingImageUri) {
+            setShowDrawing(false);
+            setEditingDrawingData(null);
+            setEditingImageUri(null);
+            ToastAndroid.show('Drawing updated!', ToastAndroid.SHORT);
+          } else {
+            setEditorImages((prev) => [...prev, imageUri]);
+            setShowDrawing(false);
+            ToastAndroid.show('Drawing saved!', ToastAndroid.SHORT);
+          }
+        }}
+        onCancel={() => {
+          setShowDrawing(false);
+          setEditingDrawingData(null);
+          setEditingImageUri(null);
+        }}
+        initialStrokes={editingDrawingData?.strokes}
+        initialBgColor={editingDrawingData?.bgColor}
+        editingImageUri={editingImageUri}
+      />
     </>
   );
 }
