@@ -12,7 +12,7 @@
 | **Production Status** | ✅ Live on Google Play |
 | **Current Focus** | Finishing P2 free features before starting P2 paid features |
 | **Blocked By** | Nothing |
-| **Next Action** | P2 2.2 (Skia drawing) or calendar widget dev build |
+| **Next Action** | P2 2.3 (custom photo backgrounds) or calendar widget dev build |
 | **EAS Credits** | ~33 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -106,10 +106,22 @@
   - Emoji picker removed from NoteEditorModal (keyboard emoji sufficient)
   - Audit 36: all findings resolved (transaction order, duplicate keys, print base64, resizeMethod)
 
-- [ ] **2.2 Notepad drawing/sketch mode**
-  - `@shopify/react-native-skia`
-  - S Pen pressure sensitivity + finger drawing
-  - Canvas overlay on note editor
+- [x] **2.2 Notepad drawing/sketch mode** ✅ COMPLETE (March 26, 2026)
+  - Full-screen Skia canvas (DrawingCanvas.tsx) with PanResponder touch handling
+  - Strokes stored as serializable StrokeData (SVG path strings) — memoized SkPaths for 60fps performance
+  - Tools: pen, eraser (draws in BG color), undo, clear (with confirmation), cancel (with discard prompt)
+  - 4 stroke widths: XS(1), S(3), M(6), L(12) — default S
+  - 8-color palette + custom color picker + custom canvas background color picker
+  - S Pen pressure: sampled on touch start, modulates stroke width
+  - Drawings save as PNG + companion JSON (stroke data for re-editing)
+  - Edit flow: thumbnail tap offers View/Edit for drawings, new filename on edit (cache bust), old files deleted
+  - saveNoteImage detects .png, copies companion .json through save pipeline
+  - loadDrawingData early-returns null for .jpg (no reading photos as text)
+  - Share modal: custom dark modal (replaced Alert.alert). Options: Share Text, Share Photos, Share as PDF, Print, Cancel
+  - Share as PDF: buildNoteHtml → Print.printToFileAsync → Sharing.shareAsync
+  - buildNoteHtml detects .png/.jpg for correct MIME type in base64 data URIs
+  - Empty canvas save blocked, cancel prompts when strokes exist
+  - Audit 37: 3 HIGH, 2 MEDIUM, 2 LOW — all resolved
 
 - [ ] **2.3 Custom photo background underlay on main screens**
   - Alarms, Timers, Reminders screens

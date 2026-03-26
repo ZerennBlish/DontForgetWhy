@@ -136,6 +136,7 @@ DontForgetWhy/
     ├── components/
     │   ├── AlarmCard.tsx
     │   ├── BackButton.tsx
+    │   ├── DrawingCanvas.tsx
     │   ├── ErrorBoundary.tsx
     │   ├── NoteEditorModal.tsx
     │   ├── SoundPickerModal.tsx
@@ -375,7 +376,7 @@ interface Note {
 }
 ```
 
-**Image storage:** Images stored on filesystem at `${FileSystem.documentDirectory}note-images/`. Filenames: `${noteId}_${timestamp}_${uuid8}.jpg`. Service: `src/services/noteImageStorage.ts` (save, delete, deleteAll). Uses expo-file-system v19 class-based API (`File`, `Directory`, `Paths`). `noteStorage.ts` auto-cleans images on permanent delete and 30-day purge.
+**Image storage:** Images stored on filesystem at `${FileSystem.documentDirectory}note-images/`. Photos: `${noteId}_${timestamp}_${uuid8}.jpg`. Drawings: `${noteId}_${timestamp}_${uuid8}.png` + companion `.json` (stroke data for re-editing). Service: `src/services/noteImageStorage.ts` — `saveNoteImage` detects .png/.jpg extension, copies companion .json alongside PNGs. `deleteNoteImage` also deletes companion .json. `loadDrawingData` reads companion .json (early-returns null for .jpg). `getDrawingJsonUri` derives .json path from .png path. All use directory-based File constructors (`new File(dir, filename)`) for reliability. `noteStorage.ts` auto-cleans images on permanent delete and 30-day purge.
 
 ### ActiveTimer / UserTimer
 ```typescript
@@ -692,6 +693,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 | 34 | Mar 25 | CalendarWidget + calendar fixes | Codex: 1 HIGH (note sort UTC slice), 1 MEDIUM (floating back button overlap), 1 LOW (root widget missing clickAction). Gemini: 2 HIGH (widget deep-link doesn't drive month — useState stale, widget alarm loader no normalization), 1 MEDIUM (widget minHeight too small for 6-row months). All fixed. Re-audit: Codex all PASS. Gemini: 4 PASS, 1 partial (widget alarm normalization functionally equivalent but not identical to loadAlarms — accepted, daily behavior same). |
 | 35 | Mar 25 | Tablet responsive (Onboarding + Sudoku) | Codex: 1 MEDIUM (Sudoku paused/won not width-capped). Fixed. Gemini: All PASS. |
 | 36 | Mar 26 | Note image attachments (P2 2.1) | Self-audit during implementation. 1 HIGH (transaction order), 2 MEDIUM (duplicate keys, image-only notes blocked), 2 MEDIUM (print broken images), 1 LOW (thumbnail memory). All resolved. Emoji picker removed. |
+| 37 | Mar 26 | Drawing canvas (P2 2.2) | 3 HIGH (drawing persistence — saveNoteImage .png extension + companion .json copy, performance — memoize parsedStrokes, loadDrawingData reads JPGs as text), 2 MEDIUM (image cache after edit — new filename cache bust, print/share MIME detection), 2 LOW (empty canvas save block, cancel confirmation). All resolved. |
 
 ### Audit 33 — March 25, 2026 (Codex + Gemini)
 **Scope:** Foreground notification refactor, calendar feature, AlarmsTab extraction, NoteEditorModal extraction, UI polish (dark capsules, floating headers, BackButton)
@@ -717,6 +719,53 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - LOW: Share logic — upgraded to "Share Text" + "Share Photos" (Sharing.shareAsync per image) when images present. Print always uses white background (#FFFFFF) with dark text (#1A1A2E) for ink efficiency.
 
 **Also completed:** Removed dedicated emoji picker from NoteEditorModal (keyboard emoji sufficient). Iterative thumbnail styling (border, spacing, positioning, safe area insets).
+
+### P2 2.2 — Notepad Drawing/Sketch Mode (March 26, 2026)
+
+**Component:** `src/components/DrawingCanvas.tsx` — full-screen Skia canvas modal with PanResponder touch handling.
+
+**Architecture:**
+- Strokes stored as serializable `StrokeData` objects (`pathSvg` SVG string, `color`, `strokeWidth`) — no native SkPath objects in React state (avoids "Invalid prop value for SkPath" crash)
+- SkPath objects memoized via `useMemo` keyed on strokes array — only rebuilt on stroke release/undo/clear, not during 60fps touch moves
+- In-progress stroke tracked as `{x,y}[]` coordinate array in a ref, fresh SkPath built each render via `buildPathFromPoints`
+- Canvas background rendered via `<Fill color={canvasBgColor}>` — captured in PNG snapshot
+
+**Drawing tools (bottom toolbar):**
+- Pen (default) — draws colored strokes with round caps/joins
+- Eraser — draws in current background color (works on any background, not just white)
+- Color palette — 8 preset colors + custom color via reanimated-color-picker
+- Canvas background color — BG button opens separate color picker modal
+- Stroke widths — XS(1), S(3 default), M(6), L(12)
+- Undo — removes last completed stroke
+- Clear — Alert confirmation, then clears all strokes
+- Cancel — prompts "Discard Drawing?" if strokes exist
+- Done — blocks empty canvas save with toast
+
+**S Pen pressure:** `nativeEvent.force` sampled once per stroke on `onPanResponderGrant`. Formula: `baseWidth * pressure * 2`. Falls back to base width when force unavailable (finger input).
+
+**Save flow:**
+- `canvasRef.makeImageSnapshot()` → `encodeToBytes(ImageFormat.PNG)` → `File.write(bytes)`
+- Companion JSON: `{ strokes: StrokeData[], bgColor: string }` saved alongside PNG (same basename, `.json` extension)
+- File naming: `drawing_${Date.now()}_${uuid8}.png` + `.json`
+
+**Edit flow:**
+- `loadDrawingData(imageUri)` checks for companion `.json` — returns `{strokes, bgColor}` or null (photos)
+- Thumbnail tap in NoteEditorModal shows View/Edit alert for drawings, direct lightbox for photos
+- Editing generates new filename (cache bust for React Native Image), deletes old PNG + JSON
+- `saveNoteImage` detects `.png` extension, copies companion `.json` alongside through the save pipeline
+
+**Share modal:** Custom dark modal (`shareModalStyles`) replacing `Alert.alert` (Android 3-button limit workaround). Options: Share Text (always), Share Photos (when images, correct MIME per file), Share as PDF (`buildNoteHtml` → `Print.printToFileAsync` → `Sharing.shareAsync`), Print, Cancel.
+
+**Print/share fixes:** `buildNoteHtml` detects `.png`/`.jpg` for correct MIME type (`image/png` vs `image/jpeg`) in base64 data URIs.
+
+**Audit 37 findings (all resolved):**
+- HIGH: Drawing persistence — `saveNoteImage` now detects .png extension, copies companion .json
+- HIGH: Performance — `parsedStrokes` memoized via `useMemo`, eliminates per-frame `MakeFromSVGString`
+- HIGH: `loadDrawingData` early-returns null for .jpg files (no reading multi-MB photos as text)
+- MEDIUM: Image cache after edit — new filename on edit (cache bust), deletes old files, replaces URI in editorImages
+- MEDIUM: Print/share — MIME type detection for .png vs .jpg in buildNoteHtml and share handlers
+- LOW: Empty canvas save blocked with toast
+- LOW: Cancel confirmation when strokes exist
 
 **38 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
@@ -989,8 +1038,8 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - [x] 2.0g AlarmListScreen split — AlarmsTab extraction (v1.5.0)
 - [x] 2.0h NotepadScreen split — NoteEditorModal extraction (v1.5.0)
 - [x] 2.0i UI polish — dark capsule buttons, floating headers (editor/settings/riddle), BackButton visibility (v1.5.0)
-- 2.1 Note image attachments
-- 2.2 Notepad drawing/sketch mode (Skia, S Pen pressure + finger)
+- [x] 2.1 Note image attachments (gallery photos, max 3, thumbnails, lightbox, share/print, transactional save)
+- [x] 2.2 Notepad drawing/sketch mode (Skia canvas, pen/eraser/undo/clear, custom colors, BG color, editable drawings, S Pen pressure, share modal with PDF)
 - 2.3 Custom photo background underlay on main screens
 - 2.4 Full-bleed per-alarm photo on Alarm Fire screen with photo-aware roasts
 - ~~2.5 App text color picker in Settings~~ — REMOVED (readability solved by dark capsule pattern + auto-contrast overlays, not user-facing text color picker)
