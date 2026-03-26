@@ -14,10 +14,29 @@ export async function saveNoteImage(noteId: string, sourceUri: string): Promise<
   try {
     const imageDir = ensureImageDir();
     const shortId = uuidv4().split('-')[0];
-    const filename = `${noteId}_${Date.now()}_${shortId}.jpg`;
+    const isPng = sourceUri.toLowerCase().endsWith('.png');
+    const ext = isPng ? 'png' : 'jpg';
+    const filename = `${noteId}_${Date.now()}_${shortId}.${ext}`;
     const destFile = new File(imageDir, filename);
     const sourceFile = new File(sourceUri);
     sourceFile.copy(destFile);
+
+    // Copy companion drawing JSON if it exists
+    if (isPng) {
+      try {
+        const srcFilename = sourceUri.split('/').pop();
+        if (srcFilename) {
+          const srcJsonFilename = srcFilename.replace(/\.png$/i, '.json');
+          const sourceJson = new File(imageDir, srcJsonFilename);
+          if (sourceJson.exists) {
+            const destJsonFilename = filename.replace(/\.png$/i, '.json');
+            const destJson = new File(imageDir, destJsonFilename);
+            sourceJson.copy(destJson);
+          }
+        }
+      } catch { /* best-effort */ }
+    }
+
     return destFile.uri;
   } catch (error) {
     console.error('[noteImageStorage] saveNoteImage failed:', error);
@@ -32,13 +51,19 @@ export async function deleteNoteImage(imageUri: string): Promise<void> {
       file.delete();
     }
     // Also delete companion drawing JSON if it exists
-    const jsonUri = getDrawingJsonUri(imageUri);
-    try {
-      const jsonFile = new File(jsonUri);
-      if (jsonFile.exists) {
-        jsonFile.delete();
-      }
-    } catch { /* best-effort */ }
+    if (imageUri.toLowerCase().endsWith('.png')) {
+      try {
+        const imageDir = ensureImageDir();
+        const pngFilename = imageUri.split('/').pop();
+        if (pngFilename) {
+          const jsonFilename = pngFilename.replace(/\.png$/i, '.json');
+          const jsonFile = new File(imageDir, jsonFilename);
+          if (jsonFile.exists) {
+            jsonFile.delete();
+          }
+        }
+      } catch { /* best-effort */ }
+    }
   } catch (error) {
     console.error('[noteImageStorage] deleteNoteImage failed:', error);
   }
@@ -55,9 +80,14 @@ export function getDrawingJsonUri(imageUri: string): string {
 export async function loadDrawingData(
   imageUri: string,
 ): Promise<{ strokes: StrokeData[]; bgColor: string } | null> {
+  if (!imageUri.toLowerCase().endsWith('.png')) return null;
   try {
-    const jsonUri = getDrawingJsonUri(imageUri);
-    const jsonFile = new File(jsonUri);
+    // Use directory-based constructor — extract filename from URI
+    const imageDir = ensureImageDir();
+    const pngFilename = imageUri.split('/').pop();
+    if (!pngFilename) return null;
+    const jsonFilename = pngFilename.replace(/\.png$/i, '.json');
+    const jsonFile = new File(imageDir, jsonFilename);
     if (!jsonFile.exists) return null;
     const raw = await jsonFile.text();
     const data = JSON.parse(raw);

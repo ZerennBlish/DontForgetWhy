@@ -240,6 +240,10 @@ export default function DrawingCanvas({
   }, []);
 
   const handleDone = useCallback(async () => {
+    if (strokes.length === 0) {
+      ToastAndroid.show("Draw something first. The canvas isn't going to fill itself.", ToastAndroid.SHORT);
+      return;
+    }
     try {
       const image = canvasRef.current?.makeImageSnapshot();
       if (!image) {
@@ -252,15 +256,27 @@ export default function DrawingCanvas({
       let pngUri: string;
 
       if (editingImageUri) {
-        // Overwrite existing PNG
-        const existingFile = new File(editingImageUri);
-        existingFile.write(bytes);
-        pngUri = editingImageUri;
+        // Write to a new filename to bust image cache
+        const dir = new Directory(Paths.document, 'note-images/');
+        if (!dir.exists) {
+          dir.create({ intermediates: true });
+        }
+        const shortId = uuidv4().split('-')[0];
+        const baseName = `drawing_${Date.now()}_${shortId}`;
+        const pngFile = new File(dir, `${baseName}.png`);
+        pngFile.write(bytes);
+        pngUri = pngFile.uri;
 
-        // Overwrite companion JSON
-        const jsonUri = editingImageUri.replace(/\.png$/i, '.json');
-        const jsonFile = new File(jsonUri);
+        const jsonFile = new File(dir, `${baseName}.json`);
         jsonFile.write(JSON.stringify({ strokes, bgColor: canvasBgColor }));
+
+        // Delete old files
+        try {
+          const oldPng = new File(editingImageUri);
+          if (oldPng.exists) oldPng.delete();
+          const oldJson = new File(editingImageUri.replace(/\.png$/i, '.json'));
+          if (oldJson.exists) oldJson.delete();
+        } catch { /* best-effort cleanup */ }
       } else {
         // New drawing
         const dir = new Directory(Paths.document, 'note-images/');
@@ -288,9 +304,35 @@ export default function DrawingCanvas({
   }, [canvasRef, onSave, resetCanvas, strokes, canvasBgColor, editingImageUri]);
 
   const handleCancel = useCallback(() => {
+    if (strokes.length > 0 || currentPointsRef.current.length > 0) {
+      Alert.alert(
+        'Discard Drawing?',
+        'Your masterpiece will be lost forever. No pressure.',
+        [
+          { text: 'Keep Drawing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => { onCancel(); resetCanvas(); } },
+        ],
+      );
+      return;
+    }
     onCancel();
     resetCanvas();
-  }, [onCancel, resetCanvas]);
+  }, [onCancel, resetCanvas, strokes]);
+
+  // -----------------------------------------------------------------------
+  // Memoized parsed strokes — only rebuilds when strokes array changes
+  // -----------------------------------------------------------------------
+
+  const parsedStrokes = useMemo(
+    () =>
+      strokes
+        .map((stroke) => ({
+          ...stroke,
+          skPath: Skia.Path.MakeFromSVGString(stroke.pathSvg),
+        }))
+        .filter((s): s is typeof s & { skPath: SkPath } => s.skPath !== null),
+    [strokes],
+  );
 
   // -----------------------------------------------------------------------
   // Derived values for current in-progress stroke rendering
@@ -463,22 +505,18 @@ export default function DrawingCanvas({
             {/* Background — captured in snapshot */}
             <Fill color={canvasBgColor} />
 
-            {/* Completed strokes — SkPath built at render time from SVG strings */}
-            {strokes.map((stroke, i) => {
-              const path = Skia.Path.MakeFromSVGString(stroke.pathSvg);
-              if (!path) return null;
-              return (
-                <Path
-                  key={i}
-                  path={path}
-                  color={stroke.color}
-                  style="stroke"
-                  strokeWidth={stroke.strokeWidth}
-                  strokeCap="round"
-                  strokeJoin="round"
-                />
-              );
-            })}
+            {/* Completed strokes — memoized SkPath objects */}
+            {parsedStrokes.map((stroke, i) => (
+              <Path
+                key={i}
+                path={stroke.skPath}
+                color={stroke.color}
+                style="stroke"
+                strokeWidth={stroke.strokeWidth}
+                strokeCap="round"
+                strokeJoin="round"
+              />
+            ))}
 
             {/* In-progress stroke — SkPath built at render time from points */}
             {(() => {
