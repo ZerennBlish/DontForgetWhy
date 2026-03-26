@@ -392,6 +392,9 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
   // ---------- Styles ----------
 
+  const { width: screenWidthForLayout } = Dimensions.get('window');
+  const CONTENT_MAX_WIDTH = Math.min(screenWidthForLayout - 32, 500);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -403,6 +406,9 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         // Difficulty Select
         selectContent: {
           paddingBottom: 60 + insets.bottom,
+          maxWidth: CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+          width: '100%',
         },
         header: {
           paddingTop: 60,
@@ -487,6 +493,9 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           alignItems: 'center',
           paddingHorizontal: 24,
           paddingBottom: 60 + insets.bottom,
+          maxWidth: CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+          width: '100%',
         },
         winHeader: {
           alignSelf: 'stretch',
@@ -574,7 +583,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           color: colors.accent,
         },
       }),
-    [colors, insets.bottom],
+    [colors, insets.bottom, CONTENT_MAX_WIDTH],
   );
 
   // ---------- Render: Difficulty Select ----------
@@ -693,10 +702,11 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
   const config = DIFFICULTY_CONFIG[difficulty];
   const { width: screenWidth } = Dimensions.get('window');
+  const effectiveWidth = Math.min(screenWidth, 600);
   const GRID_PADDING = 16;
   const CARD_GAP = 8;
   const cardSize = Math.floor(
-    (screenWidth - GRID_PADDING * 2 - (config.cols - 1) * CARD_GAP) / config.cols,
+    (effectiveWidth - GRID_PADDING * 2 - (config.cols - 1) * CARD_GAP) / config.cols,
   );
   const gridWidth = config.cols * cardSize + (config.cols - 1) * CARD_GAP;
 

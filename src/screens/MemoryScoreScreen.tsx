@@ -206,10 +206,12 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/library.png')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
+    <View style={{ position: 'absolute', top: insets.top + 8, left: 16, zIndex: 10, backgroundColor: 'rgba(18, 18, 32, 0.85)', borderRadius: 20, padding: 4 }}>
+      <BackButton onPress={() => navigation.goBack()} />
+    </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <BackButton onPress={() => navigation.goBack()} />
         <Text style={{ fontSize: 36, textAlign: 'center' }}>{'\u{1F3C6}'}</Text>
         <Text style={[styles.title, { textAlign: 'center' }]}>Brain Training Stats</Text>
       </View>
