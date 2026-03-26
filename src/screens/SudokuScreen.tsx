@@ -527,7 +527,7 @@ export default function SudokuScreen({ navigation }: Props) {
   // ---------- Styles ----------
 
   const { width: screenWidth } = Dimensions.get('window');
-  const GRID_SIZE = Math.min(screenWidth - 32, 380);
+  const GRID_SIZE = Math.min(screenWidth - 32, screenWidth > 600 ? 540 : 380);
   const CELL_SIZE = Math.floor(GRID_SIZE / 9);
 
   const styles = useMemo(
@@ -874,6 +874,9 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
     },
     selectContent: {
       paddingBottom: 60 + bottomInset,
+      maxWidth: 500,
+      alignSelf: 'center' as const,
+      width: '100%' as const,
     },
     header: {
       paddingTop: 60,
@@ -1127,6 +1130,9 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       paddingHorizontal: 16,
       paddingBottom: 16 + bottomInset,
       marginTop: 'auto' as const,
+      maxWidth: 600,
+      alignSelf: 'center' as const,
+      width: '100%' as const,
     },
     numberRow: {
       flexDirection: 'row',
@@ -1134,7 +1140,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       marginBottom: 12,
     },
     numBtn: {
-      width: (Dimensions.get('window').width - 32 - 32) / 9,
+      width: (Math.min(Dimensions.get('window').width, 600) - 32 - 32) / 9,
       alignItems: 'center',
       paddingVertical: 8,
       backgroundColor: colors.card,

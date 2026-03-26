@@ -57,28 +57,24 @@ export default function SettingsScreen({ navigation }: Props) {
       backgroundColor: 'transparent',
     },
     scrollContent: {
-      paddingTop: insets.top + 58,
+      paddingTop: insets.top,
       paddingBottom: 40 + insets.bottom,
     },
     header: {
       position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
+      top: insets.top + 8,
+      left: 16,
       zIndex: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingTop: insets.top + 8,
-      paddingHorizontal: 16,
-      paddingBottom: 10,
-      backgroundColor: 'rgba(0, 0, 0, 0.4)',
-      gap: 12,
+      backgroundColor: 'rgba(18, 18, 32, 0.85)',
+      borderRadius: 20,
+      padding: 4,
     },
     title: {
       fontSize: 28,
       fontWeight: '800',
       color: '#FFFFFF',
       textAlign: 'center',
+      paddingVertical: 12,
     },
     permissionBanner: {
       marginHorizontal: 16,
@@ -454,9 +450,9 @@ export default function SettingsScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
     <View style={styles.header}>
       <BackButton onPress={() => navigation.goBack()} />
-      <Text style={styles.title}>Settings</Text>
     </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <Text style={styles.title}>Settings</Text>
 
       {hasPermissionIssues && (
         <TouchableOpacity

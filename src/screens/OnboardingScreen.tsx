@@ -25,6 +25,8 @@ import type { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CONTENT_MAX_WIDTH = Math.min(SCREEN_WIDTH * 0.75, 500);
+const EMOJI_SIZE = SCREEN_WIDTH > 600 ? 80 : 64;
 
 interface SlideData {
   id: string;
@@ -525,7 +527,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       paddingBottom: 100,
     },
     emoji: {
-      fontSize: 64,
+      fontSize: EMOJI_SIZE,
       marginBottom: 24,
     },
     title: {
@@ -540,7 +542,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       color: colors.textSecondary,
       textAlign: 'center',
       lineHeight: 24,
-      maxWidth: 300,
+      maxWidth: CONTENT_MAX_WIDTH,
       marginBottom: 32,
     },
     button: {
@@ -549,7 +551,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       paddingVertical: 16,
       paddingHorizontal: 32,
       width: '100%',
-      maxWidth: 300,
+      maxWidth: CONTENT_MAX_WIDTH,
       alignItems: 'center',
     },
     buttonGranted: {
@@ -567,12 +569,12 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       color: colors.textTertiary,
       textAlign: 'center',
       marginTop: 12,
-      maxWidth: 280,
+      maxWidth: CONTENT_MAX_WIDTH - 20,
       lineHeight: 18,
     },
     instructions: {
       alignSelf: 'center',
-      maxWidth: 300,
+      maxWidth: CONTENT_MAX_WIDTH,
       marginBottom: 24,
     },
     instructionStep: {
@@ -586,7 +588,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       color: colors.textTertiary,
       textAlign: 'center',
       marginTop: 16,
-      maxWidth: 280,
+      maxWidth: CONTENT_MAX_WIDTH - 20,
       fontStyle: 'italic',
       lineHeight: 18,
     },
@@ -623,7 +625,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       fontSize: 13,
       color: colors.orange,
       textAlign: 'center',
-      maxWidth: 280,
+      maxWidth: CONTENT_MAX_WIDTH - 20,
       marginBottom: 16,
       lineHeight: 18,
     },
@@ -631,7 +633,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       fontSize: 14,
       color: colors.red,
       textAlign: 'center',
-      maxWidth: 300,
+      maxWidth: CONTENT_MAX_WIDTH,
       marginBottom: 16,
       lineHeight: 20,
       fontWeight: '600',
