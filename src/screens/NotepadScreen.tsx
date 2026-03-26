@@ -27,6 +27,7 @@ import {
   permanentlyDeleteNote,
   getPendingNoteAction,
 } from '../services/noteStorage';
+import { saveNoteImage, deleteNoteImage } from '../services/noteImageStorage';
 import {
   getPinnedNotes,
   togglePinNote,
@@ -327,25 +328,62 @@ export default function NotepadScreen({ navigation, route }: Props) {
     handledActionRef.current = '';
   };
 
-  const handleEditorSave = async (data: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string }) => {
+  const handleEditorSave = async (data: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string; images: string[] }) => {
     const now = new Date().toISOString();
-    if (data.isNew) {
-      const newNote: Note = {
-        id: uuidv4(),
-        text: data.text,
-        color: data.color,
-        fontColor: data.fontColor,
-        icon: data.icon,
-        pinned: false,
-        createdAt: now,
-        updatedAt: now,
-      };
-      await addNote(newNote);
-    } else if (data.noteId) {
-      const existing = notes.find(n => n.id === data.noteId);
-      if (existing) {
-        await updateNote({ ...existing, text: data.text, color: data.color, fontColor: data.fontColor, icon: data.icon, updatedAt: now });
+    try {
+      if (data.isNew) {
+        const noteId = uuidv4();
+        const savedUris = await Promise.all(
+          data.images.map((uri) => saveNoteImage(noteId, uri)),
+        );
+        try {
+          const newNote: Note = {
+            id: noteId,
+            text: data.text,
+            color: data.color,
+            fontColor: data.fontColor,
+            icon: data.icon,
+            pinned: false,
+            createdAt: now,
+            updatedAt: now,
+            images: savedUris.length > 0 ? savedUris : undefined,
+          };
+          await addNote(newNote);
+        } catch (e) {
+          for (const uri of savedUris) { await deleteNoteImage(uri); }
+          throw e;
+        }
+      } else if (data.noteId) {
+        const existing = notes.find(n => n.id === data.noteId);
+        if (existing) {
+          const originalImages = existing.images || [];
+          const keptImages = data.images.filter((uri) => originalImages.includes(uri));
+          const newImageUris = data.images.filter((uri) => !originalImages.includes(uri));
+          const removedImages = originalImages.filter((uri) => !data.images.includes(uri));
+          const savedNewUris = await Promise.all(
+            newImageUris.map((uri) => saveNoteImage(data.noteId!, uri)),
+          );
+          try {
+            const finalImages = [...keptImages, ...savedNewUris];
+            await updateNote({
+              ...existing,
+              text: data.text,
+              color: data.color,
+              fontColor: data.fontColor,
+              icon: data.icon,
+              updatedAt: now,
+              images: finalImages.length > 0 ? finalImages : undefined,
+            });
+          } catch (e) {
+            for (const uri of savedNewUris) { await deleteNoteImage(uri); }
+            throw e;
+          }
+          for (const uri of removedImages) { await deleteNoteImage(uri); }
+        }
       }
+    } catch {
+      ToastAndroid.show('Failed to save note', ToastAndroid.SHORT);
+      return;
     }
     await loadData();
     refreshWidgets();
@@ -771,6 +809,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
             <View style={styles.cardMeta}>
               <Text style={[styles.cardTime, { color: (cardFontColor || getTextColor(item.color)) + '99' }]}>{getRelativeTime(item.updatedAt)}</Text>
               {pinned && <Text style={styles.cardPin}>{'\u{1F4CC}'}</Text>}
+              {(item.images?.length ?? 0) > 0 && (
+                <Text style={[styles.cardTime, { color: (cardFontColor || getTextColor(item.color)) + '99' }]}>{'\u{1F4F7}'} {item.images!.length}</Text>
+              )}
             </View>
           </View>
           <View style={styles.cardRight}>

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Note } from '../types/note';
+import { deleteAllNoteImages } from './noteImageStorage';
 
 const NOTES_KEY = 'notes';
 const PENDING_ACTION_KEY = 'pendingNoteAction';
@@ -34,6 +35,7 @@ async function _loadAllNotes(): Promise<Note[]> {
         pinned: typeof item.pinned === 'boolean' ? item.pinned : false,
         fontColor: typeof item.fontColor === 'string' ? item.fontColor : null,
         deletedAt: typeof item.deletedAt === 'string' ? item.deletedAt : null,
+        images: Array.isArray(item.images) ? (item.images as unknown[]).filter((i): i is string => typeof i === 'string') : undefined,
       }));
   } catch {
     return [];
@@ -92,6 +94,10 @@ export async function restoreNote(id: string): Promise<Note[]> {
 
 export async function permanentlyDeleteNote(id: string): Promise<Note[]> {
   const notes = await _loadAllNotes();
+  const target = notes.find((n) => n.id === id);
+  if (target?.images) {
+    await deleteAllNoteImages(target.images);
+  }
   const updated = notes.filter((n) => n.id !== id);
   await _saveNotes(updated);
   return updated.filter((n) => !n.deletedAt);
@@ -104,6 +110,12 @@ export async function purgeDeletedNotes(): Promise<void> {
     (n) => !n.deletedAt || new Date(n.deletedAt).getTime() > cutoff,
   );
   if (kept.length !== notes.length) {
+    const purged = notes.filter((n) => !kept.includes(n));
+    for (const note of purged) {
+      if (note.images) {
+        await deleteAllNoteImages(note.images);
+      }
+    }
     await _saveNotes(kept);
   }
 }

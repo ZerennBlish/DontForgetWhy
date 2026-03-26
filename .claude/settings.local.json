@@ -50,7 +50,11 @@
       "Bash(/tmp/analysis.txt:*)",
       "Read(//tmp/**)",
       "Bash(npm list -g eas-cli 2>/dev/null; which eas 2>/dev/null; ls node_modules/.bin/eas 2>/dev/null)",
-      "Bash(eas build --profile development --platform android --non-interactive)"
+      "Bash(eas build --profile development --platform android --non-interactive)",
+      "Bash(node -e \"console.log\\(require\\(''/mnt/c/DontForgetWhy/node_modules/expo-file-system/package.json''\\).version\\)\")",
+      "Bash(node:*)",
+      "Bash(chmod -R 777 /mnt/c/DontForgetWhy/node_modules/expo/node_modules/expo-file-system)",
+      "Bash(node -e \"console.log\\(require\\(''/mnt/c/DontForgetWhy/node_modules/expo-sharing/package.json''\\).version\\)\")"
     ]
   }
 }

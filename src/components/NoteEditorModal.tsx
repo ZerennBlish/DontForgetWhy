@@ -14,8 +14,12 @@ import {
   Alert,
   Linking,
   Share,
+  Image,
 } from 'react-native';
 import * as Print from 'expo-print';
+import * as ImagePicker from 'expo-image-picker';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
@@ -105,12 +109,29 @@ function renderLinkedText(
   return parts.length > 0 ? parts : [<Text key="full" style={baseStyle}>{text}</Text>];
 }
 
+async function buildNoteHtml(
+  text: string,
+  icon: string,
+  images: string[],
+): Promise<string> {
+  const iconHtml = icon ? `<div style="font-size:48px;margin-bottom:16px;">${icon}</div>` : '';
+  const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let imagesHtml = '';
+  for (const uri of images) {
+    try {
+      const b64 = await new FileSystem.File(uri).base64();
+      imagesHtml += `<img src="data:image/jpeg;base64,${b64}" style="display:block;width:100%;max-height:83vh;object-fit:contain;margin-top:24px;border-radius:8px;" />`;
+    } catch { /* skip failed image */ }
+  }
+  return `<html><head><style>@page { size: letter; margin: 0.75in; } img { page-break-inside: avoid; }</style></head><body style="background:#FFFFFF;color:#1A1A2E;font-family:system-ui;padding:32px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:#1A1A2E;margin:0;">${escapedText}</pre>${imagesHtml}</body></html>`;
+}
+
 interface NoteEditorModalProps {
   visible: boolean;
   note: Note | null;
   customBgColor: string | null;
   customFontColor: string | null;
-  onSave: (note: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string }) => void;
+  onSave: (note: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string; images: string[] }) => void;
   onDelete: (noteId: string) => void;
   onClose: () => void;
   onCustomBgColorChange: (color: string) => void;
@@ -136,23 +157,23 @@ export default function NoteEditorModal({
   const [editorIcon, setEditorIcon] = useState('');
   const [editorFontColor, setEditorFontColor] = useState<string | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [editorPlaceholder, setEditorPlaceholder] = useState(EDITOR_PLACEHOLDERS[0]);
   const [showBgPicker, setShowBgPicker] = useState(false);
   const [showFontPicker, setShowFontPicker] = useState(false);
+  const [editorImages, setEditorImages] = useState<string[]>([]);
+  const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
   const pickedBgRef = useRef(customBgColor || '#4A90D9');
   const pickedFontRef = useRef(customFontColor || '#FF6B6B');
   const textInputRef = useRef<TextInput>(null);
-  const emojiInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (!visible) {
       setShowColorPicker(false);
-      setShowEmojiPicker(false);
       setShowBgPicker(false);
       setShowFontPicker(false);
+      setLightboxUri(null);
       return;
     }
     if (note) {
@@ -160,12 +181,14 @@ export default function NoteEditorModal({
       setEditorColor(note.color);
       setEditorIcon(note.icon);
       setEditorFontColor(note.fontColor ?? null);
+      setEditorImages(note.images || []);
       setIsViewMode(true);
     } else {
       setEditorText('');
       setEditorColor(colors.background);
       setEditorIcon('');
       setEditorFontColor(null);
+      setEditorImages([]);
       setIsViewMode(false);
     }
     setEditorPlaceholder(EDITOR_PLACEHOLDERS[Math.floor(Math.random() * EDITOR_PLACEHOLDERS.length)]);
@@ -182,14 +205,16 @@ export default function NoteEditorModal({
         editorText !== note.text ||
         editorColor !== note.color ||
         editorIcon !== note.icon ||
-        editorFontColor !== (note.fontColor ?? null)
+        editorFontColor !== (note.fontColor ?? null) ||
+        JSON.stringify(editorImages) !== JSON.stringify(note.images || [])
       );
     }
     return (
       editorText.trim().length > 0 ||
       editorColor !== colors.background ||
       editorIcon !== '' ||
-      editorFontColor !== null
+      editorFontColor !== null ||
+      editorImages.length > 0
     );
   };
 
@@ -212,7 +237,7 @@ export default function NoteEditorModal({
   const handleSave = () => {
     hapticMedium();
     const trimmed = editorText.trim();
-    if (!trimmed) {
+    if (!trimmed && editorImages.length === 0) {
       ToastAndroid.show('Write something down before you forget. Oh wait, too late.', ToastAndroid.LONG);
       return;
     }
@@ -223,12 +248,30 @@ export default function NoteEditorModal({
       icon: editorIcon,
       isNew: !note,
       noteId: note?.id,
+      images: editorImages,
     });
   };
 
   const handleDeleteFromEditor = () => {
     if (!note) return;
     onDelete(note.id);
+  };
+
+  const pickImage = async () => {
+    Keyboard.dismiss();
+    setShowColorPicker(false);
+    if (editorImages.length >= 3) {
+      ToastAndroid.show('3 photos max. Quality over quantity.', ToastAndroid.SHORT);
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      quality: 0.7,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setEditorImages((prev) => [...prev, result.assets[0].uri]);
+    }
   };
 
   const styles = useMemo(() => StyleSheet.create({
@@ -438,7 +481,64 @@ export default function NoteEditorModal({
       fontWeight: '700',
       color: colors.textPrimary,
     },
-  }), [colors, insets.bottom]);
+    thumbnailRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-evenly',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginBottom: insets.bottom + 12,
+    },
+    thumbnail: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: 'rgba(255, 255, 255, 0.5)',
+    },
+    thumbnailRemove: {
+      position: 'absolute',
+      top: 2,
+      right: 10,
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    thumbnailRemoveText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    lightboxOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.9)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    lightboxImage: {
+      width: '100%',
+      height: '100%',
+    },
+    lightboxClose: {
+      position: 'absolute',
+      top: insets.top + 16,
+      right: 16,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    lightboxCloseText: {
+      color: '#FFFFFF',
+      fontSize: 18,
+      fontWeight: '700',
+    },
+  }), [colors, insets.top, insets.bottom]);
 
   return (
     <>
@@ -475,32 +575,66 @@ export default function NoteEditorModal({
                     style={styles.editorTopBtn}
                     onPress={() => {
                       hapticLight();
-                      Alert.alert('Share Note', '', [
-                        {
-                          text: 'Share',
+                      const hasText = !!editorText.trim();
+                      const hasImages = editorImages.length > 0;
+                      if (!hasText && !hasImages) {
+                        ToastAndroid.show('Nothing to share', ToastAndroid.SHORT);
+                        return;
+                      }
+                      const options: { text: string; onPress?: () => void; style?: 'cancel' | 'destructive' }[] = [];
+                      if (hasImages) {
+                        options.push({
+                          text: 'Share Text',
                           onPress: () => {
-                            if (!editorText.trim()) {
-                              ToastAndroid.show('Nothing to share', ToastAndroid.SHORT);
-                              return;
-                            }
                             const content = editorIcon ? `${editorIcon} ${editorText}` : editorText;
                             Share.share({ message: content });
                           },
-                        },
-                        {
-                          text: 'Print',
-                          onPress: () => {
-                            if (!editorText.trim()) {
-                              ToastAndroid.show('Nothing to print', ToastAndroid.SHORT);
-                              return;
+                        });
+                        options.push({
+                          text: editorImages.length === 1 ? 'Share Photo' : 'Share Photos',
+                          onPress: async () => {
+                            try {
+                              const available = await Sharing.isAvailableAsync();
+                              if (!available) {
+                                ToastAndroid.show('Sharing not available', ToastAndroid.SHORT);
+                                return;
+                              }
+                              for (const uri of editorImages) {
+                                await Sharing.shareAsync(uri, { mimeType: 'image/jpeg' });
+                              }
+                            } catch {
+                              ToastAndroid.show("Couldn't share photos.", ToastAndroid.SHORT);
                             }
-                            const iconHtml = editorIcon ? `<div style="font-size:48px;margin-bottom:16px;">${editorIcon}</div>` : '';
-                            const html = `<html><head><style>@page { size: letter; margin: 0.75in; }</style></head><body style="background:${editorColor};color:${noteTextColor};font-family:system-ui;padding:40px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:${noteTextColor};margin:0;">${editorText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre></body></html>`;
-                            Print.printAsync({ html });
                           },
+                        });
+                      } else {
+                        options.push({
+                          text: 'Share',
+                          onPress: () => {
+                            const content = editorIcon ? `${editorIcon} ${editorText}` : editorText;
+                            Share.share({ message: content });
+                          },
+                        });
+                      }
+                      options.push({
+                        text: 'Print',
+                        onPress: async () => {
+                          try {
+                            const html = hasImages
+                              ? await buildNoteHtml(editorText, editorIcon, editorImages)
+                              : (() => {
+                                  const iconHtml = editorIcon ? `<div style="font-size:48px;margin-bottom:16px;">${editorIcon}</div>` : '';
+                                  const escapedText = editorText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                  return `<html><head><style>@page { size: letter; margin: 0.75in; }</style></head><body style="background:#FFFFFF;color:#1A1A2E;font-family:system-ui;padding:32px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:#1A1A2E;margin:0;">${escapedText}</pre></body></html>`;
+                                })();
+                            await Print.printAsync({ html });
+                          } catch {
+                            ToastAndroid.show("Couldn't print. Try again.", ToastAndroid.SHORT);
+                          }
                         },
-                        { text: 'Cancel', style: 'cancel' },
-                      ]);
+                      });
+                      options.push({ text: 'Cancel', style: 'cancel' });
+                      Alert.alert('Share Note', '', options);
                     }}
                     activeOpacity={0.7}
                   >
@@ -521,7 +655,7 @@ export default function NoteEditorModal({
               <>
                 <View style={styles.topBarCenter}>
                   <TouchableOpacity
-                    style={{ backgroundColor: 'rgba(30, 30, 40, 0.7)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 6, minWidth: 100, alignItems: 'center', justifyContent: 'center' }}
+                    style={{ backgroundColor: 'rgba(30, 30, 40, 0.7)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 6, minWidth: 80, alignItems: 'center', justifyContent: 'center' }}
                     onPress={handleSave}
                     activeOpacity={0.7}
                   >
@@ -530,39 +664,17 @@ export default function NoteEditorModal({
                 </View>
                 <View style={styles.topBarRight}>
                   <TouchableOpacity
-                    style={[styles.editorTopBtn, showEmojiPicker && styles.editorTopBtnActive]}
-                    onPress={() => {
-                      hapticLight();
-                      Keyboard.dismiss();
-                      setShowColorPicker(false);
-                      setShowEmojiPicker((v) => !v);
-                    }}
+                    style={styles.editorTopBtn}
+                    onPress={pickImage}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.editorTopBtnEmoji}>{editorIcon || '\u{1F600}'}</Text>
+                    <Text style={styles.editorTopBtnEmoji}>{'\u{1F4F7}'}</Text>
                   </TouchableOpacity>
-                  <TextInput
-                    ref={emojiInputRef}
-                    style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}
-                    autoCorrect={false}
-                    onChangeText={(t) => {
-                      if (t) {
-                        const graphemes = [...t];
-                        setEditorIcon(graphemes[graphemes.length - 1] || '');
-                      }
-                      setShowEmojiPicker(false);
-                      if (emojiInputRef.current) {
-                        emojiInputRef.current.setNativeProps({ text: '' });
-                        emojiInputRef.current.blur();
-                      }
-                    }}
-                  />
                   <TouchableOpacity
                     style={[styles.editorTopBtn, showColorPicker && styles.editorTopBtnActive]}
                     onPress={() => {
                       hapticLight();
                       Keyboard.dismiss();
-                      setShowEmojiPicker(false);
                       setShowColorPicker((v) => !v);
                     }}
                     activeOpacity={0.7}
@@ -585,55 +697,6 @@ export default function NoteEditorModal({
 
           {/* Spacer so content clears the floating top bar */}
           <View style={styles.topBarContentPad} />
-
-          {/* Emoji quick-pick row */}
-          {showEmojiPicker && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 8, paddingVertical: 8 }}>
-              {['\u{1F4DD}', '\u{1F4CC}', '\u{1F4A1}', '\u2B50', '\u2764\uFE0F', '\u{1F3AF}', '\u{1F4C5}', '\u{1F514}'].map((emoji) => (
-                <TouchableOpacity
-                  key={emoji}
-                  onPress={() => {
-                    hapticLight();
-                    if (editorIcon === emoji) {
-                      setEditorIcon('');
-                    } else {
-                      setEditorIcon(emoji);
-                      setShowEmojiPicker(false);
-                    }
-                  }}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: editorIcon === emoji ? 'rgba(30, 30, 40, 0.85)' : 'rgba(30, 30, 40, 0.7)',
-                    borderWidth: 1,
-                    borderColor: editorIcon === emoji ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)',
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ fontSize: 18 }}>{emoji}</Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity
-                onPress={() => { hapticLight(); emojiInputRef.current?.focus(); }}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(30, 30, 40, 0.7)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.15)',
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={{ fontSize: 18, color: 'rgba(255, 255, 255, 0.6)' }}>+</Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
           {/* Hero text area */}
           {isViewMode ? (
@@ -658,9 +721,30 @@ export default function NoteEditorModal({
                 autoFocus={!note}
                 onFocus={() => {
                   setShowColorPicker(false);
-                  setShowEmojiPicker(false);
                 }}
               />
+            </View>
+          )}
+
+          {editorImages.length > 0 && (
+            <View style={styles.thumbnailRow}>
+              {editorImages.map((uri, idx) => (
+                <TouchableOpacity key={`${uri}-${idx}`} onPress={() => setLightboxUri(uri)} activeOpacity={0.8}>
+                  <Image source={{ uri }} style={styles.thumbnail} resizeMethod="resize" />
+                  {!isViewMode && (
+                    <TouchableOpacity
+                      style={styles.thumbnailRemove}
+                      onPress={() => {
+                        hapticLight();
+                        setEditorImages((imgs) => imgs.filter((_, i) => i !== idx));
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.thumbnailRemoveText}>{'\u2715'}</Text>
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+              ))}
             </View>
           )}
 
@@ -888,6 +972,18 @@ export default function NoteEditorModal({
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Image Lightbox */}
+      <Modal visible={!!lightboxUri} transparent animationType="fade" onRequestClose={() => setLightboxUri(null)}>
+        <TouchableOpacity style={styles.lightboxOverlay} activeOpacity={1} onPress={() => setLightboxUri(null)}>
+          {lightboxUri && (
+            <Image source={{ uri: lightboxUri }} style={styles.lightboxImage} resizeMode="contain" />
+          )}
+          <TouchableOpacity style={styles.lightboxClose} onPress={() => setLightboxUri(null)} activeOpacity={0.7}>
+            <Text style={styles.lightboxCloseText}>{'\u2715'}</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </>
   );

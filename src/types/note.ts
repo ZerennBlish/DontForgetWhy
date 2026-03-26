@@ -8,6 +8,7 @@ export interface Note {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+  images?: string[];
 }
 
 export const NOTE_FONT_COLORS: string[] = [
