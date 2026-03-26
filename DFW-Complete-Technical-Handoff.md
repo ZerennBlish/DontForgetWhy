@@ -1,5 +1,5 @@
 # Don't Forget Why — Complete Technical Handoff
-## Compiled: March 25, 2026
+## Compiled: March 25, 2026 (evening update)
 ## Covers: February 8 – March 25, 2026 (entire project history)
 
 ---
@@ -214,6 +214,7 @@ DontForgetWhy/
     │   ├── sudoku.ts
     │   └── time.ts                 # utils are pure/side-effect free
     └── widget/
+        ├── CalendarWidget.tsx
         ├── DetailedWidget.tsx
         ├── NotepadWidget.tsx
         ├── updateWidget.ts
@@ -255,7 +256,7 @@ DontForgetWhy/
 | Mar 22 | 1.3.8 | 15 | Emoji crash fix, trivia centering, timer layout, note card colors, capsule buttons, reminder UX, dead sound picker removed. Emulator testing matrix. | Built and ready to upload |
 | Mar 24 | 1.3.9 | 16 | Notification action buttons (Dismiss/Snooze on alarm, Dismiss on timer), dismiss flash fix, note card borders, reminder two-line layout, safety net fix. Store screenshots updated (8 professional graphics). App live in production on Google Play. | Production |
 | Mar 25 | 1.4.0 | 17 | Timer dismiss race condition hotfix: foreground DELIVERED now sound-only (no auto-navigation), timer cleanup in handleDismiss. | Production (live) |
-| Mar 25 | 1.5.0 | 18 | Calendar feature, AlarmListScreen refactor (AlarmsTab extraction), NotepadScreen refactor (NoteEditorModal extraction), dark capsule button uniformity, floating headers (editor/settings/riddle), BackButton visibility fix, 999 char note limit, initialDate prefill for create screens, daily recurring calendar mapping, timezone bucketing fix. Audit 33 complete. | Dev branch (not yet shipped) |
+| Mar 25 | 1.5.0 | 18 | Calendar feature (CalendarScreen), CalendarWidget (home screen mini calendar with dot indicators), AlarmListScreen refactor (AlarmsTab extraction), NotepadScreen refactor (NoteEditorModal extraction), dark capsule button uniformity, floating headers (editor/settings/riddle/calendar/memoryscore), BackButton visibility fix, 999 char note limit, initialDate prefill for create screens, daily recurring calendar mapping, timezone bucketing fix, widget alarm normalization, note sort UTC fix, week view locked to current week, tablet responsive (Onboarding/Sudoku/MemoryMatch/MemoryScore). Audits 33-35 complete. | Dev branch — ready to ship |
 
 ---
 
@@ -268,7 +269,8 @@ DontForgetWhy/
 - **Timers** — 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule
   - Notification action buttons: "Dismiss" button on timer completion notification
 - **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji picker, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4)
-- **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing).
+- **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing). Week view locked to current week (always shows Sunday–Saturday containing today). Tapping a date outside current week while in week view auto-switches to day view. Supports initialDate route param for deep-linking from widget or other screens.
+- **Calendar Widget** — Home screen widget showing current month as a mini grid. Colored dots per day: red=alarms, blue=reminders, green=notes. Tap any day → opens CalendarScreen focused on that date. Today highlighted with accent background. Past days dimmed. Adjacent month days shown in secondary color. Registered as third widget in app.json (minWidth 250dp, minHeight 280dp).
 - **DND bypass** — Notifee full-screen intent + Samsung onboarding
 - **Full-screen alarm fire** — lightbulb background, snooze shame (4 tiers × 7 messages), shows 🔇 when silenced
 - **Native MediaPlayer sound** — plays through STREAM_ALARM regardless of ringer mode. Notification channels are SILENT. MediaPlayer handles all audio.
@@ -493,7 +495,19 @@ All app-opening approaches failed (Linking.openURL, OPEN_URI, deep links). Solut
 `getWidgetTheme()` reads theme from AsyncStorage with migration map, returns `WidgetTheme` object. `refreshWidgets()` (renamed from `refreshTimerWidget`) triggered after theme changes, data changes.
 
 ### Evolution
-Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWidgetCompact added. Mar 12: Trimmed to 2 — DetailedWidget redesigned, compacts deleted.
+Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWidgetCompact added. Mar 12: Trimmed to 2 — DetailedWidget redesigned, compacts deleted. Mar 25: CalendarWidget added — mini monthly calendar grid with colored dot indicators. Third widget alongside DetailedWidget and NotepadWidget. Uses getCalendarWidgetData() in widgetTaskHandler.ts for data loading. Click actions: OPEN_CALENDAR (opens CalendarScreen) and OPEN_CALENDAR_DAY__YYYY-MM-DD (opens CalendarScreen with date). pendingCalendarAction consumed in App.tsx on cold start and app resume. Widget alarm loader includes normalization for legacy alarm payloads (mode, days array, numeric weekday format) — does not import loadAlarms() to stay headless-safe, duplicates normalization inline.
+
+### CalendarWidget
+- Mini month grid: 7 columns × 5-6 rows, weekday header, month/year label
+- Colored dots: red (#FF6B6B) alarms, blue (#4A90D9) reminders, green (#55EFC4) notes — up to 3 per day
+- Today: accent background highlight
+- Past days: textSecondary color (dimmed)
+- Adjacent month padding days: textSecondary color with actual date click actions
+- Root FlexWidget has clickAction="OPEN_CALENDAR" (dead space opens app)
+- Footer: "Don't Forget Why" branding
+- minWidth: 250dp, minHeight: 280dp (bumped from 220dp after Audit 34 finding — 6-row months need more height)
+- Data: getCalendarWidgetData() loads alarms/reminders/notes, computes dot presence per day for entire current month
+- Refresh: included in refreshWidgets() and refreshAllWidgets()
 
 ---
 
@@ -601,6 +615,38 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - Fix: Added `updateSingleAlarm()` call to persist snooze notification ID, matching AlarmFireScreen pattern.
 - Version: v1.3.9
 
+### v1.5.0 Bug Fixes (found via Audits 34-35)
+
+**Bug: Note sort uses UTC time instead of local**
+- Found: Mar 25 by Codex Audit 34
+- Cause: getItemSortTime in CalendarScreen used `createdAt.slice(11, 16)` which extracts UTC time. Alarms/reminders use local time strings, causing notes to sort out of order in non-UTC timezones.
+- Fix: Parse Date object, extract local hours/minutes via getHours()/getMinutes().
+
+**Bug: Widget alarm loader bypasses canonical migration**
+- Found: Mar 25 by Gemini Audit 34
+- Cause: loadWidgetAlarms() in widgetTaskHandler did raw JSON parse without normalizing missing mode, missing days array, or legacy numeric weekday values. Could crash or show wrong dots.
+- Fix: Added inline normalization matching loadAlarms() logic — defaults mode to 'recurring', days to [], maps numeric weekday arrays to string format.
+
+**Bug: CalendarWidget minHeight too small for 6-row months**
+- Found: Mar 25 by Gemini Audit 34
+- Cause: 220dp minimum left ~25dp per row after chrome. Day cells need ~30dp+ for number + dot row.
+- Fix: Bumped to 280dp in app.json.
+
+**Bug: Widget deep-links don't update already-mounted CalendarScreen**
+- Found: Mar 25 by Gemini Audit 34
+- Cause: useState initializers only run on first mount. If CalendarScreen was already in the nav stack, route.params.initialDate changes were ignored.
+- Fix: Added useEffect watching route.params?.initialDate to update selectedDate and currentMonth on re-navigation.
+
+**Bug: Floating BackButton overlaps scrolling content on CalendarScreen**
+- Found: Mar 25 by Codex Audit 34
+- Cause: Floating back button container had no background, scrolling content showed through.
+- Fix: Added semi-transparent dark background pill (rgba(18, 18, 32, 0.85), borderRadius 20).
+
+**Bug: Sudoku paused/won screens not width-capped on tablet**
+- Found: Mar 25 by Codex Audit 35
+- Cause: centeredContent and winContent styles had no maxWidth. Action buttons stretched full tablet width.
+- Fix: Added maxWidth: 500, alignSelf: 'center', width: '100%' to both.
+
 ---
 
 ## 12. COMPLETE AUDIT HISTORY
@@ -640,6 +686,9 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 | 32 | Mar 24 | P2 polish (3 fixes) | Codex: 2 HIGH (safety net too aggressive — kills live alarms, early return blocks displayed-notification fallback), 1 LOW (completed reminders hide secondary text — design choice). Gemini: All PASS. |
 | 32b | Mar 24 | Notification actions + safety net fix | Codex: 3 HIGH (timer countdown not cancelled on dismiss, snooze flag not enforced, snooze notif ID not persisted), 1 MEDIUM (safety net async race — accepted), 2 LOW (redundant cleanup, unused imports). Gemini: All PASS with 1 LOW redundant stopAlarmSound. All HIGH findings fixed. |
 
+| 34 | Mar 25 | CalendarWidget + calendar fixes | Codex: 1 HIGH (note sort UTC slice), 1 MEDIUM (floating back button overlap), 1 LOW (root widget missing clickAction). Gemini: 2 HIGH (widget deep-link doesn't drive month — useState stale, widget alarm loader no normalization), 1 MEDIUM (widget minHeight too small for 6-row months). All fixed. Re-audit: Codex all PASS. Gemini: 4 PASS, 1 partial (widget alarm normalization functionally equivalent but not identical to loadAlarms — accepted, daily behavior same). |
+| 35 | Mar 25 | Tablet responsive (Onboarding + Sudoku) | Codex: 1 MEDIUM (Sudoku paused/won not width-capped). Fixed. Gemini: All PASS. |
+
 ### Audit 33 — March 25, 2026 (Codex + Gemini)
 **Scope:** Foreground notification refactor, calendar feature, AlarmsTab extraction, NoteEditorModal extraction, UI polish (dark capsules, floating headers, BackButton)
 
@@ -652,7 +701,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 **Passed:** Foreground notification refactor (both auditors), consumePendingAlarm cleanup, timer dismissal state management, refactor integrity (AlarmsTab + NoteEditorModal), calendar date mapping (after fix).
 
-**35 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+**37 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
 ---
 
@@ -783,6 +832,16 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 **Calendar is free, not Pro (Mar 25):** Calendar visualizes existing alarms/reminders/notes — it's the universal mental model for "what did I forget." Paywalling it would undermine the app's core "don't forget" promise. Pro tier reserved for enhancements (voice, photos, online features), not core functionality.
 
 **Dark capsule button uniformity (Mar 25):** All tappable buttons use rgba(30,30,40,0.7) background with rgba(255,255,255,0.15) border. Ensures visibility on any background (light notes, dark notes, any theme). Applied to BackButton, NoteEditorModal toolbar, note card actions. Eliminates mixed styling where some buttons used translucent theme colors.
+
+**Text color picker removed from roadmap (Mar 25):** The dark capsule pattern (semi-transparent dark backgrounds with white text/borders) solves readability on all backgrounds without user configuration. For future photo backgrounds (P2 Pro), dark overlays or frosted-glass strips behind text regions with automatic black/white text selection based on background luminance. More reliable, zero-config, preserves visual consistency. reanimated-color-picker stays installed for custom theme builder but is NOT used for a global text color setting.
+
+**CalendarWidget as mini month grid, not agenda list (Mar 25):** Initial design was "Today's Agenda" list widget. Switched to mini calendar with dots because: (1) month-at-a-glance is more useful than duplicating DetailedWidget's item list, (2) dots answer "do I have anything on X day?" which is the core calendar question, (3) tapping any day deep-links to CalendarScreen for details. Widget can't navigate months (click-only interaction model) — always shows current month.
+
+**Week view locked to current week (Mar 25):** Week view previously showed whatever week contained selectedDate. Changed to always show the current week because: "What's on my plate this week?" is the useful question. Browsing other weeks is what month view is for. Tapping a date outside current week while in week mode auto-switches to day view so it doesn't feel stuck.
+
+**Floating back buttons — selective, not global (Mar 25):** Only applied to screens with scrollable content that hides the back button: CalendarScreen, SettingsScreen, DailyRiddleScreen, NoteEditorModal, MemoryScoreScreen. Not app-wide — screens without scrolling or with fixed headers don't need it. Back button only floats (compact dark pill), title stays in scroll flow. Started with full-width FloatingHeader component, reverted — direct styles on individual screens is simpler.
+
+**Tablet responsive — scale, don't redesign (Mar 25):** Used responsive maxWidth constants (CONTENT_MAX_WIDTH) capped at 500-600px rather than redesigning layouts. Phone experience unchanged. Tablet gets wider content that still looks intentional. Applied to: Onboarding (maxWidth 500), Sudoku (grid 540, pad 600), MemoryMatch (content 500, grid 600), MemoryScore (floating back button).
 
 ---
 
@@ -917,9 +976,9 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - 2.2 Notepad drawing/sketch mode (Skia, S Pen pressure + finger)
 - 2.3 Custom photo background underlay on main screens
 - 2.4 Full-bleed per-alarm photo on Alarm Fire screen with photo-aware roasts
-- 2.5 App text color picker in Settings (global readability solution)
-- 2.6 Tablet responsive pass (Onboarding, Sudoku, Trivia)
-- 2.7 Calendar widget
+- ~~2.5 App text color picker in Settings~~ — REMOVED (readability solved by dark capsule pattern + auto-contrast overlays, not user-facing text color picker)
+- [x] 2.6 Tablet responsive pass (Onboarding, Sudoku, MemoryMatch, MemoryScore)
+- [x] 2.7 Calendar widget (CalendarWidget — mini month grid with colored dot indicators)
 
 **Phase 3 — Voice Roasts** (ElevenLabs pre-recorded, bundled via expo-av)
 - 3.1 Alarm fire voice lines
