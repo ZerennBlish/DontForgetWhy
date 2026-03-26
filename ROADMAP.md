@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: March 25, 2026
+### Source of Truth · Updated: March 26, 2026
 
 ---
 
@@ -12,7 +12,7 @@
 | **Production Status** | ✅ Live on Google Play |
 | **Current Focus** | Finishing P2 free features before starting P2 paid features |
 | **Blocked By** | Nothing |
-| **Next Action** | Calendar widget + drawing (Skia) dev build (batch native deps) |
+| **Next Action** | P2 2.2 (Skia drawing) or calendar widget dev build |
 | **EAS Credits** | ~33 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -73,7 +73,7 @@
 
 **Status:** 🔧 In Progress (free features)
 **Branch:** `dev`
-**New deps:** `expo-image-picker`, `@shopify/react-native-skia`
+**New deps:** `expo-image-picker`, `@shopify/react-native-skia`, `expo-file-system`
 **Existing dep:** `reanimated-color-picker` (already installed)
 **Build cost:** 1 dev build + 1 production build minimum
 **Note:** Consider bundling Phase 3 native deps (`expo-av`) into the same dev build to save a credit
@@ -94,10 +94,17 @@
 
 ### Pro Features
 
-- [ ] **2.1 Note image attachments**
-  - Photos attached to notes (license plates, parking spots, receipts)
-  - Text above or below image
-  - `expo-image-picker`
+- [x] **2.1 Note image attachments** ✅ COMPLETE (March 26, 2026)
+  - Photo attachments via gallery (expo-image-picker, max 3 per note, JPEG quality 0.7)
+  - Image-only notes supported (no text required)
+  - Thumbnail display in editor (edit + view mode) with lightbox viewer
+  - Share: text-only or photos via Sharing.shareAsync
+  - Print: base64 data URIs via buildNoteHtml helper, white background for ink efficiency
+  - Transactional save with rollback on failure
+  - Image files managed by noteImageStorage service (expo-file-system v19)
+  - Note cards show 📷 count indicator
+  - Emoji picker removed from NoteEditorModal (keyboard emoji sufficient)
+  - Audit 36: all findings resolved (transaction order, duplicate keys, print base64, resizeMethod)
 
 - [ ] **2.2 Notepad drawing/sketch mode**
   - `@shopify/react-native-skia`
@@ -424,3 +431,4 @@ Batch native deps within phases to minimize dev builds.
 | Mar 22, 2026 | v1.4.0 shipped — timer dismiss race condition hotfix. Store screenshots updated. |
 | Mar 25, 2026 | v1.5.0 on dev — Calendar feature, AlarmListScreen/NotepadScreen refactors, UI polish, Audit 33 complete. |
 | Mar 25, 2026 | Removed 2.5 (text color picker) from roadmap. Readability solved by dark capsule pattern + auto-contrast overlays. |
+| Mar 26, 2026 | P2 2.1 (Note image attachments) complete. Deps installed: expo-image-picker, @shopify/react-native-skia, expo-file-system. Emoji picker removed. Audit 36 all resolved. |

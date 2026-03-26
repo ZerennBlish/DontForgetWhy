@@ -1,6 +1,6 @@
 # Don't Forget Why — Complete Technical Handoff
-## Compiled: March 25, 2026 (evening update)
-## Covers: February 8 – March 25, 2026 (entire project history)
+## Compiled: March 26, 2026
+## Covers: February 8 – March 26, 2026 (entire project history)
 
 ---
 
@@ -268,7 +268,7 @@ DontForgetWhy/
 - **Reminders** — due dates, 5 recurring patterns (daily/weekly/monthly/yearly/one-time), 6-hour completion window, date-only mode, completion history, sound mode (sound/vibrate/silent), emoji icon
 - **Timers** — 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule
   - Notification action buttons: "Dismiss" button on timer completion notification
-- **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji picker, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4)
+- **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7)
 - **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing). Week view locked to current week (always shows Sunday–Saturday containing today). Tapping a date outside current week while in week view auto-switches to day view. Supports initialDate route param for deep-linking from widget or other screens.
 - **Calendar Widget** — Home screen widget showing current month as a mini grid. Colored dots per day: red=alarms, blue=reminders, green=notes. Tap any day → opens CalendarScreen focused on that date. Today highlighted with accent background. Past days dimmed. Adjacent month days shown in secondary color. Registered as third widget in app.json (minWidth 250dp, minHeight 280dp).
 - **DND bypass** — Notifee full-screen intent + Samsung onboarding
@@ -371,8 +371,11 @@ interface Note {
   id: string; text: string; icon: string; color: string;
   fontColor: string; pinned: boolean; createdAt: string;
   updatedAt: string; deletedAt: string | null;
+  images?: string[];  // file:// URIs to locally stored images (max 3)
 }
 ```
+
+**Image storage:** Images stored on filesystem at `${FileSystem.documentDirectory}note-images/`. Filenames: `${noteId}_${timestamp}_${uuid8}.jpg`. Service: `src/services/noteImageStorage.ts` (save, delete, deleteAll). Uses expo-file-system v19 class-based API (`File`, `Directory`, `Paths`). `noteStorage.ts` auto-cleans images on permanent delete and 30-day purge.
 
 ### ActiveTimer / UserTimer
 ```typescript
@@ -688,6 +691,7 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 | 34 | Mar 25 | CalendarWidget + calendar fixes | Codex: 1 HIGH (note sort UTC slice), 1 MEDIUM (floating back button overlap), 1 LOW (root widget missing clickAction). Gemini: 2 HIGH (widget deep-link doesn't drive month — useState stale, widget alarm loader no normalization), 1 MEDIUM (widget minHeight too small for 6-row months). All fixed. Re-audit: Codex all PASS. Gemini: 4 PASS, 1 partial (widget alarm normalization functionally equivalent but not identical to loadAlarms — accepted, daily behavior same). |
 | 35 | Mar 25 | Tablet responsive (Onboarding + Sudoku) | Codex: 1 MEDIUM (Sudoku paused/won not width-capped). Fixed. Gemini: All PASS. |
+| 36 | Mar 26 | Note image attachments (P2 2.1) | Self-audit during implementation. 1 HIGH (transaction order), 2 MEDIUM (duplicate keys, image-only notes blocked), 2 MEDIUM (print broken images), 1 LOW (thumbnail memory). All resolved. Emoji picker removed. |
 
 ### Audit 33 — March 25, 2026 (Codex + Gemini)
 **Scope:** Foreground notification refactor, calendar feature, AlarmsTab extraction, NoteEditorModal extraction, UI polish (dark capsules, floating headers, BackButton)
@@ -701,7 +705,20 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 
 **Passed:** Foreground notification refactor (both auditors), consumePendingAlarm cleanup, timer dismissal state management, refactor integrity (AlarmsTab + NoteEditorModal), calendar date mapping (after fix).
 
-**37 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+### Audit 36 — March 26, 2026 (Self-audit during implementation)
+**Scope:** Note image attachments (P2 2.1) — full feature implementation + audit fixes
+
+**Findings (all resolved inline):**
+- HIGH: Transaction order — save flow copied images before saving note, risking orphaned files on failure. Fixed — copy images first, save note in inner try/catch, rollback newly copied files on failure. Removed images deleted only after updateNote succeeds.
+- MEDIUM: Duplicate React keys — thumbnail `key={uri}` breaks if same image picked twice. Fixed — `key={\`${uri}-${idx}\`}`.
+- MEDIUM: Image-only notes blocked — validation rejected empty text even with images. Fixed — allow save if text OR images present.
+- MEDIUM: Print broken images — file:// URIs in HTML img tags blocked by Android WebView. Fixed — `buildNoteHtml` helper converts to base64 data URIs via `FileSystem.File.base64()`.
+- LOW: Thumbnail memory — full-size bitmaps decoded for 80x80 thumbnails. Fixed — `resizeMethod="resize"` on Image components.
+- LOW: Share logic — upgraded to "Share Text" + "Share Photos" (Sharing.shareAsync per image) when images present. Print always uses white background (#FFFFFF) with dark text (#1A1A2E) for ink efficiency.
+
+**Also completed:** Removed dedicated emoji picker from NoteEditorModal (keyboard emoji sufficient). Iterative thumbnail styling (border, spacing, positioning, safe area insets).
+
+**38 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
 ---
 
