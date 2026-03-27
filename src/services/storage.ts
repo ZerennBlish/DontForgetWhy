@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
 import { scheduleAlarm, cancelAlarmNotifications } from './notifications';
+import { deleteAlarmPhoto } from './alarmPhotoStorage';
 
 const STORAGE_KEY = 'alarms';
 
@@ -176,6 +177,9 @@ export async function permanentlyDeleteAlarm(id: string): Promise<Alarm[]> {
   if (alarm?.notificationIds?.length) {
     await cancelAlarmNotifications(alarm.notificationIds);
   }
+  if (alarm?.photoUri) {
+    await deleteAlarmPhoto(alarm.photoUri);
+  }
   const filtered = alarms.filter(a => a.id !== id);
   await saveAlarms(filtered);
   return filtered;
@@ -184,6 +188,12 @@ export async function permanentlyDeleteAlarm(id: string): Promise<Alarm[]> {
 export async function purgeDeletedAlarms(): Promise<void> {
   const alarms = await _loadAllAlarms();
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  // Clean up photos for alarms being purged
+  for (const a of alarms) {
+    if (a.deletedAt && new Date(a.deletedAt).getTime() <= cutoff && a.photoUri) {
+      await deleteAlarmPhoto(a.photoUri);
+    }
+  }
   const kept = alarms.filter((a) => {
     if (!a.deletedAt) return true;
     return new Date(a.deletedAt).getTime() > cutoff;
@@ -222,6 +232,20 @@ export async function toggleAlarm(id: string): Promise<Alarm[]> {
     }
     const toggled = { ...a, enabled: !a.enabled };
     if (toggled.enabled) {
+      // Auto-update past dates for one-time alarms being toggled on
+      if (toggled.mode === 'one-time' && toggled.date) {
+        const [h, m] = toggled.time.split(':').map(Number);
+        const [y, mo, d] = toggled.date.split('-').map(Number);
+        const alarmDate = new Date(y, mo - 1, d, h, m, 0, 0);
+        if (alarmDate.getTime() <= Date.now()) {
+          const now = new Date();
+          const todayWithTime = new Date();
+          todayWithTime.setHours(h, m, 0, 0);
+          const newDate = todayWithTime.getTime() > Date.now() ? now : new Date(now.getTime() + 86400000);
+          toggled.date = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-${String(newDate.getDate()).padStart(2, '0')}`;
+          console.log('[toggleAlarm] updated past date to:', toggled.date);
+        }
+      }
       try {
         const notificationIds = await scheduleAlarm(toggled);
         toggled.notificationIds = notificationIds;

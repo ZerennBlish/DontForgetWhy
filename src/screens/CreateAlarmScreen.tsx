@@ -867,6 +867,41 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         />
         <Text style={styles.charCount}>{form.note.length}/200</Text>
 
+        <Text style={styles.label}>Wake-up Photo</Text>
+        <Text style={{ fontSize: 12, color: colors.textTertiary, marginBottom: 10, marginTop: -6 }}>Shows when this alarm fires</Text>
+        {form.photoUri ? (
+          <View style={{ marginBottom: 24, position: 'relative' as const }}>
+            <TouchableOpacity onPress={form.pickPhoto} activeOpacity={0.8}>
+              <Image
+                source={{ uri: form.photoUri }}
+                style={{ width: '100%', height: 160, borderRadius: 12 }}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ position: 'absolute' as const, top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}
+              onPress={() => {
+                Alert.alert('Remove Photo', 'Remove the wake-up photo for this alarm?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Remove', style: 'destructive', onPress: form.clearPhoto },
+                ]);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>{'\u2715'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={form.pickPhoto}
+            activeOpacity={0.7}
+            style={{ borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', borderStyle: 'dashed' as const, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)', height: 120, justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}
+          >
+            <Text style={{ fontSize: 28, marginBottom: 4 }}>{'\u{1F4F7}'}</Text>
+            <Text style={{ fontSize: 14, color: colors.textTertiary }}>Tap to add photo</Text>
+          </TouchableOpacity>
+        )}
+
         {(() => {
           const guessWhyDisabled = !form.nickname.trim() && form.note.trim().length < 3 && !form.selectedIcon;
           return (

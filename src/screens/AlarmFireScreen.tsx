@@ -84,6 +84,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   } = route.params;
 
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [photoFailed, setPhotoFailed] = useState(false);
   const [globalSilenced, setGlobalSilenced] = useState(false);
   const [silenceLoaded, setSilenceLoaded] = useState(false);
   const [snoozeShameMessage, setSnoozeShameMessage] = useState<string | null>(null);
@@ -527,10 +528,15 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     },
   }), [colors, insets.bottom]);
 
+  const hasAlarmPhoto = !isTimer && !!alarm?.photoUri && !photoFailed;
+  const bgSource = hasAlarmPhoto
+    ? { uri: alarm!.photoUri! }
+    : require('../../assets/lightbulb.png');
+
   // Snooze shame overlay
   if (snoozeShameMessage) {
     return (
-      <ImageBackground source={require('../../assets/lightbulb.png')} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={bgSource} style={{ flex: 1 }} resizeMode="cover" onError={hasAlarmPhoto ? () => setPhotoFailed(true) : undefined}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <View style={styles.container}>
             <Animated.View style={[styles.shameOverlay, { opacity: snoozeShameOpacity }]}>
@@ -544,7 +550,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ImageBackground source={require('../../assets/lightbulb.png')} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={bgSource} style={{ flex: 1 }} resizeMode="cover" onError={hasAlarmPhoto ? () => setPhotoFailed(true) : undefined}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
         <View style={styles.container}>
           <View style={styles.top}>

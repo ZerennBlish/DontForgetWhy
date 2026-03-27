@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { TextInput, Alert, ToastAndroid } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
+import * as ImagePicker from 'expo-image-picker';
 import type { AlarmCategory, AlarmDay } from '../types/alarm';
 import type { Alarm } from '../types/alarm';
 import type { SoundMode } from '../utils/soundModeUtils';
@@ -14,6 +15,7 @@ import { getRandomQuote } from '../services/quotes';
 import { getRandomPlaceholder } from '../data/placeholders';
 import { refreshWidgets } from '../widget/updateWidget';
 import { getNearestDayDate } from '../utils/time';
+import { saveAlarmPhoto, deleteAlarmPhoto, alarmPhotoExists } from '../services/alarmPhotoStorage';
 import type { SystemSound } from '../components/SoundPickerModal';
 
 function getDateStr(date: Date): string {
@@ -27,6 +29,7 @@ interface UseAlarmFormParams {
 
 export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams) {
   const isEditing = !!existingAlarm;
+  const [alarmId] = useState(() => existingAlarm?.id || uuidv4());
 
   // Time state
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
@@ -112,6 +115,15 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
   const [selectedSystemSoundID, setSelectedSystemSoundID] = useState<number | null>(
     existingAlarm?.soundID ?? null
   );
+
+  // Photo state — mutations deferred until save
+  const [photoUri, setPhotoUri] = useState<string | null>(() => {
+    const uri = existingAlarm?.photoUri ?? null;
+    if (uri && !alarmPhotoExists(uri)) return null;
+    return uri;
+  });
+  const originalPhotoRef = useRef<string | null>(existingAlarm?.photoUri ?? null);
+  const photoChangedRef = useRef(false);
 
   // Day selection
   const {
@@ -305,6 +317,23 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
     }
   };
 
+  const pickPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      quality: 0.7,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setPhotoUri(result.assets[0].uri);
+      photoChangedRef.current = true;
+    }
+  };
+
+  const clearPhoto = () => {
+    setPhotoUri(null);
+    photoChangedRef.current = true;
+  };
+
   const hasContent = (): boolean => {
     return !!(nickname.trim() || note.trim() || (selectedIcon && selectedIcon !== '\u{1F60A}'));
   };
@@ -390,6 +419,26 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
         }
       }
 
+      // Handle photo file operations (deferred until save)
+      let finalPhotoUri: string | null = photoUri;
+      if (photoChangedRef.current) {
+        if (photoUri) {
+          // Copy from temp cache to permanent storage
+          try {
+            finalPhotoUri = await saveAlarmPhoto(alarmId, photoUri);
+          } catch {
+            ToastAndroid.show('Failed to save photo', ToastAndroid.SHORT);
+            finalPhotoUri = null;
+          }
+        } else {
+          finalPhotoUri = null;
+        }
+        // Best-effort delete old photo if editing
+        if (originalPhotoRef.current) {
+          await deleteAlarmPhoto(originalPhotoRef.current);
+        }
+      }
+
       if (isEditing) {
         const updated = {
           ...existingAlarm!,
@@ -407,11 +456,12 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
           soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
           soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
           soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
+          photoUri: finalPhotoUri,
         };
         await updateAlarm(updated);
       } else {
         const alarm = {
-          id: uuidv4(),
+          id: alarmId,
           time,
           nickname: nickname.trim() || undefined,
           note: note.trim(),
@@ -430,6 +480,7 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
           soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
           soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
           soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
+          photoUri: finalPhotoUri,
         };
 
         let notificationIds: string[] = [];
@@ -532,6 +583,8 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
     showCalendar, handleCalPrev, handleCalNext,
     handleSelectDate, toggleCalendar,
     calDays, calFirstDay, MONTH_NAMES,
+    // Photo
+    photoUri, pickPhoto, clearPhoto,
     // Actions
     clearDate, applySystemSound, hasContent, save, switchMode,
     // Computed

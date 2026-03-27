@@ -23,6 +23,7 @@ export interface Alarm {
   soundUri?: string | null;
   soundName?: string | null;
   soundID?: number | null;
+  photoUri?: string | null;
   deletedAt?: string | null;
   /** @deprecated kept for backward compatibility with old alarms */
   notificationId?: string;
