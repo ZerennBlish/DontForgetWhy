@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.5.0 (versionCode 18) on dev branch, v1.4.0 (versionCode 17) live on Play Store |
-| **Branch** | `dev` (v1.5.0 not yet merged to main or built) |
+| **Current Version** | v1.6.0 (versionCode 19) — production build in progress |
+| **Branch** | `main` (merged from dev) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | P2 complete — ready for audit and production build |
+| **Current Focus** | v1.6.0 production build — P2 ship |
 | **Blocked By** | Nothing |
-| **Next Action** | Dual audit (Codex + Gemini) → production build → P3 voice roasts |
+| **Next Action** | Upload to Play Store → P3 voice roasts |
 | **EAS Credits** | ~33 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -71,7 +71,7 @@
 
 ## PHASE 2 — PHOTOS + DRAWING + BACKGROUNDS ✅ COMPLETE
 
-**Shipped in:** v1.5.0 (dev branch, not yet built/merged)
+**Shipped in:** v1.6.0 (production)
 **Branch:** `dev`
 **New deps:** `expo-image-picker`, `@shopify/react-native-skia`, `expo-file-system`
 **Existing dep:** `reanimated-color-picker` (already installed)
@@ -149,7 +149,7 @@
 ### Audit Gate
 - [ ] Full dual audit (Codex + Gemini) before production build
 - [ ] `npx tsc --noEmit` — 0 errors
-- [ ] Increment `expo.version` and `expo.android.versionCode` in `app.json`
+- [x] Increment `expo.version` and `expo.android.versionCode` in `app.json`
 
 ---
 
@@ -449,3 +449,4 @@ Batch native deps within phases to minimize dev builds.
 | Mar 27, 2026 | P2 2.3 (Custom photo backgrounds) complete. backgroundStorage.ts, Settings photo picker, opacity presets, 3 screens updated. |
 | Mar 27, 2026 | P2 2.4 (Per-alarm photo) complete. alarmPhotoStorage.ts, deferred save pattern, CreateAlarmScreen photo picker, AlarmFireScreen conditional background. |
 | Mar 27, 2026 | P2 fully COMPLETE. File splits (ShareNoteModal, ImageLightbox, DayPickerRow, useAlarmForm, useReminderForm, useNotificationRouting), header consistency, toggleAlarm past-date fix, audit cleanup. |
+| Mar 27, 2026 | v1.6.0 production build. Merged dev → main. Full P2 shipped: image attachments, drawing/Skia, photo backgrounds, per-alarm photos, file splits, header consistency, dismiss fix. |
