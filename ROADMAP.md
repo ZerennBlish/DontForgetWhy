@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: March 26, 2026
+### Source of Truth · Updated: March 27, 2026
 
 ---
 
@@ -10,9 +10,9 @@
 | **Current Version** | v1.5.0 (versionCode 18) on dev branch, v1.4.0 (versionCode 17) live on Play Store |
 | **Branch** | `dev` (v1.5.0 not yet merged to main or built) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | Finishing P2 free features before starting P2 paid features |
+| **Current Focus** | P2 complete — ready for audit and production build |
 | **Blocked By** | Nothing |
-| **Next Action** | P2 2.3 (custom photo backgrounds) or calendar widget dev build |
+| **Next Action** | Dual audit (Codex + Gemini) → production build → P3 voice roasts |
 | **EAS Credits** | ~33 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -24,8 +24,8 @@
 | Phase | Name | Status | Branch | Build Type |
 |-------|------|--------|--------|------------|
 | 1 | Housekeeping | ✅ Done | main | — |
-| 2 | Photos + Drawing + Backgrounds | 🔧 In Progress (free features) | dev | Dev + Prod |
-| 3 | Voice Roasts | ⬜ Waiting | dev | Dev + Prod |
+| 2 | Photos + Drawing + Backgrounds | ✅ Done | dev | Dev + Prod |
+| 3 | Voice Roasts | ⬜ Next | dev | Dev + Prod |
 | 4 | Chess + Checkers | ⬜ Waiting | dev | Prod only |
 | 5 | Google Calendar Sync | ⬜ Waiting | dev | Dev + Prod |
 | 6 | Memory Score Expansion | ⬜ Waiting | dev | Prod only |
@@ -69,16 +69,14 @@
 
 ---
 
-## PHASE 2 — PHOTOS + DRAWING + BACKGROUNDS
+## PHASE 2 — PHOTOS + DRAWING + BACKGROUNDS ✅ COMPLETE
 
-**Status:** 🔧 In Progress (free features)
+**Shipped in:** v1.5.0 (dev branch, not yet built/merged)
 **Branch:** `dev`
 **New deps:** `expo-image-picker`, `@shopify/react-native-skia`, `expo-file-system`
 **Existing dep:** `reanimated-color-picker` (already installed)
-**Build cost:** 1 dev build + 1 production build minimum
-**Note:** Consider bundling Phase 3 native deps (`expo-av`) into the same dev build to save a credit
 
-### Free Features (Current Sprint)
+### Free Features
 
 - [x] **2.0 In-app Calendar** (CalendarScreen.tsx — DONE in v1.5.0)
   - Full month/week/day views with react-native-calendars (JS-only, no native dep)
@@ -89,8 +87,8 @@
 - [x] **2.0b NotepadScreen refactor** — extracted NoteEditorModal.tsx (DONE)
 - [x] **2.0c UI polish** — dark capsule BackButton, floating headers on Settings/DailyRiddle/NoteEditorModal (DONE)
 - [x] **2.0d Audit 33** — all findings resolved (DONE)
-- [ ] **2.6 Calendar widget** — native dep, batch with Skia dev build
-- [ ] **2.7 Tablet responsive pass** — Onboarding, Sudoku, Trivia screens
+- [x] **2.6 Calendar widget** — CalendarWidget with dot indicators (DONE in v1.5.0)
+- [x] **2.7 Tablet responsive pass** — Onboarding, Sudoku, MemoryMatch, MemoryScore (DONE in v1.5.0)
 
 ### Pro Features
 
@@ -102,7 +100,7 @@
   - Print: base64 data URIs via buildNoteHtml helper, white background for ink efficiency
   - Transactional save with rollback on failure
   - Image files managed by noteImageStorage service (expo-file-system v19)
-  - Note cards show 📷 count indicator
+  - Note cards show camera count indicator
   - Emoji picker removed from NoteEditorModal (keyboard emoji sufficient)
   - Audit 36: all findings resolved (transaction order, duplicate keys, print base64, resizeMethod)
 
@@ -123,26 +121,30 @@
   - Empty canvas save blocked, cancel prompts when strokes exist
   - Audit 37: 3 HIGH, 2 MEDIUM, 2 LOW — all resolved
 
-- [ ] **2.3 Custom photo background underlay on main screens**
-  - Alarms, Timers, Reminders screens
-  - `expo-image-picker` (shared with 2.1 — no additional dep cost)
+- [x] **2.3 Custom photo background underlay** ✅ COMPLETE (March 27, 2026)
+  - One user-selected photo shared across AlarmListScreen, NotepadScreen, CalendarScreen
+  - backgroundStorage.ts: atomic save (copy first, persist key, delete old), ${Paths.document}backgrounds/
+  - Settings: "Screen Background" section with photo picker, thumbnail preview, clear, opacity presets (30-80%)
+  - Screens: conditional render — photo + dark overlay when set, fullscreenicon.png watermark when not
+  - onError fallback: setBgUri(null) if image fails to load
 
-- [ ] **2.4 Full-bleed per-alarm photo on Alarm Fire screen**
-  - Per-alarm photo selection in alarm creation
-  - Photo-aware sarcastic snooze lines (content adjusts to acknowledge the photo)
+- [x] **2.4 Per-alarm photo on fire screen** ✅ COMPLETE (March 27, 2026)
+  - Optional photoUri field on Alarm type
+  - alarmPhotoStorage.ts: saves to ${Paths.document}alarm-photos/, cleanup on purge/permanentDelete
+  - Deferred save pattern: photo stays in ImagePicker cache until alarm save succeeds
+  - CreateAlarmScreen: "Wake-up Photo" section with placeholder/thumbnail/clear
+  - AlarmFireScreen: conditional ImageBackground — alarm.photoUri if set, lightbulb.png fallback, onError recovery
+  - Timers always use lightbulb.png (no photo support)
 
 ### Removed from Phase 2
 
-- ~~2.5 App text color picker~~ — REMOVED. The dark capsule pattern (semi-transparent dark backgrounds with white text/borders) solves readability on all backgrounds without user configuration. For photo backgrounds (2.3, 2.4), use dark overlays or frosted-glass strips behind text regions with automatic black/white text selection based on background luminance. This is more reliable, zero-config, and preserves visual consistency across themes.
-
-### Blockers
-- None anticipated — all deps are well-documented Expo packages
+- ~~2.5 App text color picker~~ — REMOVED. Dark capsule pattern solved readability without user configuration. Dark overlays with auto-contrast text selection on photo backgrounds. Zero-config, visually consistent.
 
 ### Notes
-- `useCalendar` hook accepts `initialDate` and `onSelectDate` callback (handoff doc Section G needs update)
-- 2.3 and 2.4 share `expo-image-picker` — install once, use in both
-- Readability strategy: dark capsules + auto-contrast overlays. No user-facing text color picker.
-- `reanimated-color-picker` remains installed for custom theme builder but is NOT used for a global text color setting.
+- Tablet responsive pass deferred to standalone task for remaining screens (not part of P2 scope)
+- No new native dependencies in 2.3/2.4 (expo-image-picker and expo-file-system already installed from 2.1/2.2)
+- `useCalendar` hook accepts `initialDate` and `onSelectDate` callback
+- `reanimated-color-picker` remains installed for custom theme builder
 
 ### Audit Gate
 - [ ] Full dual audit (Codex + Gemini) before production build
@@ -363,7 +365,6 @@
 
 ## BACKLOG (Not Scheduled)
 
-- Past-time alarm toggle: should warn user or auto-advance date when toggling on an alarm whose time has passed
 - Recurring reminder UX: annual recurring set for today when time passed should auto-schedule next year; completing recurring should gray out + reappear at next occurrence
 - Daily Riddle scoring: needs design review — unclear if point values are well-tuned
 - Expo SDK 55 upgrade: deferred until after Phase 3
@@ -444,3 +445,7 @@ Batch native deps within phases to minimize dev builds.
 | Mar 25, 2026 | v1.5.0 on dev — Calendar feature, AlarmListScreen/NotepadScreen refactors, UI polish, Audit 33 complete. |
 | Mar 25, 2026 | Removed 2.5 (text color picker) from roadmap. Readability solved by dark capsule pattern + auto-contrast overlays. |
 | Mar 26, 2026 | P2 2.1 (Note image attachments) complete. Deps installed: expo-image-picker, @shopify/react-native-skia, expo-file-system. Emoji picker removed. Audit 36 all resolved. |
+| Mar 26, 2026 | P2 2.2 (Drawing canvas) complete. Skia canvas, pen/eraser/undo, custom colors, S Pen pressure, PNG+JSON save, share modal with PDF. Audit 37 all resolved. |
+| Mar 27, 2026 | P2 2.3 (Custom photo backgrounds) complete. backgroundStorage.ts, Settings photo picker, opacity presets, 3 screens updated. |
+| Mar 27, 2026 | P2 2.4 (Per-alarm photo) complete. alarmPhotoStorage.ts, deferred save pattern, CreateAlarmScreen photo picker, AlarmFireScreen conditional background. |
+| Mar 27, 2026 | P2 fully COMPLETE. File splits (ShareNoteModal, ImageLightbox, DayPickerRow, useAlarmForm, useReminderForm, useNotificationRouting), header consistency, toggleAlarm past-date fix, audit cleanup. |

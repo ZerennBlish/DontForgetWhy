@@ -1,6 +1,6 @@
 # Don't Forget Why — Complete Technical Handoff
-## Compiled: March 26, 2026
-## Covers: February 8 – March 26, 2026 (entire project history)
+## Compiled: March 27, 2026
+## Covers: February 8 – March 27, 2026 (entire project history)
 
 ---
 
@@ -136,9 +136,12 @@ DontForgetWhy/
     ├── components/
     │   ├── AlarmCard.tsx
     │   ├── BackButton.tsx
+    │   ├── DayPickerRow.tsx
     │   ├── DrawingCanvas.tsx
     │   ├── ErrorBoundary.tsx
+    │   ├── ImageLightbox.tsx
     │   ├── NoteEditorModal.tsx
+    │   ├── ShareNoteModal.tsx
     │   ├── SoundPickerModal.tsx
     │   ├── TimePicker.tsx
     │   └── UndoToast.tsx
@@ -155,8 +158,11 @@ DontForgetWhy/
     │   ├── timerPresets.ts
     │   └── triviaQuestions.ts
     ├── hooks/
+    │   ├── useAlarmForm.ts         # alarm create/edit form state + deferred photo save
     │   ├── useCalendar.ts          # accepts initialDate + onSelectDate callback
-    │   └── useDaySelection.ts
+    │   ├── useDaySelection.ts
+    │   ├── useNotificationRouting.ts # notification event handlers extracted from App.tsx
+    │   └── useReminderForm.ts      # reminder create/edit form state
     ├── navigation/
     │   └── types.ts                # navigation param types
     ├── screens/
@@ -181,10 +187,13 @@ DontForgetWhy/
     │   ├── TimerScreen.tsx
     │   └── TriviaScreen.tsx
     ├── services/
+    │   ├── alarmPhotoStorage.ts    # per-alarm photo save/delete/exists
     │   ├── alarmSound.ts
+    │   ├── backgroundStorage.ts    # shared screen background photo
     │   ├── forgetLog.ts
     │   ├── guessWhyStats.ts
     │   ├── memoryScore.ts
+    │   ├── noteImageStorage.ts      # note image save/delete/drawing data
     │   ├── noteStorage.ts
     │   ├── notifications.ts
     │   ├── pendingAlarm.ts
@@ -210,6 +219,7 @@ DontForgetWhy/
     │   ├── connectivity.ts
     │   ├── fullScreenPermission.ts
     │   ├── haptics.ts
+    │   ├── noteColors.ts           # getTextColor() — contrast-based text color
     │   ├── soundFeedback.ts
     │   ├── soundModeUtils.ts
     │   ├── sudoku.ts
@@ -273,7 +283,7 @@ DontForgetWhy/
 - **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing). Week view locked to current week (always shows Sunday–Saturday containing today). Tapping a date outside current week while in week view auto-switches to day view. Supports initialDate route param for deep-linking from widget or other screens.
 - **Calendar Widget** — Home screen widget showing current month as a mini grid. Colored dots per day: red=alarms, blue=reminders, green=notes. Tap any day → opens CalendarScreen focused on that date. Today highlighted with accent background. Past days dimmed. Adjacent month days shown in secondary color. Registered as third widget in app.json (minWidth 250dp, minHeight 280dp).
 - **DND bypass** — Notifee full-screen intent + Samsung onboarding
-- **Full-screen alarm fire** — lightbulb background, snooze shame (4 tiers × 7 messages), shows 🔇 when silenced
+- **Full-screen alarm fire** — lightbulb background (or per-alarm photo if set), snooze shame (4 tiers × 7 messages), shows 🔇 when silenced
 - **Native MediaPlayer sound** — plays through STREAM_ALARM regardless of ringer mode. Notification channels are SILENT. MediaPlayer handles all audio.
 
 ### Guess Why System (Per-Alarm)
@@ -331,7 +341,8 @@ DontForgetWhy/
 ### Background Images
 - Game screens: AI-generated themed backgrounds with dark overlays (0.55-0.7 opacity)
 - Games Hub + Settings: semi-transparent cards over background images
-- Main tabs: app icon watermark at 0.07 opacity
+- Main tabs: user photo background with configurable dark overlay (30-80% opacity), or app icon watermark at 0.07 opacity when no photo set
+- Alarm fire: per-alarm photo background (if set) with 0.7 opacity overlay, or lightbulb.png default
 
 ### Sorting, Filtering, Soft Delete
 - Alarms: sort by Time/Created/Name, filter by All/Active/One-time/Recurring. Default: All
@@ -350,9 +361,13 @@ interface Alarm {
   date: string | null; category: AlarmCategory; icon?: string;
   private: boolean; guessWhy?: boolean; createdAt: string;
   notificationIds: string[]; soundId?: string; soundUri?: string | null;
-  soundName?: string | null; soundID?: number | null; deletedAt?: string | null;
+  soundName?: string | null; soundID?: number | null;
+  photoUri?: string | null;  // per-alarm wake-up photo (P2 2.4)
+  deletedAt?: string | null;
 }
 ```
+
+**Alarm photo storage:** Photos stored at `${Paths.document}alarm-photos/`. Filename: `alarm_${alarmId}_${timestamp}.jpg`. Service: `src/services/alarmPhotoStorage.ts` — `saveAlarmPhoto`, `deleteAlarmPhoto`, `alarmPhotoExists`. Deferred save pattern: photo stays in ImagePicker temp cache during form editing, only copied to permanent storage when alarm save succeeds. Old photo deleted only after new one confirmed. Cancel never touches filesystem. Photo cleanup: `permanentlyDeleteAlarm` and `purgeDeletedAlarms` (30-day) both delete photo files. Soft-delete keeps photo on disk.
 
 ### Reminder
 ```typescript
@@ -392,7 +407,7 @@ interface UserTimer {
 ```
 
 ### Key AsyncStorage Keys
-`'alarms'`, `'reminders'`, `'activeTimers'`, `'notes'`, `'userTimers'`, `'appSettings'`, `'silenceAllAlarms'`, `'appTheme'`, `'customTheme'`, `'hapticsEnabled'`, `'onboardingComplete'`, `'defaultTimerSound'`, plus game stats (guessWhyStats, forgetLog, memoryMatchScores, sudokuBestScores, dailyRiddleStats, triviaStats), widget pins (widgetPinnedPresets, widgetPinnedAlarms, widgetPinnedReminders, widgetPinnedNotes), per-alarm (`snoozeCount_{alarmId}`, `snoozing_{alarmId}`), pending actions (pendingTabAction, pendingAlarmAction, pendingReminderAction, pendingNoteAction), notification dedupe (`_handledNotifs` in-memory + `handled_notifs` persistent in AsyncStorage)
+`'alarms'`, `'reminders'`, `'activeTimers'`, `'notes'`, `'userTimers'`, `'appSettings'`, `'silenceAllAlarms'`, `'appTheme'`, `'customTheme'`, `'hapticsEnabled'`, `'onboardingComplete'`, `'defaultTimerSound'`, `'bg_main'` (background photo URI), `'bg_overlay_opacity'` (background overlay 0.3-0.8), plus game stats (guessWhyStats, forgetLog, memoryMatchScores, sudokuBestScores, dailyRiddleStats, triviaStats), widget pins (widgetPinnedPresets, widgetPinnedAlarms, widgetPinnedReminders, widgetPinnedNotes), per-alarm (`snoozeCount_{alarmId}`, `snoozing_{alarmId}`), pending actions (pendingTabAction, pendingAlarmAction, pendingReminderAction, pendingNoteAction), notification dedupe (`_handledNotifs` in-memory + `handled_notifs` persistent in AsyncStorage)
 
 ---
 
@@ -767,6 +782,101 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - LOW: Empty canvas save blocked with toast
 - LOW: Cancel confirmation when strokes exist
 
+### P2 2.3 — Custom Photo Background Underlay (March 27, 2026)
+
+One user-selected photo shared across AlarmListScreen, NotepadScreen, CalendarScreen as a background underlay.
+
+**Service:** `src/services/backgroundStorage.ts` — atomic save pattern (copy new file first, persist AsyncStorage key, then best-effort delete old file). Storage directory: `${Paths.document}backgrounds/`. Uses expo-file-system `File/Directory/Paths` API (same as noteImageStorage).
+
+**AsyncStorage keys:** `bg_main` (file URI string), `bg_overlay_opacity` (number 0.3–0.8, default 0.5).
+
+**Settings UI:** "Screen Background" section in SettingsScreen with:
+- Photo picker (expo-image-picker, JPEG quality 0.7)
+- Thumbnail preview of current background
+- "Change Photo" button (checks saveBackground return for null/error)
+- "Clear Background" button with Alert confirmation
+- Opacity presets (30%–80%) as pill row
+
+**Screen integration:** Conditional render pattern — when photo set: `ImageBackground` with photo + dark overlay at configured opacity. When not set: `fullscreenicon.png` watermark at 0.07 opacity. `onError` handler: `setBgUri(null)` if image fails to load (file deleted, corrupted).
+
+### P2 2.4 — Per-Alarm Photo on Fire Screen (March 27, 2026)
+
+Optional photo per alarm that displays as full-bleed background on AlarmFireScreen when the alarm fires.
+
+**Type change:** `photoUri?: string | null` added to Alarm interface.
+
+**Service:** `src/services/alarmPhotoStorage.ts` — `saveAlarmPhoto(alarmId, sourceUri)` copies to `${Paths.document}alarm-photos/` as `alarm_${alarmId}_${timestamp}.jpg`. `deleteAlarmPhoto(uri)` best-effort delete. `alarmPhotoExists(uri)` synchronous existence check.
+
+**Deferred save pattern (useAlarmForm.ts):**
+- `pickPhoto()` stores ImagePicker's temporary cache URI in state — NO file copy
+- `clearPhoto()` clears state — NO file delete
+- `originalPhotoRef` tracks existing alarm's photo URI, `photoChangedRef` tracks if photo was modified
+- On save: if `photoChangedRef` is true, copies temp file to permanent storage via `saveAlarmPhoto`, then best-effort deletes old photo via `originalPhotoRef`
+- On cancel/unmount: no file mutations — temp cache managed by OS
+- Alarm ID pre-generated via `useState(() => existingAlarm?.id || uuidv4())` so photo filename uses correct ID
+
+**CreateAlarmScreen:** "Wake-up Photo" section between note char count and Guess Why toggle:
+- Empty: dashed-border placeholder (120px, camera emoji, "Tap to add photo")
+- Set: full-width thumbnail (160px, cover), tap to change, X button with Alert confirmation to clear
+
+**AlarmFireScreen:** Conditional `ImageBackground` source:
+- `photoFailed` state for fallback. `hasAlarmPhoto = !isTimer && !!alarm?.photoUri && !photoFailed`
+- Both return paths (main view + snooze shame) use `bgSource` with `onError` handler
+- Dark overlay stays at 0.7 opacity for readability
+- Timers always use lightbulb.png (no photo support)
+
+**Photo cleanup:** `permanentlyDeleteAlarm` and `purgeDeletedAlarms` (30-day) delete photo files. Soft-delete keeps photo on disk.
+
+**Edit form validation:** `alarmPhotoExists(uri)` check on init — if file gone, initializes photoUri as null (prevents broken preview).
+
+### File Splits Completed (P2 Session)
+
+- **NoteEditorModal.tsx** split into: `ShareNoteModal.tsx` (share/print modal), `ImageLightbox.tsx` (fullscreen image viewer), `noteColors.ts` (getTextColor utility)
+- **CreateAlarmScreen/CreateReminderScreen:** extracted `DayPickerRow.tsx` component, `useAlarmForm.ts` hook (form state + photo + save logic), `useReminderForm.ts` hook
+- **App.tsx:** extracted `useNotificationRouting.ts` hook (notification event handlers)
+
+### Back Button Header Consistency (P2 Session)
+
+All screens with back buttons unified to Notepad pattern: fixed header above scroll content, centered title, absolute `BackButton` at `left: 20, top: insets.top + 10`.
+
+**Screens updated:** Settings, Calendar, About, MemoryScore, Games, DailyRiddle, ForgetLog, Trivia, MemoryMatch, Sudoku.
+
+**Intentionally excluded:** In-game views (Trivia gameplay, MemoryMatch gameplay, Sudoku active play) — these have custom top bars with game-specific info (score, timer, streak).
+
+### Bug Fixes (P2 Session)
+
+**Timer/alarm dismiss clearing pending data:**
+- `clearPendingAlarm()` added to ACTION_PRESS dismiss and snooze handlers in both `index.ts` and `useNotificationRouting.ts`
+- DISMISSED handler now cleans up timers (previously only alarms)
+- `consumePendingAlarm` checks `wasNotifHandled` before navigating
+
+**One-time alarm toggle with past date:**
+- `toggleAlarm` in storage.ts auto-updates date to today/tomorrow when re-enabling a one-time alarm whose date has passed
+- Uses constructor-based date parsing (`new Date(y, mo - 1, d, h, m, 0, 0)`) to avoid engine-dependent string parsing
+- Handles: restored-from-trash alarms, old alarms toggled back on, any lapsed one-time alarm
+
+**Day picker mutual exclusivity:**
+- Switching from recurring to one-time clears selected days
+- Selecting a day updates the date field to next occurrence via `getNearestDayDate`
+
+### New Files Added in Phase 2
+
+| File | Purpose |
+|------|---------|
+| `src/services/backgroundStorage.ts` | Shared screen background photo storage |
+| `src/services/alarmPhotoStorage.ts` | Per-alarm photo save/delete/exists |
+| `src/components/ShareNoteModal.tsx` | Share/print note modal (split from NoteEditorModal) |
+| `src/components/ImageLightbox.tsx` | Fullscreen image viewer (split from NoteEditorModal) |
+| `src/components/DayPickerRow.tsx` | Day-of-week picker row (split from CreateAlarmScreen) |
+| `src/utils/noteColors.ts` | getTextColor contrast utility (split from NotepadScreen) |
+| `src/hooks/useAlarmForm.ts` | Alarm form state + deferred photo save |
+| `src/hooks/useReminderForm.ts` | Reminder form state |
+| `src/hooks/useNotificationRouting.ts` | Notification event handlers (split from App.tsx) |
+
+### Dependencies (P2 2.3/2.4)
+
+No new native dependencies — expo-image-picker and expo-file-system already installed from P2 2.1/2.2.
+
 **38 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
 ---
@@ -1040,9 +1150,9 @@ Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWi
 - [x] 2.0i UI polish — dark capsule buttons, floating headers (editor/settings/riddle), BackButton visibility (v1.5.0)
 - [x] 2.1 Note image attachments (gallery photos, max 3, thumbnails, lightbox, share/print, transactional save)
 - [x] 2.2 Notepad drawing/sketch mode (Skia canvas, pen/eraser/undo/clear, custom colors, BG color, editable drawings, S Pen pressure, share modal with PDF)
-- 2.3 Custom photo background underlay on main screens
-- 2.4 Full-bleed per-alarm photo on Alarm Fire screen with photo-aware roasts
-- ~~2.5 App text color picker in Settings~~ — REMOVED (readability solved by dark capsule pattern + auto-contrast overlays, not user-facing text color picker)
+- [x] 2.3 Custom photo background underlay on main screens (backgroundStorage.ts, Settings photo picker, opacity presets)
+- [x] 2.4 Per-alarm photo on fire screen (alarmPhotoStorage.ts, deferred save pattern, conditional ImageBackground)
+- ~~2.5 App text color picker in Settings~~ — REMOVED (readability solved by dark capsule pattern + auto-contrast overlays)
 - [x] 2.6 Tablet responsive pass (Onboarding, Sudoku, MemoryMatch, MemoryScore)
 - [x] 2.7 Calendar widget (CalendarWidget — mini month grid with colored dot indicators)
 
