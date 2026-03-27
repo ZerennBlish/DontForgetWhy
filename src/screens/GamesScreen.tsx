@@ -44,9 +44,17 @@ export default function GamesScreen({ navigation }: Props) {
           paddingBottom: 60 + insets.bottom,
         },
         header: {
-          paddingTop: 60,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 12,
+          paddingBottom: 2,
+        },
+        headerBack: {
+          position: 'absolute',
+          left: 20,
+          top: insets.top + 10,
         },
         title: {
           fontSize: 28,
@@ -107,13 +115,14 @@ export default function GamesScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/brain.png')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
+    <View style={styles.header}>
+      <View style={styles.headerBack}>
         <BackButton onPress={() => navigation.goBack()} />
-        <Text style={{ fontSize: 36, textAlign: 'center' }}>{'\u{1F3AE}'}</Text>
-        <Text style={[styles.title, { textAlign: 'center', marginTop: 4 }]}>Brain Games</Text>
-        <Text style={[styles.subtitle, { textAlign: 'center' }]}>Exercise that forgetful brain of yours</Text>
       </View>
+      <Text style={styles.title}>{'\u{1F3AE}'} Brain Games</Text>
+    </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={[styles.subtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Exercise that forgetful brain of yours</Text>
 
       {/* Daily Riddle */}
       <TouchableOpacity

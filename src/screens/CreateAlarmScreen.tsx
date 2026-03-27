@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,47 +10,23 @@ import {
   Alert,
   Switch,
   Modal,
-  ToastAndroid,
   Keyboard,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { v4 as uuidv4 } from 'uuid';
-import type { AlarmCategory, AlarmDay } from '../types/alarm';
 import { WEEKDAYS, WEEKENDS } from '../types/alarm';
 import type { SoundMode } from '../utils/soundModeUtils';
-import { cycleSoundMode, soundModeToSoundId, soundIdToSoundMode, getSoundModeIcon, getSoundModeLabel } from '../utils/soundModeUtils';
-import { useCalendar } from '../hooks/useCalendar';
-import { useDaySelection } from '../hooks/useDaySelection';
-import { addAlarm, updateAlarm } from '../services/storage';
-import { scheduleAlarm, requestPermissions } from '../services/notifications';
-import { loadSettings } from '../services/settings';
-import { getRandomQuote } from '../services/quotes';
-import { getRandomPlaceholder } from '../data/placeholders';
+import { cycleSoundMode, getSoundModeIcon, getSoundModeLabel } from '../utils/soundModeUtils';
+import { useAlarmForm } from '../hooks/useAlarmForm';
+import DayPickerRow from '../components/DayPickerRow';
 import SoundPickerModal from '../components/SoundPickerModal';
 import type { SystemSound } from '../components/SoundPickerModal';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { refreshWidgets } from '../widget/updateWidget';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
-
-const DAY_LABELS: { key: AlarmDay; short: string }[] = [
-  { key: 'Sun', short: 'S' },
-  { key: 'Mon', short: 'M' },
-  { key: 'Tue', short: 'T' },
-  { key: 'Wed', short: 'W' },
-  { key: 'Thu', short: 'T' },
-  { key: 'Fri', short: 'F' },
-  { key: 'Sat', short: 'S' },
-];
-
-
-function getDateStr(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
 
 function formatDateDisplay(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -63,160 +39,52 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
 export default function CreateAlarmScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const existingAlarm = route.params?.alarm;
-  const initialDate = route.params?.initialDate;
-  const isEditing = !!existingAlarm;
 
-  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
-  const [hourText, setHourText] = useState<string>(() => {
-    if (existingAlarm) {
-      const h24 = parseInt(existingAlarm.time.split(':')[0], 10);
-      return String(h24);
-    }
-    return String(new Date().getHours());
+  const form = useAlarmForm({
+    existingAlarm: route.params?.alarm,
+    initialDate: route.params?.initialDate,
   });
-  const [minuteText, setMinuteText] = useState<string>(() => {
-    if (existingAlarm) {
-      return existingAlarm.time.split(':')[1];
-    }
-    return String(new Date().getMinutes()).padStart(2, '0');
-  });
-  const [ampm, setAmpm] = useState<'AM' | 'PM'>(() => {
-    if (existingAlarm) {
-      const h = parseInt(existingAlarm.time.split(':')[0], 10);
-      return h >= 12 ? 'PM' : 'AM';
-    }
-    return new Date().getHours() >= 12 ? 'PM' : 'AM';
-  });
-  const hourRef = useRef<TextInput>(null);
-  const minuteRef = useRef<TextInput>(null);
-  const [pickerHours, setPickerHours] = useState<number>(() => {
-    if (existingAlarm) {
-      return parseInt(existingAlarm.time.split(':')[0], 10);
-    }
-    return new Date().getHours();
-  });
-  const [pickerMinutes, setPickerMinutes] = useState<number>(() => {
-    if (existingAlarm) {
-      return parseInt(existingAlarm.time.split(':')[1], 10);
-    }
-    return new Date().getMinutes();
-  });
+
+  // UI-only state
   const [timeModalVisible, setTimeModalVisible] = useState(false);
-  const [modalHours, setModalHours] = useState(0);
-  const [modalMinutes, setModalMinutes] = useState(0);
-  const [modalAmpm, setModalAmpm] = useState<'AM' | 'PM'>('AM');
-  const prevModalHourRef = useRef(0);
-  const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
-
-  const [nickname, setNickname] = useState(existingAlarm?.nickname || '');
-
-  const [soundMode, setSoundMode] = useState<SoundMode>(() => soundIdToSoundMode(existingAlarm?.soundId));
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [systemSoundPickerVisible, setSystemSoundPickerVisible] = useState(false);
-  const iconInputRef = useRef<TextInput>(null);
-  const [selectedSoundUri, setSelectedSoundUri] = useState<string | null>(
-    existingAlarm?.soundUri || null
-  );
-  const [selectedSoundName, setSelectedSoundName] = useState<string | null>(
-    existingAlarm?.soundName || null
-  );
-  const [selectedSystemSoundID, setSelectedSystemSoundID] = useState<number | null>(
-    existingAlarm?.soundID ?? null
-  );
 
-  const handleHourChange = (text: string) => {
-    const digits = text.replace(/[^0-9]/g, '');
-    if (digits === '') { setHourText(''); return; }
-    if (timeFormat === '12h') {
-      if (digits.length === 1) {
-        const d = parseInt(digits, 10);
-        if (d >= 2 && d <= 9) {
-          setHourText(digits);
-          minuteRef.current?.focus();
-        } else if (d <= 1) {
-          setHourText(digits);
-        }
-      } else {
-        const val = parseInt(digits.slice(0, 2), 10);
-        if (val >= 1 && val <= 12) {
-          setHourText(digits.slice(0, 2));
-          minuteRef.current?.focus();
-        }
-      }
+  const cardBg = colors.card + 'BF';
+
+  const navigateBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
     } else {
-      if (digits.length === 1) {
-        const d = parseInt(digits, 10);
-        if (d >= 3) {
-          setHourText(digits);
-          minuteRef.current?.focus();
-        } else {
-          setHourText(digits);
-        }
-      } else {
-        const val = parseInt(digits.slice(0, 2), 10);
-        if (val <= 23) {
-          setHourText(digits.slice(0, 2));
-          minuteRef.current?.focus();
-        }
-      }
+      navigation.navigate('AlarmList');
     }
   };
 
-  const handleMinuteChange = (text: string) => {
-    const digits = text.replace(/[^0-9]/g, '');
-    if (digits === '') { setMinuteText(''); return; }
-    if (digits.length === 1) {
-      if (parseInt(digits, 10) <= 5) {
-        setMinuteText(digits);
-      }
-    } else {
-      const val = parseInt(digits.slice(0, 2), 10);
-      if (val <= 59) {
-        setMinuteText(digits.slice(0, 2));
-      }
+  const handleSave = () => {
+    hapticMedium();
+    if (!form.hasContent()) {
+      Alert.alert(
+        'Really? Nothing?',
+        "No nickname, no reason, no icon. You're literally setting a mystery alarm. Future you is going to be SO confused.",
+        [
+          { text: "Go back, I'll fix it", style: 'cancel' },
+          { text: 'I like chaos', onPress: () => form.save(navigateBack) },
+        ],
+      );
+      return;
     }
-  };
-
-  const handleMinuteKeyPress = ({ nativeEvent }: { nativeEvent: { key: string } }) => {
-    if (nativeEvent.key === 'Backspace' && minuteText === '') {
-      hourRef.current?.focus();
-    }
+    form.save(navigateBack);
   };
 
   const openTimeModal = () => {
     hapticLight();
-    setModalHours(pickerHours);
-    setModalMinutes(pickerMinutes);
-    setModalAmpm(ampm);
-    prevModalHourRef.current = pickerHours;
+    form.prepareTimeModal();
     setTimeModalVisible(true);
   };
 
-  const handleModalHoursChange = useCallback((h: number) => {
-    const prev = prevModalHourRef.current;
-    if (timeFormat === '12h') {
-      const crossedBoundary = (prev <= 11 && h >= 12) || (prev >= 12 && h <= 11);
-      if (crossedBoundary) setModalAmpm((a) => a === 'AM' ? 'PM' : 'AM');
-    }
-    prevModalHourRef.current = h;
-    setModalHours(h);
-  }, [timeFormat]);
-
-  const handleModalMinutesChange = useCallback((m: number) => {
-    setModalMinutes(m);
-  }, []);
-
-
-
   const handleTimeModalDone = () => {
     hapticLight();
-    const h = modalHours || (timeFormat === '12h' ? 12 : 0);
-    const m = modalMinutes;
-    setPickerHours(h);
-    setPickerMinutes(m);
-    setAmpm(modalAmpm);
-    setHourText(String(h));
-    setMinuteText(String(m).padStart(2, '0'));
+    form.confirmTimeModal();
     setTimeModalVisible(false);
   };
 
@@ -225,82 +93,14 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     setTimeModalVisible(false);
   };
 
-  useEffect(() => {
-    loadSettings().then((s) => {
-      setTimeFormat(s.timeFormat);
-      setTimeInputMode(s.timeInputMode);
-      if (s.timeFormat === '12h') {
-        setHourText((prev) => {
-          const h24 = parseInt(prev, 10) || 0;
-          const h12 = h24 % 12 || 12;
-          return String(h12);
-        });
-        setPickerHours((prev) => prev % 12 || 12);
-      }
-    });
-  }, []);
-  const [note, setNote] = useState(existingAlarm?.note || '');
-  const [placeholder] = useState(getRandomPlaceholder);
-  const [selectedIcon, setSelectedIcon] = useState<string | null>(
-    existingAlarm?.icon || null
-  );
-  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
-  const [guessWhy, setGuessWhy] = useState(existingAlarm?.guessWhy ?? false);
+  const handleSystemSoundSelect = (sound: SystemSound | null) => {
+    hapticLight();
+    form.applySystemSound(sound);
+    setSystemSoundPickerVisible(false);
+  };
 
-  // Auto-clear guessWhy when eligibility is lost (no nickname, note < 3 chars, no icon)
-  useEffect(() => {
-    if (guessWhy && !nickname.trim() && note.trim().length < 3 && !selectedIcon) {
-      setGuessWhy(false);
-    }
-  }, [nickname, note, selectedIcon, guessWhy]);
-
-  const [selectedPrivate, setSelectedPrivate] = useState(
-    existingAlarm?.private || false
-  );
-  const [privateHint] = useState(() => {
-    const hints = [
-      "Hides your secrets from the alarm list. You're welcome.",
-      "What alarm? I don't see an alarm.",
-      'Your business is your business.',
-      'Prying eyes get nothing.',
-      'Stealth mode: engaged.',
-      'Nobody needs to know about your 3 AM alarm.',
-      'Hidden from the list. Hidden from judgment.',
-    ];
-    return hints[Math.floor(Math.random() * hints.length)];
-  });
-  const [mode, setMode] = useState<'recurring' | 'one-time'>(
-    existingAlarm?.mode || (initialDate ? 'one-time' : 'one-time')
-  );
-  const [selectedDate, setSelectedDate] = useState<string | null>(
-    existingAlarm?.date || initialDate || null
-  );
-
-  const {
-    selectedDays, setSelectedDays,
-    handleToggleDay, handleQuickDays,
-    isWeekdaysSelected, isWeekendsSelected,
-  } = useDaySelection(
-    existingAlarm?.days?.length ? existingAlarm.days as AlarmDay[] : []
-  );
-
-  const {
-    calendarMonth: calMonth, calendarYear: calYear,
-    showCalendar, handleCalPrev, handleCalNext,
-    handleSelectDate, toggleCalendar,
-    calDays, calFirstDay, MONTH_NAMES,
-  } = useCalendar({
-    initialMonth: (existingAlarm?.date || initialDate) ? (existingAlarm?.date || initialDate)!.split('-').map(Number)[1] - 1 : undefined,
-    initialYear: (existingAlarm?.date || initialDate) ? (existingAlarm?.date || initialDate)!.split('-').map(Number)[0] : undefined,
-    onSelectDate: (dateStr) => {
-      setSelectedDate(dateStr);
-      if (mode === 'recurring') {
-        setSelectedDays([]);
-      }
-    },
-  });
-
-  const cardBg = colors.card + 'BF';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -593,55 +393,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     modeBtnTextActive: {
       color: colors.textPrimary,
     },
-    dayRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 10,
-    },
-    dayBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.border,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    dayBtnActive: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent,
-    },
-    dayBtnText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.textTertiary,
-    },
-    dayBtnTextActive: {
-      color: colors.textPrimary,
-    },
-    quickDayRow: {
-      flexDirection: 'row',
-      gap: 10,
-      marginBottom: 10,
-    },
-    quickDayBtn: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 10,
-      backgroundColor: cardBg,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    quickDayBtnActive: {
-      backgroundColor: colors.activeBackground,
-      borderColor: colors.accent,
-    },
-    quickDayText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textSecondary,
-    },
     setDateRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -782,240 +533,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     },
   }), [colors, cardBg, insets.top, insets.bottom]);
 
-  const clearDate = () => setSelectedDate(null);
-
-  const handleSystemSoundSelect = (sound: SystemSound | null) => {
-    hapticLight();
-    if (sound) {
-      setSelectedSoundUri(sound.url);
-      setSelectedSoundName(sound.title);
-      setSelectedSystemSoundID(sound.soundID);
-    } else {
-      setSelectedSoundUri(null);
-      setSelectedSoundName(null);
-      setSelectedSystemSoundID(null);
-    }
-    setSystemSoundPickerVisible(false);
-  };
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const proceedWithSave = async () => {
-    try {
-      let rawH: number, rawM: number;
-      if (timeInputMode === 'type') {
-        rawH = parseInt(hourText, 10);
-        rawM = parseInt(minuteText, 10);
-        if (isNaN(rawH)) rawH = pickerHours;
-        if (isNaN(rawM)) rawM = pickerMinutes;
-        if (timeFormat === '12h') { rawH = Math.max(1, Math.min(12, rawH)); } else { rawH = Math.max(0, Math.min(23, rawH)); }
-        rawM = Math.max(0, Math.min(59, rawM));
-      } else {
-        rawH = pickerHours;
-        rawM = pickerMinutes;
-      }
-      let h: number;
-      if (timeFormat === '12h') {
-        let h12 = Math.min(12, Math.max(1, rawH || 12));
-        if (ampm === 'AM') {
-          h = h12 === 12 ? 0 : h12;
-        } else {
-          h = h12 === 12 ? 12 : h12 + 12;
-        }
-      } else {
-        h = Math.min(23, Math.max(0, rawH));
-      }
-      const m = Math.min(59, Math.max(0, rawM));
-      const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-
-      let alarmDate: string | null = null;
-      if (mode === 'one-time') {
-        if (selectedDate) {
-          alarmDate = selectedDate;
-          const [py, pm, pd] = alarmDate.split('-').map(Number);
-          const alarmDateTime = new Date(py, pm - 1, pd, h, m, 0, 0);
-          if (alarmDateTime.getTime() <= Date.now()) {
-            Alert.alert('Time Passed', 'Selected time has already passed. Choose a future time or date.');
-            return;
-          }
-        } else if (selectedDays.length === 1) {
-          // Day-of-week chip tapped in one-time mode — schedule for next occurrence
-          const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-          const targetDayIdx = dayMap[selectedDays[0]];
-          const now = new Date();
-          let daysUntil = (targetDayIdx - now.getDay() + 7) % 7;
-          if (daysUntil === 0) {
-            // Same day — check if time already passed
-            const selectedMinutes = h * 60 + m;
-            const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            if (selectedMinutes <= currentMinutes) {
-              daysUntil = 7;
-            }
-          }
-          const target = new Date(now);
-          target.setDate(target.getDate() + daysUntil);
-          alarmDate = getDateStr(target);
-          // Validate the calculated date+time is in the future
-          const [py, pm, pd] = alarmDate.split('-').map(Number);
-          const alarmDateTime = new Date(py, pm - 1, pd, h, m, 0, 0);
-          if (alarmDateTime.getTime() <= Date.now()) {
-            Alert.alert('Time Passed', 'Selected time has already passed. Choose a future time or date.');
-            return;
-          }
-        } else {
-          const now = new Date();
-          const selectedMinutes = h * 60 + m;
-          const currentMinutes = now.getHours() * 60 + now.getMinutes();
-          if (selectedMinutes > currentMinutes) {
-            alarmDate = getDateStr(now);
-          } else {
-            const tmrw = new Date(now);
-            tmrw.setDate(tmrw.getDate() + 1);
-            alarmDate = getDateStr(tmrw);
-          }
-        }
-      }
-
-      if (!isEditing || existingAlarm!.enabled) {
-        const granted = await requestPermissions();
-        if (!granted) {
-          Alert.alert('Permissions Needed', 'Enable notifications to use alarms.');
-          return;
-        }
-      }
-
-      if (isEditing) {
-        const updated = {
-          ...existingAlarm!,
-          time,
-          nickname: nickname.trim() || undefined,
-          note: note.trim(),
-          category: 'general' as AlarmCategory,
-          icon: selectedIcon || undefined,
-          guessWhy,
-          private: selectedPrivate,
-          mode,
-          days: selectedDays,
-          date: mode === 'one-time' ? alarmDate : null,
-          soundId: soundModeToSoundId(soundMode) ?? (selectedSoundUri ? undefined : (existingAlarm!.soundId === 'silent' || existingAlarm!.soundId === 'true_silent' ? undefined : existingAlarm!.soundId)),
-          soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
-          soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
-          soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
-        };
-        await updateAlarm(updated);
-      } else {
-        const alarm = {
-          id: uuidv4(),
-          time,
-          nickname: nickname.trim() || undefined,
-          note: note.trim(),
-          quote: getRandomQuote(),
-          enabled: true,
-          mode,
-          days: selectedDays,
-          date: mode === 'one-time' ? alarmDate : null,
-          category: 'general' as AlarmCategory,
-          icon: selectedIcon || undefined,
-          guessWhy,
-          private: selectedPrivate,
-          createdAt: new Date().toISOString(),
-          notificationIds: [],
-          soundId: soundModeToSoundId(soundMode),
-          soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
-          soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
-          soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
-        };
-
-        let notificationIds: string[] = [];
-        let alarmEnabled = true;
-        try {
-          notificationIds = await scheduleAlarm(alarm);
-        } catch (scheduleError) {
-          console.error('[SAVE] scheduleAlarm failed:', scheduleError);
-          alarmEnabled = false;
-          Alert.alert(
-            'Alarm Saved',
-            "Alarm saved but couldn't schedule notifications. Check notification permissions.",
-          );
-        }
-        await addAlarm({ ...alarm, enabled: alarmEnabled, notificationIds });
-      }
-
-      // Show time-until toast
-      try {
-        let fireTime: Date | null = null;
-        if (mode === 'one-time' && alarmDate) {
-          const [py, pm, pd] = alarmDate.split('-').map(Number);
-          fireTime = new Date(py, pm - 1, pd, h, m, 0, 0);
-        } else if (mode === 'recurring' && selectedDays.length > 0) {
-          const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-          const dayNums = selectedDays.map(d => dayMap[d]);
-          const now = new Date();
-          for (let offset = 0; offset <= 7; offset++) {
-            const candidate = new Date(now);
-            candidate.setDate(candidate.getDate() + offset);
-            candidate.setHours(h, m, 0, 0);
-            if (dayNums.includes(candidate.getDay()) && candidate.getTime() > Date.now()) {
-              fireTime = candidate;
-              break;
-            }
-          }
-        }
-        if (fireTime) {
-          const diffMs = fireTime.getTime() - Date.now();
-          if (diffMs > 0) {
-            const totalMin = Math.floor(diffMs / 60000);
-            let msg: string;
-            if (totalMin < 1) {
-              msg = 'Alarm in less than a minute';
-            } else if (totalMin < 60) {
-              msg = `Alarm in ${totalMin} minute${totalMin === 1 ? '' : 's'}`;
-            } else {
-              const hrs = Math.floor(totalMin / 60);
-              const mins = totalMin % 60;
-              if (hrs < 24) {
-                msg = `Alarm in ${hrs} hour${hrs === 1 ? '' : 's'}${mins ? ` ${mins} min` : ''}`;
-              } else {
-                const days = Math.floor(hrs / 24);
-                const remHrs = hrs % 24;
-                msg = `Alarm in ${days} day${days === 1 ? '' : 's'}${remHrs ? ` ${remHrs} hour${remHrs === 1 ? '' : 's'}` : ''}`;
-              }
-            }
-            ToastAndroid.show(msg, ToastAndroid.SHORT);
-          }
-        }
-      } catch {}
-
-      refreshWidgets();
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      } else {
-        navigation.navigate('AlarmList');
-      }
-    } catch (error: any) {
-      console.error('[SAVE ERROR]', error);
-      Alert.alert('Error', 'Failed to save alarm: ' + error.message);
-    }
-  };
-
-  const handleSave = () => {
-    hapticMedium();
-    const hasSomething = nickname.trim() || note.trim() || (selectedIcon && selectedIcon !== '😊');
-    if (!hasSomething) {
-      Alert.alert(
-        'Really? Nothing?',
-        "No nickname, no reason, no icon. You're literally setting a mystery alarm. Future you is going to be SO confused.",
-        [
-          { text: "Go back, I'll fix it", style: 'cancel' },
-          { text: 'I like chaos', onPress: () => proceedWithSave() },
-        ],
-      );
-      return;
-    }
-    proceedWithSave();
-  };
-
   return (
     <View style={styles.container}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -1029,52 +546,52 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
-        <Text style={styles.heading}>{isEditing ? 'Edit Alarm' : 'New Alarm'}</Text>
+        <Text style={styles.heading}>{form.isEditing ? 'Edit Alarm' : 'New Alarm'}</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-            <Text style={styles.saveBtnText}>{isEditing ? 'Update' : 'Save'}</Text>
+            <Text style={styles.saveBtnText}>{form.isEditing ? 'Update' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
-        {timeInputMode === 'type' ? (
+        {form.timeInputMode === 'type' ? (
           <View style={styles.timeDisplay}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TextInput
-                ref={hourRef}
+                ref={form.hourRef}
                 style={styles.timeDisplayInput}
-                value={hourText}
-                onChangeText={handleHourChange}
+                value={form.hourText}
+                onChangeText={form.handleHourChange}
                 keyboardType="number-pad"
                 maxLength={2}
                 selectTextOnFocus
               />
               <Text style={styles.timeDisplayText}>:</Text>
               <TextInput
-                ref={minuteRef}
+                ref={form.minuteRef}
                 style={styles.timeDisplayInput}
-                value={minuteText}
-                onChangeText={handleMinuteChange}
-                onKeyPress={handleMinuteKeyPress}
+                value={form.minuteText}
+                onChangeText={form.handleMinuteChange}
+                onKeyPress={form.handleMinuteKeyPress}
                 keyboardType="number-pad"
                 maxLength={2}
                 selectTextOnFocus
               />
-              {timeFormat === '12h' && (
+              {form.timeFormat === '12h' && (
                 <View style={{ marginLeft: 12, gap: 4 }}>
                   <TouchableOpacity
-                    style={[styles.ampmBtn, ampm === 'AM' && styles.ampmBtnActive]}
-                    onPress={() => { hapticLight(); setAmpm('AM'); }}
+                    style={[styles.ampmBtn, form.ampm === 'AM' && styles.ampmBtnActive]}
+                    onPress={() => { hapticLight(); form.setAmpm('AM'); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
+                    <Text style={[styles.ampmText, form.ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.ampmBtn, ampm === 'PM' && styles.ampmBtnActive]}
-                    onPress={() => { hapticLight(); setAmpm('PM'); }}
+                    style={[styles.ampmBtn, form.ampm === 'PM' && styles.ampmBtnActive]}
+                    onPress={() => { hapticLight(); form.setAmpm('PM'); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
+                    <Text style={[styles.ampmText, form.ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1094,9 +611,9 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             style={styles.timeDisplay}
           >
             <Text style={styles.timeDisplayText}>
-              {timeFormat === '12h'
-                ? `${pickerHours}:${String(pickerMinutes).padStart(2, '0')} ${ampm}`
-                : `${String(pickerHours).padStart(2, '0')}:${String(pickerMinutes).padStart(2, '0')}`}
+              {form.timeFormat === '12h'
+                ? `${form.pickerHours}:${String(form.pickerMinutes).padStart(2, '0')} ${form.ampm}`
+                : `${String(form.pickerHours).padStart(2, '0')}:${String(form.pickerMinutes).padStart(2, '0')}`}
             </Text>
             <Text style={styles.timeDisplayHint}>Tap to set time</Text>
           </TouchableOpacity>
@@ -1110,31 +627,31 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             <View style={{ alignItems: 'center', marginVertical: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TimePicker
-                  key={`modal-${timeFormat}`}
-                  hours={modalHours}
-                  minutes={modalMinutes}
-                  onHoursChange={handleModalHoursChange}
-                  onMinutesChange={handleModalMinutesChange}
-                  minHours={timeFormat === '12h' ? 1 : 0}
-                  maxHours={timeFormat === '12h' ? 13 : 24}
-                  padHours={timeFormat === '24h'}
+                  key={`modal-${form.timeFormat}`}
+                  hours={form.modalHours}
+                  minutes={form.modalMinutes}
+                  onHoursChange={form.handleModalHoursChange}
+                  onMinutesChange={form.handleModalMinutesChange}
+                  minHours={form.timeFormat === '12h' ? 1 : 0}
+                  maxHours={form.timeFormat === '12h' ? 13 : 24}
+                  padHours={form.timeFormat === '24h'}
                   labels={{ hours: '', minutes: '' }}
                 />
-                {timeFormat === '12h' && (
+                {form.timeFormat === '12h' && (
                   <View style={{ marginLeft: 16, gap: 8 }}>
                     <TouchableOpacity
-                      style={[styles.ampmBtn, modalAmpm === 'AM' && styles.ampmBtnActive]}
-                      onPress={() => { hapticLight(); setModalAmpm('AM'); }}
+                      style={[styles.ampmBtn, form.modalAmpm === 'AM' && styles.ampmBtnActive]}
+                      onPress={() => { hapticLight(); form.setModalAmpm('AM'); }}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.ampmText, modalAmpm === 'AM' && styles.ampmTextActive]}>AM</Text>
+                      <Text style={[styles.ampmText, form.modalAmpm === 'AM' && styles.ampmTextActive]}>AM</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.ampmBtn, modalAmpm === 'PM' && styles.ampmBtnActive]}
-                      onPress={() => { hapticLight(); setModalAmpm('PM'); }}
+                      style={[styles.ampmBtn, form.modalAmpm === 'PM' && styles.ampmBtnActive]}
+                      onPress={() => { hapticLight(); form.setModalAmpm('PM'); }}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.ampmText, modalAmpm === 'PM' && styles.ampmTextActive]}>PM</Text>
+                      <Text style={[styles.ampmText, form.modalAmpm === 'PM' && styles.ampmTextActive]}>PM</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1156,71 +673,46 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         <View style={styles.scheduleSection}>
           <View style={styles.modeContainer}>
             <TouchableOpacity
-              style={[styles.modeBtn, mode === 'one-time' && styles.modeBtnActive]}
-              onPress={() => { hapticLight(); setMode('one-time'); }}
+              style={[styles.modeBtn, form.mode === 'one-time' && styles.modeBtnActive]}
+              onPress={() => { hapticLight(); form.switchMode('one-time'); }}
               activeOpacity={0.7}
             >
-              <Text style={[styles.modeBtnText, mode === 'one-time' && styles.modeBtnTextActive]}>
+              <Text style={[styles.modeBtnText, form.mode === 'one-time' && styles.modeBtnTextActive]}>
                 One-time
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modeBtn, mode === 'recurring' && styles.modeBtnActive]}
-              onPress={() => { hapticLight(); setMode('recurring'); setSelectedDate(null); }}
+              style={[styles.modeBtn, form.mode === 'recurring' && styles.modeBtnActive]}
+              onPress={() => { hapticLight(); form.switchMode('recurring'); }}
               activeOpacity={0.7}
             >
-              <Text style={[styles.modeBtnText, mode === 'recurring' && styles.modeBtnTextActive]}>
+              <Text style={[styles.modeBtnText, form.mode === 'recurring' && styles.modeBtnTextActive]}>
                 Recurring
               </Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.dayRow}>
-            {DAY_LABELS.map(({ key, short }) => (
-              <TouchableOpacity
-                key={key}
-                style={[styles.dayBtn, selectedDays.includes(key) && styles.dayBtnActive]}
-                onPress={() => { hapticLight(); handleToggleDay(key, mode, clearDate); }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.dayBtnText, selectedDays.includes(key) && styles.dayBtnTextActive]}>
-                  {short}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {mode === 'recurring' && (
+          <DayPickerRow
+            selectedDays={form.selectedDays}
+            onToggleDay={(day) => form.handleToggleDay(day, form.mode, form.clearDate)}
+            onSelectWeekdays={() => form.handleQuickDays([...WEEKDAYS], form.clearDate)}
+            onSelectWeekends={() => form.handleQuickDays([...WEEKENDS], form.clearDate)}
+            isWeekdaysSelected={form.isWeekdaysSelected}
+            isWeekendsSelected={form.isWeekendsSelected}
+            showQuickDays={form.mode === 'recurring'}
+            onToggleCalendar={form.toggleCalendar}
+            isCalendarOpen={form.showCalendar}
+            colors={colors}
+          />
+          {form.mode === 'recurring' && (
             <>
-              <View style={styles.quickDayRow}>
-                <TouchableOpacity
-                  style={[styles.quickDayBtn, isWeekdaysSelected && styles.quickDayBtnActive]}
-                  onPress={() => { hapticLight(); handleQuickDays([...WEEKDAYS], clearDate); }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.quickDayText}>Weekdays</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.quickDayBtn, isWeekendsSelected && styles.quickDayBtnActive]}
-                  onPress={() => { hapticLight(); handleQuickDays([...WEEKENDS], clearDate); }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.quickDayText}>Weekends</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.quickDayBtn, showCalendar && styles.quickDayBtnActive]}
-                  onPress={() => { hapticLight(); toggleCalendar(); }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.quickDayText}>{'\u{1F4C5}'}</Text>
-                </TouchableOpacity>
-              </View>
-              {selectedDate && (
+              {form.selectedDate && (
                 <View style={styles.setDateRow}>
                   <Text style={styles.setDateText}>
-                    {'\u{1F4C5}'} {formatDateDisplay(selectedDate)}
+                    {'\u{1F4C5}'} {formatDateDisplay(form.selectedDate)}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => { hapticLight(); setSelectedDate(null); }}
+                    onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                     style={styles.clearDateBtn}
                   >
                     <Text style={styles.clearDateText}>{'\u2715'}</Text>
@@ -1230,38 +722,38 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             </>
           )}
 
-          {mode === 'one-time' && (
+          {form.mode === 'one-time' && (
             <View style={styles.setDateRow}>
               <TouchableOpacity
                 style={{ flex: 1 }}
-                onPress={() => { hapticLight(); toggleCalendar(); }}
+                onPress={() => { hapticLight(); form.toggleCalendar(); }}
                 activeOpacity={0.6}
               >
                 <Text style={styles.setDateText}>
-                  {'\u{1F4C5}'} {selectedDate ? formatDateDisplay(selectedDate) : 'Set date'}
+                  {'\u{1F4C5}'} {form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}
                 </Text>
               </TouchableOpacity>
-              {selectedDate ? (
+              {form.selectedDate ? (
                 <TouchableOpacity
-                  onPress={() => { hapticLight(); setSelectedDate(null); }}
+                  onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                   style={styles.clearDateBtn}
                 >
                   <Text style={styles.clearDateText}>{'\u2715'}</Text>
                 </TouchableOpacity>
               ) : (
-                <Text style={styles.setDateChevron}>{showCalendar ? '\u25B4' : '\u25BE'}</Text>
+                <Text style={styles.setDateChevron}>{form.showCalendar ? '\u25B4' : '\u25BE'}</Text>
               )}
             </View>
           )}
 
-          {showCalendar && (
+          {form.showCalendar && (
             <>
               <View style={styles.calHeader}>
-                <TouchableOpacity onPress={() => { hapticLight(); handleCalPrev(); }} style={styles.calNav}>
+                <TouchableOpacity onPress={() => { hapticLight(); form.handleCalPrev(); }} style={styles.calNav}>
                   <Text style={styles.calNavText}>{'\u2039'}</Text>
                 </TouchableOpacity>
-                <Text style={styles.calTitle}>{MONTH_NAMES[calMonth]} {calYear}</Text>
-                <TouchableOpacity onPress={() => { hapticLight(); handleCalNext(); }} style={styles.calNav}>
+                <Text style={styles.calTitle}>{form.MONTH_NAMES[form.calMonth]} {form.calYear}</Text>
+                <TouchableOpacity onPress={() => { hapticLight(); form.handleCalNext(); }} style={styles.calNav}>
                   <Text style={styles.calNavText}>{'\u203A'}</Text>
                 </TouchableOpacity>
               </View>
@@ -1271,21 +763,21 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 ))}
               </View>
               <View style={styles.calGrid}>
-                {Array.from({ length: calFirstDay }).map((_, i) => (
+                {Array.from({ length: form.calFirstDay }).map((_, i) => (
                   <View key={`empty-${i}`} style={styles.calCell} />
                 ))}
-                {Array.from({ length: calDays }).map((_, i) => {
+                {Array.from({ length: form.calDays }).map((_, i) => {
                   const day = i + 1;
-                  const dateObj = new Date(calYear, calMonth, day);
+                  const dateObj = new Date(form.calYear, form.calMonth, day);
                   dateObj.setHours(0, 0, 0, 0);
                   const isPast = dateObj.getTime() < today.getTime();
-                  const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                  const isSelected = selectedDate === dateStr;
+                  const dateStr = `${form.calYear}-${String(form.calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const isSelected = form.selectedDate === dateStr;
                   return (
                     <View key={day} style={styles.calCell}>
                       <TouchableOpacity
                         style={[styles.calDay, isSelected && styles.calDaySelected]}
-                        onPress={() => { hapticLight(); handleSelectDate(day); }}
+                        onPress={() => { hapticLight(); form.handleSelectDate(day); }}
                         disabled={isPast}
                         activeOpacity={0.7}
                       >
@@ -1301,8 +793,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                   );
                 })}
               </View>
-              {selectedDate && (
-                <Text style={styles.selectedDateText}>{formatDateDisplay(selectedDate)}</Text>
+              {form.selectedDate && (
+                <Text style={styles.selectedDateText}>{formatDateDisplay(form.selectedDate)}</Text>
               )}
             </>
           )}
@@ -1312,8 +804,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         <View style={styles.nicknameRow}>
           <TextInput
             style={styles.nicknameInput}
-            value={nickname}
-            onChangeText={setNickname}
+            value={form.nickname}
+            onChangeText={form.setNickname}
             placeholder="e.g. Pill O'Clock, Dog Time"
             placeholderTextColor={colors.textTertiary}
             maxLength={40}
@@ -1323,21 +815,21 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             onPress={() => { hapticLight(); setEmojiPickerOpen((o) => !o); }}
             activeOpacity={0.7}
           >
-            <Text style={styles.emojiCircleText}>{selectedIcon || '\u{1F60A}'}</Text>
+            <Text style={styles.emojiCircleText}>{form.selectedIcon || '\u{1F60A}'}</Text>
           </TouchableOpacity>
           <TextInput
-            ref={iconInputRef}
+            ref={form.iconInputRef}
             style={styles.hiddenInput}
             autoCorrect={false}
             onChangeText={(t) => {
               if (t) {
                 const graphemes = [...t];
-                setSelectedIcon(graphemes[graphemes.length - 1] || null);
+                form.setSelectedIcon(graphemes[graphemes.length - 1] || null);
               }
               setEmojiPickerOpen(false);
-              if (iconInputRef.current) {
-                iconInputRef.current.setNativeProps({ text: '' });
-                iconInputRef.current.blur();
+              if (form.iconInputRef.current) {
+                form.iconInputRef.current.setNativeProps({ text: '' });
+                form.iconInputRef.current.blur();
               }
             }}
           />
@@ -1347,14 +839,14 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             {['\u{1F305}', '\u{23F0}', '\u{1F4BC}', '\u{1F392}', '\u{1F48A}', '\u{1F3CB}\u{FE0F}', '\u{1F4C5}', '\u{1F43E}'].map((emoji) => (
               <TouchableOpacity
                 key={emoji}
-                onPress={() => { hapticLight(); setSelectedIcon(selectedIcon === emoji ? null : emoji); setEmojiPickerOpen(false); }}
-                style={[styles.quickEmojiBtn, selectedIcon === emoji && styles.quickEmojiBtnActive]}
+                onPress={() => { hapticLight(); form.setSelectedIcon(form.selectedIcon === emoji ? null : emoji); setEmojiPickerOpen(false); }}
+                style={[styles.quickEmojiBtn, form.selectedIcon === emoji && styles.quickEmojiBtnActive]}
               >
                 <Text style={{ fontSize: 18 }}>{emoji}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
-              onPress={() => { hapticLight(); iconInputRef.current?.focus(); }}
+              onPress={() => { hapticLight(); form.iconInputRef.current?.focus(); }}
               style={styles.quickEmojiBtn}
             >
               <Text style={{ fontSize: 18, color: colors.textTertiary }}>+</Text>
@@ -1365,18 +857,18 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         <Text style={styles.label}>Why are you setting this alarm?</Text>
         <TextInput
           style={styles.noteInput}
-          value={note}
-          onChangeText={setNote}
-          placeholder={placeholder}
+          value={form.note}
+          onChangeText={form.setNote}
+          placeholder={form.placeholder}
           placeholderTextColor={colors.textTertiary}
           multiline
           maxLength={200}
           textAlignVertical="top"
         />
-        <Text style={styles.charCount}>{note.length}/200</Text>
+        <Text style={styles.charCount}>{form.note.length}/200</Text>
 
         {(() => {
-          const guessWhyDisabled = !nickname.trim() && note.trim().length < 3 && !selectedIcon;
+          const guessWhyDisabled = !form.nickname.trim() && form.note.trim().length < 3 && !form.selectedIcon;
           return (
             <>
               <View style={[styles.toggleCard, { marginTop: 4 }, guessWhyDisabled && { opacity: 0.5 }]}>
@@ -1389,10 +881,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                   <Text style={{ fontSize: 12, color: colors.textTertiary, fontWeight: '700' }}>i</Text>
                 </TouchableOpacity>
                 <Switch
-                  value={guessWhy}
-                  onValueChange={(v) => { hapticLight(); setGuessWhy(v); }}
+                  value={form.guessWhy}
+                  onValueChange={(v) => { hapticLight(); form.setGuessWhy(v); }}
                   trackColor={{ false: colors.border, true: colors.accent }}
-                  thumbColor={guessWhy ? colors.textPrimary : colors.textTertiary}
+                  thumbColor={form.guessWhy ? colors.textPrimary : colors.textTertiary}
                   disabled={guessWhyDisabled}
                 />
               </View>
@@ -1406,22 +898,22 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         <View style={[styles.toggleCard, { marginTop: 4 }]}>
           <Text style={styles.toggleLabel}>Private Alarm</Text>
           <Switch
-            value={selectedPrivate}
-            onValueChange={(v) => { hapticLight(); setSelectedPrivate(v); }}
+            value={form.selectedPrivate}
+            onValueChange={(v) => { hapticLight(); form.setSelectedPrivate(v); }}
             trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor={selectedPrivate ? colors.textPrimary : colors.textTertiary}
+            thumbColor={form.selectedPrivate ? colors.textPrimary : colors.textTertiary}
           />
         </View>
-        <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: -22, marginBottom: selectedPrivate ? 2 : 20, paddingLeft: 16 }}>Hides name and details from the alarm list</Text>
-        {selectedPrivate && (
-          <Text style={{ fontSize: 10, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{privateHint}</Text>
+        <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: -22, marginBottom: form.selectedPrivate ? 2 : 20, paddingLeft: 16 }}>Hides name and details from the alarm list</Text>
+        {form.selectedPrivate && (
+          <Text style={{ fontSize: 10, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{form.privateHint}</Text>
         )}
 
         <View style={styles.soundRow}>
           <View style={{ alignItems: 'center' }}>
             <TouchableOpacity
               onPress={() => {
-                setSoundMode((prev) => {
+                form.setSoundMode((prev: SoundMode) => {
                   const next = cycleSoundMode(prev);
                   if (next === 'vibrate') { hapticMedium(); }
                   if (next === 'sound') { hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); }
@@ -1430,19 +922,19 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               }}
               style={[
                 styles.soundModeIconBtn,
-                soundMode === 'sound' && { backgroundColor: colors.accent },
+                form.soundMode === 'sound' && { backgroundColor: colors.accent },
               ]}
               activeOpacity={0.7}
             >
               <Text style={styles.soundModeIconText}>
-                {getSoundModeIcon(soundMode)}
+                {getSoundModeIcon(form.soundMode)}
               </Text>
             </TouchableOpacity>
             <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
-              {getSoundModeLabel(soundMode)}
+              {getSoundModeLabel(form.soundMode)}
             </Text>
           </View>
-          {soundMode === 'sound' && (
+          {form.soundMode === 'sound' && (
             <View style={{ alignItems: 'center' }}>
               <TouchableOpacity
                 onPress={() => { hapticLight(); setSystemSoundPickerVisible(true); }}
@@ -1450,7 +942,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 style={{ backgroundColor: colors.accent + '20', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 }}
               >
                 <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent }} numberOfLines={1}>
-                  {selectedSoundName || 'Default Sound'}
+                  {form.selectedSoundName || 'Default Sound'}
                 </Text>
               </TouchableOpacity>
               <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>Select Sound</Text>
@@ -1462,7 +954,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           visible={systemSoundPickerVisible}
           onSelect={handleSystemSoundSelect}
           onClose={() => setSystemSoundPickerVisible(false)}
-          currentSoundID={selectedSystemSoundID}
+          currentSoundID={form.selectedSystemSoundID}
         />
       </ScrollView>
 

@@ -28,6 +28,15 @@ const placeholders: string[] = [
   'Pro tip: actually write something useful here.',
 ];
 
+export const EDITOR_PLACEHOLDERS = [
+  'Type something before you forget... again.',
+  'Your brain called. It wants backup.',
+  'Future you will thank present you. Maybe.',
+  'Quick, write it down before it\'s gone forever.',
+  'If you\'re reading this, you already forgot something.',
+  'Your memory has left the chat.',
+];
+
 export function getRandomPlaceholder(): string {
   return placeholders[Math.floor(Math.random() * placeholders.length)];
 }

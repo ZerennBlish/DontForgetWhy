@@ -5,6 +5,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Calendar } from 'react-native-calendars';
@@ -22,6 +23,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { formatTime } from '../utils/time';
 import { loadSettings } from '../services/settings';
 import { hapticLight } from '../utils/haptics';
+import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>;
 
@@ -48,8 +50,7 @@ interface DayDate {
 interface DayComponentProps {
   date?: DayDate;
   state?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  marking?: any;
+  marking?: { dots?: { key?: string; color: string }[]; selected?: boolean };
   onPress?: (date?: DayDate) => void;
 }
 
@@ -251,6 +252,8 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [filterType, setFilterType] = useState<FilterType>('all');
+  const [bgUri, setBgUri] = useState<string | null>(null);
+  const [bgOpacity, setBgOpacity] = useState(0.5);
 
   useEffect(() => {
     const incoming = route.params?.initialDate;
@@ -278,6 +281,8 @@ export default function CalendarScreen({ navigation, route }: Props) {
         setNotes(n.filter((x) => !x.deletedAt));
         setTimeFormat(s.timeFormat);
       })();
+      loadBackground().then(setBgUri);
+      getOverlayOpacity().then(setBgOpacity);
     }, []),
   );
 
@@ -442,20 +447,22 @@ export default function CalendarScreen({ navigation, route }: Props) {
           backgroundColor: colors.background,
         },
         header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 2,
+        },
+        headerBack: {
           position: 'absolute',
-          top: insets.top + 12,
-          left: 16,
-          zIndex: 10,
-          backgroundColor: 'rgba(18, 18, 32, 0.85)',
-          borderRadius: 20,
-          padding: 4,
+          left: 20,
+          top: insets.top + 10,
         },
         title: {
-          fontSize: 22,
-          fontWeight: '700',
-          color: colors.textPrimary,
-          textAlign: 'center',
-          paddingVertical: 12,
+          fontSize: 28,
+          fontWeight: '800',
+          color: '#FFFFFF',
         },
         calendarWrap: {
           paddingHorizontal: 8,
@@ -572,7 +579,6 @@ export default function CalendarScreen({ navigation, route }: Props) {
           paddingBottom: 6,
         },
         listContent: {
-          paddingTop: insets.top,
           paddingHorizontal: 16,
           paddingBottom: insets.bottom + 16,
         },
@@ -827,7 +833,6 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const listHeader = useMemo(
     () => (
       <>
-        <Text style={styles.title}>{'\uD83D\uDCC5'} Calendar</Text>
         <View style={styles.calendarWrap}>
           <Calendar
             key={`${colors.background}-${currentMonth}`}
@@ -971,8 +976,25 @@ export default function CalendarScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.container}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        {bgUri ? (
+          <>
+            <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+          </>
+        ) : (
+          <Image
+            source={require('../../assets/fullscreenicon.png')}
+            style={{ width: '100%', height: '100%', opacity: 0.07 }}
+            resizeMode="cover"
+          />
+        )}
+      </View>
       <View style={styles.header}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <View style={styles.headerBack}>
+          <BackButton onPress={() => navigation.goBack()} />
+        </View>
+        <Text style={styles.title}>{'\uD83D\uDCC5'} Calendar</Text>
       </View>
       <FlatList
         data={listData}

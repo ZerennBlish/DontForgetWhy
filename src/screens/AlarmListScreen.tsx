@@ -32,6 +32,7 @@ import TimerScreen from './TimerScreen';
 import ReminderScreen from './ReminderScreen';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight } from '../utils/haptics';
+import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -68,6 +69,8 @@ export default function AlarmListScreen({ navigation, route }: Props) {
   const [pinnedAlarmIds, setPinnedAlarmIds] = useState<string[]>([]);
   const [reminderCount, setReminderCount] = useState(0);
   const [noteCount, setNoteCount] = useState(0);
+  const [bgUri, setBgUri] = useState<string | null>(null);
+  const [bgOpacity, setBgOpacity] = useState(0.5);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -207,6 +210,8 @@ export default function AlarmListScreen({ navigation, route }: Props) {
         setReminderCount(loaded.filter((r) => !r.completed).length);
       });
       getNotes().then((loaded) => setNoteCount(loaded.length));
+      loadBackground().then(setBgUri);
+      getOverlayOpacity().then(setBgOpacity);
     }, [])
   );
 
@@ -467,11 +472,18 @@ export default function AlarmListScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <Image
-          source={require('../../assets/fullscreenicon.png')}
-          style={{ width: '100%', height: '100%', opacity: 0.07 }}
-          resizeMode="cover"
-        />
+        {bgUri ? (
+          <>
+            <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+          </>
+        ) : (
+          <Image
+            source={require('../../assets/fullscreenicon.png')}
+            style={{ width: '100%', height: '100%', opacity: 0.07 }}
+            resizeMode="cover"
+          />
+        )}
       </View>
       <View style={styles.header}>
         <View style={styles.headerRow}>

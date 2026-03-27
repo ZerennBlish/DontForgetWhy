@@ -13,16 +13,13 @@ import {
   Platform,
   Alert,
   Linking,
-  Share,
   Image,
 } from 'react-native';
-import * as Print from 'expo-print';
 import * as ImagePicker from 'expo-image-picker';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
+import { getTextColor } from '../utils/noteColors';
 import { NOTE_COLORS, NOTE_FONT_COLORS } from '../types/note';
 import type { Note } from '../types/note';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
@@ -30,28 +27,12 @@ import type { ColorFormatsObject } from 'reanimated-color-picker';
 import BackButton from './BackButton';
 import DrawingCanvas from './DrawingCanvas';
 import type { StrokeData } from './DrawingCanvas';
+import ShareNoteModal from './ShareNoteModal';
+import ImageLightbox from './ImageLightbox';
 import { loadDrawingData } from '../services/noteImageStorage';
+import { EDITOR_PLACEHOLDERS } from '../data/placeholders';
 
 const MAX_NOTE_LENGTH = 999;
-
-const EDITOR_PLACEHOLDERS = [
-  'Type something before you forget... again.',
-  'Your brain called. It wants backup.',
-  'Future you will thank present you. Maybe.',
-  'Quick, write it down before it\'s gone forever.',
-  'If you\'re reading this, you already forgot something.',
-  'Your memory has left the chat.',
-];
-
-function getTextColor(bgHex: string): string {
-  if (!/^#[0-9A-Fa-f]{6}$/.test(bgHex)) return '#FFFFFF';
-  const hex = bgHex.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 150 ? '#1A1A2E' : '#FFFFFF';
-}
 
 const LINK_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
 
@@ -111,80 +92,6 @@ function renderLinkedText(
 
   return parts.length > 0 ? parts : [<Text key="full" style={baseStyle}>{text}</Text>];
 }
-
-async function buildNoteHtml(
-  text: string,
-  icon: string,
-  images: string[],
-): Promise<string> {
-  const iconHtml = icon ? `<div style="font-size:48px;margin-bottom:16px;">${icon}</div>` : '';
-  const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  let imagesHtml = '';
-  for (const uri of images) {
-    try {
-      const b64 = await new FileSystem.File(uri).base64();
-      const mimeType = uri.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
-      imagesHtml += `<img src="data:${mimeType};base64,${b64}" style="display:block;width:100%;max-height:83vh;object-fit:contain;margin-top:24px;border-radius:8px;" />`;
-    } catch { /* skip failed image */ }
-  }
-  return `<html><head><style>@page { size: letter; margin: 0.75in; } img { page-break-inside: avoid; }</style></head><body style="background:#FFFFFF;color:#1A1A2E;font-family:system-ui;padding:32px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:#1A1A2E;margin:0;">${escapedText}</pre>${imagesHtml}</body></html>`;
-}
-
-const shareModalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  card: {
-    backgroundColor: 'rgba(24, 24, 38, 0.95)',
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    marginHorizontal: 32,
-    width: '80%',
-    maxWidth: 320,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 4,
-  },
-  optionIcon: {
-    fontSize: 20,
-    marginRight: 14,
-  },
-  optionText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#FFFFFF',
-  },
-  cancelBtn: {
-    marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-  },
-  cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.5)',
-  },
-});
 
 interface NoteEditorModalProps {
   visible: boolean;
@@ -578,32 +485,6 @@ export default function NoteEditorModal({
     thumbnailRemoveText: {
       color: '#FFFFFF',
       fontSize: 10,
-      fontWeight: '700',
-    },
-    lightboxOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.9)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    lightboxImage: {
-      width: '100%',
-      height: '100%',
-    },
-    lightboxClose: {
-      position: 'absolute',
-      top: insets.top + 16,
-      right: 16,
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: 'rgba(255,255,255,0.2)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    lightboxCloseText: {
-      color: '#FFFFFF',
-      fontSize: 18,
       fontWeight: '700',
     },
   }), [colors, insets.top, insets.bottom]);
@@ -1021,98 +902,20 @@ export default function NoteEditorModal({
       </Modal>
 
       {/* Image Lightbox */}
-      <Modal visible={!!lightboxUri} transparent animationType="fade" onRequestClose={() => setLightboxUri(null)}>
-        <TouchableOpacity style={styles.lightboxOverlay} activeOpacity={1} onPress={() => setLightboxUri(null)}>
-          {lightboxUri && (
-            <Image source={{ uri: lightboxUri }} style={styles.lightboxImage} resizeMode="contain" />
-          )}
-          <TouchableOpacity style={styles.lightboxClose} onPress={() => setLightboxUri(null)} activeOpacity={0.7}>
-            <Text style={styles.lightboxCloseText}>{'\u2715'}</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+      <ImageLightbox
+        visible={!!lightboxUri}
+        imageUri={lightboxUri}
+        onClose={() => setLightboxUri(null)}
+      />
 
       {/* Share Modal */}
-      <Modal transparent visible={showShareModal} animationType="fade" onRequestClose={() => setShowShareModal(false)}>
-        <TouchableOpacity style={shareModalStyles.overlay} activeOpacity={1} onPress={() => setShowShareModal(false)}>
-          <View style={shareModalStyles.card} onStartShouldSetResponder={() => true}>
-            <Text style={shareModalStyles.title}>Share Note</Text>
-
-            <TouchableOpacity style={shareModalStyles.option} onPress={async () => {
-              setShowShareModal(false);
-              hapticLight();
-              const content = editorIcon ? `${editorIcon} ${editorText}` : editorText;
-              if (!content.trim()) { ToastAndroid.show('Nothing to share', ToastAndroid.SHORT); return; }
-              Share.share({ message: content });
-            }} activeOpacity={0.7}>
-              <Text style={shareModalStyles.optionIcon}>{'\u{1F4DD}'}</Text>
-              <Text style={shareModalStyles.optionText}>Share Text</Text>
-            </TouchableOpacity>
-
-            {editorImages.length > 0 && (
-              <TouchableOpacity style={shareModalStyles.option} onPress={async () => {
-                setShowShareModal(false);
-                hapticLight();
-                try {
-                  const available = await Sharing.isAvailableAsync();
-                  if (!available) { ToastAndroid.show('Sharing not available', ToastAndroid.SHORT); return; }
-                  for (const uri of editorImages) {
-                    const mime = uri.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
-                    await Sharing.shareAsync(uri, { mimeType: mime });
-                  }
-                } catch {
-                  ToastAndroid.show("Couldn't share photos.", ToastAndroid.SHORT);
-                }
-              }} activeOpacity={0.7}>
-                <Text style={shareModalStyles.optionIcon}>{'\u{1F4F7}'}</Text>
-                <Text style={shareModalStyles.optionText}>{editorImages.length === 1 ? 'Share Photo' : 'Share Photos'}</Text>
-              </TouchableOpacity>
-            )}
-
-            {editorImages.length > 0 && (
-              <TouchableOpacity style={shareModalStyles.option} onPress={async () => {
-                setShowShareModal(false);
-                hapticLight();
-                try {
-                  const html = await buildNoteHtml(editorText, editorIcon, editorImages);
-                  const pdf = await Print.printToFileAsync({ html });
-                  await Sharing.shareAsync(pdf.uri, { mimeType: 'application/pdf' });
-                } catch {
-                  ToastAndroid.show("Couldn't share PDF.", ToastAndroid.SHORT);
-                }
-              }} activeOpacity={0.7}>
-                <Text style={shareModalStyles.optionIcon}>{'\u{1F4C4}'}</Text>
-                <Text style={shareModalStyles.optionText}>Share as PDF</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity style={shareModalStyles.option} onPress={async () => {
-              setShowShareModal(false);
-              hapticLight();
-              try {
-                const hasImages = editorImages.length > 0;
-                const html = hasImages
-                  ? await buildNoteHtml(editorText, editorIcon, editorImages)
-                  : (() => {
-                      const iconHtml = editorIcon ? `<div style="font-size:48px;margin-bottom:16px;">${editorIcon}</div>` : '';
-                      const escapedText = editorText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                      return `<html><head><style>@page{size:letter;margin:0.75in;}img{page-break-inside:avoid;}</style></head><body style="background:#FFFFFF;color:#1A1A2E;font-family:system-ui;padding:32px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:#1A1A2E;margin:0;">${escapedText}</pre></body></html>`;
-                    })();
-                await Print.printAsync({ html });
-              } catch {
-                ToastAndroid.show("Couldn't print.", ToastAndroid.SHORT);
-              }
-            }} activeOpacity={0.7}>
-              <Text style={shareModalStyles.optionIcon}>{'\u{1F5A8}\uFE0F'}</Text>
-              <Text style={shareModalStyles.optionText}>Print</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={shareModalStyles.cancelBtn} onPress={() => { hapticLight(); setShowShareModal(false); }} activeOpacity={0.7}>
-              <Text style={shareModalStyles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ShareNoteModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        noteText={editorText}
+        noteIcon={editorIcon}
+        noteImages={editorImages}
+      />
 
       {/* Drawing Canvas */}
       <DrawingCanvas

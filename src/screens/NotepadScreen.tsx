@@ -9,6 +9,8 @@ import {
   Image,
   Linking,
   AppState,
+  type StyleProp,
+  type TextStyle,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,6 +40,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { refreshWidgets } from '../widget/updateWidget';
 import UndoToast from '../components/UndoToast';
+import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import BackButton from '../components/BackButton';
 import NoteEditorModal from '../components/NoteEditorModal';
 import { CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
@@ -95,7 +98,7 @@ const LINK_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((
 
 function renderLinkedText(
   text: string,
-  baseStyle: any,
+  baseStyle: StyleProp<TextStyle>,
   linkColor: string,
 ): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
@@ -173,6 +176,8 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const [deletedNotePinned, setDeletedNotePinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
   const [undoKey, setUndoKey] = useState(0);
+  const [bgUri, setBgUri] = useState<string | null>(null);
+  const [bgOpacity, setBgOpacity] = useState(0.5);
 
   const handledActionRef = useRef('');
   useEffect(() => {
@@ -237,6 +242,8 @@ export default function NotepadScreen({ navigation, route }: Props) {
   useFocusEffect(
     useCallback(() => {
       loadData();
+      loadBackground().then(setBgUri);
+      getOverlayOpacity().then(setBgOpacity);
     }, [loadData]),
   );
 
@@ -873,11 +880,18 @@ export default function NotepadScreen({ navigation, route }: Props) {
   return (
     <View style={styles.outerContainer}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <Image
-          source={require('../../assets/fullscreenicon.png')}
-          style={styles.watermark}
-          resizeMode="cover"
-        />
+        {bgUri ? (
+          <>
+            <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+          </>
+        ) : (
+          <Image
+            source={require('../../assets/fullscreenicon.png')}
+            style={styles.watermark}
+            resizeMode="cover"
+          />
+        )}
       </View>
 
       <View style={styles.container}>

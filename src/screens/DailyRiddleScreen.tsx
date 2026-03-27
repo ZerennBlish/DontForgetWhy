@@ -283,28 +283,25 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           backgroundColor: 'transparent',
         },
         scrollContent: {
-          paddingTop: insets.top + 58,
           paddingBottom: 60 + insets.bottom,
         },
         header: {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: insets.top + 8,
-          paddingHorizontal: 16,
-          paddingBottom: 10,
-          backgroundColor: 'rgba(0, 0, 0, 0.4)',
-          gap: 12,
+          justifyContent: 'center',
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 2,
+        },
+        headerBack: {
+          position: 'absolute',
+          left: 20,
+          top: insets.top + 10,
         },
         title: {
           fontSize: 28,
           fontWeight: '800',
           color: '#FFFFFF',
-          textAlign: 'center',
         },
         dateText: {
           fontSize: 15,
@@ -1111,10 +1108,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
     <ImageBackground source={require('../../assets/door.png')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.header}>
-      <BackButton onPress={() => navigation.goBack()} />
-      <Text style={styles.title}>
-        {'\u{1F4A1}'} Daily Riddle
-      </Text>
+      <View style={styles.headerBack}>
+        <BackButton onPress={() => navigation.goBack()} />
+      </View>
+      <Text style={styles.title}>{'\u{1F4A1}'} Daily Riddle</Text>
     </View>
     <ScrollView
       style={styles.container}

@@ -55,19 +55,28 @@ export default function ForgetLogScreen({ navigation }: Props) {
       backgroundColor: colors.background,
     },
     header: {
-      paddingTop: 60,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: insets.top + 10,
       paddingHorizontal: 20,
-      paddingBottom: 16,
+      paddingBottom: 2,
+    },
+    headerBack: {
+      position: 'absolute',
+      left: 20,
+      top: insets.top + 10,
     },
     title: {
       fontSize: 28,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: '#FFFFFF',
     },
     subtitle: {
       fontSize: 14,
       color: colors.textTertiary,
       marginTop: 4,
+      paddingHorizontal: 20,
     },
     empty: {
       flex: 1,
@@ -205,10 +214,12 @@ export default function ForgetLogScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <View style={styles.headerBack}>
+          <BackButton onPress={() => navigation.goBack()} />
+        </View>
         <Text style={styles.title}>What Did I Forget?</Text>
-        <Text style={styles.subtitle}>Every time you couldn't remember why.</Text>
       </View>
+      <Text style={styles.subtitle}>Every time you couldn't remember why.</Text>
 
       {log.length === 0 ? (
         <View style={styles.empty}>

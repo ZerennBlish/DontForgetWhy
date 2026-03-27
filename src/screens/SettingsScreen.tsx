@@ -12,11 +12,15 @@ import {
   ImageBackground,
   ToastAndroid,
   TextInput,
+  Image,
+  Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import notifee from '@notifee/react-native';
@@ -26,6 +30,7 @@ import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/hapti
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import BackButton from '../components/BackButton';
+import { saveBackground, loadBackground, clearBackground, getOverlayOpacity, setOverlayOpacity } from '../services/backgroundStorage';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -50,6 +55,8 @@ export default function SettingsScreen({ navigation }: Props) {
   const [silencePickerVisible, setSilencePickerVisible] = useState(false);
   const [pickerHours, setPickerHours] = useState(1);
   const [pickerMinutes, setPickerMinutes] = useState(0);
+  const [bgUri, setBgUri] = useState<string | null>(null);
+  const [bgOpacity, setBgOpacity] = useState(0.5);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -57,24 +64,25 @@ export default function SettingsScreen({ navigation }: Props) {
       backgroundColor: 'transparent',
     },
     scrollContent: {
-      paddingTop: insets.top,
       paddingBottom: 40 + insets.bottom,
     },
     header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: insets.top + 10,
+      paddingHorizontal: 20,
+      paddingBottom: 2,
+    },
+    headerBack: {
       position: 'absolute',
-      top: insets.top + 8,
-      left: 16,
-      zIndex: 10,
-      backgroundColor: 'rgba(18, 18, 32, 0.85)',
-      borderRadius: 20,
-      padding: 4,
+      left: 20,
+      top: insets.top + 10,
     },
     title: {
       fontSize: 28,
       fontWeight: '800',
       color: '#FFFFFF',
-      textAlign: 'center',
-      paddingVertical: 12,
     },
     permissionBanner: {
       marginHorizontal: 16,
@@ -284,6 +292,13 @@ export default function SettingsScreen({ navigation }: Props) {
     })();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadBackground().then(setBgUri);
+      getOverlayOpacity().then(setBgOpacity);
+    }, []),
+  );
+
   // Permission health check — runs on mount, doesn't block render.
   // Only flags permissions we can DEFINITIVELY confirm are missing.
   // Indeterminate checks (e.g. full-screen intent on API 34+ where
@@ -449,10 +464,12 @@ export default function SettingsScreen({ navigation }: Props) {
     <ImageBackground source={require('../../assets/gear.png')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
     <View style={styles.header}>
-      <BackButton onPress={() => navigation.goBack()} />
+      <View style={styles.headerBack}>
+        <BackButton onPress={() => navigation.goBack()} />
+      </View>
+      <Text style={styles.title}>Settings</Text>
     </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.title}>Settings</Text>
 
       {hasPermissionIssues && (
         <TouchableOpacity
@@ -618,6 +635,110 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
 
       <View style={[styles.card, { marginTop: 16 }]}>
+        <Text style={styles.sectionLabel}>Screen Background</Text>
+        <Text style={[styles.description, { marginTop: 0, marginBottom: 16 }]}>Photo background for Alarms, Timers, Reminders, Notes, and Calendar</Text>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <TouchableOpacity
+            onPress={async () => {
+              hapticLight();
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: 'images',
+                quality: 0.7,
+                allowsEditing: false,
+              });
+              if (!result.canceled && result.assets[0]) {
+                const uri = await saveBackground(result.assets[0].uri);
+                if (uri) {
+                  setBgUri(uri);
+                  ToastAndroid.show('Background set!', ToastAndroid.SHORT);
+                } else {
+                  ToastAndroid.show('Failed to set background', ToastAndroid.SHORT);
+                }
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            {bgUri ? (
+              <Image source={{ uri: bgUri }} style={{ width: 80, height: 80, borderRadius: 8 }} resizeMode="cover" />
+            ) : (
+              <View style={{ width: 80, height: 80, borderRadius: 8, borderWidth: 2, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 24 }}>{'\u{1F4F7}'}</Text>
+                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>Tap to set</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <View style={{ flex: 1, justifyContent: 'center', gap: 10 }}>
+            <TouchableOpacity
+              style={{ backgroundColor: 'rgba(0,0,0,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}
+              onPress={async () => {
+                hapticLight();
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: 'images',
+                  quality: 0.7,
+                  allowsEditing: false,
+                });
+                if (!result.canceled && result.assets[0]) {
+                  const uri = await saveBackground(result.assets[0].uri);
+                  setBgUri(uri);
+                  ToastAndroid.show('Background set!', ToastAndroid.SHORT);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>Change Photo</Text>
+            </TouchableOpacity>
+            {bgUri && (
+              <TouchableOpacity
+                style={{ backgroundColor: 'rgba(0,0,0,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}
+                onPress={() => {
+                  hapticLight();
+                  Alert.alert('Clear Background?', 'Remove the photo background?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Clear', style: 'destructive', onPress: async () => {
+                      await clearBackground();
+                      setBgUri(null);
+                      ToastAndroid.show('Background cleared', ToastAndroid.SHORT);
+                    }},
+                  ]);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+        {bgUri && (
+          <>
+            <Text style={[styles.description, { marginTop: 16, marginBottom: 8 }]}>Overlay Darkness: {Math.round(bgOpacity * 100)}%</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {[0.3, 0.4, 0.5, 0.6, 0.7, 0.8].map((val) => (
+                <TouchableOpacity
+                  key={val}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 12,
+                    backgroundColor: bgOpacity === val ? 'rgba(74, 144, 217, 0.25)' : 'rgba(0,0,0,0.4)',
+                    borderWidth: 1,
+                    borderColor: bgOpacity === val ? '#4A90D9' : 'rgba(255,255,255,0.2)',
+                  }}
+                  onPress={async () => {
+                    hapticLight();
+                    setBgOpacity(val);
+                    await setOverlayOpacity(val);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#FFFFFF' }}>{Math.round(val * 100)}%</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
         <View style={styles.row}>
           <Text style={styles.label}>Haptic Feedback</Text>
           <Switch
@@ -638,8 +759,8 @@ export default function SettingsScreen({ navigation }: Props) {
           hapticLight();
           const version =
             Constants.expoConfig?.version
-            || (Constants as any).manifest?.version
-            || (Constants as any).manifest2?.extra?.expoClient?.version
+            || (Constants as Record<string, Record<string, string>>).manifest?.version
+            || (Constants as Record<string, Record<string, Record<string, Record<string, string>>>>).manifest2?.extra?.expoClient?.version
             || 'unknown';
           const model = Device.modelName || 'Unknown';
           const osVersion = Device.osVersion || 'Unknown';

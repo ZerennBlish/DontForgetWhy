@@ -411,15 +411,22 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           width: '100%',
         },
         header: {
-          paddingTop: 60,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 24,
+          paddingBottom: 2,
+        },
+        headerBack: {
+          position: 'absolute',
+          left: 20,
+          top: insets.top + 10,
         },
         title: {
           fontSize: 28,
           fontWeight: '800',
           color: '#FFFFFF',
-          textAlign: 'center',
         },
         selectSubtitle: {
           fontSize: 15,
@@ -498,10 +505,18 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           width: '100%',
         },
         winHeader: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
           alignSelf: 'stretch',
-          paddingTop: 60,
-          paddingHorizontal: 0,
-          paddingBottom: 16,
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 2,
+        },
+        winHeaderBack: {
+          position: 'absolute',
+          left: 20,
+          top: insets.top + 10,
         },
         winEmoji: {
           fontSize: 64,
@@ -583,7 +598,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           color: colors.accent,
         },
       }),
-    [colors, insets.bottom, CONTENT_MAX_WIDTH],
+    [colors, insets.bottom, insets.top, CONTENT_MAX_WIDTH],
   );
 
   // ---------- Render: Difficulty Select ----------
@@ -592,12 +607,14 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/oakbackground.png')} style={{ flex: 1 }} resizeMode="cover">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
-            <View style={styles.header}>
+          <View style={styles.header}>
+            <View style={styles.headerBack}>
               <BackButton onPress={() => navigation.goBack()} />
-              <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
-              <Text style={styles.selectSubtitle}>Find all the matching pairs!</Text>
             </View>
+            <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
+          </View>
+          <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
+            <Text style={[styles.selectSubtitle, { paddingHorizontal: 20 }]}>Find all the matching pairs!</Text>
 
             {(['easy', 'medium', 'hard'] as Difficulty[]).map((diff) => {
               const config = DIFFICULTY_CONFIG[diff];
@@ -640,13 +657,16 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/oakbackground.png')} style={{ flex: 1 }} resizeMode="cover">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <View style={styles.winHeader}>
+            <View style={styles.winHeaderBack}>
+              <BackButton onPress={() => navigation.goBack()} />
+            </View>
+            <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
+          </View>
           <ScrollView
             style={styles.container}
             contentContainerStyle={styles.winContent}
           >
-            <View style={styles.winHeader}>
-              <BackButton onPress={() => navigation.goBack()} />
-            </View>
             <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
             <Text style={styles.winTitle}>Congratulations!</Text>
             <Text style={styles.starsText}>{'\u2B50'.repeat(stars)}</Text>

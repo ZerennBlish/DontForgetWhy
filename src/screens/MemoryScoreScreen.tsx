@@ -190,7 +190,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     );
   };
 
-  const styles = useMemo(() => makeStyles(colors, insets.bottom), [colors, insets.bottom]);
+  const styles = useMemo(() => makeStyles(colors, insets.bottom, insets.top), [colors, insets.bottom, insets.top]);
 
   const diffLabels = { easy: 'Easy', medium: 'Medium', hard: 'Hard' } as const;
 
@@ -206,15 +206,13 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/library.png')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-    <View style={{ position: 'absolute', top: insets.top + 8, left: 16, zIndex: 10, backgroundColor: 'rgba(18, 18, 32, 0.85)', borderRadius: 20, padding: 4 }}>
-      <BackButton onPress={() => navigation.goBack()} />
+    <View style={styles.header}>
+      <View style={styles.headerBack}>
+        <BackButton onPress={() => navigation.goBack()} />
+      </View>
+      <Text style={styles.title}>{'\u{1F3C6}'} Memory Score</Text>
     </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={{ fontSize: 36, textAlign: 'center' }}>{'\u{1F3C6}'}</Text>
-        <Text style={[styles.title, { textAlign: 'center' }]}>Brain Training Stats</Text>
-      </View>
 
       {/* Overall Summary — composite rank */}
       <View style={styles.summaryCard}>
@@ -523,7 +521,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   );
 }
 
-function makeStyles(colors: ThemeColors, bottomInset: number) {
+function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -533,9 +531,17 @@ function makeStyles(colors: ThemeColors, bottomInset: number) {
       paddingBottom: 60 + bottomInset,
     },
     header: {
-      paddingTop: 60,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: topInset + 10,
       paddingHorizontal: 20,
-      paddingBottom: 20,
+      paddingBottom: 2,
+    },
+    headerBack: {
+      position: 'absolute',
+      left: 20,
+      top: topInset + 10,
     },
     title: {
       fontSize: 28,

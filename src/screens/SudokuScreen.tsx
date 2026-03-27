@@ -531,8 +531,8 @@ export default function SudokuScreen({ navigation }: Props) {
   const CELL_SIZE = Math.floor(GRID_SIZE / 9);
 
   const styles = useMemo(
-    () => makeStyles(colors, insets.bottom, CELL_SIZE, GRID_SIZE),
-    [colors, insets.bottom, CELL_SIZE, GRID_SIZE],
+    () => makeStyles(colors, insets.bottom, insets.top, CELL_SIZE, GRID_SIZE),
+    [colors, insets.bottom, insets.top, CELL_SIZE, GRID_SIZE],
   );
 
   // ---------- Render: Difficulty Select ----------
@@ -541,12 +541,14 @@ export default function SudokuScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
-        <View style={styles.header}>
+      <View style={styles.header}>
+        <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
-          <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
-          <Text style={styles.selectSubtitle}>Classic number puzzle. No forgetting allowed.</Text>
         </View>
+        <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
+      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
+        <Text style={[styles.selectSubtitle, { paddingHorizontal: 20 }]}>Classic number puzzle. No forgetting allowed.</Text>
 
         {hasSavedGame && (
           <TouchableOpacity
@@ -636,10 +638,13 @@ export default function SudokuScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
-        <View style={styles.winHeader}>
+      <View style={styles.winHeader}>
+        <View style={styles.winHeaderBack}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
+        <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
+      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
         <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
         <Text style={styles.winTitle}>Puzzle Complete!</Text>
 
@@ -866,7 +871,7 @@ export default function SudokuScreen({ navigation }: Props) {
 
 // ---------- Styles ----------
 
-function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, _gridSize: number) {
+function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, cellSize: number, _gridSize: number) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -879,15 +884,22 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       width: '100%' as const,
     },
     header: {
-      paddingTop: 60,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: topInset + 10,
       paddingHorizontal: 20,
-      paddingBottom: 24,
+      paddingBottom: 2,
+    },
+    headerBack: {
+      position: 'absolute',
+      left: 20,
+      top: topInset + 10,
     },
     title: {
       fontSize: 28,
       fontWeight: '800',
-      color: colors.textPrimary,
-      textAlign: 'center',
+      color: '#FFFFFF',
     },
     selectSubtitle: {
       fontSize: 15,
@@ -966,9 +978,18 @@ function makeStyles(colors: ThemeColors, bottomInset: number, cellSize: number, 
       width: '100%' as const,
     },
     winHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
       alignSelf: 'stretch',
-      paddingTop: 60,
-      paddingBottom: 16,
+      paddingTop: topInset + 10,
+      paddingHorizontal: 20,
+      paddingBottom: 2,
+    },
+    winHeaderBack: {
+      position: 'absolute',
+      left: 20,
+      top: topInset + 10,
     },
     winEmoji: {
       fontSize: 64,

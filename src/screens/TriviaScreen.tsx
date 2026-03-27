@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { EdgeInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import { TRIVIA_QUESTIONS, TRIVIA_CATEGORIES } from '../data/triviaQuestions';
 import { fetchOnlineQuestions, checkOnlineAvailable } from '../services/triviaAI';
@@ -368,12 +370,13 @@ export default function TriviaScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/questionmark.png')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
+      <View style={styles.header}>
+        <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
-          <Text style={styles.title}>Trivia Time</Text>
         </View>
-
+        <Text style={styles.title}>Trivia Time</Text>
+      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Online/Offline toggle (disabled) */}
         <TouchableOpacity
           style={[styles.modeToggle, { opacity: 0.4 }]}
@@ -458,10 +461,13 @@ export default function TriviaScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/questionmark.png')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
+      <View style={styles.header}>
+        <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
+        <Text style={styles.title}>Trivia Time</Text>
+      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsTitle}>Round Complete</Text>
 
@@ -615,7 +621,7 @@ export default function TriviaScreen({ navigation }: Props) {
   );
 }
 
-function makeStyles(colors: any, insets: any) {
+function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -625,15 +631,22 @@ function makeStyles(colors: any, insets: any) {
       paddingBottom: 16,
     },
     header: {
-      paddingTop: 60,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: insets.top + 10,
       paddingHorizontal: 20,
-      paddingBottom: 16,
+      paddingBottom: 2,
+    },
+    headerBack: {
+      position: 'absolute',
+      left: 20,
+      top: insets.top + 10,
     },
     title: {
       fontSize: 28,
       fontWeight: '800',
       color: '#FFFFFF',
-      textAlign: 'center',
     },
 
     // Mode toggle

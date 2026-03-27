@@ -16,8 +16,8 @@ export default function AboutScreen({ navigation }: Props) {
   const [tapCount, setTapCount] = useState(0);
   const version =
     Constants.expoConfig?.version
-    || (Constants as any).manifest?.version
-    || (Constants as any).manifest2?.extra?.expoClient?.version
+    || (Constants as { manifest?: { version?: string } }).manifest?.version
+    || (Constants as { manifest2?: { extra?: { expoClient?: { version?: string } } } }).manifest2?.extra?.expoClient?.version
     || '1.0.0';
 
   const styles = useMemo(() => StyleSheet.create({
@@ -26,9 +26,22 @@ export default function AboutScreen({ navigation }: Props) {
       backgroundColor: colors.background,
     },
     header: {
-      paddingTop: 60,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: insets.top + 10,
       paddingHorizontal: 20,
-      paddingBottom: 16,
+      paddingBottom: 2,
+    },
+    headerBack: {
+      position: 'absolute',
+      left: 20,
+      top: insets.top + 10,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: '#FFFFFF',
     },
     content: {
       flex: 1,
@@ -121,7 +134,10 @@ export default function AboutScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <View style={styles.headerBack}>
+          <BackButton onPress={() => navigation.goBack()} />
+        </View>
+        <Text style={styles.headerTitle}>About</Text>
       </View>
 
       <View style={styles.content}>
