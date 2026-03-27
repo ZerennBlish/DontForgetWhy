@@ -24,7 +24,6 @@ import {
   CATEGORY_LABELS,
   getDailyRiddleIndex,
   type RiddleCategory,
-  type Riddle,
 } from '../data/riddles';
 import {
   fetchMultipleOnlineRiddles,
@@ -244,14 +243,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
     }
     setOnlineLoading(false);
   }, []);
-
-  const handleSwitchBrowseSource = useCallback((source: BrowseSource) => {
-    hapticLight();
-    setBrowseSource(source);
-    if (source === 'online' && onlineRiddles.length === 0) {
-      handleFetchOnlineRiddles();
-    }
-  }, [onlineRiddles.length, handleFetchOnlineRiddles]);
 
   const filteredRiddles = useMemo(() => {
     let list = RIDDLES;

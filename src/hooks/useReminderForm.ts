@@ -3,7 +3,6 @@ import { TextInput, Alert, ToastAndroid } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import type { AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
-import { WEEKDAYS, WEEKENDS } from '../types/alarm';
 import { useDaySelection } from './useDaySelection';
 import { useCalendar } from './useCalendar';
 import {
@@ -412,9 +411,9 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
 
       refreshWidgets();
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[SAVE REMINDER ERROR]', error);
-      Alert.alert('Error', 'Failed to save reminder: ' + error.message);
+      Alert.alert('Error', 'Failed to save reminder: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 

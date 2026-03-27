@@ -45,6 +45,7 @@ import BackButton from '../components/BackButton';
 import NoteEditorModal from '../components/NoteEditorModal';
 import { CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
 import type { Note } from '../types/note';
+import { getTextColor } from '../utils/noteColors';
 import type { RootStackParamList } from '../navigation/types';
 
 const MAX_NOTE_PINS = 4;
@@ -82,16 +83,6 @@ function formatDeletedAgo(deletedAt: string): string {
   if (days === 1) return 'Deleted yesterday';
   if (days < 30) return `Deleted ${days} days ago`;
   return `Deleted ${Math.floor(days / 30)}mo ago`;
-}
-
-function getTextColor(bgHex: string): string {
-  if (!/^#[0-9A-Fa-f]{6}$/.test(bgHex)) return '#FFFFFF';
-  const hex = bgHex.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 150 ? '#1A1A2E' : '#FFFFFF';
 }
 
 const LINK_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
@@ -494,8 +485,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
     unpinned.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return [...pinned, ...unpinned];
   }, [notes, pinnedIds, filter]);
-
-  const nonDeletedCount = notes.filter((n) => !n.deletedAt).length;
 
   const styles = useMemo(() => StyleSheet.create({
     outerContainer: {

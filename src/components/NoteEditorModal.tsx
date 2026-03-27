@@ -14,6 +14,8 @@ import {
   Alert,
   Linking,
   Image,
+  type StyleProp,
+  type TextStyle,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../theme/ThemeContext';
@@ -38,7 +40,7 @@ const LINK_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((
 
 function renderLinkedText(
   text: string,
-  baseStyle: any,
+  baseStyle: StyleProp<TextStyle>,
   linkColor: string,
 ): React.ReactNode[] {
   const parts: React.ReactNode[] = [];

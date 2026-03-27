@@ -3,7 +3,6 @@ import { TextInput, Alert, ToastAndroid } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import type { AlarmCategory, AlarmDay } from '../types/alarm';
 import type { Alarm } from '../types/alarm';
-import { WEEKDAYS, WEEKENDS } from '../types/alarm';
 import type { SoundMode } from '../utils/soundModeUtils';
 import { soundModeToSoundId, soundIdToSoundMode } from '../utils/soundModeUtils';
 import { useDaySelection } from './useDaySelection';
@@ -495,9 +494,9 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
 
       refreshWidgets();
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[SAVE ERROR]', error);
-      Alert.alert('Error', 'Failed to save alarm: ' + error.message);
+      Alert.alert('Error', 'Failed to save alarm: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 

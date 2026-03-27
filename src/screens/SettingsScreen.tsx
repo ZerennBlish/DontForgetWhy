@@ -679,8 +679,12 @@ export default function SettingsScreen({ navigation }: Props) {
                 });
                 if (!result.canceled && result.assets[0]) {
                   const uri = await saveBackground(result.assets[0].uri);
-                  setBgUri(uri);
-                  ToastAndroid.show('Background set!', ToastAndroid.SHORT);
+                  if (uri) {
+                    setBgUri(uri);
+                    ToastAndroid.show('Background set!', ToastAndroid.SHORT);
+                  } else {
+                    ToastAndroid.show('Failed to set background', ToastAndroid.SHORT);
+                  }
                 }
               }}
               activeOpacity={0.7}
