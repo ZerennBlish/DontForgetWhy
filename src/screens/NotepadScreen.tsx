@@ -29,7 +29,7 @@ import {
   permanentlyDeleteNote,
   getPendingNoteAction,
 } from '../services/noteStorage';
-import { saveNoteImage, deleteNoteImage } from '../services/noteImageStorage';
+import { saveNoteImage, deleteNoteImage, cleanupTempDrawings } from '../services/noteImageStorage';
 import {
   getPinnedNotes,
   togglePinNote,
@@ -324,6 +324,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     setEditorVisible(false);
     setEditingNote(null);
     handledActionRef.current = '';
+    cleanupTempDrawings();
   };
 
   const handleEditorSave = async (data: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string; images: string[] }) => {
@@ -331,9 +332,16 @@ export default function NotepadScreen({ navigation, route }: Props) {
     try {
       if (data.isNew) {
         const noteId = uuidv4();
-        const savedUris = await Promise.all(
-          data.images.map((uri) => saveNoteImage(noteId, uri)),
-        );
+        const savedUris: string[] = [];
+        for (const uri of data.images) {
+          try {
+            const saved = await saveNoteImage(noteId, uri);
+            savedUris.push(saved);
+          } catch (e) {
+            for (const copied of savedUris) { await deleteNoteImage(copied); }
+            throw e;
+          }
+        }
         try {
           const newNote: Note = {
             id: noteId,
@@ -358,9 +366,16 @@ export default function NotepadScreen({ navigation, route }: Props) {
           const keptImages = data.images.filter((uri) => originalImages.includes(uri));
           const newImageUris = data.images.filter((uri) => !originalImages.includes(uri));
           const removedImages = originalImages.filter((uri) => !data.images.includes(uri));
-          const savedNewUris = await Promise.all(
-            newImageUris.map((uri) => saveNoteImage(data.noteId!, uri)),
-          );
+          const savedNewUris: string[] = [];
+          for (const uri of newImageUris) {
+            try {
+              const saved = await saveNoteImage(data.noteId!, uri);
+              savedNewUris.push(saved);
+            } catch (e) {
+              for (const copied of savedNewUris) { await deleteNoteImage(copied); }
+              throw e;
+            }
+          }
           try {
             const finalImages = [...keptImages, ...savedNewUris];
             await updateNote({

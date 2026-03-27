@@ -419,13 +419,14 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
         }
       }
 
-      // Handle photo file operations (deferred until save)
+      // Handle photo: copy new photo first, do NOT delete old yet
       let finalPhotoUri: string | null = photoUri;
+      let newPhotoCopiedUri: string | null = null;
       if (photoChangedRef.current) {
         if (photoUri) {
-          // Copy from temp cache to permanent storage
           try {
             finalPhotoUri = await saveAlarmPhoto(alarmId, photoUri);
+            newPhotoCopiedUri = finalPhotoUri;
           } catch {
             ToastAndroid.show('Failed to save photo', ToastAndroid.SHORT);
             finalPhotoUri = null;
@@ -433,69 +434,79 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
         } else {
           finalPhotoUri = null;
         }
-        // Best-effort delete old photo if editing
-        if (originalPhotoRef.current) {
-          await deleteAlarmPhoto(originalPhotoRef.current);
-        }
       }
 
-      if (isEditing) {
-        const updated = {
-          ...existingAlarm!,
-          time,
-          nickname: nickname.trim() || undefined,
-          note: note.trim(),
-          category: 'general' as AlarmCategory,
-          icon: selectedIcon || undefined,
-          guessWhy,
-          private: selectedPrivate,
-          mode,
-          days: selectedDays,
-          date: mode === 'one-time' ? alarmDate : null,
-          soundId: soundModeToSoundId(soundMode) ?? (selectedSoundUri ? undefined : (existingAlarm!.soundId === 'silent' || existingAlarm!.soundId === 'true_silent' ? undefined : existingAlarm!.soundId)),
-          soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
-          soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
-          soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
-          photoUri: finalPhotoUri,
-        };
-        await updateAlarm(updated);
-      } else {
-        const alarm = {
-          id: alarmId,
-          time,
-          nickname: nickname.trim() || undefined,
-          note: note.trim(),
-          quote: getRandomQuote(),
-          enabled: true,
-          mode,
-          days: selectedDays,
-          date: mode === 'one-time' ? alarmDate : null,
-          category: 'general' as AlarmCategory,
-          icon: selectedIcon || undefined,
-          guessWhy,
-          private: selectedPrivate,
-          createdAt: new Date().toISOString(),
-          notificationIds: [],
-          soundId: soundModeToSoundId(soundMode),
-          soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
-          soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
-          soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
-          photoUri: finalPhotoUri,
-        };
+      // Persist the alarm record
+      try {
+        if (isEditing) {
+          const updated = {
+            ...existingAlarm!,
+            time,
+            nickname: nickname.trim() || undefined,
+            note: note.trim(),
+            category: 'general' as AlarmCategory,
+            icon: selectedIcon || undefined,
+            guessWhy,
+            private: selectedPrivate,
+            mode,
+            days: selectedDays,
+            date: mode === 'one-time' ? alarmDate : null,
+            soundId: soundModeToSoundId(soundMode) ?? (selectedSoundUri ? undefined : (existingAlarm!.soundId === 'silent' || existingAlarm!.soundId === 'true_silent' ? undefined : existingAlarm!.soundId)),
+            soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
+            soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
+            soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
+            photoUri: finalPhotoUri,
+          };
+          await updateAlarm(updated);
+        } else {
+          const alarm = {
+            id: alarmId,
+            time,
+            nickname: nickname.trim() || undefined,
+            note: note.trim(),
+            quote: getRandomQuote(),
+            enabled: true,
+            mode,
+            days: selectedDays,
+            date: mode === 'one-time' ? alarmDate : null,
+            category: 'general' as AlarmCategory,
+            icon: selectedIcon || undefined,
+            guessWhy,
+            private: selectedPrivate,
+            createdAt: new Date().toISOString(),
+            notificationIds: [],
+            soundId: soundModeToSoundId(soundMode),
+            soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
+            soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
+            soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
+            photoUri: finalPhotoUri,
+          };
 
-        let notificationIds: string[] = [];
-        let alarmEnabled = true;
-        try {
-          notificationIds = await scheduleAlarm(alarm);
-        } catch (scheduleError) {
-          console.error('[SAVE] scheduleAlarm failed:', scheduleError);
-          alarmEnabled = false;
-          Alert.alert(
-            'Alarm Saved',
-            "Alarm saved but couldn't schedule notifications. Check notification permissions.",
-          );
+          let notificationIds: string[] = [];
+          let alarmEnabled = true;
+          try {
+            notificationIds = await scheduleAlarm(alarm);
+          } catch (scheduleError) {
+            console.error('[SAVE] scheduleAlarm failed:', scheduleError);
+            alarmEnabled = false;
+            Alert.alert(
+              'Alarm Saved',
+              "Alarm saved but couldn't schedule notifications. Check notification permissions.",
+            );
+          }
+          await addAlarm({ ...alarm, enabled: alarmEnabled, notificationIds });
         }
-        await addAlarm({ ...alarm, enabled: alarmEnabled, notificationIds });
+      } catch (saveError) {
+        // Alarm save failed — rollback: delete newly copied photo
+        if (newPhotoCopiedUri) {
+          await deleteAlarmPhoto(newPhotoCopiedUri);
+        }
+        throw saveError;
+      }
+
+      // Alarm saved successfully — NOW safe to delete old photo
+      if (photoChangedRef.current && originalPhotoRef.current) {
+        await deleteAlarmPhoto(originalPhotoRef.current);
       }
 
       // Show time-until toast

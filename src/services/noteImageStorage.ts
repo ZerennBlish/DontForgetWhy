@@ -24,15 +24,25 @@ export async function saveNoteImage(noteId: string, sourceUri: string): Promise<
     // Copy companion drawing JSON if it exists
     if (isPng) {
       try {
-        const srcFilename = sourceUri.split('/').pop();
-        if (srcFilename) {
-          const srcJsonFilename = srcFilename.replace(/\.png$/i, '.json');
-          const sourceJson = new File(imageDir, srcJsonFilename);
-          if (sourceJson.exists) {
-            const destJsonFilename = filename.replace(/\.png$/i, '.json');
-            const destJson = new File(imageDir, destJsonFilename);
-            sourceJson.copy(destJson);
-          }
+        const srcJsonUri = sourceUri.replace(/\.png$/i, '.json');
+        const sourceJson = new File(srcJsonUri);
+        if (sourceJson.exists) {
+          const destJsonFilename = filename.replace(/\.png$/i, '.json');
+          const destJson = new File(imageDir, destJsonFilename);
+          sourceJson.copy(destJson);
+        }
+      } catch { /* best-effort */ }
+    }
+
+    // Clean up temp source if from drawing-temp/
+    if (sourceUri.includes('drawing-temp/')) {
+      try {
+        const srcFile = new File(sourceUri);
+        if (srcFile.exists) srcFile.delete();
+        if (isPng) {
+          const srcJsonUri = sourceUri.replace(/\.png$/i, '.json');
+          const srcJson = new File(srcJsonUri);
+          if (srcJson.exists) srcJson.delete();
         }
       } catch { /* best-effort */ }
     }
@@ -98,4 +108,13 @@ export async function loadDrawingData(
   } catch {
     return null;
   }
+}
+
+export function cleanupTempDrawings(): void {
+  try {
+    const tempDir = new Directory(Paths.cache, 'drawing-temp/');
+    if (tempDir.exists) {
+      tempDir.delete();
+    }
+  } catch { /* best-effort */ }
 }

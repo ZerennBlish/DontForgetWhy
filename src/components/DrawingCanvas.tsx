@@ -256,8 +256,8 @@ export default function DrawingCanvas({
       let pngUri: string;
 
       if (editingImageUri) {
-        // Write to a new filename to bust image cache
-        const dir = new Directory(Paths.document, 'note-images/');
+        // Write to temp cache — permanent save handled by NotepadScreen
+        const dir = new Directory(Paths.cache, 'drawing-temp/');
         if (!dir.exists) {
           dir.create({ intermediates: true });
         }
@@ -269,17 +269,9 @@ export default function DrawingCanvas({
 
         const jsonFile = new File(dir, `${baseName}.json`);
         jsonFile.write(JSON.stringify({ strokes, bgColor: canvasBgColor }));
-
-        // Delete old files
-        try {
-          const oldPng = new File(editingImageUri);
-          if (oldPng.exists) oldPng.delete();
-          const oldJson = new File(editingImageUri.replace(/\.png$/i, '.json'));
-          if (oldJson.exists) oldJson.delete();
-        } catch { /* best-effort cleanup */ }
       } else {
-        // New drawing
-        const dir = new Directory(Paths.document, 'note-images/');
+        // New drawing — write to temp cache
+        const dir = new Directory(Paths.cache, 'drawing-temp/');
         if (!dir.exists) {
           dir.create({ intermediates: true });
         }
