@@ -166,6 +166,12 @@ export function useNotificationRouting() {
     const pending = getPendingAlarm();
     if (pending) {
       clearPendingAlarm();
+      // Safety net: if this notification was already handled (e.g. dismissed/snoozed),
+      // don't re-navigate to AlarmFire
+      if (pending.notificationId && (wasNotifHandled(pending.notificationId) || await wasNotifHandledPersistent(pending.notificationId))) {
+        console.log('[NOTIF] consumePendingAlarm — skipping already-handled:', pending.notificationId);
+        return false;
+      }
       console.log('[NOTIF] consumePendingAlarm — found:', JSON.stringify(pending));
       await navigateToAlarmFire(pending);
       return true;
@@ -548,6 +554,9 @@ export function useNotificationRouting() {
             } catch {}
           }
 
+          // Clear stale pending data so app open doesn't re-navigate to AlarmFire
+          clearPendingAlarm();
+
           if (notifId) {
             markNotifHandled(notifId);
             await persistNotifHandled(notifId);
@@ -589,6 +598,9 @@ export function useNotificationRouting() {
             console.error('[NOTIF] foreground snooze failed:', e);
           }
 
+          // Clear stale pending data — snooze replaces with a new notification
+          clearPendingAlarm();
+
           if (notifId) {
             markNotifHandled(notifId);
             await persistNotifHandled(notifId);
@@ -606,6 +618,7 @@ export function useNotificationRouting() {
         console.log('[NOTIF] FOREGROUND DISMISSED — alarmId:', alarmId, 'timerId:', timerId);
         if (alarmId || timerId) {
           stopAlarmSound();
+          clearPendingAlarm();
         }
         if (alarmId) {
           try {
@@ -620,6 +633,18 @@ export function useNotificationRouting() {
                 refreshWidgets();
               }
             }
+          } catch {}
+        }
+        // Timer cleanup: cancel countdown notification and remove from active timers
+        if (timerId) {
+          try {
+            await cancelTimerCountdownNotification(timerId);
+          } catch {}
+          try {
+            const timers = await loadActiveTimers();
+            const updated = timers.filter((t) => t.id !== timerId);
+            await saveActiveTimers(updated);
+            await refreshWidgets();
           } catch {}
         }
       }

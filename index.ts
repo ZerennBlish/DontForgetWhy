@@ -8,7 +8,7 @@ import { loadAlarms, deleteAlarm, updateSingleAlarm } from './src/services/stora
 import { getReminders, updateReminder } from './src/services/reminderStorage';
 import { scheduleReminderNotification, cancelReminderNotification, cancelReminderNotifications, scheduleSnooze, cancelTimerCountdownNotification } from './src/services/notifications';
 import { refreshWidgets } from './src/widget/updateWidget';
-import { setPendingAlarm, markNotifHandled, persistNotifHandled } from './src/services/pendingAlarm';
+import { setPendingAlarm, clearPendingAlarm, markNotifHandled, persistNotifHandled } from './src/services/pendingAlarm';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
@@ -161,6 +161,9 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
         } catch {}
       }
 
+      // Clear stale pending data so app open doesn't re-navigate to AlarmFire
+      clearPendingAlarm();
+
       // Mark as handled so fire screen doesn't reopen
       if (notifId2) {
         markNotifHandled(notifId2);
@@ -205,6 +208,9 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
         console.error('[NOTIF] background snooze failed:', e);
       }
 
+      // Clear stale pending data — snooze replaces with a new notification
+      clearPendingAlarm();
+
       // Mark as handled
       if (notifId2) {
         markNotifHandled(notifId2);
@@ -217,6 +223,7 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
     console.log('[NOTIF] BACKGROUND DISMISSED — alarmId:', alarmId, 'timerId:', timerId);
     if (alarmId || timerId) {
       stopAlarmSound();
+      clearPendingAlarm();
     }
     if (alarmId) {
       try {
@@ -233,6 +240,18 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
             await refreshWidgets();
           }
         }
+      } catch {}
+    }
+    // Timer cleanup: cancel countdown notification and remove from active timers
+    if (timerId) {
+      try {
+        await cancelTimerCountdownNotification(timerId);
+      } catch {}
+      try {
+        const timers = await loadActiveTimers();
+        const updated = timers.filter((t) => t.id !== timerId);
+        await saveActiveTimers(updated);
+        await refreshWidgets();
       } catch {}
     }
   }
