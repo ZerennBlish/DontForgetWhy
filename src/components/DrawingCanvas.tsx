@@ -17,6 +17,8 @@ import {
   Skia,
   useCanvasRef,
   ImageFormat,
+  Image as SkImage,
+  useImage,
 } from '@shopify/react-native-skia';
 import type { SkPath } from '@shopify/react-native-skia';
 import { File, Directory, Paths } from 'expo-file-system';
@@ -43,6 +45,8 @@ interface DrawingCanvasProps {
   initialStrokes?: StrokeData[];
   initialBgColor?: string;
   editingImageUri?: string | null;
+  backgroundImageUri?: string | null;
+  initialBackgroundImageUri?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +96,8 @@ export default function DrawingCanvas({
   initialStrokes,
   initialBgColor,
   editingImageUri,
+  backgroundImageUri = null,
+  initialBackgroundImageUri = null,
 }: DrawingCanvasProps) {
   const insets = useSafeAreaInsets();
   const canvasRef = useCanvasRef();
@@ -105,6 +111,11 @@ export default function DrawingCanvas({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [canvasBgColor, setCanvasBgColor] = useState('#FFFFFF');
   const [showBgPicker, setShowBgPicker] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ width: 1, height: 1 });
+
+  const bgImage = useImage(backgroundImageUri || null);
+
+  const canvasReady = canvasSize.width > 1 && canvasSize.height > 1 && (!backgroundImageUri || bgImage !== null);
 
   // Render-tick forces Canvas to re-draw the in-progress stroke
   const [, setRenderTick] = useState(0);
@@ -240,6 +251,10 @@ export default function DrawingCanvas({
   }, []);
 
   const handleDone = useCallback(async () => {
+    if (!canvasReady) {
+      ToastAndroid.show('Canvas still loading...', ToastAndroid.SHORT);
+      return;
+    }
     if (strokes.length === 0) {
       ToastAndroid.show("Draw something first. The canvas isn't going to fill itself.", ToastAndroid.SHORT);
       return;
@@ -268,7 +283,28 @@ export default function DrawingCanvas({
         pngUri = pngFile.uri;
 
         const jsonFile = new File(dir, `${baseName}.json`);
-        jsonFile.write(JSON.stringify({ strokes, bgColor: canvasBgColor }));
+        jsonFile.write(JSON.stringify({
+          strokes,
+          bgColor: canvasBgColor,
+          sourceImageUri: backgroundImageUri || initialBackgroundImageUri || null,
+        }));
+
+        if (backgroundImageUri && !backgroundImageUri.includes('drawing-temp/')) {
+          try {
+            const sourceFile = new File(backgroundImageUri);
+            if (sourceFile.exists) {
+              const ext = backgroundImageUri.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+              const sourceFilename = `source_${Date.now()}_${uuidv4().split('-')[0]}.${ext}`;
+              const sourceCopy = new File(dir, sourceFilename);
+              sourceFile.copy(sourceCopy);
+              jsonFile.write(JSON.stringify({
+                strokes,
+                bgColor: canvasBgColor,
+                sourceImageUri: sourceCopy.uri,
+              }));
+            }
+          } catch { /* best-effort */ }
+        }
       } else {
         // New drawing — write to temp cache
         const dir = new Directory(Paths.cache, 'drawing-temp/');
@@ -284,7 +320,28 @@ export default function DrawingCanvas({
 
         // Save companion JSON with stroke data
         const jsonFile = new File(dir, `${baseName}.json`);
-        jsonFile.write(JSON.stringify({ strokes, bgColor: canvasBgColor }));
+        jsonFile.write(JSON.stringify({
+          strokes,
+          bgColor: canvasBgColor,
+          sourceImageUri: backgroundImageUri || initialBackgroundImageUri || null,
+        }));
+
+        if (backgroundImageUri && !backgroundImageUri.includes('drawing-temp/')) {
+          try {
+            const sourceFile = new File(backgroundImageUri);
+            if (sourceFile.exists) {
+              const ext = backgroundImageUri.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+              const sourceFilename = `source_${Date.now()}_${uuidv4().split('-')[0]}.${ext}`;
+              const sourceCopy = new File(dir, sourceFilename);
+              sourceFile.copy(sourceCopy);
+              jsonFile.write(JSON.stringify({
+                strokes,
+                bgColor: canvasBgColor,
+                sourceImageUri: sourceCopy.uri,
+              }));
+            }
+          } catch { /* best-effort */ }
+        }
       }
 
       onSave(pngUri);
@@ -293,7 +350,7 @@ export default function DrawingCanvas({
       console.error('[DrawingCanvas] save failed:', error);
       ToastAndroid.show('Failed to save drawing', ToastAndroid.SHORT);
     }
-  }, [canvasRef, onSave, resetCanvas, strokes, canvasBgColor, editingImageUri]);
+  }, [canvasRef, onSave, resetCanvas, strokes, canvasBgColor, editingImageUri, backgroundImageUri, initialBackgroundImageUri, canvasReady]);
 
   const handleCancel = useCallback(() => {
     if (strokes.length > 0 || currentPointsRef.current.length > 0) {
@@ -492,10 +549,28 @@ export default function DrawingCanvas({
         </View>
 
         {/* ---- Canvas ---- */}
-        <View style={styles.canvasWrapper} {...panResponder.panHandlers}>
+        <View
+          style={styles.canvasWrapper}
+          {...panResponder.panHandlers}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setCanvasSize({ width, height });
+          }}
+        >
           <Canvas ref={canvasRef} style={{ flex: 1 }}>
-            {/* Background — captured in snapshot */}
-            <Fill color={canvasBgColor} />
+            {/* Background — photo or solid color, captured in snapshot */}
+            {bgImage ? (
+              <SkImage
+                image={bgImage}
+                x={0}
+                y={0}
+                width={canvasSize.width}
+                height={canvasSize.height}
+                fit="cover"
+              />
+            ) : (
+              <Fill color={canvasBgColor} />
+            )}
 
             {/* Completed strokes — memoized SkPath objects */}
             {parsedStrokes.map((stroke, i) => (
@@ -552,8 +627,13 @@ export default function DrawingCanvas({
               style={[
                 styles.toolBtn,
                 activeTool === 'eraser' && styles.toolBtnActive,
+                !!backgroundImageUri && { opacity: 0.4 },
               ]}
               onPress={() => {
+                if (backgroundImageUri) {
+                  ToastAndroid.show('Use undo to erase on photos', ToastAndroid.SHORT);
+                  return;
+                }
                 hapticLight();
                 setActiveTool('eraser');
               }}
@@ -667,20 +747,24 @@ export default function DrawingCanvas({
               </TouchableOpacity>
             ))}
 
-            <View style={styles.separator} />
+            {!backgroundImageUri && (
+              <>
+                <View style={styles.separator} />
 
-            <TouchableOpacity
-              style={[styles.toolBtn, { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12 }]}
-              onPress={() => {
-                hapticLight();
-                pickedBgRef.current = canvasBgColor;
-                setShowBgPicker(true);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.bgPreview, { backgroundColor: canvasBgColor }]} />
-              <Text style={styles.toolBtnText}>BG</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toolBtn, { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12 }]}
+                  onPress={() => {
+                    hapticLight();
+                    pickedBgRef.current = canvasBgColor;
+                    setShowBgPicker(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.bgPreview, { backgroundColor: canvasBgColor }]} />
+                  <Text style={styles.toolBtnText}>BG</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </View>

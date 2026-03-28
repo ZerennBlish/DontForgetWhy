@@ -134,7 +134,7 @@ export default function NoteEditorModal({
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [showDrawing, setShowDrawing] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [editingDrawingData, setEditingDrawingData] = useState<{ strokes: StrokeData[]; bgColor: string } | null>(null);
+  const [editingDrawingData, setEditingDrawingData] = useState<{ strokes: StrokeData[]; bgColor: string; sourceImageUri?: string | null } | null>(null);
   const [editingImageUri, setEditingImageUri] = useState<string | null>(null);
 
   const pickedBgRef = useRef(customBgColor || '#4A90D9');
@@ -656,7 +656,19 @@ export default function NoteEditorModal({
                       { text: 'Cancel', style: 'cancel' },
                     ]);
                   } else {
-                    setLightboxUri(uri);
+                    if (isViewMode) {
+                      setLightboxUri(uri);
+                    } else {
+                      Alert.alert('Photo', '', [
+                        { text: 'View', onPress: () => setLightboxUri(uri) },
+                        { text: 'Draw On', onPress: () => {
+                          setEditingDrawingData(null);
+                          setEditingImageUri(uri);
+                          setShowDrawing(true);
+                        }},
+                        { text: 'Cancel', style: 'cancel' },
+                      ]);
+                    }
                   }
                 }} activeOpacity={0.8}>
                   <Image source={{ uri }} style={styles.thumbnail} resizeMethod="resize" />
@@ -922,6 +934,8 @@ export default function NoteEditorModal({
       {/* Drawing Canvas */}
       <DrawingCanvas
         visible={showDrawing}
+        backgroundImageUri={editingImageUri && !editingDrawingData ? editingImageUri : (editingDrawingData?.sourceImageUri || null)}
+        initialBackgroundImageUri={editingDrawingData?.sourceImageUri || null}
         onSave={(imageUri: string) => {
           if (editingImageUri) {
             setEditorImages((prev) => prev.map((uri) => uri === editingImageUri ? imageUri : uri));

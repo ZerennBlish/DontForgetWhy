@@ -7,10 +7,10 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.6.0 (versionCode 19) — production build in progress |
+| **Current Version** | v1.6.1 (versionCode 20) — production build |
 | **Branch** | `main` (merged from dev) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | v1.6.0 production build — P2 ship |
+| **Current Focus** | v1.6.1 production — draw on photos |
 | **Blocked By** | Nothing |
 | **Next Action** | Upload to Play Store → P3 voice roasts |
 | **EAS Credits** | ~33 remaining (reset April 12) |
@@ -450,3 +450,4 @@ Batch native deps within phases to minimize dev builds.
 | Mar 27, 2026 | P2 2.4 (Per-alarm photo) complete. alarmPhotoStorage.ts, deferred save pattern, CreateAlarmScreen photo picker, AlarmFireScreen conditional background. |
 | Mar 27, 2026 | P2 fully COMPLETE. File splits (ShareNoteModal, ImageLightbox, DayPickerRow, useAlarmForm, useReminderForm, useNotificationRouting), header consistency, toggleAlarm past-date fix, audit cleanup. |
 | Mar 27, 2026 | v1.6.0 production build. Merged dev → main. Full P2 shipped: image attachments, drawing/Skia, photo backgrounds, per-alarm photos, file splits, header consistency, dismiss fix. |
+| Mar 28, 2026 | v1.6.1 — Draw on photos in notepad. Tap any photo attachment to annotate with full drawing tools. |
