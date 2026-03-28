@@ -200,7 +200,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       if (cancelled) return;
       const soundUri = alarm?.soundUri ?? null;
       playAlarmSound(soundUri);
-    }, 2000);
+    }, 1500);
 
     return () => {
       cancelled = true;

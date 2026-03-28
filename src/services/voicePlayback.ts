@@ -68,6 +68,12 @@ export async function playRandomClip(category: VoiceCategory): Promise<void> {
     await stopVoice();
 
     const source = clips[Math.floor(Math.random() * clips.length)];
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      shouldDuckAndroid: false,
+    });
     const { sound } = await Audio.Sound.createAsync(source, {
       shouldPlay: true,
       volume: 1.0,
@@ -110,6 +116,12 @@ export async function playIntroIfNeeded(): Promise<boolean> {
 
     await stopVoice();
 
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      shouldDuckAndroid: false,
+    });
     const { sound } = await Audio.Sound.createAsync(clips[0], {
       shouldPlay: true,
       volume: 1.0,
