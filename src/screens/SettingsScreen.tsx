@@ -25,6 +25,7 @@ import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import notifee from '@notifee/react-native';
 import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
+import { getVoiceEnabled, setVoiceEnabled } from '../services/voicePlayback';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,6 +46,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
+  const [voiceRoasts, setVoiceRoastsState] = useState(true);
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedAccentRef = useRef(customAccent || colors.accent);
   const pickedBgRef = useRef(customBackground || '#121220');
@@ -290,6 +292,7 @@ export default function SettingsScreen({ navigation }: Props) {
         }
       } catch {}
     })();
+    getVoiceEnabled().then(setVoiceRoastsState).catch(() => {});
   }, []);
 
   useFocusEffect(
@@ -740,6 +743,25 @@ export default function SettingsScreen({ navigation }: Props) {
             </View>
           </>
         )}
+      </View>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={styles.row}>
+          <Text style={styles.label}>Voice Roasts</Text>
+          <Switch
+            value={voiceRoasts}
+            onValueChange={async (val) => {
+              hapticLight();
+              setVoiceRoastsState(val);
+              await setVoiceEnabled(val);
+            }}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+        <Text style={styles.description}>
+          Sarcastic voice lines when your alarm fires. He's not mean... he's just tired.
+        </Text>
       </View>
 
       <View style={[styles.card, { marginTop: 16 }]}>

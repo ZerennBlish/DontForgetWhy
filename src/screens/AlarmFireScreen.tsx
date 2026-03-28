@@ -31,6 +31,7 @@ import { getSnoozeMessage } from '../data/snoozeMessages';
 import { refreshWidgets } from '../widget/updateWidget';
 import { markNotifHandled, persistNotifHandled } from '../services/pendingAlarm';
 import { playAlarmSound, stopAlarmSound, isAlarmSoundPlaying } from '../services/alarmSound';
+import { playRandomClip, playIntroIfNeeded, stopVoice } from '../services/voicePlayback';
 import { getDefaultTimerSound } from '../services/settings';
 import guessWhyIcons from '../data/guessWhyIcons';
 import type { RootStackParamList } from '../navigation/types';
@@ -91,6 +92,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   const [isSnoozing, setIsSnoozing] = useState(false);
   const snoozeShameOpacity = useRef(new Animated.Value(0)).current;
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voicePlayedRef = useRef(false);
 
   useEffect(() => {
     loadSettings().then((s) => setTimeFormat(s.timeFormat)).catch(() => {});
@@ -180,6 +182,33 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     }
   }, [postGuessWhy]);
 
+  // Voice roast sequence: alarm plays 3 sec → stop alarm → voice clip → resume alarm
+  useEffect(() => {
+    if (!fromNotification || postGuessWhy || isTimer || voicePlayedRef.current) return;
+    if (globalSilenced) return;
+    if (!silenceLoaded) return;
+
+    voicePlayedRef.current = true;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      if (cancelled) return;
+      await stopAlarmSound();
+      if (cancelled) return;
+      await playIntroIfNeeded();
+      if (cancelled) return;
+      await playRandomClip('fire');
+      if (cancelled) return;
+      const soundUri = alarm?.soundUri ?? null;
+      playAlarmSound(soundUri);
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      stopVoice();
+    };
+  }, [fromNotification, postGuessWhy, isTimer, globalSilenced, silenceLoaded, alarm]);
+
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
@@ -245,6 +274,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     console.log('[AlarmFire] handleDismiss — isTimer:', isTimer, 'alarmId:', alarm?.id);
     try {
       await cancelAllNotifications();
+      await stopVoice();
       // Persist the notification ID so cold-start dedupe survives process death
       if (notificationId) {
         await persistNotifHandled(notificationId);
@@ -272,7 +302,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         await resetSnoozeCount(alarm.id);
       }
     } catch {}
-    console.log('[AlarmFire] handleDismiss — complete, exiting');
+    console.log('[AlarmFire] handleDismiss — complete, playing dismiss clip');
+    exitTimerRef.current = setTimeout(() => exitToLockScreen(), 8000);
+    await playRandomClip('dismiss');
     exitToLockScreen();
   }, [cancelAllNotifications, exitToLockScreen, alarm, isTimer, timerId]);
 
@@ -311,6 +343,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     } catch {}
 
     await cancelAllNotifications();
+    await stopVoice();
 
     try {
       const snoozeNotifId = await scheduleSnooze(alarm);
@@ -334,6 +367,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     // Show escalating snooze shame message briefly before closing
     const message = getSnoozeMessage(newCount);
     setSnoozeShameMessage(message);
+    const snoozeTierMap: Record<number, string> = { 1: 'snooze1', 2: 'snooze2', 3: 'snooze3' };
+    const snoozeVoice = snoozeTierMap[newCount] || 'snooze4';
+    playRandomClip(snoozeVoice as 'snooze1');
     Animated.timing(snoozeShameOpacity, {
       toValue: 1,
       duration: 300,
@@ -348,8 +384,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const handleGuessWhy = useCallback(async () => {
     if (!alarm) return;
-    // Stop sound + vibration BEFORE navigating — game plays in silence
+    // Stop sound + vibration + voice BEFORE navigating — game plays in silence
     await cancelAllNotifications();
+    await stopVoice();
     navigation.navigate('GuessWhy', {
       alarm,
       fromNotification: true,

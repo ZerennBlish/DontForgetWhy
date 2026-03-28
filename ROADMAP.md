@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: March 27, 2026
+### Source of Truth · Updated: March 28, 2026
 
 ---
 
@@ -7,13 +7,13 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.6.1 (versionCode 20) — production build |
-| **Branch** | `main` (merged from dev) |
+| **Current Version** | v1.6.1 (versionCode 20) live on Play Store |
+| **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | v1.6.1 production — draw on photos |
+| **Current Focus** | P3 voice roasts — implementation |
 | **Blocked By** | Nothing |
-| **Next Action** | Upload to Play Store → P3 voice roasts |
-| **EAS Credits** | ~33 remaining (reset April 12) |
+| **Next Action** | Bundle voice clips as assets → wire audio playback → 2.0.0 release |
+| **EAS Credits** | ~21 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
 
@@ -71,7 +71,7 @@
 
 ## PHASE 2 — PHOTOS + DRAWING + BACKGROUNDS ✅ COMPLETE
 
-**Shipped in:** v1.6.0 (production)
+**Shipped in:** v1.6.1 (production) — v1.6.0 initial ship, v1.6.1 added draw-on-photos
 **Branch:** `dev`
 **New deps:** `expo-image-picker`, `@shopify/react-native-skia`, `expo-file-system`
 **Existing dep:** `reanimated-color-picker` (already installed)
@@ -136,6 +136,15 @@
   - AlarmFireScreen: conditional ImageBackground — alarm.photoUri if set, lightbulb.png fallback, onError recovery
   - Timers always use lightbulb.png (no photo support)
 
+- [x] **2.8 Draw on photos** ✅ COMPLETE (March 28, 2026)
+  - Tap any photo attachment in notepad to annotate with full drawing tools
+  - DrawingCanvas: backgroundImageUri prop, Skia SkImage rendering behind strokes
+  - Source photo copied to durable storage for re-editing
+  - Eraser disabled on photo backgrounds (undo covers use case)
+  - Done button gated on canvas readiness (layout + image loaded)
+  - loadDrawingData derives JSON path from URI (works in any directory)
+  - Calendar tap-to-navigate on event cards, week view shows next 7 days
+
 ### Removed from Phase 2
 
 - ~~2.5 App text color picker~~ — REMOVED. Dark capsule pattern solved readability without user configuration. Dark overlays with auto-contrast text selection on photo backgrounds. Zero-config, visually consistent.
@@ -147,25 +156,25 @@
 - `reanimated-color-picker` remains installed for custom theme builder
 
 ### Audit Gate
-- [ ] Full dual audit (Codex + Gemini) before production build
-- [ ] `npx tsc --noEmit` — 0 errors
+- [x] Full dual audit (Codex + Gemini) before production build
+- [x] `npx tsc --noEmit` — 0 errors
 - [x] Increment `expo.version` and `expo.android.versionCode` in `app.json`
 
 ---
 
 ## PHASE 3 — VOICE ROASTS
 
-**Status:** ⬜ Not started
+**Status:** ⬜ Pre-work complete — voice clips generated, implementation next
 **Branch:** `dev`
 **New deps:** `expo-av`
 **External tool:** ElevenLabs (subscription active)
 **Build cost:** 1 dev build + 1 production build (or share dev build with Phase 2)
 
 ### Pre-Work (No Code — Asset Generation)
-- [ ] Generate alarm fire voice clips in ElevenLabs
-- [ ] Generate snooze shame voice clips (4 tiers matching existing text tiers)
-- [ ] Generate wake-up greeting clips ("Hey you" variants)
-- [ ] Export and organize clips as bundled assets
+- [x] Generate alarm fire voice clips in ElevenLabs
+- [x] Generate snooze shame voice clips (4 tiers matching existing text tiers)
+- [x] Generate wake-up greeting clips ("Hey you" variants)
+- [x] Export and organize clips as bundled assets
 
 ### Tasks
 
@@ -179,6 +188,27 @@
 
 - [ ] **3.3 Wake-up greeting ("Hey you")**
   - Plays on alarm fire before/alongside main content
+
+### Voice Character
+- Male, early 30s, American accent
+- Personality: tired, sarcastic, self-aware app with his own life (coworkers, dates, opinions)
+- Not mean — just over it. Competent but would rather be anywhere else
+- Clean language — no profanity (competitive advantage, keeps E rating)
+- Designed and generated in ElevenLabs v3 with audio tags
+- Female character (girlfriend) planned as future user-selectable voice
+
+### Clip Counts
+- Intro: 1
+- Alarm fire: 17
+- Snooze tier 1: 4
+- Snooze tier 2: 6
+- Snooze tier 3: 5
+- Snooze tier 4: 6
+- Guess Why before: 5
+- Guess Why correct: 4
+- Guess Why wrong: 4
+- Dismiss: 10
+- Total: 62 clips
 
 ### Blockers
 - None anticipated
@@ -450,4 +480,6 @@ Batch native deps within phases to minimize dev builds.
 | Mar 27, 2026 | P2 2.4 (Per-alarm photo) complete. alarmPhotoStorage.ts, deferred save pattern, CreateAlarmScreen photo picker, AlarmFireScreen conditional background. |
 | Mar 27, 2026 | P2 fully COMPLETE. File splits (ShareNoteModal, ImageLightbox, DayPickerRow, useAlarmForm, useReminderForm, useNotificationRouting), header consistency, toggleAlarm past-date fix, audit cleanup. |
 | Mar 27, 2026 | v1.6.0 production build. Merged dev → main. Full P2 shipped: image attachments, drawing/Skia, photo backgrounds, per-alarm photos, file splits, header consistency, dismiss fix. |
-| Mar 28, 2026 | v1.6.1 — Draw on photos in notepad. Tap any photo attachment to annotate with full drawing tools. |
+| Mar 28, 2026 | v1.6.0 shipped to Play Store. Full P2: image attachments, drawing/Skia, photo backgrounds, per-alarm photos, file splits, header consistency, dismiss fix. Audit 38 fixes: deferred drawing/photo saves, rollback on failure. Store listing updated with 8 new screenshots and full description rewrite. |
+| Mar 28, 2026 | v1.6.1 shipped. Draw on photos (annotate photo attachments with drawing tools), calendar tap-to-navigate, week view next 7 days. Audit 39 fixes: durable source photo, eraser disabled on photos, canvas readiness gate, loadDrawingData path fix. |
+| Mar 28, 2026 | P3 voice roasts pre-work complete. Custom ElevenLabs v3 voice designed. 62 voice clips generated across all categories: fire, snooze (4 tiers), guess why (before/correct/wrong), dismiss, intro. |

@@ -6,12 +6,14 @@ export interface AppSettings {
   guessWhyEnabled: boolean;
   timeFormat: '12h' | '24h';
   timeInputMode: 'scroll' | 'type';
+  voiceRoasts: boolean;
 }
 
 const defaultSettings: AppSettings = {
   guessWhyEnabled: false,
   timeFormat: '12h',
   timeInputMode: 'scroll',
+  voiceRoasts: true,
 };
 
 export async function loadSettings(): Promise<AppSettings> {
@@ -32,6 +34,10 @@ export async function loadSettings(): Promise<AppSettings> {
         parsed.timeInputMode === 'scroll' || parsed.timeInputMode === 'type'
           ? parsed.timeInputMode
           : defaultSettings.timeInputMode,
+      voiceRoasts:
+        typeof parsed.voiceRoasts === 'boolean'
+          ? parsed.voiceRoasts
+          : defaultSettings.voiceRoasts,
     };
   } catch {
     return { ...defaultSettings };

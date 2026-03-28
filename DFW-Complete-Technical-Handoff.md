@@ -268,6 +268,8 @@ DontForgetWhy/
 | Mar 24 | 1.3.9 | 16 | Notification action buttons (Dismiss/Snooze on alarm, Dismiss on timer), dismiss flash fix, note card borders, reminder two-line layout, safety net fix. Store screenshots updated (8 professional graphics). App live in production on Google Play. | Production |
 | Mar 25 | 1.4.0 | 17 | Timer dismiss race condition hotfix: foreground DELIVERED now sound-only (no auto-navigation), timer cleanup in handleDismiss. | Production (live) |
 | Mar 25 | 1.5.0 | 18 | Calendar feature (CalendarScreen), CalendarWidget (home screen mini calendar with dot indicators), AlarmListScreen refactor (AlarmsTab extraction), NotepadScreen refactor (NoteEditorModal extraction), dark capsule button uniformity, floating headers (editor/settings/riddle/calendar/memoryscore), BackButton visibility fix, 999 char note limit, initialDate prefill for create screens, daily recurring calendar mapping, timezone bucketing fix, widget alarm normalization, note sort UTC fix, week view locked to current week, tablet responsive (Onboarding/Sudoku/MemoryMatch/MemoryScore). Audits 33-35 complete. | Dev branch — ready to ship |
+| Mar 28 | 1.6.0 | 19 | Full Phase 2 production ship. Audit 38: 2 critical + 2 high fixed (Codex found, Gemini missed) — DrawingCanvas temp dir for drawings (no premature deletion), NotepadScreen sequential image save with rollback, useAlarmForm deferred photo deletion with rollback on failure. Play Store listing updated: 8 screenshots, full description rewrite. All P2 features shipped free (no Pro gate). | Production (live) |
+| Mar 28 | 1.6.1 | 20 | Draw on photos: annotate photo attachments with full drawing tools. DrawingCanvas backgroundImageUri, SkImage, onLayout sizing, durable source copy. NoteEditorModal "Draw On" option for photos. noteImageStorage URI-based JSON lookup, source photo persistence. Calendar tap-to-navigate on event cards, week view = next 7 days. Audit 39: 1 critical + 1 high + 2 medium fixed — durable source photo storage, eraser disabled on photos, canvas readiness gate. | Production (live) |
 
 ---
 
@@ -1157,6 +1159,7 @@ No new native dependencies — expo-image-picker and expo-file-system already in
 - [x] 2.7 Calendar widget (CalendarWidget — mini month grid with colored dot indicators)
 
 **Phase 3 — Voice Roasts** (ElevenLabs pre-recorded, bundled via expo-av)
+- Voice roasts (P3): 62 pre-recorded clips generated in ElevenLabs v3, bundled as assets. No runtime API calls. Implementation pending.
 - 3.1 Alarm fire voice lines
 - 3.2 Snooze shame voice escalation (tier-matched)
 - 3.3 Wake-up greeting ("Hey you")
@@ -1207,10 +1210,10 @@ No new native dependencies — expo-image-picker and expo-file-system already in
 | App name | Don't Forget Why |
 | Category | Productivity |
 | Short description | "Set alarms. Forget why. Get roasted. A memory app with attitude." |
-| Full description | Feature overview + "Built by Bald Guy & Company Games" |
+| Full description | Updated for all P2 features including calendar, notepad photos/drawing, photo backgrounds. "Built by Bald Guy & Company Games" |
 | App icon | Clock icon, 512×512 |
 | Feature graphic | 1024×500, clock + lightbulb + neon elements, Midnight palette |
-| Screenshots | 8 professional graphics with phone mockups and personality taglines. Created Mar 24 via ChatGPT image gen + Canva compositing. Themes: dark (Midnight) for most, light (Frost) for Reminders, green (Trivia), brown (Memory Match). |
+| Screenshots | 8 total (5 original personality-driven + calendar + games + photo background). Created Mar 24 via ChatGPT image gen + Canva compositing. Updated for all P2 features including calendar, notepad photos/drawing, photo backgrounds. |
 | Privacy policy | https://zerennblish.github.io/DontForgetWhy/privacy-policy.html |
 | Countries | All |
 | Content rating | 13+ |
@@ -1358,8 +1361,8 @@ Copy-Item "$root\src\widget\widgetTaskHandler.ts" "$dest\widgetTaskHandler.ts"
 
 | Item | Value |
 |------|-------|
-| Current version | v1.5.0 (versionCode 18) |
-| Production status | v1.3.8 live, v1.3.9 uploaded and in review |
+| Current version | v1.6.1 (versionCode 20) |
+| Production status | v1.6.1 live on Google Play |
 | Install count | 48+ |
 | Phase 1 housekeeping | ✅ COMPLETE |
 | Phase 2 polish | 5/11 items complete (v1.3.9) |

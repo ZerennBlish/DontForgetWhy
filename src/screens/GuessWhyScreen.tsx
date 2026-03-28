@@ -24,6 +24,7 @@ import { useTheme } from '../theme/ThemeContext';
 import BackButton from '../components/BackButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
+import { playRandomClip, stopVoice } from '../services/voicePlayback';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GuessWhy'>;
@@ -66,6 +67,15 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
   // Sound + vibration are already stopped before we get here.
   // AlarmFireScreen's handleGuessWhy cancels everything before navigating.
+
+  useEffect(() => {
+    let cancelled = false;
+    playRandomClip('guess_before');
+    return () => {
+      cancelled = true;
+      stopVoice();
+    };
+  }, []);
 
   useEffect(() => {
     if (!canPlay) {
@@ -308,6 +318,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     if (checkIconGuess(iconId, iconEmoji)) {
       resolvedRef.current = true;
       setResult({ type: 'win', message: getRandomWinMessage() });
+      playRandomClip('guess_correct');
       try { await recordWin(); } catch {}
     } else {
       const remaining = attemptsLeft - 1;
@@ -315,6 +326,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       if (remaining <= 0) {
         resolvedRef.current = true;
         setResult({ type: 'lose', message: getRandomLoseMessage() });
+        playRandomClip('guess_wrong');
         try { await recordLoss(); } catch {}
         logForget('loss');
       } else {
@@ -332,6 +344,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     if (checkTypeGuess(trimmed)) {
       resolvedRef.current = true;
       setResult({ type: 'win', message: getRandomWinMessage() });
+      playRandomClip('guess_correct');
       try { await recordWin(); } catch {}
     } else {
       const remaining = attemptsLeft - 1;
@@ -340,6 +353,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       if (remaining <= 0) {
         resolvedRef.current = true;
         setResult({ type: 'lose', message: getRandomLoseMessage() });
+        playRandomClip('guess_wrong');
         try { await recordLoss(); } catch {}
         logForget('loss');
       } else {
@@ -353,12 +367,14 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     hapticLight();
     resolvedRef.current = true;
     setResult({ type: 'skip', message: getRandomSkipMessage() });
+    playRandomClip('guess_wrong');
     try { await recordSkip(); } catch {}
     logForget('skip');
   };
 
   const handleContinue = () => {
     hapticLight();
+    stopVoice();
     // Navigate to AlarmFire with postGuessWhy — it will cancel notifications + vibration
     navigation.replace('AlarmFire', { alarm, postGuessWhy: true, fromNotification: false, notificationId });
   };
