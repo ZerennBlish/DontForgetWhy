@@ -274,7 +274,7 @@ DontForgetWhy/
 | Mar 25 | 1.5.0 | 18 | Calendar feature (CalendarScreen), CalendarWidget (home screen mini calendar with dot indicators), AlarmListScreen refactor (AlarmsTab extraction), NotepadScreen refactor (NoteEditorModal extraction), dark capsule button uniformity, floating headers (editor/settings/riddle/calendar/memoryscore), BackButton visibility fix, 999 char note limit, initialDate prefill for create screens, daily recurring calendar mapping, timezone bucketing fix, widget alarm normalization, note sort UTC fix, week view locked to current week, tablet responsive (Onboarding/Sudoku/MemoryMatch/MemoryScore). Audits 33-35 complete. | Dev branch — ready to ship |
 | Mar 28 | 1.6.0 | 19 | Full Phase 2 production ship. Audit 38: 2 critical + 2 high fixed (Codex found, Gemini missed) — DrawingCanvas temp dir for drawings (no premature deletion), NotepadScreen sequential image save with rollback, useAlarmForm deferred photo deletion with rollback on failure. Play Store listing updated: 8 screenshots, full description rewrite. All P2 features shipped free (no Pro gate). | Production (live) |
 | Mar 28 | 1.6.1 | 20 | Draw on photos: annotate photo attachments with full drawing tools. DrawingCanvas backgroundImageUri, SkImage, onLayout sizing, durable source copy. NoteEditorModal "Draw On" option for photos. noteImageStorage URI-based JSON lookup, source photo persistence. Calendar tap-to-navigate on event cards, week view = next 7 days. Audit 39: 1 critical + 1 high + 2 medium fixed — durable source photo storage, eraser disabled on photos, canvas readiness gate. | Production (live) |
-| Mar 29 | 1.7.0 | 21 | P3 Voice Roasts: 63 voice clips, native ALARM stream playback, expo-av removed, expo-audio chirp, dismiss voice toggle, silent alarm guard, production URI handling | Pending production |
+| Mar 29 | 1.7.0 | 21 | P3 Voice Roasts: 63 voice clips across 10 categories, native ALARM stream playback via AlarmChannelModule, expo-av removed, expo-audio chirp, expo-asset for URI resolution, dismiss voice toggle, double-tap dismiss/snooze to skip clips, true_silent guard, production URI handling (HTTP/asset/file/content) | Pending production |
 
 ---
 
@@ -325,14 +325,22 @@ Two separate MediaPlayers in AlarmChannelHelper.java (embedded in plugins/withAl
 - sPlayer: alarm/timer sounds (looping)
 - sVoicePlayer: voice clips (non-looping, completion callback resolves JS promise)
 
-JS service (src/services/voicePlayback.ts) uses Image.resolveAssetSource to get URIs from bundled require() assets, then passes URIs to the native module. No expo-av involved.
+JS service (src/services/voicePlayback.ts) uses expo-asset (Asset.fromModule + downloadAsync) to resolve bundled require() assets to local file:// URIs, then passes URIs to the native module. No expo-av involved.
 
 #### Audio Sequencing (AlarmFireScreen)
 1. Alarm sound plays for 1.5 seconds
-2. Alarm sound stops (stopAlarmSound)
-3. Intro clip plays if first alarm ever (one-time, stored in AsyncStorage)
-4. Random fire/timer clip plays (await playRandomClip)
-5. Alarm sound resumes (unless silent/true_silent alarm)
+2. stopVoice() kills any lingering clip from previous fire
+3. Alarm sound stops (stopAlarmSound)
+4. Intro clip plays if first alarm ever (one-time, stored in AsyncStorage) — alarms only, not timers
+5. Random fire/timer clip plays (await playRandomClip)
+6. Alarm sound resumes (unless silent/true_silent alarm)
+- True silent alarms skip voice entirely (guard before voicePlayedRef)
+- Regular silent alarms play voice but don't resume alarm tone
+
+#### Double-Tap Skip (AlarmFireScreen)
+- **Dismiss:** First tap starts dismiss flow (plays dismiss clip). isDismissingRef tracks state, button text changes to "Tap to skip". Second tap calls stopVoice() + exitToLockScreen() immediately.
+- **Snooze:** First tap starts snooze flow (schedules snooze, shows shame message, plays snooze clip, exits when clip finishes). isSnoozing state tracks, button stays tappable, text changes to "Tap to skip". Second tap calls stopVoice() + exitToLockScreen() immediately.
+- Snooze shame overlay animates in while clip plays, exits when clip finishes (await playRandomClip → exitToLockScreen). No more 5-second setTimeout.
 
 #### Voice Categories (src/data/voiceClips.ts)
 - fire (16 clips): alarm fire lines
@@ -359,10 +367,12 @@ playVoiceClip handles multiple URI schemes for dev/production compatibility:
 - Bare resource name fallback (tries AssetManager then Uri.parse)
 
 #### Safety
-- playId counter prevents zombie playback after cancellation
-- sPendingVoiceCallback ensures JS promise always resolves (even on stop/error)
+- playId counter prevents zombie playback after cancellation (incremented in stopVoice + play functions)
+- sPendingVoiceCallback ensures JS promise always resolves (even on stop/error) — grab-and-null pattern prevents double-fire
 - stopVoice() called in all exit paths (dismiss, snooze, guess why, unmount cleanup)
+- stopVoice() increments _playId to invalidate in-flight downloads
 - Voice errors never crash the alarm flow — all caught and logged
+- markIntroPlayed() only called after successful playback (inner try/catch), not on error
 
 #### Voice Character
 Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. Has coworkers (Denise), a life, opinions about being stuck in a phone. Clean — no profanity. Generated via ElevenLabs v3.
@@ -939,7 +949,23 @@ No new native dependencies — expo-image-picker and expo-file-system already in
 
 - `expo-av` removed (was only used for chirp sound feedback)
 - `expo-audio` added (chirp/UI sound feedback via createAudioPlayer)
+- `expo-asset` added (voice clip URI resolution: Asset.fromModule + downloadAsync → file:// URI)
 - Voice clips use native AlarmChannelModule, NOT expo-audio (ALARM stream requirement)
+
+### New/Modified Files in Phase 3
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/data/voiceClips.ts` | NEW | Voice clip registry (10 categories, 63 clips) |
+| `src/services/voicePlayback.ts` | NEW | Voice playback service (native module bridge, playId cancellation) |
+| `assets/voice/` | NEW | 63 bundled MP3 voice clip files |
+| `plugins/withAlarmChannel.js` | MODIFIED | Added playVoiceClip, stopVoiceClip, sPendingVoiceCallback, production URI branches |
+| `src/screens/AlarmFireScreen.tsx` | MODIFIED | Voice sequence useEffect, dismiss/snooze double-tap, true_silent guard |
+| `src/screens/GuessWhyScreen.tsx` | MODIFIED | Voice clips on game events (before/correct/wrong) |
+| `src/screens/SettingsScreen.tsx` | MODIFIED | Voice roasts toggle, dismiss voice toggle |
+| `src/services/settings.ts` | MODIFIED | Removed ghost voiceRoasts field |
+| `src/utils/soundFeedback.ts` | MODIFIED | expo-av → expo-audio migration |
+| `package.json` | MODIFIED | expo-av removed, expo-audio + expo-asset added |
 
 **38 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
@@ -1222,7 +1248,8 @@ No new native dependencies — expo-image-picker and expo-file-system already in
 
 **Phase 3 — Voice Roasts** ✅ COMPLETE (March 29, 2026)
 - 63 voice clips across 10 categories, native ALARM stream playback via AlarmChannelModule
-- expo-av removed, expo-audio added for chirp. Voice clips use native module, not expo-audio.
+- expo-av removed, expo-audio added for chirp, expo-asset for URI resolution. Voice clips use native module, not expo-audio.
+- Double-tap dismiss/snooze to skip voice clips. Dismiss voice toggle. True silent alarm guard.
 - [x] 3.1 Alarm fire voice lines
 - [x] 3.2 Snooze shame voice escalation (tier-matched, 4 tiers)
 - [x] 3.3 Timer voice lines
@@ -1428,8 +1455,8 @@ Copy-Item "$root\src\widget\widgetTaskHandler.ts" "$dest\widgetTaskHandler.ts"
 
 | Item | Value |
 |------|-------|
-| Current version | v1.6.1 (versionCode 20) |
-| Production status | v1.6.1 live on Google Play |
+| Current version | v1.7.0 (versionCode 21) — pending production build |
+| Production status | v1.6.1 live on Google Play, v1.7.0 pending |
 | Install count | 48+ |
 | Phase 1 housekeeping | ✅ COMPLETE |
 | Phase 2 polish | 5/11 items complete (v1.3.9) |
