@@ -11,7 +11,8 @@
  * and resolves when done. Voice errors must NEVER crash the alarm flow.
  */
 
-import { NativeModules, Platform, Image } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
+import { Asset } from 'expo-asset';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import voiceClips, { type VoiceCategory } from '../data/voiceClips';
 
@@ -88,9 +89,10 @@ export async function playRandomClip(category: VoiceCategory): Promise<void> {
     const thisPlayId = ++_playId;
 
     const source = clips[Math.floor(Math.random() * clips.length)];
-    const resolved = Image.resolveAssetSource(source as number);
-    const uri = resolved?.uri;
+    const asset = Asset.fromModule(source as number);
+    await asset.downloadAsync();
     if (thisPlayId !== _playId) return;
+    const uri = asset.localUri;
     if (!uri) return;
 
     _playing = true;
@@ -122,9 +124,10 @@ export async function playIntroIfNeeded(): Promise<boolean> {
     await stopVoice();
     const thisPlayId = ++_playId;
 
-    const resolved = Image.resolveAssetSource(clips[0] as number);
-    const uri = resolved?.uri;
+    const asset = Asset.fromModule(clips[0] as number);
+    await asset.downloadAsync();
     if (thisPlayId !== _playId) return false;
+    const uri = asset.localUri;
     if (!uri) return false;
 
     try {

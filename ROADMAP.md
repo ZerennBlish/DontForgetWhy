@@ -7,7 +7,7 @@
 
 | | |
 |---|---|
-| **Current Version** | v2.0.0 (versionCode 21) — pending production build |
+| **Current Version** | v1.7.0 (versionCode 21) — pending production build |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
 | **Current Focus** | P3 voice roasts — COMPLETE |
