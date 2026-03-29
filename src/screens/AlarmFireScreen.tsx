@@ -184,7 +184,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   // Voice roast sequence: alarm plays 3 sec → stop alarm → voice clip → resume alarm
   useEffect(() => {
-    if (!fromNotification || postGuessWhy || isTimer || voicePlayedRef.current) return;
+    if (!fromNotification || postGuessWhy || voicePlayedRef.current) return;
     if (globalSilenced) return;
     if (!silenceLoaded) return;
 
@@ -196,10 +196,18 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       if (cancelled) return;
       await playIntroIfNeeded();
       if (cancelled) return;
-      await playRandomClip('fire');
+      await playRandomClip(isTimer ? 'timer' : 'fire');
       if (cancelled) return;
-      const soundUri = alarm?.soundUri ?? null;
-      playAlarmSound(soundUri);
+      let resumeSoundUri: string | null = null;
+      if (isTimer) {
+        try {
+          const timerSound = await getDefaultTimerSound();
+          resumeSoundUri = timerSound.uri;
+        } catch {}
+      } else {
+        resumeSoundUri = alarm?.soundUri ?? null;
+      }
+      playAlarmSound(resumeSoundUri);
     }, 1500);
 
     return () => {

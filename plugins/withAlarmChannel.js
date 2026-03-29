@@ -86,6 +86,60 @@ public class AlarmChannelHelper {
         }
     }
 
+    // ── Voice clip playback (non-looping, USAGE_ALARM stream) ───────
+
+    private static MediaPlayer sVoicePlayer;
+    private static Runnable sPendingVoiceCallback;
+
+    public static void playVoiceClip(Context context, String soundUri, final Runnable onComplete) {
+        stopVoiceClip();
+        sPendingVoiceCallback = onComplete;
+        if (soundUri == null || soundUri.isEmpty()) {
+            if (onComplete != null) onComplete.run();
+            return;
+        }
+        try {
+            sVoicePlayer = new MediaPlayer();
+            sVoicePlayer.setAudioAttributes(ALARM_AUDIO);
+            sVoicePlayer.setDataSource(context, Uri.parse(soundUri));
+            sVoicePlayer.setLooping(false);
+            sVoicePlayer.setOnCompletionListener(mp -> {
+                Runnable cb = sPendingVoiceCallback;
+                sPendingVoiceCallback = null;
+                stopVoiceClip();
+                if (cb != null) cb.run();
+            });
+            sVoicePlayer.setOnErrorListener((mp, what, extra) -> {
+                Runnable cb = sPendingVoiceCallback;
+                sPendingVoiceCallback = null;
+                stopVoiceClip();
+                if (cb != null) cb.run();
+                return true;
+            });
+            sVoicePlayer.prepare();
+            sVoicePlayer.start();
+        } catch (Exception e) {
+            Runnable cb = sPendingVoiceCallback;
+            sPendingVoiceCallback = null;
+            if (sVoicePlayer != null) {
+                try { sVoicePlayer.release(); } catch (Exception ignored) {}
+                sVoicePlayer = null;
+            }
+            if (cb != null) cb.run();
+        }
+    }
+
+    public static void stopVoiceClip() {
+        Runnable cb = sPendingVoiceCallback;
+        sPendingVoiceCallback = null;
+        if (sVoicePlayer != null) {
+            try { sVoicePlayer.stop(); } catch (Exception ignored) {}
+            try { sVoicePlayer.release(); } catch (Exception ignored) {}
+            sVoicePlayer = null;
+        }
+        if (cb != null) cb.run();
+    }
+
     // ── Notification channels ───────────────────────────────────────
 
     public static void createPresetChannels(Context context) {
@@ -236,6 +290,32 @@ public class AlarmChannelModule extends ReactContextBaseJavaModule {
             promise.resolve(null);
         } catch (Exception e) {
             promise.reject("STOP_ERROR", e.getMessage(), e);
+        }
+    }
+
+    @ReactMethod
+    public void playVoiceClip(String soundUri, final Promise promise) {
+        try {
+            AlarmChannelHelper.playVoiceClip(getReactApplicationContext(), soundUri, new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        promise.resolve(null);
+                    } catch (Exception ignored) {}
+                }
+            });
+        } catch (Exception e) {
+            promise.reject("VOICE_ERROR", e.getMessage(), e);
+        }
+    }
+
+    @ReactMethod
+    public void stopVoiceClip(Promise promise) {
+        try {
+            AlarmChannelHelper.stopVoiceClip();
+            promise.resolve(null);
+        } catch (Exception e) {
+            promise.reject("STOP_VOICE_ERROR", e.getMessage(), e);
         }
     }
 }

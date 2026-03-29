@@ -10,7 +10,8 @@ export type VoiceCategory =
   | 'guess_correct'
   | 'guess_wrong'
   | 'dismiss'
-  | 'intro';
+  | 'intro'
+  | 'timer';
 
 const voiceClips: Record<VoiceCategory, AVPlaybackSource[]> = {
   fire: [
@@ -90,6 +91,14 @@ const voiceClips: Record<VoiceCategory, AVPlaybackSource[]> = {
   ],
   intro: [
     require('../../assets/voice/intro_01_first_alarm.mp3'),
+  ],
+  timer: [
+    require('../../assets/voice/timer_01_times_up.mp3'),
+    require('../../assets/voice/timer_02_counting.mp3'),
+    require('../../assets/voice/timer_03_ding.mp3'),
+    require('../../assets/voice/timer_04_standing_here.mp3'),
+    require('../../assets/voice/timer_05_burnt.mp3'),
+    require('../../assets/voice/timer_06_not_a_microwave.mp3'),
   ],
 };
 

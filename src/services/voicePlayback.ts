@@ -1,37 +1,40 @@
 /**
- * Voice clip playback engine.
+ * Voice clip playback engine — native USAGE_ALARM stream.
+ *
+ * Plays voice clips through AlarmChannelModule's MediaPlayer on the ALARM
+ * audio stream, so they're audible regardless of media volume / ringer mode.
  *
  * Callers handle alarm sound sequencing:
- *   alarm plays 3 sec → alarm stops → await playRandomClip → alarm resumes.
+ *   alarm plays 1.5s → alarm stops → await playRandomClip → alarm resumes.
  *
  * This service doesn't know about alarm sounds — it just plays clips
  * and resolves when done. Voice errors must NEVER crash the alarm flow.
  */
 
-import { Audio } from 'expo-av';
+import { NativeModules, Platform } from 'react-native';
+import { Asset } from 'expo-asset';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import voiceClips, { type VoiceCategory } from '../data/voiceClips';
 
 const VOICE_ENABLED_KEY = 'voiceRoastsEnabled';
 const INTRO_PLAYED_KEY = 'voiceIntroPlayed';
 
-let _currentSound: Audio.Sound | null = null;
 let _playing = false;
+let _playId = 0;
 
 export function isVoicePlaying(): boolean {
   return _playing;
 }
 
 export async function stopVoice(): Promise<void> {
+  _playId++;
   _playing = false;
-  if (_currentSound) {
+  if (Platform.OS === 'android') {
     try {
-      await _currentSound.stopAsync();
-      await _currentSound.unloadAsync();
+      await NativeModules.AlarmChannelModule.stopVoiceClip();
     } catch (e) {
       console.warn('[voicePlayback] stopVoice error:', e);
     }
-    _currentSound = null;
   }
 }
 
@@ -56,9 +59,13 @@ export async function markIntroPlayed(): Promise<void> {
 /**
  * Play a random clip from the given category.
  * Resolves when the clip finishes playing (or immediately if voice is disabled/empty).
+ * The native playVoiceClip promise resolves on MediaPlayer OnCompletionListener,
+ * so this awaits until the clip is done — callers can then resume the alarm sound.
  */
 export async function playRandomClip(category: VoiceCategory): Promise<void> {
   try {
+    const thisPlayId = ++_playId;
+
     const enabled = await getVoiceEnabled();
     if (!enabled) return;
 
@@ -66,36 +73,24 @@ export async function playRandomClip(category: VoiceCategory): Promise<void> {
     if (!clips || clips.length === 0) return;
 
     await stopVoice();
+    if (thisPlayId !== _playId) return;
 
     const source = clips[Math.floor(Math.random() * clips.length)];
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-      shouldDuckAndroid: false,
-    });
-    const { sound } = await Audio.Sound.createAsync(source, {
-      shouldPlay: true,
-      volume: 1.0,
-    });
+    const asset = Asset.fromModule(source as number);
+    await asset.downloadAsync();
+    if (thisPlayId !== _playId) return;
 
-    _currentSound = sound;
+    const uri = asset.localUri;
+    if (!uri) return;
+
     _playing = true;
-
-    return new Promise<void>((resolve) => {
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          _playing = false;
-          _currentSound = null;
-          sound.unloadAsync().catch(() => {});
-          resolve();
-        }
-      });
-    });
+    if (Platform.OS === 'android') {
+      await NativeModules.AlarmChannelModule.playVoiceClip(uri);
+    }
+    _playing = false;
   } catch (e) {
     console.warn('[voicePlayback] playRandomClip error:', e);
     _playing = false;
-    _currentSound = null;
   }
 }
 
@@ -105,6 +100,8 @@ export async function playRandomClip(category: VoiceCategory): Promise<void> {
  */
 export async function playIntroIfNeeded(): Promise<boolean> {
   try {
+    const thisPlayId = ++_playId;
+
     const enabled = await getVoiceEnabled();
     if (!enabled) return false;
 
@@ -115,38 +112,32 @@ export async function playIntroIfNeeded(): Promise<boolean> {
     if (!clips || clips.length === 0) return false;
 
     await stopVoice();
+    if (thisPlayId !== _playId) return false;
 
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-      shouldDuckAndroid: false,
-    });
-    const { sound } = await Audio.Sound.createAsync(clips[0], {
-      shouldPlay: true,
-      volume: 1.0,
-    });
+    const asset = Asset.fromModule(clips[0] as number);
+    await asset.downloadAsync();
+    if (thisPlayId !== _playId) return false;
 
-    _currentSound = sound;
-    _playing = true;
+    const uri = asset.localUri;
+    if (!uri) return false;
 
-    await new Promise<void>((resolve) => {
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          _playing = false;
-          _currentSound = null;
-          sound.unloadAsync().catch(() => {});
-          resolve();
-        }
-      });
-    });
-
-    await markIntroPlayed();
-    return true;
+    try {
+      _playing = true;
+      if (Platform.OS === 'android') {
+        await NativeModules.AlarmChannelModule.playVoiceClip(uri);
+      }
+      _playing = false;
+      if (thisPlayId !== _playId) return false;
+      await markIntroPlayed();
+      return true;
+    } catch (e) {
+      console.warn('[voicePlayback] playIntroIfNeeded playback error:', e);
+      _playing = false;
+      return false;
+    }
   } catch (e) {
     console.warn('[voicePlayback] playIntroIfNeeded error:', e);
     _playing = false;
-    _currentSound = null;
     return false;
   }
 }

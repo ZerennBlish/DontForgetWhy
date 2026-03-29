@@ -55,7 +55,8 @@
       "Bash(node:*)",
       "Bash(chmod -R 777 /mnt/c/DontForgetWhy/node_modules/expo/node_modules/expo-file-system)",
       "Bash(node -e \"console.log\\(require\\(''/mnt/c/DontForgetWhy/node_modules/expo-sharing/package.json''\\).version\\)\")",
-      "Bash(2)"
+      "Bash(2)",
+      "Bash(sudo apt-get:*)"
     ]
   }
 }
