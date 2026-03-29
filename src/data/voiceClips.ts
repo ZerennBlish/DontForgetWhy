@@ -50,7 +50,6 @@ const voiceClips: Record<VoiceCategory, AVPlaybackSource[]> = {
     require('../../assets/voice/snooze3_01_stub_your_toe.mp3'),
     require('../../assets/voice/snooze3_02_bothered_me_to_bother_you.mp3'),
     require('../../assets/voice/snooze3_03_i_quit.mp3'),
-    require('../../assets/voice/snooze3_04_trees_move_faster.mp3'),
     require('../../assets/voice/snooze3_05_lazy_person_i_know.mp3'),
   ],
   snooze4: [

@@ -198,16 +198,22 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       if (cancelled) return;
       await playRandomClip(isTimer ? 'timer' : 'fire');
       if (cancelled) return;
-      let resumeSoundUri: string | null = null;
-      if (isTimer) {
-        try {
-          const timerSound = await getDefaultTimerSound();
-          resumeSoundUri = timerSound.uri;
-        } catch {}
-      } else {
-        resumeSoundUri = alarm?.soundUri ?? null;
+      const isSilent = isTimer
+        ? (timerSoundId === 'silent' || timerSoundId === 'true_silent')
+        : (alarm?.soundId === 'silent' || alarm?.soundId === 'true_silent');
+
+      if (!isSilent) {
+        let resumeSoundUri: string | null = null;
+        if (isTimer) {
+          try {
+            const timerSound = await getDefaultTimerSound();
+            resumeSoundUri = timerSound.uri;
+          } catch {}
+        } else {
+          resumeSoundUri = alarm?.soundUri ?? null;
+        }
+        playAlarmSound(resumeSoundUri);
       }
-      playAlarmSound(resumeSoundUri);
     }, 1500);
 
     return () => {

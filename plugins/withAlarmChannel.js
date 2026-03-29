@@ -101,7 +101,28 @@ public class AlarmChannelHelper {
         try {
             sVoicePlayer = new MediaPlayer();
             sVoicePlayer.setAudioAttributes(ALARM_AUDIO);
-            sVoicePlayer.setDataSource(context, Uri.parse(soundUri));
+            if (soundUri.startsWith("http://") || soundUri.startsWith("https://")) {
+                sVoicePlayer.setDataSource(soundUri);
+            } else if (soundUri.startsWith("file:///android_asset/")) {
+                String assetPath = soundUri.replace("file:///android_asset/", "");
+                android.content.res.AssetFileDescriptor afd = context.getAssets().openFd(assetPath);
+                sVoicePlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                afd.close();
+            } else if (soundUri.startsWith("file://")) {
+                sVoicePlayer.setDataSource(context, Uri.parse(soundUri));
+            } else if (soundUri.startsWith("content://")) {
+                sVoicePlayer.setDataSource(context, Uri.parse(soundUri));
+            } else {
+                // Bare asset path fallback — try as android asset
+                try {
+                    android.content.res.AssetFileDescriptor afd = context.getAssets().openFd(soundUri);
+                    sVoicePlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                    afd.close();
+                } catch (Exception assetEx) {
+                    // Last resort: try as raw URI
+                    sVoicePlayer.setDataSource(context, Uri.parse(soundUri));
+                }
+            }
             sVoicePlayer.setLooping(false);
             sVoicePlayer.setOnCompletionListener(mp -> {
                 Runnable cb = sPendingVoiceCallback;
