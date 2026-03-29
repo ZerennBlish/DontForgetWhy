@@ -84,8 +84,8 @@ const voiceClips: Record<VoiceCategory, AVPlaybackSource[]> = {
     require('../../assets/voice/dismiss_05_see_you_tomorrow.mp3'),
     require('../../assets/voice/dismiss_06_proud_of_you.mp3'),
     require('../../assets/voice/dismiss_07_go_do_the_thing.mp3'),
-    require('../../assets/voice/dismiss_08_finally_over.mp3'),
-    require('../../assets/voice/dismiss_09_dont_miss_me.mp3'),
+    require('../../assets/voice/dismiss_08_forget_about_me.mp3'),
+    require('../../assets/voice/dismiss_09_back_to_sleep.mp3'),
     require('../../assets/voice/dismiss_10_poor_life_choices.mp3'),
   ],
   intro: [
