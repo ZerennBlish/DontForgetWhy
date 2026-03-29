@@ -31,7 +31,7 @@ import { getSnoozeMessage } from '../data/snoozeMessages';
 import { refreshWidgets } from '../widget/updateWidget';
 import { markNotifHandled, persistNotifHandled } from '../services/pendingAlarm';
 import { playAlarmSound, stopAlarmSound, isAlarmSoundPlaying } from '../services/alarmSound';
-import { playRandomClip, playIntroIfNeeded, stopVoice, getDismissVoiceEnabled } from '../services/voicePlayback';
+import { playRandomClip, playIntroIfNeeded, stopVoice } from '../services/voicePlayback';
 import { getDefaultTimerSound } from '../services/settings';
 import guessWhyIcons from '../data/guessWhyIcons';
 import type { RootStackParamList } from '../navigation/types';
@@ -325,11 +325,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         await resetSnoozeCount(alarm.id);
       }
     } catch {}
-    const dismissEnabled = await getDismissVoiceEnabled();
-    if (dismissEnabled) {
-      exitTimerRef.current = setTimeout(() => exitToLockScreen(), 10000);
-      await playRandomClip('dismiss');
-    }
+    exitTimerRef.current = setTimeout(() => exitToLockScreen(), 10000);
+    await playRandomClip('dismiss');
     exitToLockScreen();
   }, [cancelAllNotifications, exitToLockScreen, alarm, isTimer, timerId]);
 
@@ -601,14 +598,15 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   if (snoozeShameMessage) {
     return (
       <ImageBackground source={bgSource} style={{ flex: 1 }} resizeMode="cover" onError={hasAlarmPhoto ? () => setPhotoFailed(true) : undefined}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <TouchableOpacity activeOpacity={1} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }} onPress={() => { stopVoice(); exitToLockScreen(); }}>
           <View style={styles.container}>
             <Animated.View style={[styles.shameOverlay, { opacity: snoozeShameOpacity }]}>
               <Text style={styles.shameEmoji}>{'\u{1F634}'}</Text>
               <Text style={styles.shameMessage}>{snoozeShameMessage}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 16 }}>Tap anywhere to skip</Text>
             </Animated.View>
           </View>
-        </View>
+        </TouchableOpacity>
       </ImageBackground>
     );
   }

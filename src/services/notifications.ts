@@ -114,6 +114,9 @@ async function _createChannels(): Promise<void> {
   await notifee.deleteChannel('alarms_silent');
   await notifee.deleteChannel('alarms_silent_v2');
   await notifee.deleteChannel('alarms_silent_v3');
+  await notifee.deleteChannel('alarms_silent_v4');
+  await notifee.deleteChannel('alarms_true_silent_v1');
+  await notifee.deleteChannel('timer_silent_v1');
 
   // Preset alarm channels are created natively in MainApplication.onCreate()
   // via AlarmChannelHelper. All channels are SILENT (no sound) — MediaPlayer
@@ -184,9 +187,9 @@ async function _createChannels(): Promise<void> {
 
   // Silent — vibration only, no sound
   await notifee.createChannel({
-    id: 'alarms_silent_v4',
+    id: 'alarms_silent_v5',
     name: 'Alarms (Silent)',
-    importance: AndroidImportance.LOW,
+    importance: AndroidImportance.HIGH,
     vibration: true,
     vibrationPattern: [500, 500],
     lights: true,
@@ -196,16 +199,16 @@ async function _createChannels(): Promise<void> {
 
   // True Silent — no sound AND no vibration
   await notifee.createChannel({
-    id: 'alarms_true_silent_v1',
+    id: 'alarms_true_silent_v2',
     name: 'Alarms (True Silent)',
-    importance: AndroidImportance.LOW,
+    importance: AndroidImportance.HIGH,
     vibration: false,
     lights: true,
     lightColor: '#808080',
     bypassDnd: true,
   });
 
-  console.log('[Channels] Preset channels created:', ALARM_CHANNEL_ID, 'alarms_gentle_v4', 'alarms_urgent_v4', 'alarms_classic_v4', 'alarms_digital_v4', 'alarms_silent_v4', 'alarms_true_silent_v1');
+  console.log('[Channels] Preset channels created:', ALARM_CHANNEL_ID, 'alarms_gentle_v4', 'alarms_urgent_v4', 'alarms_classic_v4', 'alarms_digital_v4', 'alarms_silent_v5', 'alarms_true_silent_v2');
 
   await notifee.createChannel({
     id: TIMER_PROGRESS_CHANNEL_ID,
@@ -251,9 +254,9 @@ async function _createChannels(): Promise<void> {
 
   // Timer silent — no sound, no vibration
   await notifee.createChannel({
-    id: 'timer_silent_v1',
+    id: 'timer_silent_v2',
     name: 'Timers (Silent)',
-    importance: AndroidImportance.LOW,
+    importance: AndroidImportance.HIGH,
     vibration: false,
     bypassDnd: true,
   });
@@ -346,9 +349,9 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
   let customChannel = false;
 
   if (alarm.soundId === 'silent') {
-    channelId = 'alarms_silent_v4';
+    channelId = 'alarms_silent_v5';
   } else if (alarm.soundId === 'true_silent') {
-    channelId = 'alarms_true_silent_v1';
+    channelId = 'alarms_true_silent_v2';
   } else if (alarm.soundUri) {
     try {
       channelId = await getOrCreateSoundChannel(
@@ -367,7 +370,7 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
   // Override channel when global silence is active
   const isSilenced = await getSilenceAll();
   if (isSilenced) {
-    channelId = 'alarms_true_silent_v1';
+    channelId = 'alarms_true_silent_v2';
   }
 
   // Do NOT set sound in the notification payload — let the channel control it.
@@ -488,9 +491,9 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
   let channelId = ALARM_CHANNEL_ID;
   let customChannel = false;
   if (alarm.soundId === 'silent') {
-    channelId = 'alarms_silent_v4';
+    channelId = 'alarms_silent_v5';
   } else if (alarm.soundId === 'true_silent') {
-    channelId = 'alarms_true_silent_v1';
+    channelId = 'alarms_true_silent_v2';
   } else if (alarm.soundUri) {
     try {
       channelId = await getOrCreateSoundChannel(
@@ -506,7 +509,7 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
   // Override channel when global silence is active
   const snoozeSilenced = await getSilenceAll();
   if (snoozeSilenced) {
-    channelId = 'alarms_true_silent_v1';
+    channelId = 'alarms_true_silent_v2';
   }
 
   const trigger: TimestampTrigger = {
@@ -563,7 +566,7 @@ export async function scheduleTimerNotification(
   if (soundId === 'silent') {
     channelId = 'timer_vibrate_v1';
   } else if (soundId === 'true_silent') {
-    channelId = 'timer_silent_v1';
+    channelId = 'timer_silent_v2';
   } else if (soundUri) {
     try {
       channelId = await getOrCreateSoundChannel(
@@ -582,7 +585,7 @@ export async function scheduleTimerNotification(
   // Override channel when global silence is active
   const timerSilenced = await getSilenceAll();
   if (timerSilenced) {
-    channelId = 'timer_silent_v1';
+    channelId = 'timer_silent_v2';
   }
 
   const trigger: TimestampTrigger = {
