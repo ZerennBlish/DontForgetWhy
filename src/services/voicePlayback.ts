@@ -11,8 +11,7 @@
  * and resolves when done. Voice errors must NEVER crash the alarm flow.
  */
 
-import { NativeModules, Platform } from 'react-native';
-import { Asset } from 'expo-asset';
+import { NativeModules, Platform, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import voiceClips, { type VoiceCategory } from '../data/voiceClips';
 
@@ -64,8 +63,6 @@ export async function markIntroPlayed(): Promise<void> {
  */
 export async function playRandomClip(category: VoiceCategory): Promise<void> {
   try {
-    const thisPlayId = ++_playId;
-
     const enabled = await getVoiceEnabled();
     if (!enabled) return;
 
@@ -73,14 +70,12 @@ export async function playRandomClip(category: VoiceCategory): Promise<void> {
     if (!clips || clips.length === 0) return;
 
     await stopVoice();
-    if (thisPlayId !== _playId) return;
+    const thisPlayId = ++_playId;
 
     const source = clips[Math.floor(Math.random() * clips.length)];
-    const asset = Asset.fromModule(source as number);
-    await asset.downloadAsync();
+    const resolved = Image.resolveAssetSource(source as number);
+    const uri = resolved?.uri;
     if (thisPlayId !== _playId) return;
-
-    const uri = asset.localUri;
     if (!uri) return;
 
     _playing = true;
@@ -100,8 +95,6 @@ export async function playRandomClip(category: VoiceCategory): Promise<void> {
  */
 export async function playIntroIfNeeded(): Promise<boolean> {
   try {
-    const thisPlayId = ++_playId;
-
     const enabled = await getVoiceEnabled();
     if (!enabled) return false;
 
@@ -112,13 +105,11 @@ export async function playIntroIfNeeded(): Promise<boolean> {
     if (!clips || clips.length === 0) return false;
 
     await stopVoice();
-    if (thisPlayId !== _playId) return false;
+    const thisPlayId = ++_playId;
 
-    const asset = Asset.fromModule(clips[0] as number);
-    await asset.downloadAsync();
+    const resolved = Image.resolveAssetSource(clips[0] as number);
+    const uri = resolved?.uri;
     if (thisPlayId !== _playId) return false;
-
-    const uri = asset.localUri;
     if (!uri) return false;
 
     try {
