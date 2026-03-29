@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: March 28, 2026
+### Source of Truth · Updated: March 29, 2026
 
 ---
 
@@ -7,13 +7,13 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.6.1 (versionCode 20) live on Play Store |
+| **Current Version** | v2.0.0 (versionCode 21) — pending production build |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | P3 voice roasts — implementation |
+| **Current Focus** | P3 voice roasts — COMPLETE |
 | **Blocked By** | Nothing |
-| **Next Action** | Bundle voice clips as assets → wire audio playback → 2.0.0 release |
-| **EAS Credits** | ~21 remaining (reset April 12) |
+| **Next Action** | Production build → Play Store publish → P4 Chess/Checkers |
+| **EAS Credits** | ~19 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
 
@@ -25,7 +25,7 @@
 |-------|------|--------|--------|------------|
 | 1 | Housekeeping | ✅ Done | main | — |
 | 2 | Photos + Drawing + Backgrounds | ✅ Done | dev | Dev + Prod |
-| 3 | Voice Roasts | ⬜ Next | dev | Dev + Prod |
+| 3 | Voice Roasts | ✅ Done | dev | Dev + Prod |
 | 4 | Chess + Checkers | ⬜ Waiting | dev | Prod only |
 | 5 | Google Calendar Sync | ⬜ Waiting | dev | Dev + Prod |
 | 6 | Memory Score Expansion | ⬜ Waiting | dev | Prod only |
@@ -162,11 +162,11 @@
 
 ---
 
-## PHASE 3 — VOICE ROASTS
+## PHASE 3 — VOICE ROASTS ✅ COMPLETE
 
-**Status:** ⬜ Pre-work complete — voice clips generated, implementation next
+**Status:** ✅ Complete
 **Branch:** `dev`
-**New deps:** `expo-av`
+**New deps:** `expo-audio` (replaced `expo-av`)
 **External tool:** ElevenLabs (subscription active)
 **Build cost:** 1 dev build + 1 production build (or share dev build with Phase 2)
 
@@ -178,16 +178,32 @@
 
 ### Tasks
 
-- [ ] **3.1 Alarm fire voice lines**
+- [x] **3.1 Alarm fire voice lines**
   - Pre-recorded clips bundled in app assets
-  - Played via `expo-av` when alarm fires
+  - Played via native AlarmChannelModule when alarm fires
 
-- [ ] **3.2 Snooze shame voice escalation**
+- [x] **3.2 Snooze shame voice escalation**
   - Tier-matched to existing `snoozeTiers` in `snoozeMessages.ts`
   - Escalating sass per snooze count (4 tiers)
 
-- [ ] **3.3 Wake-up greeting ("Hey you")**
-  - Plays on alarm fire before/alongside main content
+- [x] **3.3 Timer voice lines**
+  - Voice clips play when timer fires
+
+- [x] **3.4 Guess Why voice lines (before/correct/wrong)**
+  - Voice clips for guess why flow stages
+
+- [x] **3.5 Intro line (first alarm only, one-time)**
+  - One-time intro clip on first alarm fire, tracked via AsyncStorage
+
+- [x] **3.6 Settings toggle (voice on/off + dismiss voice on/off)**
+  - Main voice roasts toggle in Settings
+  - Dismiss voice sub-toggle (conditional on main toggle)
+  - Dismiss voice off = instant exit, no clip
+
+- [x] **3.7 Native ALARM stream playback (AlarmChannelModule)**
+  - Voice clips play on ALARM audio stream via native MediaPlayer
+  - Audible regardless of media volume / ringer mode
+  - URI scheme handling: HTTP (dev), file:///android_asset/, file://, content://, bare path fallback
 
 ### Voice Character
 - Male, early 30s, American accent
@@ -202,13 +218,14 @@
 - Alarm fire: 17
 - Snooze tier 1: 4
 - Snooze tier 2: 6
-- Snooze tier 3: 5
+- Snooze tier 3: 4
 - Snooze tier 4: 6
 - Guess Why before: 5
 - Guess Why correct: 4
 - Guess Why wrong: 4
 - Dismiss: 10
-- Total: 62 clips
+- Timer: 11
+- Total: 68 clips (was 62 — removed 1 snooze3 clip too long, added 5 timer clips, timer category added)
 
 ### Blockers
 - None anticipated
@@ -217,6 +234,9 @@
 - All clips are pre-recorded and bundled — NO runtime API calls to ElevenLabs
 - Voice features are Pro-tier only (Phase 8 gates this)
 - Build with `--clear` flag when new audio assets are added
+- `expo-av` removed, replaced with `expo-audio` for UI chirp (soundFeedback.ts)
+- Voice clips play via native AlarmChannelModule, NOT expo-audio (ALARM stream requirement)
+- Silent alarm guard: voice clips still play for silent alarms, but alarm tone doesn't resume after
 
 ### Audit Gate
 - [ ] Full dual audit (Codex + Gemini) before production build
@@ -483,3 +503,4 @@ Batch native deps within phases to minimize dev builds.
 | Mar 28, 2026 | v1.6.0 shipped to Play Store. Full P2: image attachments, drawing/Skia, photo backgrounds, per-alarm photos, file splits, header consistency, dismiss fix. Audit 38 fixes: deferred drawing/photo saves, rollback on failure. Store listing updated with 8 new screenshots and full description rewrite. |
 | Mar 28, 2026 | v1.6.1 shipped. Draw on photos (annotate photo attachments with drawing tools), calendar tap-to-navigate, week view next 7 days. Audit 39 fixes: durable source photo, eraser disabled on photos, canvas readiness gate, loadDrawingData path fix. |
 | Mar 28, 2026 | P3 voice roasts pre-work complete. Custom ElevenLabs v3 voice designed. 62 voice clips generated across all categories: fire, snooze (4 tiers), guess why (before/correct/wrong), dismiss, intro. |
+| Mar 29, 2026 | P3 Voice Roasts complete. 68 voice clips across 11 categories. Native ALARM stream playback via AlarmChannelModule (plays regardless of media volume). expo-av removed, replaced with expo-audio for chirp. Settings toggles for voice and dismiss voice. Dismiss voice toggle conditional on main voice toggle. Silent alarm guard prevents alarm resume after voice. |

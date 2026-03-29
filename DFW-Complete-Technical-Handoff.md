@@ -1,6 +1,6 @@
 # Don't Forget Why — Complete Technical Handoff
-## Compiled: March 27, 2026
-## Covers: February 8 – March 27, 2026 (entire project history)
+## Compiled: March 29, 2026
+## Covers: February 8 – March 29, 2026 (entire project history)
 
 ---
 
@@ -132,6 +132,8 @@ DontForgetWhy/
 ├── package.json
 ├── ROADMAP.md
 ├── DFW-Complete-Technical-Handoff.md
+├── assets/
+│   └── voice/                     # 63 bundled MP3 voice clips
 └── src/
     ├── components/
     │   ├── AlarmCard.tsx
@@ -148,6 +150,7 @@ DontForgetWhy/
     ├── data/
     │   ├── alarmSounds.ts
     │   ├── appOpenQuotes.ts
+    │   ├── voiceClips.ts          # voice clip registry (10 categories, 63 clips)
     │   ├── guessWhyIcons.ts
     │   ├── guessWhyMessages.ts
     │   ├── memoryRanks.ts
@@ -201,6 +204,7 @@ DontForgetWhy/
     │   ├── reminderStorage.ts
     │   ├── riddleOnline.ts
     │   ├── settings.ts
+    │   ├── voicePlayback.ts        # voice playback service (native module bridge)
     │   ├── storage.ts
     │   ├── timerStorage.ts
     │   ├── triviaAI.ts
@@ -270,6 +274,7 @@ DontForgetWhy/
 | Mar 25 | 1.5.0 | 18 | Calendar feature (CalendarScreen), CalendarWidget (home screen mini calendar with dot indicators), AlarmListScreen refactor (AlarmsTab extraction), NotepadScreen refactor (NoteEditorModal extraction), dark capsule button uniformity, floating headers (editor/settings/riddle/calendar/memoryscore), BackButton visibility fix, 999 char note limit, initialDate prefill for create screens, daily recurring calendar mapping, timezone bucketing fix, widget alarm normalization, note sort UTC fix, week view locked to current week, tablet responsive (Onboarding/Sudoku/MemoryMatch/MemoryScore). Audits 33-35 complete. | Dev branch — ready to ship |
 | Mar 28 | 1.6.0 | 19 | Full Phase 2 production ship. Audit 38: 2 critical + 2 high fixed (Codex found, Gemini missed) — DrawingCanvas temp dir for drawings (no premature deletion), NotepadScreen sequential image save with rollback, useAlarmForm deferred photo deletion with rollback on failure. Play Store listing updated: 8 screenshots, full description rewrite. All P2 features shipped free (no Pro gate). | Production (live) |
 | Mar 28 | 1.6.1 | 20 | Draw on photos: annotate photo attachments with full drawing tools. DrawingCanvas backgroundImageUri, SkImage, onLayout sizing, durable source copy. NoteEditorModal "Draw On" option for photos. noteImageStorage URI-based JSON lookup, source photo persistence. Calendar tap-to-navigate on event cards, week view = next 7 days. Audit 39: 1 critical + 1 high + 2 medium fixed — durable source photo storage, eraser disabled on photos, canvas readiness gate. | Production (live) |
+| Mar 29 | 2.0.0 | 21 | P3 Voice Roasts: 63 voice clips, native ALARM stream playback, expo-av removed, expo-audio chirp, dismiss voice toggle, silent alarm guard, production URI handling | Pending production |
 
 ---
 
@@ -297,7 +302,7 @@ DontForgetWhy/
 
 ### Sound Mode System
 - Single cycling icon: 🔔 Sound → 📳 Vibrate → 🔇 Silent
-- Sound chirp via expo-av on Sound transition (with `Audio.setAudioModeAsync` for reliability)
+- Sound chirp via expo-audio on Sound transition (createAudioPlayer, volume 0.3, auto-release on completion)
 - Global Silence All in Settings with duration picker
 - Two-layer enforcement: schedule-time channel swap + fire-time MediaPlayer skip
 
@@ -310,6 +315,57 @@ DontForgetWhy/
 - Snooze: stops sound, sets snoozing flag (enforced — aborts on failure), cancels notification, schedules snooze, persists snooze notification ID via updateSingleAlarm, marks as handled
 - Solves "pulled out of app" problem — users handle alarms/timers from notification banner without leaving current app
 - **v1.4.0 behavior change:** Foreground DELIVERED events now play sound only — no auto-navigation to AlarmFireScreen. Users interact via notification action buttons or tap notification body to optionally open fire screen. Eliminates race condition where timer dismiss failed due to competing DELIVERED navigation.
+
+### Voice Roasts System
+
+#### Architecture
+Voice clips play through the native AlarmChannelModule on Android's ALARM audio stream (USAGE_ALARM), bypassing media volume. This ensures clips are always audible when an alarm fires, regardless of ringer mode or media volume setting.
+
+Two separate MediaPlayers in AlarmChannelHelper.java (embedded in plugins/withAlarmChannel.js):
+- sPlayer: alarm/timer sounds (looping)
+- sVoicePlayer: voice clips (non-looping, completion callback resolves JS promise)
+
+JS service (src/services/voicePlayback.ts) uses Image.resolveAssetSource to get URIs from bundled require() assets, then passes URIs to the native module. No expo-av involved.
+
+#### Audio Sequencing (AlarmFireScreen)
+1. Alarm sound plays for 1.5 seconds
+2. Alarm sound stops (stopAlarmSound)
+3. Intro clip plays if first alarm ever (one-time, stored in AsyncStorage)
+4. Random fire/timer clip plays (await playRandomClip)
+5. Alarm sound resumes (unless silent/true_silent alarm)
+
+#### Voice Categories (src/data/voiceClips.ts)
+- fire (16 clips): alarm fire lines
+- snooze1-4 (4/6/4/6 clips): tier-matched snooze shame
+- timer (11 clips): timer completion lines
+- guess_before (4 clips): before Guess Why question
+- guess_correct (3 clips): correct answer
+- guess_wrong (3 clips): wrong answer/skip
+- dismiss (10 clips): plays full clip before app exit
+- intro (1 clip): one-time first alarm greeting
+Total: 63 bundled MP3 files in assets/voice/
+
+#### Settings
+- Voice Roasts toggle: AsyncStorage key 'voiceRoastsEnabled', defaults to true (opt-out)
+- Dismiss Voice toggle: AsyncStorage key 'dismissVoiceEnabled', defaults to true, only shown when voice roasts is on
+- Settings UI in SettingsScreen.tsx, read by voicePlayback.ts
+
+#### Native URI Handling (plugins/withAlarmChannel.js)
+playVoiceClip handles multiple URI schemes for dev/production compatibility:
+- http/https (Metro dev server)
+- file:///android_asset/ (production bundled assets)
+- file:// (cached assets)
+- content:// (content provider URIs)
+- Bare resource name fallback (tries AssetManager then Uri.parse)
+
+#### Safety
+- playId counter prevents zombie playback after cancellation
+- sPendingVoiceCallback ensures JS promise always resolves (even on stop/error)
+- stopVoice() called in all exit paths (dismiss, snooze, guess why, unmount cleanup)
+- Voice errors never crash the alarm flow — all caught and logged
+
+#### Voice Character
+Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. Has coworkers (Denise), a life, opinions about being stuck in a phone. Clean — no profanity. Generated via ElevenLabs v3.
 
 ### Time Input System
 - Global preference: Scroll (rolodex) vs Type (text inputs) in Settings
@@ -879,6 +935,12 @@ All screens with back buttons unified to Notepad pattern: fixed header above scr
 
 No new native dependencies — expo-image-picker and expo-file-system already installed from P2 2.1/2.2.
 
+### Dependencies (P3)
+
+- `expo-av` removed (was only used for chirp sound feedback)
+- `expo-audio` added (chirp/UI sound feedback via createAudioPlayer)
+- Voice clips use native AlarmChannelModule, NOT expo-audio (ALARM stream requirement)
+
 **38 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
 
 ---
@@ -1035,7 +1097,7 @@ No new native dependencies — expo-image-picker and expo-file-system already in
 - 180dp ≈ 3 cells on S23 Ultra
 - Android full-screen intent only fires when screen is OFF or on lock screen. Screen ON = heads-up banner only (Android 10+). Not a bug.
 - Dev builds and production builds have different signing keys (signature mismatch). Cannot install dev build over Play Store production build without uninstalling. Test on emulators for dev, phone gets updates through Play Store.
-- expo-av can't play `content://` URIs — needs bundled `require()` assets
+- expo-av removed (P3) — was only used for chirp. Replaced by expo-audio. Voice clips use native AlarmChannelModule.
 - expo-clipboard is pure JS (no build needed)
 - Native module changes require uninstall/reinstall (OTA doesn't replace native binaries)
 - EAS build cache can use stale native code — use `--clear-cache`
@@ -1158,11 +1220,16 @@ No new native dependencies — expo-image-picker and expo-file-system already in
 - [x] 2.6 Tablet responsive pass (Onboarding, Sudoku, MemoryMatch, MemoryScore)
 - [x] 2.7 Calendar widget (CalendarWidget — mini month grid with colored dot indicators)
 
-**Phase 3 — Voice Roasts** (ElevenLabs pre-recorded, bundled via expo-av)
-- Voice roasts (P3): 62 pre-recorded clips generated in ElevenLabs v3, bundled as assets. No runtime API calls. Implementation pending.
-- 3.1 Alarm fire voice lines
-- 3.2 Snooze shame voice escalation (tier-matched)
-- 3.3 Wake-up greeting ("Hey you")
+**Phase 3 — Voice Roasts** ✅ COMPLETE (March 29, 2026)
+- 63 voice clips across 10 categories, native ALARM stream playback via AlarmChannelModule
+- expo-av removed, expo-audio added for chirp. Voice clips use native module, not expo-audio.
+- [x] 3.1 Alarm fire voice lines
+- [x] 3.2 Snooze shame voice escalation (tier-matched, 4 tiers)
+- [x] 3.3 Timer voice lines
+- [x] 3.4 Guess Why voice lines (before/correct/wrong)
+- [x] 3.5 Intro line (first alarm only, one-time)
+- [x] 3.6 Settings toggle (voice on/off + dismiss voice on/off)
+- [x] 3.7 Native ALARM stream playback (AlarmChannelModule)
 
 **Phase 4 — New Games** (No Build — pure JS)
 - 4.1 Chess vs CPU (chess.js)
@@ -1183,7 +1250,7 @@ No new native dependencies — expo-image-picker and expo-file-system already in
 - 8.5 Reminder-fire flow with Guess Why support
 
 **Deferred — Expo SDK 55 Upgrade (after P3)**
-- expo-av removed in SDK 55 → migrate to expo-audio (aligns with P3 voice work)
+- expo-av already removed in P3 → expo-audio in place (no migration needed for SDK 55)
 - New Architecture mandatory → verify react-native-worklets 0.5.1 compatibility
 - Verify Notifee New Architecture support
 - expo-clipboard content property removed → use getStringAsync()

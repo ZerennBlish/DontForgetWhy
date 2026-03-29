@@ -46,6 +46,21 @@ export async function setVoiceEnabled(enabled: boolean): Promise<void> {
   await AsyncStorage.setItem(VOICE_ENABLED_KEY, String(enabled));
 }
 
+const DISMISS_VOICE_KEY = 'dismissVoiceEnabled';
+
+export async function getDismissVoiceEnabled(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(DISMISS_VOICE_KEY);
+    return raw !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+export async function setDismissVoiceEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(DISMISS_VOICE_KEY, String(enabled));
+}
+
 export async function hasIntroPlayed(): Promise<boolean> {
   const raw = await AsyncStorage.getItem(INTRO_PLAYED_KEY);
   return raw === 'true';

@@ -1,30 +1,19 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 
-let chirpSound: Audio.Sound | null = null;
+const chirpSource = require('../../assets/chirp.mp3');
 
 export async function playChirp(): Promise<void> {
   try {
-    if (chirpSound) {
-      try { await chirpSound.unloadAsync(); } catch {}
-      chirpSound = null;
-    }
-    await Audio.setAudioModeAsync({
-      shouldDuckAndroid: false,
-      staysActiveInBackground: false,
-      playsInSilentModeIOS: true,
-    });
-    const { sound } = await Audio.Sound.createAsync(
-      require('../../assets/chirp.mp3'),
-      { volume: 0.3, shouldPlay: true }
-    );
-    chirpSound = sound;
-    sound.setOnPlaybackStatusUpdate((status) => {
-      if (status.isLoaded && status.didJustFinish) {
-        sound.unloadAsync().catch(() => {});
-        if (chirpSound === sound) chirpSound = null;
+    const player = createAudioPlayer(chirpSource);
+    player.volume = 0.3;
+
+    const sub = player.addListener('playbackStatusUpdate', (status) => {
+      if (status.didJustFinish) {
+        sub.remove();
+        player.release();
       }
     });
-  } catch {
-    // silently ignore if expo-av unavailable
-  }
+
+    player.play();
+  } catch {}
 }

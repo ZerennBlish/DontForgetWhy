@@ -25,7 +25,7 @@ import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import notifee from '@notifee/react-native';
 import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
-import { getVoiceEnabled, setVoiceEnabled } from '../services/voicePlayback';
+import { getVoiceEnabled, setVoiceEnabled, getDismissVoiceEnabled, setDismissVoiceEnabled } from '../services/voicePlayback';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,6 +47,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [voiceRoasts, setVoiceRoastsState] = useState(true);
+  const [dismissVoice, setDismissVoiceState] = useState(true);
   const [pickerVisible, setPickerVisible] = useState(false);
   const pickedAccentRef = useRef(customAccent || colors.accent);
   const pickedBgRef = useRef(customBackground || '#121220');
@@ -293,6 +294,7 @@ export default function SettingsScreen({ navigation }: Props) {
       } catch {}
     })();
     getVoiceEnabled().then(setVoiceRoastsState).catch(() => {});
+    getDismissVoiceEnabled().then(setDismissVoiceState).catch(() => {});
   }, []);
 
   useFocusEffect(
@@ -763,6 +765,27 @@ export default function SettingsScreen({ navigation }: Props) {
           Sarcastic voice lines when your alarm fires. He's not mean... he's just tired.
         </Text>
       </View>
+
+      {voiceRoasts && (
+        <View style={[styles.card, { marginTop: 16 }]}>
+          <View style={styles.row}>
+            <Text style={styles.label}>Dismiss Voice</Text>
+            <Switch
+              value={dismissVoice}
+              onValueChange={async (val) => {
+                hapticLight();
+                setDismissVoiceState(val);
+                await setDismissVoiceEnabled(val);
+              }}
+              trackColor={{ false: colors.border, true: colors.accent }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+          <Text style={styles.description}>
+            Play a voice clip when you dismiss. Turn off for faster exits.
+          </Text>
+        </View>
+      )}
 
       <View style={[styles.card, { marginTop: 16 }]}>
         <View style={styles.row}>

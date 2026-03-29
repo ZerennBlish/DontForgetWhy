@@ -16,7 +16,7 @@
     "@shopify/react-native-skia": "2.2.12",
     "date-fns": "^4.1.0",
     "expo": "~54.0.33",
-    "expo-av": "~16.0.8",
+    "expo-audio": "~1.1.1",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.20",

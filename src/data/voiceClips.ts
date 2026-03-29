@@ -1,5 +1,3 @@
-import type { AVPlaybackSource } from 'expo-av';
-
 export type VoiceCategory =
   | 'fire'
   | 'snooze1'
@@ -13,7 +11,7 @@ export type VoiceCategory =
   | 'intro'
   | 'timer';
 
-const voiceClips: Record<VoiceCategory, AVPlaybackSource[]> = {
+const voiceClips: Record<VoiceCategory, number[]> = {
   fire: [
     require('../../assets/voice/fire_02_dont_care_but_you_might.mp3'),
     require('../../assets/voice/fire_03_million_places.mp3'),
@@ -98,6 +96,11 @@ const voiceClips: Record<VoiceCategory, AVPlaybackSource[]> = {
     require('../../assets/voice/timer_04_standing_here.mp3'),
     require('../../assets/voice/timer_05_burnt.mp3'),
     require('../../assets/voice/timer_06_not_a_microwave.mp3'),
+    require('../../assets/voice/timer_07_babysitter.mp3'),
+    require('../../assets/voice/timer_08_whole_time.mp3'),
+    require('../../assets/voice/timer_09_exciting_life.mp3'),
+    require('../../assets/voice/timer_11_stove.mp3'),
+    require('../../assets/voice/timer_12_trusted_me.mp3'),
   ],
 };
 

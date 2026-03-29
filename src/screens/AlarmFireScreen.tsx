@@ -31,7 +31,7 @@ import { getSnoozeMessage } from '../data/snoozeMessages';
 import { refreshWidgets } from '../widget/updateWidget';
 import { markNotifHandled, persistNotifHandled } from '../services/pendingAlarm';
 import { playAlarmSound, stopAlarmSound, isAlarmSoundPlaying } from '../services/alarmSound';
-import { playRandomClip, playIntroIfNeeded, stopVoice } from '../services/voicePlayback';
+import { playRandomClip, playIntroIfNeeded, stopVoice, getDismissVoiceEnabled } from '../services/voicePlayback';
 import { getDefaultTimerSound } from '../services/settings';
 import guessWhyIcons from '../data/guessWhyIcons';
 import type { RootStackParamList } from '../navigation/types';
@@ -108,7 +108,6 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   // App.tsx won't navigate here a second time for the same notification
   // (e.g., DELIVERED showed full-screen, then PRESS fires when user opens app).
   useEffect(() => {
-    console.log('[AlarmFire] mounted — notificationId:', notificationId, 'timerId:', timerId, 'timerNotificationId:', timerNotificationId, 'fromNotification:', fromNotification, 'postGuessWhy:', postGuessWhy, 'alarmId:', alarm?.id);
     if (notificationId) {
       markNotifHandled(notificationId);
     }
@@ -235,17 +234,12 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   const cancelAllNotifications = useCallback(async () => {
     Vibration.cancel();
     stopAlarmSound();
-    console.log('[AlarmFire] cancelAllNotifications — isTimer:', isTimer,
-      'timerNotificationId:', timerNotificationId, 'timerId:', timerId,
-      'notificationId:', notificationId);
     const promises: Promise<void>[] = [];
     if (isTimer) {
       if (timerNotificationId) {
-        console.log('[AlarmFire] cancelling timer-done notification:', timerNotificationId);
         promises.push(cancelTimerNotification(timerNotificationId).catch(() => {}));
       }
       if (timerId) {
-        console.log('[AlarmFire] cancelling timer countdown:', timerId);
         promises.push(cancelTimerCountdownNotification(timerId).catch(() => {}));
       }
     } else if (alarm) {
@@ -277,7 +271,6 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       );
     }
     await Promise.all(promises);
-    console.log('[AlarmFire] cancelAllNotifications — done');
   }, [alarm, isTimer, timerNotificationId, timerId, notificationId]);
 
   const exitToLockScreen = useCallback(() => {
@@ -285,7 +278,6 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   }, []);
 
   const handleDismiss = useCallback(async () => {
-    console.log('[AlarmFire] handleDismiss — isTimer:', isTimer, 'alarmId:', alarm?.id);
     try {
       await cancelAllNotifications();
       await stopVoice();
@@ -316,9 +308,11 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         await resetSnoozeCount(alarm.id);
       }
     } catch {}
-    console.log('[AlarmFire] handleDismiss — complete, playing dismiss clip');
-    exitTimerRef.current = setTimeout(() => exitToLockScreen(), 8000);
-    await playRandomClip('dismiss');
+    const dismissEnabled = await getDismissVoiceEnabled();
+    if (dismissEnabled) {
+      exitTimerRef.current = setTimeout(() => exitToLockScreen(), 10000);
+      await playRandomClip('dismiss');
+    }
     exitToLockScreen();
   }, [cancelAllNotifications, exitToLockScreen, alarm, isTimer, timerId]);
 
@@ -393,7 +387,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     // Exit after showing shame message (extra 1s so user can read the roast)
     exitTimerRef.current = setTimeout(() => {
       exitToLockScreen();
-    }, 3500);
+    }, 5000);
   }, [cancelAllNotifications, exitToLockScreen, alarm, snoozeShameOpacity]);
 
   const handleGuessWhy = useCallback(async () => {
