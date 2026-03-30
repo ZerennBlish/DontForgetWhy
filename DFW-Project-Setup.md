@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 29, 2026
+**Last updated:** March 30, 2026*
 
 ---
 
@@ -101,7 +101,8 @@ DontForgetWhy/
     │   ├── ShareNoteModal.tsx
     │   ├── SoundPickerModal.tsx
     │   ├── TimePicker.tsx
-    │   └── UndoToast.tsx
+    │   ├── UndoToast.tsx
+    │   └── VoiceMemoCard.tsx         # Reusable voice memo list card with inline play/pause
     ├── data/
     │   ├── alarmSounds.ts
     │   ├── appOpenQuotes.ts
@@ -143,7 +144,9 @@ DontForgetWhy/
     │   ├── SettingsScreen.tsx
     │   ├── SudokuScreen.tsx
     │   ├── TimerScreen.tsx
-    │   └── TriviaScreen.tsx
+    │   ├── TriviaScreen.tsx
+    │   ├── VoiceMemoDetailScreen.tsx # Voice memo detail/edit/playback screen
+    │   └── VoiceRecordScreen.tsx     # Dedicated voice recording screen
     ├── services/
     │   ├── alarmPhotoStorage.ts    # per-alarm photo save/delete/exists
     │   ├── alarmSound.ts
@@ -160,6 +163,8 @@ DontForgetWhy/
     │   ├── riddleOnline.ts
     │   ├── settings.ts
     │   ├── voicePlayback.ts        # voice playback service (native module bridge)
+    │   ├── voiceMemoFileStorage.ts   # Voice memo .m4a file management (expo-file-system)
+    │   ├── voiceMemoStorage.ts       # Voice memo AsyncStorage CRUD with soft-delete
     │   ├── storage.ts
     │   ├── timerStorage.ts
     │   ├── triviaAI.ts
@@ -173,7 +178,8 @@ DontForgetWhy/
     │   ├── note.ts
     │   ├── reminder.ts
     │   ├── timer.ts
-    │   └── trivia.ts
+    │   ├── trivia.ts
+    │   └── voiceMemo.ts              # VoiceMemo interface
     ├── utils/
     │   ├── connectivity.ts
     │   ├── fullScreenPermission.ts
@@ -277,19 +283,19 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.7.0 (versionCode 21) — pending production build |
-| Production status | v1.6.1 live on Google Play, v1.7.0 pending |
+| Current version | v1.7.0 (versionCode 21) live. Voice memo feature on dev branch, not yet version-bumped. |
+| Production status | v1.7.0 live on Google Play |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
 | Phase 3 (Voice Roasts) | COMPLETE |
-| Audit status | Audits 40-42 complete, all findings resolved |
+| Audit status | Audits 40-42 complete, all findings resolved. Audit 44 (voice memo feature) complete. |
 | Jest tests | 222 passing on testing-setup branch |
-| EAS build credits | ~17 remaining (reset April 12) |
+| EAS build credits | ~15 remaining (reset April 12) |
 
 ### Git Branches
 | Branch | Purpose | Status |
 |--------|---------|--------|
-| `main` | Production. v1.6.1. | Active, clean |
-| `dev` | P3 feature work complete. v1.7.0 pending build. | Active — all new work goes here |
+| `main` | Production. v1.7.0. | Active, clean |
+| `dev` | Voice memo feature + calendar fixes + audit 44 fixes. Not yet version-bumped. | Active — all new work goes here |
 | `testing-setup` | Jest suite (222 tests). | Reconciled with main (Phase 1.2) |

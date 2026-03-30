@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 29, 2026
+**Last updated:** March 30, 2026*
 
 ---
 
@@ -13,7 +13,9 @@
 - **Timers** — 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule
   - Notification action buttons: "Dismiss" button on timer completion notification
 - **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7)
+  - **Voice Memos:** Standalone voice memos with dedicated recording screen (VoiceRecordScreen — tap-to-start/tap-to-stop, preview playback, save/discard flow), detail/playback screen (VoiceMemoDetailScreen — seekable progress bar, back/forward 5s skip, editable title and note fields, auto-save on exit). NotepadScreen integrates voice memos via content filter tabs (All/Notes/Voice), VoiceMemoCard with inline play/pause and mini progress bar. Mic button in header for quick record access. Note-attached voice memos share a 3-attachment limit with images.
 - **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing). Week view locked to current week (always shows Sunday–Saturday containing today). Tapping a date outside current week while in week view auto-switches to day view. Supports initialDate route param for deep-linking from widget or other screens.
+  - **Calendar fixes (dev):** Tappable event cards — alarm cards navigate to CreateAlarm, reminder cards to CreateReminder, note cards to Notepad. Annual/date-specific recurring reminders now correctly show only on matching month/day (previously showed on every day due to missing dueDate check).
 - **Calendar Widget** — Home screen widget showing current month as a mini grid. Colored dots per day: red=alarms, blue=reminders, green=notes. Tap any day → opens CalendarScreen focused on that date. Today highlighted with accent background. Past days dimmed. Adjacent month days shown in secondary color. Registered as third widget in app.json (minWidth 250dp, minHeight 280dp).
 - **DND bypass** — Notifee full-screen intent + Samsung onboarding
 - **Full-screen alarm fire** — lightbulb background (or per-alarm photo if set), snooze shame (4 tiers × 7 messages), shows 🔇 when silenced
@@ -59,6 +61,7 @@
 ### Home Screen Widgets (2)
 - **DFW (DetailedWidget):** Title, two-column timers/alarms, reminder bars, nav capsules. Themed.
 - **DFW Notes (NotepadWidget):** Header with balanced centering, up to 4 pinned notes, footer. Themed.
+  NotepadWidget now shows voice memos alongside notes — combined items sorted by createdAt descending, sliced to 4. Mic quick-record button in widget header. Voice memo click actions deep-link to VoiceMemoDetailScreen or VoiceRecordScreen.
 - Both: 180dp min, resizable, deep-link to app sections, privacy guards on private alarms
 
 ### Theme System
@@ -225,3 +228,28 @@ All screens with back buttons unified to Notepad pattern: fixed header above scr
 ### 2.8 Dependencies (P2 2.3/2.4)
 
 No new native dependencies — expo-image-picker and expo-file-system already installed from P2 2.1/2.2.
+
+## 3. Voice Memo Implementation Details
+
+### VoiceRecordScreen
+Dedicated recording screen accessed via NotepadScreen mic button or widget RECORD_VOICE action. Tap large circle to start recording (requests RECORD_AUDIO permission on first use), tap again to stop. Timer shows elapsed MM:SS. After stopping, preview card appears with play/pause button and progress bar. Save copies .m4a from cache to permanent storage via `saveVoiceMemoFile`, creates VoiceMemo record, refreshes widgets. Discard deletes temp file. Transition guard (`transitionRef`) prevents rapid-tap races. Save guard (`savingRef`) blocks exit during save. AppState listener preserves partial recording on background.
+
+### VoiceMemoDetailScreen
+Title + note editing with auto-save on back (compares against initial refs, calls `updateVoiceMemo` if changed). Seekable playback: 44px touch target wrapping 6px progress bar, touch responders for tap-to-seek and drag-to-seek, back/forward 5s skip buttons. `useFocusEffect` cleanup pauses on screen blur. `Number.isFinite` validation on all seek positions. Soft delete with 30-day pattern and sassy confirmation dialog.
+
+### VoiceMemoCard
+Reusable list card component (`React.memo` wrapped). Play/pause button (36x36 circle, #A29BFE), center column with title (fallback "Voice Memo"), subtitle (formatted duration · relative time), mini progress bar (3px, only visible when progress > 0). Optional delete button. Left purple border accent (#A29BFE).
+
+### NotepadScreen Integration
+Content filter tabs (All/Notes/Voice) render between header and active/deleted filter. Both filter systems compose: content filter controls item type, active/deleted controls soft-delete state. Combined `ListItem` union type (`{ type: 'note'; data: Note } | { type: 'voiceMemo'; data: VoiceMemo }`). `listData` useMemo merges and sorts by createdAt descending in 'all' mode. Inline playback via single `createAudioPlayer` ref — `playerListenerRef` cleaned up before `player.release()`. `useFocusEffect` cleanup stops playback on screen blur. Voice memo undo toast mirrors note undo pattern.
+
+### Storage
+- `voiceMemoStorage.ts`: AsyncStorage CRUD with soft-delete. All mutator functions re-throw after console.error (audit 44 finding)
+- `voiceMemoFileStorage.ts`: expo-file-system new API (File, Directory, Paths). Files at `${Paths.document}voice-memos/{memoId}_{timestamp}.m4a`
+- `noteVoiceMemoStorage.ts`: separate service for note-attached voice memos (different from standalone)
+
+### Permission
+`android.permission.RECORD_AUDIO` added to app.json android.permissions array.
+
+### Widget
+NotepadWidget renders mixed notes + voice memos sorted by createdAt, sliced to 4. `VoiceMemoCell` with mic emoji, title, duration on #2A2A3E background. `RECORD_VOICE` and `OPEN_VOICE_MEMO__{id}` click actions route through `pendingVoiceAction` in AsyncStorage, consumed by `useNotificationRouting`.

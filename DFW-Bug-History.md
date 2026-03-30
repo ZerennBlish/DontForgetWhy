@@ -1,12 +1,12 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 29, 2026
+**Last updated:** March 30, 2026*
 
 ---
 
 ## 1. Summary Statistics
 
-- **~90+ unique bugs** found and fixed across the project lifetime
+- **~93+ unique bugs** found and fixed across the project lifetime
 - **Found by Zerenn:** ~30 (manual testing, device observation)
 - **Found by auditors (Codex/Gemini):** ~50
 - **Found by Opus/TypeScript:** ~10
@@ -249,6 +249,7 @@
 | 35 | Mar 25 | Tablet responsive (Onboarding + Sudoku) | Codex: 1 MEDIUM (Sudoku paused/won not width-capped). Fixed. Gemini: All PASS. |
 | 36 | Mar 26 | Note image attachments (P2 2.1) | Self-audit during implementation. 1 HIGH (transaction order), 2 MEDIUM (duplicate keys, image-only notes blocked), 2 MEDIUM (print broken images), 1 LOW (thumbnail memory). All resolved. Emoji picker removed. |
 | 37 | Mar 26 | Drawing canvas (P2 2.2) | 3 HIGH (drawing persistence — saveNoteImage .png extension + companion .json copy, performance — memoize parsedStrokes, loadDrawingData reads JPGs as text), 2 MEDIUM (image cache after edit — new filename cache bust, print/share MIME detection), 2 LOW (empty canvas save block, cancel confirmation). All resolved. |
+| 44 | Mar 30 | Voice memo feature (full) | Codex: 3 HIGH (VoiceRecordScreen rapid-tap race, recorder.stop not awaited, NotepadScreen listener leak), 2 MEDIUM (audio listener stale ref, AsyncStorage race). Gemini: 3 HIGH (rapid-tap race + save exit paths active during save + voiceMemoStorage swallows errors), 3 MEDIUM (detail screen no focus cleanup, seek validation, widget sort order). 8 findings fixed. voiceMemoFileStorage.ts false positive from Codex (File.copy is sync in new expo-file-system API). |
 
 ### Audit 33 — March 25, 2026 (Codex + Gemini)
 **Scope:** Foreground notification refactor, calendar feature, AlarmsTab extraction, NoteEditorModal extraction, UI polish (dark capsules, floating headers, BackButton)
@@ -274,4 +275,22 @@
 - Fix: Wrapped shame overlay in TouchableOpacity with stopVoice + exitToLockScreen. Added "Tap anywhere to skip" hint text.
 - Version: v1.7.0
 
-**38 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+### Bug: Calendar annual/date-specific recurring reminders show on every day
+- **Found:** Mar 30, 2026 by Zerenn
+- **Cause:** `getItemsForDate` and `markedDates` in CalendarScreen treated `recurring: true` + empty `days` array as "daily recurring" without checking `dueDate`. Annual reminders saved with `recurring: true, days: [], dueDate: set` — calendar showed them on every day
+- **Fix:** When recurring + empty days + dueDate exists, match only month/day of dueDate (annual pattern). Only fall through to "every day" push when no dueDate. Fixed in both `getItemsForDate` and `markedDates` useMemo
+- **Version:** pre-v1.8.0 (dev)
+
+### Bug: Calendar event cards not tappable
+- **Found:** Mar 30, 2026 by Zerenn
+- **Cause:** All three card types in `renderEventCard` used plain `<View>` wrappers with no `onPress` handler
+- **Fix:** Wrapped each card type in `<TouchableOpacity>` with `activeOpacity={0.7}` and `hapticLight()`. Alarm → `CreateAlarm`, Reminder → `CreateReminder`, Note → `Notepad`. Added `navigation` to `renderEventCard` dependency array
+- **Version:** pre-v1.8.0 (dev)
+
+### Bug: AlarmFireScreen merge conflict markers committed to repo
+- **Found:** Mar 30, 2026 by Zerenn
+- **Cause:** Merge conflict markers (`<<<<<<< / ======= / >>>>>>>`) accidentally committed during laptop-to-desktop sync. `git status` showed clean because markers were part of the committed content
+- **Fix:** Resolved conflict blocks manually, keeping correct code
+- **Version:** pre-v1.8.0 (dev)
+
+**44 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.

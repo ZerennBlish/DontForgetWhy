@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 29, 2026
+**Last updated:** March 30, 2026
 
 ---
 
@@ -118,6 +118,8 @@ All app-opening approaches failed (Linking.openURL, OPEN_URI, deep links). Solut
 ### Evolution
 Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWidgetCompact added. Mar 12: Trimmed to 2 — DetailedWidget redesigned, compacts deleted. Mar 25: CalendarWidget added — mini monthly calendar grid with colored dot indicators. Third widget alongside DetailedWidget and NotepadWidget. Uses getCalendarWidgetData() in widgetTaskHandler.ts for data loading. Click actions: OPEN_CALENDAR (opens CalendarScreen) and OPEN_CALENDAR_DAY__YYYY-MM-DD (opens CalendarScreen with date). pendingCalendarAction consumed in App.tsx on cold start and app resume. Widget alarm loader includes normalization for legacy alarm payloads (mode, days array, numeric weekday format) — does not import loadAlarms() to stay headless-safe, duplicates normalization inline.
 
+**NotepadWidget voice memo integration:** Widget now shows voice memos alongside notes. Combined items sorted by `createdAt` descending, sliced to 4 total. `VoiceMemoCell` component renders mic emoji + title + formatted duration on dark purple (#2A2A3E) background. Click actions: `OPEN_VOICE_MEMO__{id}` opens VoiceMemoDetailScreen, `RECORD_VOICE` opens VoiceRecordScreen. Widget task handler stores `pendingVoiceAction` in AsyncStorage (type: 'record' or 'detail' with memoId), routed by `useNotificationRouting` on cold start, warm start, and foreground resume.
+
 ### CalendarWidget
 - Mini month grid: 7 columns × 5-6 rows, weekday header, month/year label
 - Colored dots: red (#FF6B6B) alarms, blue (#4A90D9) reminders, green (#55EFC4) notes — up to 3 per day
@@ -214,3 +216,25 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 | `src/services/settings.ts` | MODIFIED | Removed ghost voiceRoasts field |
 | `src/utils/soundFeedback.ts` | MODIFIED | expo-av → expo-audio migration |
 | `package.json` | MODIFIED | expo-av removed, expo-audio + expo-asset added |
+
+---
+
+## 6. Voice Memo Audio System
+
+### Recording (expo-audio, NOT native AlarmChannelModule)
+- Voice memos record and play through the **MEDIA stream** via expo-audio — they are user-initiated playback, not alarm-stream audio
+- Recording uses expo-audio's `useAudioRecorder` hook with `RecordingPresets.HIGH_QUALITY` — AAC codec, `.m4a` output
+- `requestRecordingPermissionsAsync()` gates recording; `android.permission.RECORD_AUDIO` added to app.json
+- Transition guard pattern (`transitionRef`) prevents rapid-tap race conditions on record/stop toggle — if `transitionRef.current` is true, `handleRecordPress` returns immediately. Both `startRecording` and `stopRecording` set it true at entry, false in `finally`
+- Save guard pattern (`savingRef`) blocks Back/Discard handlers during the async save operation
+- `recorder.stop()` is `await`ed everywhere before reading status/URI/duration — non-awaited stop reads stale data
+- AppState listener stops recording on app background, preserves the partial recording for preview (doesn't discard)
+
+### Playback
+- **VoiceRecordScreen:** `useAudioPlayer` hook for preview after recording. `useAudioPlayerStatus` for position/duration. `didJustFinish` resets to start
+- **VoiceMemoDetailScreen:** seekable progress bar (44px touch target, 6px visual bar), back/forward 5s, `useFocusEffect` cleanup pauses on screen blur. `Number.isFinite` validation on all seek values with try/catch on `seekTo`
+- **NotepadScreen (inline):** single player instance in `useRef` via `createAudioPlayer` (imperative, not hooks). `addListener('playbackStatusUpdate')` for finish detection. Listener ref (`playerListenerRef`) cleaned up before `player.release()` in `stopPlayback`. Focus cleanup via `useFocusEffect` stops playback when screen loses focus
+- **NoteEditorModal (note-attached):** `useAudioPlayer`/`useAudioPlayerStatus` hooks for per-note voice memo playback. Seekable via touch responders. Shared 3-attachment limit (images + voice memos)
+
+### Key distinction from Voice Roasts
+Voice roasts use the native `AlarmChannelModule` on ALARM stream because they play during alarm fires and must be audible regardless of ringer mode. Voice memos are user-initiated — MEDIA stream via expo-audio is correct.

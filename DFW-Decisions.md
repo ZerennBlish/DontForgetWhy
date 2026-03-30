@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 29, 2026
+**Last updated:** March 30, 2026*
 
 ---
 
@@ -94,6 +94,21 @@
 **Tablet responsive — scale, don't redesign (Mar 25):** Used responsive maxWidth constants (CONTENT_MAX_WIDTH) capped at 500-600px rather than redesigning layouts. Phone experience unchanged. Tablet gets wider content that still looks intentional. Applied to: Onboarding (maxWidth 500), Sudoku (grid 540, pad 600), MemoryMatch (content 500, grid 600), MemoryScore (floating back button).
 
 **Dismiss Voice toggle removed, double-tap is sufficient (Mar 29):** Removed the per-category "Dismiss Voice" setting toggle. Two controls is the right amount: master Voice Roasts on/off for people who want no voice ever, and double-tap to skip any individual clip. Per-category toggles create settings bloat and set a precedent for snooze toggle, timer toggle, etc. In an app where simplicity is brand, fewer options is better.
+
+### Voice memos as standalone items, not note attachments (Mar 30)
+Initially planned voice memos as a field on the Note type (like images). Changed to standalone VoiceMemo type with own storage because: (1) voice memo users want quick capture — tap widget, record, done. Attaching to a note adds friction. (2) NotepadScreen filter tabs let users switch between notes and voice memos cleanly. (3) Optional `noteId` field allows future linking without coupling the data models. (4) Standalone items show in widget feed naturally without loading parent notes.
+
+### Voice memo shared 3-attachment limit (Mar 30)
+Images and voice memos share a 3-attachment limit per note (when attached via NoteEditorModal). Keeps storage per-note bounded without separate limits to explain. Matches the existing image-only limit users are already familiar with.
+
+### NotepadScreen content filter tabs, not a separate screen (Mar 30)
+Voice memos could have been a separate VoiceMemoListScreen. Instead, integrated into NotepadScreen with filter tabs (All/Notes/Voice) because: the notepad IS the quick-capture hub. Switching screens adds friction. Widget deep-links use `initialFilter` route param to jump straight to the right view. The existing active/deleted filter composes cleanly with the content filter — both work independently.
+
+### voiceMemoStorage re-throws errors (Mar 30)
+Unlike other storage services that swallow errors (catch → log → return void), voice memo storage re-throws after logging. This lets callers show error UI instead of false success. Audit 44 finding. Other storage services could be migrated to this pattern in the future but aren't worth the churn now.
+
+### Voice memos play through MEDIA stream, not ALARM stream (Mar 30)
+Voice roasts use the native AlarmChannelModule on ALARM stream because they play during alarm fires and must be audible regardless of ringer mode. Voice memos are user-initiated playback — MEDIA stream via expo-audio is correct. No native module needed.
 
 ---
 

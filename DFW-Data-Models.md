@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 29, 2026
+**Last updated:** March 30, 2026
 
 ---
 
@@ -69,6 +69,29 @@ interface UserTimer {
 
 ---
 
-## 5. Key AsyncStorage Keys
+## 5. VoiceMemo
 
-`'alarms'`, `'reminders'`, `'activeTimers'`, `'notes'`, `'userTimers'`, `'appSettings'`, `'silenceAllAlarms'`, `'appTheme'`, `'customTheme'`, `'hapticsEnabled'`, `'onboardingComplete'`, `'defaultTimerSound'`, `'bg_main'` (background photo URI), `'bg_overlay_opacity'` (background overlay 0.3-0.8), plus game stats (guessWhyStats, forgetLog, memoryMatchScores, sudokuBestScores, dailyRiddleStats, triviaStats), widget pins (widgetPinnedPresets, widgetPinnedAlarms, widgetPinnedReminders, widgetPinnedNotes), per-alarm (`snoozeCount_{alarmId}`, `snoozing_{alarmId}`), pending actions (pendingTabAction, pendingAlarmAction, pendingReminderAction, pendingNoteAction), notification dedupe (`_handledNotifs` in-memory + `handled_notifs` persistent in AsyncStorage)
+```typescript
+interface VoiceMemo {
+  id: string;          // UUID
+  uri: string;         // file:// URI to .m4a file in permanent storage
+  title: string;       // user-editable, can be empty
+  note: string;        // user-editable, can be empty
+  duration: number;    // recording length in seconds
+  createdAt: string;   // ISO timestamp
+  updatedAt: string;   // ISO timestamp, updated on title/note edit
+  deletedAt?: string | null;  // soft-delete timestamp, null when active
+  noteId?: string | null;     // optional link to a Note (future use)
+}
+```
+
+- **Storage:** AsyncStorage key `'voiceMemos'`, JSON array. Service: `src/services/voiceMemoStorage.ts`
+- **Soft-delete:** same 30-day pattern as Notes/Alarms — `deletedAt` set on delete, cleared on restore, filtered out by `getVoiceMemos()`, included by `getAllVoiceMemos()`
+- **Error handling:** all mutator functions re-throw after `console.error` (unlike other storage services that swallow errors) — lets callers show error UI instead of false success
+- **File storage:** `.m4a` files stored at `${Paths.document}voice-memos/`. Filename format: `{memoId}_{timestamp}.m4a`. Service: `src/services/voiceMemoFileStorage.ts` — `saveVoiceMemoFile` (copies from cache to permanent, cleans source), `deleteVoiceMemoFile`, `deleteAllVoiceMemoFiles`. Same pattern as `noteImageStorage` but simpler (no companion JSON files)
+
+---
+
+## 6. Key AsyncStorage Keys
+
+`'alarms'`, `'reminders'`, `'activeTimers'`, `'notes'`, `'userTimers'`, `'appSettings'`, `'silenceAllAlarms'`, `'appTheme'`, `'customTheme'`, `'hapticsEnabled'`, `'onboardingComplete'`, `'defaultTimerSound'`, `'bg_main'` (background photo URI), `'bg_overlay_opacity'` (background overlay 0.3-0.8), plus game stats (guessWhyStats, forgetLog, memoryMatchScores, sudokuBestScores, dailyRiddleStats, triviaStats), widget pins (widgetPinnedPresets, widgetPinnedAlarms, widgetPinnedReminders, widgetPinnedNotes), per-alarm (`snoozeCount_{alarmId}`, `snoozing_{alarmId}`), pending actions (pendingTabAction, pendingAlarmAction, pendingReminderAction, pendingNoteAction), notification dedupe (`_handledNotifs` in-memory + `handled_notifs` persistent in AsyncStorage), `'voiceMemos'` (JSON array of VoiceMemo objects — standalone voice recordings), `'pendingVoiceAction'` (JSON object with type ('record'|'detail'), optional memoId, timestamp — set by widget click handler, consumed by useNotificationRouting)
