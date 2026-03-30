@@ -25,7 +25,7 @@ import { formatTime } from '../utils/time';
 import { DetailedWidget } from './DetailedWidget';
 import type { DetailedAlarm, DetailedPreset, DetailedReminder } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
-import type { WidgetNote, WidgetTheme } from './NotepadWidget';
+import type { WidgetNote, WidgetVoiceMemo, WidgetTheme } from './NotepadWidget';
 import { CalendarWidget } from './CalendarWidget';
 import type { CalendarDayData } from './CalendarWidget';
 import { themes, generateCustomThemeDual } from '../theme/colors';
@@ -426,7 +426,7 @@ export async function getWidgetNotes(): Promise<WidgetNote[]> {
       if (result.length >= 4) break;
       const note = allNotes.find((n) => n.id === id);
       if (note) {
-        result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor });
+        result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor, createdAt: note.createdAt });
       }
     }
   } catch {
@@ -441,11 +441,29 @@ export async function getWidgetNotes(): Promise<WidgetNote[]> {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     for (const note of sorted) {
       if (result.length >= 4) break;
-      result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor });
+      result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor, createdAt: note.createdAt });
     }
   }
 
   return result;
+}
+
+// ── Voice memo widget data ──
+
+export async function getWidgetVoiceMemos(): Promise<{ id: string; title: string; duration: number; createdAt: string }[]> {
+  try {
+    const raw = await AsyncStorage.getItem('voiceMemos');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((m: any) => m && typeof m.id === 'string' && !m.deletedAt)
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 4)
+      .map((m: any) => ({ id: m.id, title: m.title || '', duration: m.duration || 0, createdAt: m.createdAt }));
+  } catch {
+    return [];
+  }
 }
 
 // ── Calendar widget data ──
@@ -538,8 +556,9 @@ async function renderDetailedWidget(props: WidgetTaskHandlerProps) {
 
 async function renderNotepadWidget(props: WidgetTaskHandlerProps): Promise<void> {
   const notes = await getWidgetNotes();
+  const voiceMemos = await getWidgetVoiceMemos();
   const theme = await getWidgetTheme();
-  props.renderWidget(React.createElement(NotepadWidget, { notes, theme }));
+  props.renderWidget(React.createElement(NotepadWidget, { notes, voiceMemos, theme }));
 }
 
 async function renderCalendarWidget(props: WidgetTaskHandlerProps): Promise<void> {
@@ -570,7 +589,8 @@ async function refreshAllWidgets(): Promise<void> {
       widgetName: 'NotepadWidget',
       renderWidget: async () => {
         const notes = await getWidgetNotes();
-        return React.createElement(NotepadWidget, { notes, theme });
+        const voiceMemos = await getWidgetVoiceMemos();
+        return React.createElement(NotepadWidget, { notes, voiceMemos, theme });
       },
     });
   } catch {
@@ -654,6 +674,19 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
       if (action?.startsWith('OPEN_NOTE__')) {
         const noteId = action.replace('OPEN_NOTE__', '');
         await setPendingNoteAction({ type: 'edit', noteId });
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'RECORD_VOICE') {
+        await AsyncStorage.setItem('pendingVoiceAction', JSON.stringify({ type: 'record', timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action?.startsWith('OPEN_VOICE_MEMO__')) {
+        const memoId = action.replace('OPEN_VOICE_MEMO__', '');
+        await AsyncStorage.setItem('pendingVoiceAction', JSON.stringify({ type: 'detail', memoId, timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }

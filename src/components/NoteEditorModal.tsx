@@ -14,10 +14,13 @@ import {
   Alert,
   Linking,
   Image,
+  AppState,
   type StyleProp,
   type TextStyle,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useAudioRecorder, useAudioRecorderState, useAudioPlayer, useAudioPlayerStatus, requestRecordingPermissionsAsync, RecordingPresets } from 'expo-audio';
+import { deleteVoiceMemo } from '../services/noteVoiceMemoStorage';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
@@ -35,6 +38,87 @@ import { loadDrawingData } from '../services/noteImageStorage';
 import { EDITOR_PLACEHOLDERS } from '../data/placeholders';
 
 const MAX_NOTE_LENGTH = 999;
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+const voiceMemoStyles = StyleSheet.create({
+  recordingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    gap: 6,
+  },
+  recordingDot: {
+    fontSize: 10,
+  },
+  recordingText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FF4444',
+  },
+  memoRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  memoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(20, 20, 30, 0.85)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 10,
+  },
+  memoPlayBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  memoPlayText: {
+    fontSize: 16,
+  },
+  memoProgress: {
+    flex: 1,
+    gap: 4,
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  memoTime: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '500',
+  },
+  memoDeleteBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  memoDeleteText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '700',
+  },
+});
 
 const LINK_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
 
@@ -100,7 +184,7 @@ interface NoteEditorModalProps {
   note: Note | null;
   customBgColor: string | null;
   customFontColor: string | null;
-  onSave: (note: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string; images: string[] }) => void;
+  onSave: (note: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string; images: string[]; voiceMemos: string[] }) => void;
   onDelete: (noteId: string) => void;
   onClose: () => void;
   onCustomBgColorChange: (color: string) => void;
@@ -136,10 +220,23 @@ export default function NoteEditorModal({
   const [showShareModal, setShowShareModal] = useState(false);
   const [editingDrawingData, setEditingDrawingData] = useState<{ strokes: StrokeData[]; bgColor: string; sourceImageUri?: string | null } | null>(null);
   const [editingImageUri, setEditingImageUri] = useState<string | null>(null);
+  const [editorVoiceMemos, setEditorVoiceMemos] = useState<string[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [activePlayerUri, setActivePlayerUri] = useState<string | null>(null);
 
   const pickedBgRef = useRef(customBgColor || '#4A90D9');
   const pickedFontRef = useRef(customFontColor || '#FF6B6B');
   const textInputRef = useRef<TextInput>(null);
+  const newVoiceMemosRef = useRef<string[]>([]);
+  const isRecordingRef = useRef(false);
+  const progressBarWidthRef = useRef(0);
+  const pendingPlayRef = useRef(false);
+
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder, 500);
+
+  const player = useAudioPlayer(activePlayerUri ? { uri: activePlayerUri } : null);
+  const playerStatus = useAudioPlayerStatus(player);
 
   useEffect(() => {
     if (!visible) {
@@ -151,6 +248,18 @@ export default function NoteEditorModal({
       setShowShareModal(false);
       setEditingDrawingData(null);
       setEditingImageUri(null);
+      if (isRecordingRef.current) {
+        try { recorder.stop(); } catch { /* best-effort */ }
+        isRecordingRef.current = false;
+        setIsRecording(false);
+      }
+      try { player.pause(); } catch { /* best-effort */ }
+      setActivePlayerUri(null);
+      for (const uri of newVoiceMemosRef.current) {
+        deleteVoiceMemo(uri);
+      }
+      newVoiceMemosRef.current = [];
+      setEditorVoiceMemos([]);
       return;
     }
     if (note) {
@@ -159,6 +268,7 @@ export default function NoteEditorModal({
       setEditorIcon(note.icon);
       setEditorFontColor(note.fontColor ?? null);
       setEditorImages(note.images || []);
+      setEditorVoiceMemos(note.voiceMemos || []);
       setIsViewMode(true);
     } else {
       setEditorText('');
@@ -166,12 +276,41 @@ export default function NoteEditorModal({
       setEditorIcon('');
       setEditorFontColor(null);
       setEditorImages([]);
+      setEditorVoiceMemos([]);
       setIsViewMode(false);
     }
+    newVoiceMemosRef.current = [];
+    setActivePlayerUri(null);
+    setIsRecording(false);
+    isRecordingRef.current = false;
     setEditorPlaceholder(EDITOR_PLACEHOLDERS[Math.floor(Math.random() * EDITOR_PLACEHOLDERS.length)]);
     pickedBgRef.current = customBgColor || '#4A90D9';
     pickedFontRef.current = customFontColor || '#FF6B6B';
   }, [visible, note]);
+
+  useEffect(() => {
+    if (pendingPlayRef.current && playerStatus.isLoaded) {
+      player.play();
+      pendingPlayRef.current = false;
+    }
+  }, [playerStatus.isLoaded, player]);
+
+  useEffect(() => {
+    if (playerStatus.didJustFinish) {
+      player.seekTo(0);
+    }
+  }, [playerStatus.didJustFinish, player]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active' && isRecordingRef.current) {
+        try { recorder.stop(); } catch { /* best-effort */ }
+        isRecordingRef.current = false;
+        setIsRecording(false);
+      }
+    });
+    return () => sub.remove();
+  }, [recorder]);
 
   const noteTextColor = getTextColor(editorColor);
   const resolvedFontColor = editorFontColor || noteTextColor;
@@ -183,7 +322,9 @@ export default function NoteEditorModal({
         editorColor !== note.color ||
         editorIcon !== note.icon ||
         editorFontColor !== (note.fontColor ?? null) ||
-        JSON.stringify(editorImages) !== JSON.stringify(note.images || [])
+        JSON.stringify(editorImages) !== JSON.stringify(note.images || []) ||
+        JSON.stringify(editorVoiceMemos) !== JSON.stringify(note.voiceMemos || []) ||
+        isRecording
       );
     }
     return (
@@ -191,7 +332,9 @@ export default function NoteEditorModal({
       editorColor !== colors.background ||
       editorIcon !== '' ||
       editorFontColor !== null ||
-      editorImages.length > 0
+      editorImages.length > 0 ||
+      editorVoiceMemos.length > 0 ||
+      isRecording
     );
   };
 
@@ -213,11 +356,16 @@ export default function NoteEditorModal({
 
   const handleSave = () => {
     hapticMedium();
+    if (isRecording) {
+      ToastAndroid.show('Stop recording first', ToastAndroid.SHORT);
+      return;
+    }
     const trimmed = editorText.trim();
-    if (!trimmed && editorImages.length === 0) {
+    if (!trimmed && editorImages.length === 0 && editorVoiceMemos.length === 0) {
       ToastAndroid.show('Write something down before you forget. Oh wait, too late.', ToastAndroid.LONG);
       return;
     }
+    newVoiceMemosRef.current = [];
     onSave({
       text: trimmed,
       color: editorColor,
@@ -226,6 +374,7 @@ export default function NoteEditorModal({
       isNew: !note,
       noteId: note?.id,
       images: editorImages,
+      voiceMemos: editorVoiceMemos,
     });
   };
 
@@ -237,8 +386,8 @@ export default function NoteEditorModal({
   const pickImage = async () => {
     Keyboard.dismiss();
     setShowColorPicker(false);
-    if (editorImages.length >= 3) {
-      ToastAndroid.show('3 photos max. Quality over quantity.', ToastAndroid.SHORT);
+    if (editorImages.length + editorVoiceMemos.length >= 3) {
+      ToastAndroid.show('3 attachments max. Delete one first.', ToastAndroid.SHORT);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -249,6 +398,65 @@ export default function NoteEditorModal({
     if (!result.canceled && result.assets[0]) {
       setEditorImages((prev) => [...prev, result.assets[0].uri]);
     }
+  };
+
+  const handleMicPress = async () => {
+    if (isRecording) {
+      isRecordingRef.current = false;
+      setIsRecording(false);
+      try {
+        await recorder.stop();
+        const status = recorder.getStatus();
+        const uri = status.url;
+        if (uri) {
+          setEditorVoiceMemos(prev => [...prev, uri]);
+          newVoiceMemosRef.current.push(uri);
+        }
+      } catch (e) {
+        console.error('Stop recording failed:', e);
+      }
+      return;
+    }
+    if (editorImages.length + editorVoiceMemos.length >= 3) {
+      ToastAndroid.show('3 attachments max. Delete one first.', ToastAndroid.SHORT);
+      return;
+    }
+    const { granted } = await requestRecordingPermissionsAsync();
+    if (!granted) {
+      ToastAndroid.show('Microphone permission needed', ToastAndroid.SHORT);
+      return;
+    }
+    Keyboard.dismiss();
+    setShowColorPicker(false);
+    try {
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      isRecordingRef.current = true;
+      setIsRecording(true);
+    } catch (e) {
+      console.error('Recording failed:', e);
+      ToastAndroid.show('Recording failed', ToastAndroid.SHORT);
+    }
+  };
+
+  const handlePlayMemo = (uri: string) => {
+    if (activePlayerUri === uri) {
+      if (playerStatus.playing) {
+        player.pause();
+      } else {
+        player.play();
+      }
+    } else {
+      pendingPlayRef.current = true;
+      setActivePlayerUri(uri);
+    }
+  };
+
+  const handleSeek = (e: any, duration: number) => {
+    if (duration <= 0 || progressBarWidthRef.current <= 0) return;
+    const x = e.nativeEvent.locationX;
+    const fraction = Math.max(0, Math.min(1, x / progressBarWidthRef.current));
+    player.seekTo(fraction * duration);
   };
 
   const styles = useMemo(() => StyleSheet.create({
@@ -567,7 +775,7 @@ export default function NoteEditorModal({
                       hapticLight();
                       Keyboard.dismiss();
                       setShowColorPicker(false);
-                      if (editorImages.length >= 3) {
+                      if (editorImages.length + editorVoiceMemos.length >= 3) {
                         ToastAndroid.show('3 attachments max. Delete one first.', ToastAndroid.SHORT);
                         return;
                       }
@@ -583,6 +791,13 @@ export default function NoteEditorModal({
                     activeOpacity={0.7}
                   >
                     <Text style={styles.editorTopBtnEmoji}>{'\u{1F4F7}'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.editorTopBtn, isRecording && { backgroundColor: 'rgba(255, 50, 50, 0.7)', borderColor: 'rgba(255, 50, 50, 0.5)' }]}
+                    onPress={handleMicPress}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.editorTopBtnEmoji}>{isRecording ? '\u23F9\uFE0F' : '\u{1F399}\uFE0F'}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.editorTopBtn, showColorPicker && styles.editorTopBtnActive]}
@@ -611,6 +826,15 @@ export default function NoteEditorModal({
 
           {/* Spacer so content clears the floating top bar */}
           <View style={styles.topBarContentPad} />
+
+          {isRecording && (
+            <View style={voiceMemoStyles.recordingBanner}>
+              <Text style={voiceMemoStyles.recordingDot}>{'\u{1F534}'}</Text>
+              <Text style={voiceMemoStyles.recordingText}>
+                Recording {formatDuration((recorderState.durationMillis ?? 0) / 1000)}
+              </Text>
+            </View>
+          )}
 
           {/* Hero text area */}
           {isViewMode ? (
@@ -686,6 +910,61 @@ export default function NoteEditorModal({
                   )}
                 </TouchableOpacity>
               ))}
+            </View>
+          )}
+
+          {editorVoiceMemos.length > 0 && (
+            <View style={voiceMemoStyles.memoRow}>
+              {editorVoiceMemos.map((memoUri, idx) => {
+                const isActive = activePlayerUri === memoUri;
+                const isThisPlaying = isActive && playerStatus.playing;
+                const currentTime = isActive ? playerStatus.currentTime : 0;
+                const duration = isActive && playerStatus.duration > 0 ? playerStatus.duration : 0;
+                const progress = duration > 0 ? currentTime / duration : 0;
+                return (
+                  <View key={`memo-${idx}`} style={voiceMemoStyles.memoCard}>
+                    <TouchableOpacity
+                      style={voiceMemoStyles.memoPlayBtn}
+                      onPress={() => handlePlayMemo(memoUri)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={voiceMemoStyles.memoPlayText}>
+                        {isThisPlaying ? '\u23F8\uFE0F' : '\u25B6\uFE0F'}
+                      </Text>
+                    </TouchableOpacity>
+                    <View style={voiceMemoStyles.memoProgress}>
+                      <View
+                        style={voiceMemoStyles.progressTrack}
+                        onLayout={(e) => { progressBarWidthRef.current = e.nativeEvent.layout.width; }}
+                        onStartShouldSetResponder={() => isActive && duration > 0}
+                        onResponderGrant={(e) => handleSeek(e, duration)}
+                        onResponderMove={(e) => handleSeek(e, duration)}
+                      >
+                        <View style={[voiceMemoStyles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.accent }]} />
+                      </View>
+                      <Text style={voiceMemoStyles.memoTime}>
+                        {formatDuration(currentTime)} / {formatDuration(duration)}
+                      </Text>
+                    </View>
+                    {!isViewMode && (
+                      <TouchableOpacity
+                        style={voiceMemoStyles.memoDeleteBtn}
+                        onPress={() => {
+                          hapticLight();
+                          if (isActive) {
+                            try { player.pause(); } catch { /* */ }
+                            setActivePlayerUri(null);
+                          }
+                          setEditorVoiceMemos(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={voiceMemoStyles.memoDeleteText}>{'\u2715'}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           )}
 

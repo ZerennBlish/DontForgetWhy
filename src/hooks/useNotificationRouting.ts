@@ -91,6 +91,8 @@ interface InitState {
   createAlarmParams: RootStackParamList['CreateAlarm'] | null;
   createReminderParams: RootStackParamList['CreateReminder'] | null;
   calendarParams: RootStackParamList['Calendar'] | null;
+  voiceRecordParams: RootStackParamList['VoiceRecord'] | null;
+  voiceMemoDetailParams: RootStackParamList['VoiceMemoDetail'] | null;
 }
 
 export function useNotificationRouting() {
@@ -384,11 +386,31 @@ export function useNotificationRouting() {
           } catch {}
         }
 
+        // 8. Check for pending voice action from widget deep-link
+        let voiceRecordParams: RootStackParamList['VoiceRecord'] | null = null;
+        let voiceMemoDetailParams: RootStackParamList['VoiceMemoDetail'] | null = null;
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !calendarParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingVoiceAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingVoiceAction');
+              const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                if (parsed.type === 'record') {
+                  voiceRecordParams = undefined;
+                } else if (parsed.type === 'detail' && parsed.memoId) {
+                  voiceMemoDetailParams = { memoId: parsed.memoId };
+                }
+              }
+            }
+          } catch {}
+        }
+
         console.log('[NOTIF] INIT — complete. alarmFireParams:', alarmFireParams ? 'SET' : 'null');
-        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams, calendarParams });
+        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams, calendarParams, voiceRecordParams, voiceMemoDetailParams });
       } catch (e) {
         console.error('[NOTIF] INIT — fatal error:', e);
-        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: null, createAlarmParams: null, createReminderParams: null, calendarParams: null });
+        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: null, createAlarmParams: null, createReminderParams: null, calendarParams: null, voiceRecordParams: null, voiceMemoDetailParams: null });
       }
     })();
   }, []);
@@ -729,6 +751,21 @@ export function useNotificationRouting() {
       }
     }).catch(() => {});
 
+    // Check for pending voice action from widget
+    AsyncStorage.getItem('pendingVoiceAction').then((raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingVoiceAction');
+        const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          if (parsed.type === 'record') {
+            navigationRef.current.navigate('VoiceRecord');
+          } else if (parsed.type === 'detail' && parsed.memoId) {
+            navigationRef.current.navigate('VoiceMemoDetail', { memoId: parsed.memoId });
+          }
+        }
+      }
+    }).catch(() => {});
+
     // pendingTabAction is now handled directly by AlarmListScreen
   }, [navigateToAlarmFire]);
 
@@ -809,6 +846,20 @@ export function useNotificationRouting() {
             const parsed = JSON.parse(raw) as { date: string | null; timestamp: number };
             if (Date.now() - parsed.timestamp < 10000) {
               navigationRef.current.navigate('Calendar', parsed.date ? { initialDate: parsed.date } : undefined);
+            }
+          }
+        }).catch(() => {});
+        // Check for pending voice action from widget
+        AsyncStorage.getItem('pendingVoiceAction').then((raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingVoiceAction');
+            const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              if (parsed.type === 'record') {
+                navigationRef.current.navigate('VoiceRecord');
+              } else if (parsed.type === 'detail' && parsed.memoId) {
+                navigationRef.current.navigate('VoiceMemoDetail', { memoId: parsed.memoId });
+              }
             }
           }
         }).catch(() => {});

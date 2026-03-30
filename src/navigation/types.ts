@@ -27,6 +27,8 @@ export type RootStackParamList = {
   ForgetLog: undefined;
   About: undefined;
   Trivia: undefined;
-  Notepad: { noteId?: string; newNote?: boolean } | undefined;
+  Notepad: { noteId?: string; newNote?: boolean; initialFilter?: 'all' | 'notes' | 'voice' } | undefined;
   Calendar: { initialDate?: string } | undefined;
+  VoiceRecord: undefined;
+  VoiceMemoDetail: { memoId: string };
 };

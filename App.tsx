@@ -20,6 +20,8 @@ import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
 import NotepadScreen from './src/screens/NotepadScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
+import VoiceRecordScreen from './src/screens/VoiceRecordScreen';
+import VoiceMemoDetailScreen from './src/screens/VoiceMemoDetailScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -50,7 +52,7 @@ function AppNavigator() {
   // Wait for init phase to complete before rendering the navigator.
   if (!initState) return null;
 
-  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams, calendarParams } = initState;
+  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams, calendarParams, voiceRecordParams, voiceMemoDetailParams } = initState;
 
   // For TRUE cold start: set initialState so the navigator renders
   // AlarmFireScreen or NotepadScreen on the very first frame.
@@ -82,6 +84,18 @@ function AppNavigator() {
     routes: [
       { name: 'AlarmList' as const },
       { name: 'Calendar' as const, params: calendarParams },
+    ],
+    index: 1,
+  } : voiceRecordParams !== null ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'VoiceRecord' as const },
+    ],
+    index: 1,
+  } : voiceMemoDetailParams ? {
+    routes: [
+      { name: 'AlarmList' as const },
+      { name: 'VoiceMemoDetail' as const, params: voiceMemoDetailParams },
     ],
     index: 1,
   } : alarmListParams ? {
@@ -182,6 +196,16 @@ function AppNavigator() {
           <Stack.Screen
             name="Calendar"
             component={CalendarScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="VoiceRecord"
+            component={VoiceRecordScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="VoiceMemoDetail"
+            component={VoiceMemoDetailScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen

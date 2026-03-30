@@ -30,6 +30,7 @@ import {
   getPendingNoteAction,
 } from '../services/noteStorage';
 import { saveNoteImage, deleteNoteImage, cleanupTempDrawings } from '../services/noteImageStorage';
+import { saveVoiceMemo, deleteVoiceMemo, deleteAllVoiceMemos } from '../services/noteVoiceMemoStorage';
 import {
   getPinnedNotes,
   togglePinNote,
@@ -47,9 +48,15 @@ import { CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
 import type { Note } from '../types/note';
 import { getTextColor } from '../utils/noteColors';
 import type { RootStackParamList } from '../navigation/types';
+import type { VoiceMemo } from '../types/voiceMemo';
+import * as VMStore from '../services/voiceMemoStorage';
+import { deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
+import VoiceMemoCard from '../components/VoiceMemoCard';
+import { createAudioPlayer } from 'expo-audio';
 
 const MAX_NOTE_PINS = 4;
 let welcomeNoteCreating = false;
+type ListItem = { type: 'note'; data: Note } | { type: 'voiceMemo'; data: VoiceMemo };
 
 const SAVE_TOASTS = [
   'Got it. Try not to forget this one too.',
@@ -170,6 +177,19 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
 
+  // Voice memo state
+  const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
+  const [contentFilter, setContentFilter] = useState<'all' | 'notes' | 'voice'>('all');
+  const [playingMemoId, setPlayingMemoId] = useState<string | null>(null);
+  const [playbackProgress, setPlaybackProgress] = useState<Record<string, number>>({});
+  const [deletedVoiceMemo, setDeletedVoiceMemo] = useState<VoiceMemo | null>(null);
+  const [showVoiceUndo, setShowVoiceUndo] = useState(false);
+  const [voiceUndoKey, setVoiceUndoKey] = useState(0);
+
+  const playerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
+  const playbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const playerListenerRef = useRef<{ remove: () => void } | null>(null);
+
   const handledActionRef = useRef('');
   useEffect(() => {
     (async () => {
@@ -199,6 +219,12 @@ export default function NotepadScreen({ navigation, route }: Props) {
       if (resolvedFc && validHex.test(resolvedFc)) { setCustomFontColor(resolvedFc); }
     })();
   }, []);
+
+  useEffect(() => {
+    if (route.params?.initialFilter) {
+      setContentFilter(route.params.initialFilter);
+    }
+  }, [route.params?.initialFilter]);
 
   const loadData = useCallback(async () => {
     let loaded = await getAllNotes(true);
@@ -230,12 +256,40 @@ export default function NotepadScreen({ navigation, route }: Props) {
     setPinnedIds(pruned);
   }, []);
 
+  const reloadVoiceMemos = useCallback(async () => {
+    const memos = await VMStore.getAllVoiceMemos();
+    setVoiceMemos(memos);
+  }, []);
+
+  const stopPlayback = useCallback(() => {
+    if (playbackIntervalRef.current) {
+      clearInterval(playbackIntervalRef.current);
+      playbackIntervalRef.current = null;
+    }
+    if (playerListenerRef.current) {
+      try { playerListenerRef.current.remove(); } catch { /* */ }
+      playerListenerRef.current = null;
+    }
+    if (playerRef.current) {
+      try {
+        playerRef.current.pause();
+        playerRef.current.release();
+      } catch { /* */ }
+      playerRef.current = null;
+    }
+    setPlayingMemoId(null);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       loadData();
+      reloadVoiceMemos();
       loadBackground().then(setBgUri);
       getOverlayOpacity().then(setBgOpacity);
-    }, [loadData]),
+      return () => {
+        stopPlayback();
+      };
+    }, [loadData, reloadVoiceMemos, stopPlayback]),
   );
 
   // Handle route params and pending actions
@@ -327,7 +381,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     cleanupTempDrawings();
   };
 
-  const handleEditorSave = async (data: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string; images: string[] }) => {
+  const handleEditorSave = async (data: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string; images: string[]; voiceMemos: string[] }) => {
     const now = new Date().toISOString();
     try {
       if (data.isNew) {
@@ -338,6 +392,17 @@ export default function NotepadScreen({ navigation, route }: Props) {
             const saved = await saveNoteImage(noteId, uri);
             savedUris.push(saved);
           } catch (e) {
+            for (const copied of savedUris) { await deleteNoteImage(copied); }
+            throw e;
+          }
+        }
+        const savedMemoUris: string[] = [];
+        for (const memoUri of data.voiceMemos) {
+          try {
+            const saved = await saveVoiceMemo(noteId, memoUri);
+            savedMemoUris.push(saved);
+          } catch (e) {
+            for (const copied of savedMemoUris) { await deleteVoiceMemo(copied); }
             for (const copied of savedUris) { await deleteNoteImage(copied); }
             throw e;
           }
@@ -353,10 +418,12 @@ export default function NotepadScreen({ navigation, route }: Props) {
             createdAt: now,
             updatedAt: now,
             images: savedUris.length > 0 ? savedUris : undefined,
+            voiceMemos: savedMemoUris.length > 0 ? savedMemoUris : undefined,
           };
           await addNote(newNote);
         } catch (e) {
           for (const uri of savedUris) { await deleteNoteImage(uri); }
+          for (const uri of savedMemoUris) { await deleteVoiceMemo(uri); }
           throw e;
         }
       } else if (data.noteId) {
@@ -376,8 +443,24 @@ export default function NotepadScreen({ navigation, route }: Props) {
               throw e;
             }
           }
+          const originalMemos = existing.voiceMemos || [];
+          const keptMemos = data.voiceMemos.filter((u) => originalMemos.includes(u));
+          const newMemoUris = data.voiceMemos.filter((u) => !originalMemos.includes(u));
+          const removedMemos = originalMemos.filter((u) => !data.voiceMemos.includes(u));
+          const savedNewMemos: string[] = [];
+          for (const memoUri of newMemoUris) {
+            try {
+              const saved = await saveVoiceMemo(data.noteId!, memoUri);
+              savedNewMemos.push(saved);
+            } catch (e) {
+              for (const copied of savedNewMemos) { await deleteVoiceMemo(copied); }
+              for (const copied of savedNewUris) { await deleteNoteImage(copied); }
+              throw e;
+            }
+          }
           try {
             const finalImages = [...keptImages, ...savedNewUris];
+            const finalMemos = [...keptMemos, ...savedNewMemos];
             await updateNote({
               ...existing,
               text: data.text,
@@ -386,12 +469,15 @@ export default function NotepadScreen({ navigation, route }: Props) {
               icon: data.icon,
               updatedAt: now,
               images: finalImages.length > 0 ? finalImages : undefined,
+              voiceMemos: finalMemos.length > 0 ? finalMemos : undefined,
             });
           } catch (e) {
             for (const uri of savedNewUris) { await deleteNoteImage(uri); }
+            for (const uri of savedNewMemos) { await deleteVoiceMemo(uri); }
             throw e;
           }
           for (const uri of removedImages) { await deleteNoteImage(uri); }
+          for (const uri of removedMemos) { await deleteVoiceMemo(uri); }
         }
       }
     } catch {
@@ -464,9 +550,91 @@ export default function NotepadScreen({ navigation, route }: Props) {
 
   const handlePermanentDelete = async (id: string) => {
     hapticHeavy();
+    const targetNote = notes.find(n => n.id === id);
+    if (targetNote?.voiceMemos?.length) {
+      await deleteAllVoiceMemos(targetNote.voiceMemos);
+    }
     await permanentlyDeleteNote(id);
     await loadData();
     refreshWidgets();
+  };
+
+  const handlePlayToggle = (memo: VoiceMemo) => {
+    if (playingMemoId === memo.id) {
+      stopPlayback();
+      return;
+    }
+    stopPlayback();
+    const p = createAudioPlayer({ uri: memo.uri });
+    playerRef.current = p;
+    setPlayingMemoId(memo.id);
+    const sub = p.addListener('playbackStatusUpdate', (status: any) => {
+      if (status.didJustFinish) {
+        playerListenerRef.current = null;
+        sub.remove();
+        stopPlayback();
+        setPlaybackProgress(prev => ({ ...prev, [memo.id]: 0 }));
+      }
+    });
+    playerListenerRef.current = sub;
+    playbackIntervalRef.current = setInterval(() => {
+      const current = playerRef.current;
+      if (!current) return;
+      try {
+        if (current.duration > 0) {
+          setPlaybackProgress(prev => ({
+            ...prev,
+            [memo.id]: current.currentTime / current.duration,
+          }));
+        }
+      } catch { /* player might be released */ }
+    }, 500);
+    p.play();
+  };
+
+  const handleDeleteVoiceMemo = async (id: string) => {
+    hapticHeavy();
+    const memo = voiceMemos.find(m => m.id === id);
+    if (!memo) return;
+    if (playingMemoId === id) stopPlayback();
+    setDeletedVoiceMemo(memo);
+    await VMStore.deleteVoiceMemo(id);
+    await reloadVoiceMemos();
+    refreshWidgets();
+    setVoiceUndoKey(k => k + 1);
+    setShowVoiceUndo(true);
+  };
+
+  const handleRestoreVoiceMemo = async (id: string) => {
+    hapticLight();
+    await VMStore.restoreVoiceMemo(id);
+    await reloadVoiceMemos();
+    refreshWidgets();
+  };
+
+  const handlePermanentDeleteVoiceMemo = async (id: string) => {
+    hapticHeavy();
+    const memo = voiceMemos.find(m => m.id === id);
+    if (memo) {
+      await deleteVoiceMemoFile(memo.uri);
+    }
+    await VMStore.permanentlyDeleteVoiceMemo(id);
+    await reloadVoiceMemos();
+    refreshWidgets();
+  };
+
+  const handleUndoDeleteVoiceMemo = async () => {
+    setShowVoiceUndo(false);
+    if (!deletedVoiceMemo) return;
+    await VMStore.restoreVoiceMemo(deletedVoiceMemo.id);
+    await reloadVoiceMemos();
+    refreshWidgets();
+    setDeletedVoiceMemo(null);
+  };
+
+  const handleVoiceUndoDismiss = () => {
+    setShowVoiceUndo(false);
+    setDeletedVoiceMemo(null);
   };
 
   const handleTogglePin = async (id: string) => {
@@ -500,6 +668,27 @@ export default function NotepadScreen({ navigation, route }: Props) {
     unpinned.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return [...pinned, ...unpinned];
   }, [notes, pinnedIds, filter]);
+
+  const sortedVoiceMemos = useMemo(() => {
+    if (filter === 'deleted') {
+      return voiceMemos
+        .filter((m) => !!m.deletedAt)
+        .sort((a, b) => new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime());
+    }
+    return voiceMemos
+      .filter((m) => !m.deletedAt)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [voiceMemos, filter]);
+
+  const listData: ListItem[] = useMemo(() => {
+    const noteItems: ListItem[] = sorted.map((n) => ({ type: 'note' as const, data: n }));
+    const voiceItems: ListItem[] = sortedVoiceMemos.map((m) => ({ type: 'voiceMemo' as const, data: m }));
+    if (contentFilter === 'notes') return noteItems;
+    if (contentFilter === 'voice') return voiceItems;
+    return [...noteItems, ...voiceItems].sort((a, b) =>
+      new Date(b.data.createdAt).getTime() - new Date(a.data.createdAt).getTime(),
+    );
+  }, [sorted, sortedVoiceMemos, contentFilter]);
 
   const styles = useMemo(() => StyleSheet.create({
     outerContainer: {
@@ -759,7 +948,52 @@ export default function NotepadScreen({ navigation, route }: Props) {
       fontWeight: '300',
       marginTop: -2,
     },
-  }), [colors, insets.bottom]);
+    contentFilterRow: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 4,
+      gap: 8,
+    },
+    contentTab: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 16,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    contentTabActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    contentTabText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+    contentTabTextActive: {
+      fontWeight: '700',
+    },
+    headerMic: {
+      position: 'absolute',
+      right: 20,
+      top: insets.top + 10,
+    },
+    micBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    micBtnText: {
+      fontSize: 18,
+    },
+  }), [colors, insets.bottom, insets.top]);
 
   const renderDeletedItem = (item: Note) => {
     const deletedTextColor = getTextColor(item.color);
@@ -788,6 +1022,31 @@ export default function NotepadScreen({ navigation, route }: Props) {
     </View>
   );
   };
+
+  const renderDeletedVoiceMemo = (memo: VoiceMemo) => (
+    <View style={[styles.card, { opacity: 0.7, backgroundColor: 'rgba(30, 30, 50, 0.6)', borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
+      <View style={styles.cardContent}>
+        <View style={styles.cardMiddle}>
+          <Text style={[styles.cardText, { color: '#FFFFFFAA' }]} numberOfLines={2}>
+            {'\u{1F399}\uFE0F'} {memo.title || 'Voice Memo'}
+          </Text>
+          <Text style={[styles.deletedAgo, { color: '#FFFFFF80' }]}>
+            {formatDeletedAgo(memo.deletedAt!)}
+          </Text>
+        </View>
+        <View style={styles.cardRight}>
+          <View style={styles.btnRow}>
+            <TouchableOpacity onPress={() => handleRestoreVoiceMemo(memo.id)} style={styles.restoreBtn} activeOpacity={0.7}>
+              <Text style={styles.restoreText}>Restore</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handlePermanentDeleteVoiceMemo(memo.id)} style={styles.foreverBtn} activeOpacity={0.7}>
+              <Text style={styles.foreverText}>Forever</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
 
   const renderActiveItem = (item: Note) => {
     const pinned = isNotePinned(item.id, pinnedIds);
@@ -848,9 +1107,23 @@ export default function NotepadScreen({ navigation, route }: Props) {
     );
   };
 
-  const renderItem = ({ item }: { item: Note }) => {
-    if (item.deletedAt) return renderDeletedItem(item);
-    return renderActiveItem(item);
+  const renderItem = ({ item }: { item: ListItem }) => {
+    if (item.type === 'note') {
+      if (item.data.deletedAt) return renderDeletedItem(item.data);
+      return renderActiveItem(item.data);
+    }
+    const m = item.data;
+    if (m.deletedAt) return renderDeletedVoiceMemo(m);
+    return (
+      <VoiceMemoCard
+        memo={m}
+        onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: m.id }); }}
+        onPlayToggle={() => handlePlayToggle(m)}
+        isPlaying={playingMemoId === m.id}
+        playbackProgress={playbackProgress[m.id] || 0}
+        onDelete={filter === 'active' ? () => handleDeleteVoiceMemo(m.id) : undefined}
+      />
+    );
   };
 
   const renderEmpty = () => {
@@ -860,6 +1133,24 @@ export default function NotepadScreen({ navigation, route }: Props) {
           <Text style={styles.emptyIcon}>{'\u{1F5D1}\uFE0F'}</Text>
           <Text style={styles.emptyTitle}>Nothing in the trash</Text>
           <Text style={styles.emptyText}>How responsible of you.</Text>
+        </View>
+      );
+    }
+    if (contentFilter === 'voice') {
+      return (
+        <View style={styles.empty}>
+          <Text style={styles.emptyIcon}>{'\u{1F399}\uFE0F'}</Text>
+          <Text style={styles.emptyTitle}>No voice memos yet</Text>
+          <Text style={styles.emptyText}>
+            Tap the mic to record your first one.
+          </Text>
+          <TouchableOpacity
+            style={styles.emptyBtn}
+            onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.emptyBtnText}>Record</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -904,6 +1195,32 @@ export default function NotepadScreen({ navigation, route }: Props) {
             <BackButton onPress={() => navigation.goBack()} />
           </View>
           <Text style={styles.title}>Notes</Text>
+          {(contentFilter === 'all' || contentFilter === 'voice') && (
+            <View style={styles.headerMic}>
+              <TouchableOpacity
+                style={styles.micBtn}
+                onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.micBtnText}>{'\u{1F399}\uFE0F'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.contentFilterRow}>
+          {(['all', 'notes', 'voice'] as const).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.contentTab, contentFilter === tab && styles.contentTabActive]}
+              onPress={() => { hapticLight(); setContentFilter(tab); }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.contentTabText, contentFilter === tab && styles.contentTabTextActive]}>
+                {tab === 'all' ? 'All' : tab === 'notes' ? 'Notes' : 'Voice'}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.filterToggleRow}>
@@ -942,12 +1259,12 @@ export default function NotepadScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {sorted.length === 0 ? (
+        {listData.length === 0 ? (
           renderEmpty()
         ) : (
           <FlatList
-            data={sorted}
-            keyExtractor={(item) => item.id}
+            data={listData}
+            keyExtractor={(item) => `${item.type}-${item.data.id}`}
             renderItem={renderItem}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
@@ -968,6 +1285,13 @@ export default function NotepadScreen({ navigation, route }: Props) {
           message="Note deleted"
           onUndo={handleUndoDelete}
           onDismiss={handleUndoDismiss}
+        />
+        <UndoToast
+          key={`voice-${voiceUndoKey}`}
+          visible={showVoiceUndo}
+          message="Voice memo deleted"
+          onUndo={handleUndoDeleteVoiceMemo}
+          onDismiss={handleVoiceUndoDismiss}
         />
       </View>
 

@@ -9,6 +9,7 @@ export interface Note {
   updatedAt: string;
   deletedAt?: string | null;
   images?: string[];
+  voiceMemos?: string[];
 }
 
 export const NOTE_FONT_COLORS: string[] = [

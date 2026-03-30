@@ -7,6 +7,7 @@ export interface WidgetNote {
   color: string;
   icon: string;
   fontColor?: string | null;
+  createdAt: string;
 }
 
 export interface WidgetTheme {
@@ -18,8 +19,16 @@ export interface WidgetTheme {
   accent: string;
 }
 
+export interface WidgetVoiceMemo {
+  id: string;
+  title: string;
+  duration: number;
+  createdAt: string;
+}
+
 interface NotepadWidgetProps {
   notes: WidgetNote[];
+  voiceMemos: WidgetVoiceMemo[];
   theme: WidgetTheme;
 }
 
@@ -78,7 +87,53 @@ function NoteCell({ note, accent }: { note: WidgetNote; accent: string }) {
   );
 }
 
-export function NotepadWidget({ notes, theme }: NotepadWidgetProps) {
+function formatMemoDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function VoiceMemoCell({ memo }: { memo: WidgetVoiceMemo }) {
+  const label = `\u{1F399}\uFE0F ${memo.title || 'Voice Memo'}`;
+  const dur = formatMemoDuration(memo.duration);
+
+  return (
+    <FlexWidget
+      clickAction={`OPEN_VOICE_MEMO__${memo.id}`}
+      style={{
+        width: 'match_parent',
+        backgroundColor: '#2A2A3E',
+        borderRadius: 12,
+        padding: 12,
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}
+    >
+      <TextWidget
+        text={label}
+        maxLines={1}
+        style={{
+          fontSize: 14,
+          fontWeight: '600',
+          color: '#FFFFFF',
+        }}
+      />
+      <TextWidget
+        text={dur}
+        style={{
+          fontSize: 12,
+          fontWeight: '500',
+          color: '#A29BFE',
+          marginLeft: 8,
+        }}
+      />
+    </FlexWidget>
+  );
+}
+
+export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) {
   const emptyMsg = EMPTY_MESSAGES[Math.floor(Math.random() * EMPTY_MESSAGES.length)];
   return (
     <FlexWidget
@@ -115,27 +170,60 @@ export function NotepadWidget({ notes, theme }: NotepadWidgetProps) {
           />
         </FlexWidget>
         <FlexWidget
-          clickAction="ADD_NOTE"
           style={{
-            backgroundColor: theme.accent as `#${string}`,
-            borderRadius: 12,
-            paddingHorizontal: 10,
-            paddingVertical: 4,
+            flexDirection: 'row',
           }}
         >
-          <TextWidget
-            text="+"
+          <FlexWidget
+            clickAction="RECORD_VOICE"
             style={{
-              fontSize: 18,
-              fontWeight: 'bold',
-              color: '#FFFFFF',
+              backgroundColor: '#A29BFE',
+              borderRadius: 12,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
             }}
-          />
+          >
+            <TextWidget
+              text={'\u{1F399}'}
+              style={{
+                fontSize: 14,
+                color: '#FFFFFF',
+              }}
+            />
+          </FlexWidget>
+          <FlexWidget
+            clickAction="ADD_NOTE"
+            style={{
+              backgroundColor: theme.accent as `#${string}`,
+              borderRadius: 12,
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+            }}
+          >
+            <TextWidget
+              text="+"
+              style={{
+                fontSize: 18,
+                fontWeight: 'bold',
+                color: '#FFFFFF',
+              }}
+            />
+          </FlexWidget>
         </FlexWidget>
       </FlexWidget>
 
-      {/* Note cards */}
-      {notes.length > 0 ? (
+      {/* Content cards — mixed notes + voice memos */}
+      {(() => {
+        type CombinedItem =
+          | { type: 'note'; data: WidgetNote; createdAt: string }
+          | { type: 'voiceMemo'; data: WidgetVoiceMemo; createdAt: string };
+        const combined: CombinedItem[] = [
+          ...notes.map((n) => ({ type: 'note' as const, data: n, createdAt: n.createdAt })),
+          ...voiceMemos.map((m) => ({ type: 'voiceMemo' as const, data: m, createdAt: m.createdAt })),
+        ];
+        combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const items = combined.slice(0, 4);
+        return items.length > 0 ? (
         <FlexWidget
           style={{
             width: 'match_parent',
@@ -143,16 +231,18 @@ export function NotepadWidget({ notes, theme }: NotepadWidgetProps) {
             flexDirection: 'column',
           }}
         >
-          {notes.slice(0, 4).map((note, i) => (
+          {items.map((item, i) => (
             <FlexWidget
-              key={`note-${note.id}`}
+              key={item.type === 'note' ? `note-${item.data.id}` : `voice-${item.data.id}`}
               style={{
                 width: 'match_parent',
                 flex: 1,
-                marginBottom: i < Math.min(notes.length, 4) - 1 ? 4 : 0,
+                marginBottom: i < items.length - 1 ? 4 : 0,
               }}
             >
-              <NoteCell note={note} accent={theme.accent} />
+              {item.type === 'note'
+                ? <NoteCell note={item.data} accent={theme.accent} />
+                : <VoiceMemoCell memo={item.data} />}
             </FlexWidget>
           ))}
         </FlexWidget>
@@ -178,7 +268,8 @@ export function NotepadWidget({ notes, theme }: NotepadWidgetProps) {
             }}
           />
         </FlexWidget>
-      )}
+      );
+      })()}
 
       {/* Footer */}
       <FlexWidget

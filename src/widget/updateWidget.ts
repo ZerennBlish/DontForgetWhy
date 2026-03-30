@@ -3,7 +3,7 @@ import { requestWidgetUpdate } from 'react-native-android-widget';
 import { DetailedWidget } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
 import { CalendarWidget } from './CalendarWidget';
-import { getDetailedAlarms, getDetailedPresets, getCompactReminders, getWidgetNotes, getCalendarWidgetData, getWidgetTheme } from './widgetTaskHandler';
+import { getDetailedAlarms, getDetailedPresets, getCompactReminders, getWidgetNotes, getWidgetVoiceMemos, getCalendarWidgetData, getWidgetTheme } from './widgetTaskHandler';
 
 export async function refreshWidgets(): Promise<void> {
   const theme = await getWidgetTheme();
@@ -26,7 +26,8 @@ export async function refreshWidgets(): Promise<void> {
       widgetName: 'NotepadWidget',
       renderWidget: async () => {
         const notes = await getWidgetNotes();
-        return React.createElement(NotepadWidget, { notes, theme });
+        const voiceMemos = await getWidgetVoiceMemos();
+        return React.createElement(NotepadWidget, { notes, voiceMemos, theme });
       },
     });
   } catch (error) {
