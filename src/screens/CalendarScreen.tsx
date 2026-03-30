@@ -18,6 +18,8 @@ import { getNotes } from '../services/noteStorage';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import type { Note } from '../types/note';
+import type { VoiceMemo } from '../types/voiceMemo';
+import { getVoiceMemos } from '../services/voiceMemoStorage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { formatTime } from '../utils/time';
@@ -28,12 +30,13 @@ import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage
 type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>;
 
 type ViewMode = 'day' | 'week' | 'month';
-type FilterType = 'all' | 'alarms' | 'reminders' | 'notes';
+type FilterType = 'all' | 'alarms' | 'reminders' | 'notes' | 'voice';
 
 type DayItem =
   | { type: 'alarm'; data: Alarm }
   | { type: 'reminder'; data: Reminder }
-  | { type: 'note'; data: Note };
+  | { type: 'note'; data: Note }
+  | { type: 'voiceMemo'; data: VoiceMemo };
 
 type ListRow =
   | { rowType: 'dateHeader'; dateStr: string; label: string }
@@ -57,6 +60,7 @@ interface DayComponentProps {
 const DOT_ALARM = '#FF6B6B';
 const DOT_REMINDER = '#4A90D9';
 const DOT_NOTE = '#55EFC4';
+const DOT_VOICE = '#A29BFE';
 
 const WEEKDAY_MAP: Record<number, AlarmDay> = {
   0: 'Sun',
@@ -69,7 +73,7 @@ const WEEKDAY_MAP: Record<number, AlarmDay> = {
 };
 
 const VIEW_MODES: ViewMode[] = ['day', 'week', 'month'];
-const FILTER_TYPES: FilterType[] = ['all', 'alarms', 'reminders', 'notes'];
+const FILTER_TYPES: FilterType[] = ['all', 'alarms', 'reminders', 'notes', 'voice'];
 
 function getDaysInMonth(year: number, month: number): Date[] {
   const days: Date[] = [];
@@ -134,6 +138,7 @@ function getItemsForDate(
   alarmList: Alarm[],
   reminderList: Reminder[],
   noteList: Note[],
+  voiceMemoList: VoiceMemo[],
 ): DayItem[] {
   const items: DayItem[] = [];
   const d = new Date(dateStr + 'T00:00:00');
@@ -180,6 +185,14 @@ function getItemsForDate(
     }
   }
 
+  for (const memo of voiceMemoList) {
+    const md = new Date(memo.createdAt);
+    const localDate = `${md.getFullYear()}-${String(md.getMonth() + 1).padStart(2, '0')}-${String(md.getDate()).padStart(2, '0')}`;
+    if (localDate === dateStr) {
+      items.push({ type: 'voiceMemo', data: memo });
+    }
+  }
+
   return items;
 }
 
@@ -202,6 +215,7 @@ function applyFilter(items: DayItem[], filter: FilterType): DayItem[] {
   if (filter === 'all') return items;
   if (filter === 'alarms') return items.filter((i) => i.type === 'alarm');
   if (filter === 'reminders') return items.filter((i) => i.type === 'reminder');
+  if (filter === 'voice') return items.filter((i) => i.type === 'voiceMemo');
   return items.filter((i) => i.type === 'note');
 }
 
@@ -253,6 +267,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
   const today = toDateString(new Date());
   const initialDate = route.params?.initialDate || today;
   const [selectedDate, setSelectedDate] = useState(initialDate);
@@ -278,15 +293,17 @@ export default function CalendarScreen({ navigation, route }: Props) {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [a, r, n, s] = await Promise.all([
+        const [a, r, n, s, vm] = await Promise.all([
           loadAlarms(),
           getReminders(),
           getNotes(),
           loadSettings(),
+          getVoiceMemos(),
         ]);
         setAlarms(a.filter((x) => !x.deletedAt));
         setReminders(r.filter((x) => !x.deletedAt));
         setNotes(n.filter((x) => !x.deletedAt));
+        setVoiceMemos(vm);
         setTimeFormat(s.timeFormat);
       })();
       loadBackground().then(setBgUri);
@@ -403,6 +420,18 @@ export default function CalendarScreen({ navigation, route }: Props) {
       }
     }
 
+    // Voice memos — use local date
+    for (const memo of voiceMemos) {
+      const md = new Date(memo.createdAt);
+      const ds = `${md.getFullYear()}-${String(md.getMonth() + 1).padStart(2, '0')}-${String(md.getDate()).padStart(2, '0')}`;
+      if (ds.startsWith(`${year}-${String(month).padStart(2, '0')}`)) {
+        ensure(ds);
+        if (!hasDot(ds, 'voice')) {
+          marks[ds].dots.push({ key: 'voice', color: DOT_VOICE });
+        }
+      }
+    }
+
     // Mark selected date
     if (marks[selectedDate]) {
       marks[selectedDate].selected = true;
@@ -411,13 +440,13 @@ export default function CalendarScreen({ navigation, route }: Props) {
     }
 
     return marks;
-  }, [alarms, reminders, notes, currentMonth, selectedDate]);
+  }, [alarms, reminders, notes, voiceMemos, currentMonth, selectedDate]);
 
   // ── Day view items ──
   const dayRows = useMemo<ListRow[]>(() => {
-    const items = sortItems(getItemsForDate(selectedDate, alarms, reminders, notes));
+    const items = sortItems(getItemsForDate(selectedDate, alarms, reminders, notes, voiceMemos));
     return items.map((item) => ({ rowType: 'event' as const, item }));
-  }, [alarms, reminders, notes, selectedDate]);
+  }, [alarms, reminders, notes, voiceMemos, selectedDate]);
 
   // ── Week view items (always current week — the week containing today) ──
   const weekRows = useMemo<ListRow[]>(() => {
@@ -425,7 +454,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
     const dates = getDatesInRange(start, end);
     const rows: ListRow[] = [];
     for (const ds of dates) {
-      let items = getItemsForDate(ds, alarms, reminders, notes);
+      let items = getItemsForDate(ds, alarms, reminders, notes, voiceMemos);
       items = applyFilter(items, filterType);
       items = sortItems(items);
       if (items.length > 0) {
@@ -436,7 +465,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       }
     }
     return rows;
-  }, [alarms, reminders, notes, today, filterType]);
+  }, [alarms, reminders, notes, voiceMemos, today, filterType]);
 
   // ── Month view items ──
   const monthRows = useMemo<ListRow[]>(() => {
@@ -445,7 +474,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
     const dates = getDaysInMonth(year, month).map(toDateString);
     const rows: ListRow[] = [];
     for (const ds of dates) {
-      let items = getItemsForDate(ds, alarms, reminders, notes);
+      let items = getItemsForDate(ds, alarms, reminders, notes, voiceMemos);
       items = applyFilter(items, filterType);
       items = sortItems(items);
       if (items.length > 0) {
@@ -456,7 +485,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       }
     }
     return rows;
-  }, [alarms, reminders, notes, currentMonth, filterType]);
+  }, [alarms, reminders, notes, voiceMemos, currentMonth, filterType]);
 
   const listData = viewMode === 'day' ? dayRows : viewMode === 'week' ? weekRows : monthRows;
 
@@ -789,7 +818,31 @@ export default function CalendarScreen({ navigation, route }: Props) {
         );
       }
 
-      const n = item.data;
+      if (item.type === 'voiceMemo') {
+        const memo = item.data;
+        const dur = `${Math.floor(memo.duration / 60)}:${String(Math.floor(memo.duration % 60)).padStart(2, '0')}`;
+        return (
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_VOICE }]}>
+            <Text style={styles.cardIcon}>{'\u{1F399}\uFE0F'}</Text>
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {memo.title || 'Voice Memo'}
+              </Text>
+              <Text style={styles.cardSub}>{dur}</Text>
+            </View>
+            <Text
+              style={[
+                styles.cardLabel,
+                { backgroundColor: DOT_VOICE + '20', color: DOT_VOICE },
+              ]}
+            >
+              Voice
+            </Text>
+          </TouchableOpacity>
+        );
+      }
+
+      const n = item.data as Note;
       const line = n.text.split('\n')[0];
       const firstLine = line.length > 50 ? line.slice(0, 50) + '\u2026' : line;
       return (
@@ -889,6 +942,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: DOT_NOTE }]} />
             <Text style={styles.legendText}>Notes</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: DOT_VOICE }]} />
+            <Text style={styles.legendText}>Voice Memos</Text>
           </View>
         </View>
         {/* Quick-create buttons (day only, today or future) */}

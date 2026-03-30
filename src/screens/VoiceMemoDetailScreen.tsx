@@ -15,12 +15,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticLight, hapticHeavy } from '../utils/haptics';
+import { v4 as uuidv4 } from 'uuid';
+import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import {
   getAllVoiceMemos,
   updateVoiceMemo,
   deleteVoiceMemo,
+  addVoiceMemo,
 } from '../services/voiceMemoStorage';
+import { saveVoiceMemoFile, deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
 import BackButton from '../components/BackButton';
@@ -28,6 +31,15 @@ import type { RootStackParamList } from '../navigation/types';
 import type { VoiceMemo } from '../types/voiceMemo';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VoiceMemoDetail'>;
+
+const SAVE_TOASTS = [
+  'Saved. Future you will either thank you or cringe.',
+  'Recorded and stored. Your voice is safe. Whether it should be is another question.',
+  'Got it. Another thought rescued from oblivion.',
+  "Saved. Now you'll never forget what you sound like right now.",
+  'Noted. Verbally.',
+  'Your voice has been archived. No take-backs.',
+];
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -38,22 +50,31 @@ function formatTime(seconds: number): string {
 export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { memoId } = route.params;
+  const params = route.params;
+  const isNewRecording = 'tempUri' in params;
 
   const [memo, setMemo] = useState<VoiceMemo | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isNewRecording);
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
 
   const initialTitleRef = useRef('');
   const initialNoteRef = useRef('');
   const barWidthRef = useRef(0);
+  const savingRef = useRef(false);
 
+  const audioUri = isNewRecording
+    ? (params as { tempUri: string }).tempUri
+    : memo?.uri;
+  const tempDuration = isNewRecording
+    ? (params as { tempUri: string; duration: number }).duration
+    : 0;
   const audioSource = useMemo(
-    () => (memo ? { uri: memo.uri } : null),
-    [memo?.uri],
+    () => (audioUri ? { uri: audioUri } : null),
+    [audioUri],
   );
   const player = useAudioPlayer(audioSource);
   const playerStatus = useAudioPlayerStatus(player);
@@ -61,22 +82,25 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   // Load memo and background on mount
   useEffect(() => {
     (async () => {
-      const [all] = await Promise.all([
-        getAllVoiceMemos(),
+      await Promise.all([
         loadBackground().then(setBgUri),
         getOverlayOpacity().then(setBgOpacity),
       ]);
-      const found = all.find((m) => m.id === memoId);
-      if (found) {
-        setMemo(found);
-        setTitle(found.title);
-        setNote(found.note);
-        initialTitleRef.current = found.title;
-        initialNoteRef.current = found.note;
+      if (!isNewRecording) {
+        const memoId = (params as { memoId: string }).memoId;
+        const all = await getAllVoiceMemos();
+        const found = all.find((m) => m.id === memoId);
+        if (found) {
+          setMemo(found);
+          setTitle(found.title);
+          setNote(found.note);
+          initialTitleRef.current = found.title;
+          initialNoteRef.current = found.note;
+        }
+        setLoading(false);
       }
-      setLoading(false);
     })();
-  }, [memoId]);
+  }, []);
 
   // Reset position when playback finishes
   useEffect(() => {
@@ -94,12 +118,29 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   );
 
   const handleBack = async () => {
+    if (savingRef.current) return;
     Keyboard.dismiss();
-    try {
-      player.pause();
-    } catch {
-      /* best-effort */
+    try { player.pause(); } catch { /* */ }
+
+    if (isNewRecording) {
+      Alert.alert(
+        'Discard recording?',
+        "You haven't saved this recording yet.",
+        [
+          { text: 'Keep Editing', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              deleteVoiceMemoFile((params as { tempUri: string }).tempUri).catch(() => {});
+              navigation.goBack();
+            },
+          },
+        ],
+      );
+      return;
     }
+
     if (
       memo &&
       (title !== initialTitleRef.current || note !== initialNoteRef.current)
@@ -113,17 +154,17 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         });
         refreshWidgets();
         ToastAndroid.show('Saved', ToastAndroid.SHORT);
-      } catch {
-        /* best-effort */
-      }
+      } catch { /* best-effort */ }
     }
     navigation.goBack();
   };
 
   const handleDelete = () => {
+    if (isNewRecording) return;
+    const memoId = (params as { memoId: string }).memoId;
     Alert.alert(
       'Delete this memo?',
-      "Once it's gone, it's gone. Well, for 30 days. Then it's really gone.",
+      "Once it's gone, your brilliant thought goes with it. Well, for 30 days. Then it's really gone.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -131,11 +172,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           style: 'destructive',
           onPress: async () => {
             hapticHeavy();
-            try {
-              player.pause();
-            } catch {
-              /* */
-            }
+            try { player.pause(); } catch { /* */ }
             await deleteVoiceMemo(memoId);
             refreshWidgets();
             navigation.goBack();
@@ -143,6 +180,49 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         },
       ],
     );
+  };
+
+  const handleSaveNew = async () => {
+    if (savingRef.current || !isNewRecording) return;
+    savingRef.current = true;
+    setSaving(true);
+    hapticMedium();
+    Keyboard.dismiss();
+    try { player.pause(); } catch { /* */ }
+    try {
+      const tempUri = (params as { tempUri: string; duration: number }).tempUri;
+      const dur = (params as { tempUri: string; duration: number }).duration;
+      const newMemoId = uuidv4();
+      const permanentUri = await saveVoiceMemoFile(newMemoId, tempUri);
+      const now = new Date().toISOString();
+      await addVoiceMemo({
+        id: newMemoId,
+        uri: permanentUri,
+        title: title.trim(),
+        note: note.trim(),
+        duration: dur,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+        noteId: null,
+      });
+      refreshWidgets();
+      ToastAndroid.show(SAVE_TOASTS[Math.floor(Math.random() * SAVE_TOASTS.length)], ToastAndroid.LONG);
+      navigation.goBack();
+    } catch (e) {
+      console.error('Save failed:', e);
+      ToastAndroid.show('Failed to save recording', ToastAndroid.SHORT);
+      savingRef.current = false;
+      setSaving(false);
+    }
+  };
+
+  const handleDiscardNew = () => {
+    if (savingRef.current) return;
+    hapticLight();
+    try { player.pause(); } catch { /* */ }
+    deleteVoiceMemoFile((params as { tempUri: string }).tempUri).catch(() => {});
+    navigation.goBack();
   };
 
   const togglePlay = () => {
@@ -186,7 +266,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       ? playerStatus.currentTime / playerStatus.duration
       : 0;
   const displayDuration =
-    playerStatus.duration > 0 ? playerStatus.duration : memo?.duration || 0;
+    playerStatus.duration > 0 ? playerStatus.duration : (memo?.duration || tempDuration);
 
   const styles = useMemo(
     () =>
@@ -303,20 +383,20 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           alignItems: 'center',
         },
         skipText: {
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: '700',
           color: 'rgba(255, 255, 255, 0.7)',
         },
         playPauseBtn: {
-          width: 56,
-          height: 56,
-          borderRadius: 28,
+          width: 64,
+          height: 64,
+          borderRadius: 32,
           backgroundColor: '#A29BFE',
           justifyContent: 'center',
           alignItems: 'center',
         },
         playPauseIcon: {
-          fontSize: 24,
+          fontSize: 28,
         },
         notFound: {
           flex: 1,
@@ -329,13 +409,45 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           color: colors.textTertiary,
           textAlign: 'center',
         },
+        saveDiscardRow: {
+          flexDirection: 'row',
+          gap: 12,
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 16,
+        },
+        saveBtn: {
+          flex: 1,
+          backgroundColor: colors.accent,
+          borderRadius: 20,
+          paddingVertical: 14,
+          alignItems: 'center',
+        },
+        saveBtnText: {
+          fontSize: 15,
+          fontWeight: '700',
+          color: colors.background,
+        },
+        discardBtn: {
+          flex: 1,
+          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          borderRadius: 20,
+          paddingVertical: 14,
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+        },
+        discardBtnText: {
+          fontSize: 15,
+          fontWeight: '600',
+          color: colors.textSecondary,
+        },
       }),
     [colors, insets],
   );
 
   if (loading) return <View style={styles.container} />;
 
-  if (!memo) {
+  if (!memo && !isNewRecording) {
     return (
       <View style={styles.container}>
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -408,16 +520,18 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         <View style={styles.headerBack}>
           <BackButton onPress={handleBack} />
         </View>
-        <Text style={styles.headerTitle}>Voice Memo</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.trashBtn}
-            onPress={handleDelete}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.trashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>{isNewRecording ? 'New Recording' : 'Voice Memo'}</Text>
+        {!isNewRecording && (
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.trashBtn}
+              onPress={handleDelete}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.trashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Content */}
@@ -448,7 +562,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         />
 
         {/* Playback section */}
-        <View style={styles.playbackSection}>
+        <View style={[styles.playbackSection, isNewRecording && { paddingBottom: 16 }]}>
           {/* Seekable progress bar — 44px touch target, 6px visual bar */}
           <View
             style={styles.seekArea}
@@ -508,6 +622,29 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           </View>
         </View>
       </View>
+
+      {/* Save/Discard for new recordings */}
+      {isNewRecording && (
+        <View style={styles.saveDiscardRow}>
+          <TouchableOpacity
+            style={styles.discardBtn}
+            onPress={handleDiscardNew}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.discardBtnText}>Discard</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && { opacity: 0.5 }]}
+            onPress={handleSaveNew}
+            activeOpacity={0.7}
+            disabled={saving}
+          >
+            <Text style={styles.saveBtnText}>
+              {saving ? 'Saving...' : 'Save'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }

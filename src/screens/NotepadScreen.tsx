@@ -7,10 +7,7 @@ import {
   FlatList,
   ToastAndroid,
   Image,
-  Linking,
   AppState,
-  type StyleProp,
-  type TextStyle,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { v4 as uuidv4 } from 'uuid';
@@ -37,6 +34,11 @@ import {
   unpinNote,
   pruneNotePins,
   isNotePinned,
+  getPinnedVoiceMemos,
+  togglePinVoiceMemo,
+  unpinVoiceMemo,
+  pruneVoiceMemoPins,
+  isVoiceMemoPinned,
 } from '../services/widgetPins';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { refreshWidgets } from '../widget/updateWidget';
@@ -46,7 +48,6 @@ import BackButton from '../components/BackButton';
 import NoteEditorModal from '../components/NoteEditorModal';
 import { CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
 import type { Note } from '../types/note';
-import { getTextColor } from '../utils/noteColors';
 import type { RootStackParamList } from '../navigation/types';
 import type { VoiceMemo } from '../types/voiceMemo';
 import * as VMStore from '../services/voiceMemoStorage';
@@ -55,8 +56,23 @@ import VoiceMemoCard from '../components/VoiceMemoCard';
 import { createAudioPlayer } from 'expo-audio';
 
 const MAX_NOTE_PINS = 4;
+const MAX_VOICE_MEMO_PINS = 4;
 let welcomeNoteCreating = false;
 type ListItem = { type: 'note'; data: Note } | { type: 'voiceMemo'; data: VoiceMemo };
+
+const VOICE_EMPTY_MESSAGES = [
+  'Nothing to hear here. Suspiciously quiet.',
+  'No voice memos yet. Your thoughts are still trapped in your head.',
+  'Silence. The sound of someone who keeps forgetting to record things.',
+  "Your voice memo list is empty. Your head probably isn't.",
+  'No recordings yet. All those brilliant shower thoughts, lost.',
+];
+
+const VOICE_DELETE_TOASTS = [
+  "Memo deleted. Tap to undo before it's too late.",
+  'Gone. But not forgotten. Yet. Tap undo.',
+  'Deleted. Your voice echoes into the void. Undo?',
+];
 
 const SAVE_TOASTS = [
   'Got it. Try not to forget this one too.',
@@ -92,72 +108,13 @@ function formatDeletedAgo(deletedAt: string): string {
   return `Deleted ${Math.floor(days / 30)}mo ago`;
 }
 
-const LINK_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
-
-function renderLinkedText(
-  text: string,
-  baseStyle: StyleProp<TextStyle>,
-  linkColor: string,
-): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match;
-  const regex = new RegExp(LINK_REGEX.source, 'g');
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(
-        <Text key={`t-${lastIndex}`} style={baseStyle}>
-          {text.substring(lastIndex, match.index)}
-        </Text>,
-      );
-    }
-
-    let matched = match[0];
-    let url: string;
-    if (match[1]) {
-      // Strip trailing punctuation greedily captured in URLs
-      const trimmed = matched.replace(/[.,!?)\]]+$/, '');
-      if (trimmed.length < matched.length) {
-        regex.lastIndex -= matched.length - trimmed.length;
-        matched = trimmed;
-      }
-      url = /^https?:\/\//i.test(matched) ? matched : `https://${matched}`;
-    } else if (match[2]) {
-      url = `mailto:${matched}`;
-    } else {
-      url = `tel:${matched.replace(/[^\d+]/g, '')}`;
-    }
-
-    parts.push(
-      <Text
-        key={`l-${match.index}`}
-        style={[baseStyle, { color: linkColor, textDecorationLine: 'underline' as const }]}
-        onPress={() => Linking.openURL(url).catch(() => {})}
-      >
-        {matched}
-      </Text>,
-    );
-    lastIndex = regex.lastIndex;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(
-      <Text key={`t-${lastIndex}`} style={baseStyle}>
-        {text.substring(lastIndex)}
-      </Text>,
-    );
-  }
-
-  return parts.length > 0 ? parts : [<Text key="full" style={baseStyle}>{text}</Text>];
-}
-
 type Props = NativeStackScreenProps<RootStackParamList, 'Notepad'>;
 
 export default function NotepadScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
+  const [voiceEmptyMsg] = useState(() => VOICE_EMPTY_MESSAGES[Math.floor(Math.random() * VOICE_EMPTY_MESSAGES.length)]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [filter, setFilter] = useState<'active' | 'deleted'>('active');
@@ -179,6 +136,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
 
   // Voice memo state
   const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
+  const [pinnedVoiceMemoIds, setPinnedVoiceMemoIds] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<'all' | 'notes' | 'voice'>('all');
   const [playingMemoId, setPlayingMemoId] = useState<string | null>(null);
   const [playbackProgress, setPlaybackProgress] = useState<Record<string, number>>({});
@@ -259,6 +217,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const reloadVoiceMemos = useCallback(async () => {
     const memos = await VMStore.getAllVoiceMemos();
     setVoiceMemos(memos);
+    const activeIds = memos.filter((m) => !m.deletedAt).map((m) => m.id);
+    const pruned = await pruneVoiceMemoPins(activeIds);
+    setPinnedVoiceMemoIds(pruned);
   }, []);
 
   const stopPlayback = useCallback(() => {
@@ -598,6 +559,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     if (!memo) return;
     if (playingMemoId === id) stopPlayback();
     setDeletedVoiceMemo(memo);
+    await unpinVoiceMemo(id);
     await VMStore.deleteVoiceMemo(id);
     await reloadVoiceMemos();
     refreshWidgets();
@@ -654,6 +616,23 @@ export default function NotepadScreen({ navigation, route }: Props) {
     );
   };
 
+  const handleToggleVoiceMemoPin = async (id: string) => {
+    hapticMedium();
+    const currentlyPinned = isVoiceMemoPinned(id, pinnedVoiceMemoIds);
+    if (!currentlyPinned && pinnedVoiceMemoIds.length >= MAX_VOICE_MEMO_PINS) {
+      ToastAndroid.show('Voice memo pins full \u2014 unpin one first', ToastAndroid.SHORT);
+      return;
+    }
+    await togglePinVoiceMemo(id);
+    const updated = await getPinnedVoiceMemos();
+    setPinnedVoiceMemoIds(updated);
+    refreshWidgets();
+    ToastAndroid.show(
+      currentlyPinned ? 'Unpinned' : 'Pinned to widget',
+      ToastAndroid.SHORT,
+    );
+  };
+
   const sorted = useMemo(() => {
     if (filter === 'deleted') {
       return notes
@@ -675,10 +654,13 @@ export default function NotepadScreen({ navigation, route }: Props) {
         .filter((m) => !!m.deletedAt)
         .sort((a, b) => new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime());
     }
-    return voiceMemos
-      .filter((m) => !m.deletedAt)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [voiceMemos, filter]);
+    const active = voiceMemos.filter((m) => !m.deletedAt);
+    const pinned = active.filter((m) => isVoiceMemoPinned(m.id, pinnedVoiceMemoIds));
+    const unpinned = active.filter((m) => !isVoiceMemoPinned(m.id, pinnedVoiceMemoIds));
+    pinned.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    unpinned.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return [...pinned, ...unpinned];
+  }, [voiceMemos, pinnedVoiceMemoIds, filter]);
 
   const listData: ListItem[] = useMemo(() => {
     const noteItems: ListItem[] = sorted.map((n) => ({ type: 'note' as const, data: n }));
@@ -812,55 +794,44 @@ export default function NotepadScreen({ navigation, route }: Props) {
       color: colors.textPrimary,
     },
     card: {
-      borderRadius: 16,
-      flexDirection: 'row',
-      alignItems: 'stretch',
-      borderWidth: 1.5,
-      overflow: 'hidden',
-      marginBottom: 10,
-    },
-    cardContent: {
-      flex: 1,
-      padding: 14,
       flexDirection: 'row',
       alignItems: 'center',
+      backgroundColor: 'rgba(30, 30, 50, 0.8)',
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderLeftWidth: 3,
+      borderLeftColor: 'transparent',
+      marginBottom: 8,
     },
-    cardMiddle: {
+    iconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    iconCircleText: {
+      fontSize: 16,
+    },
+    cardCenter: {
       flex: 1,
-      marginRight: 10,
+      marginHorizontal: 12,
     },
-    cardIcon: {
-      fontSize: 18,
-      marginRight: 6,
-    },
-    cardTextRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-    },
-    cardText: {
-      flex: 1,
+    cardTitle: {
       fontSize: 15,
       fontWeight: '600',
-      color: colors.textPrimary,
-      lineHeight: 20,
+      color: '#FFFFFF',
     },
-    cardMeta: {
+    cardSubtitle: {
+      fontSize: 12,
+      color: 'rgba(255, 255, 255, 0.5)',
+      marginTop: 2,
+    },
+    cardActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: 4,
-      gap: 6,
-    },
-    cardTime: {
-      fontSize: 12,
-      color: colors.textTertiary,
-    },
-    cardPin: {
-      fontSize: 11,
-      color: colors.accent,
-    },
-    cardRight: {
-      alignItems: 'center',
-      justifyContent: 'center',
       gap: 6,
     },
     pinBtn: {
@@ -875,7 +846,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
       backgroundColor: 'rgba(30, 30, 40, 0.85)',
     },
     pinBtnText: {
-      fontSize: 13,
+      fontSize: 12,
     },
     deleteBtn: {
       paddingHorizontal: 12,
@@ -886,7 +857,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
       borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     deleteText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
       color: '#EF4444',
     },
@@ -895,10 +866,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
       color: colors.textTertiary,
       marginTop: 4,
       fontStyle: 'italic',
-    },
-    btnRow: {
-      flexDirection: 'row',
-      gap: 6,
     },
     restoreBtn: {
       paddingHorizontal: 12,
@@ -929,7 +896,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
     fab: {
       position: 'absolute',
       bottom: 36 + insets.bottom,
-      right: 24,
       width: 60,
       height: 60,
       borderRadius: 30,
@@ -950,14 +916,13 @@ export default function NotepadScreen({ navigation, route }: Props) {
     },
     contentFilterRow: {
       flexDirection: 'row',
+      justifyContent: 'space-evenly',
       paddingHorizontal: 16,
-      paddingTop: 8,
-      paddingBottom: 4,
-      gap: 8,
+      paddingVertical: 8,
     },
     contentTab: {
-      paddingHorizontal: 14,
-      paddingVertical: 6,
+      paddingHorizontal: 24,
+      paddingVertical: 8,
       borderRadius: 16,
       backgroundColor: 'rgba(30, 30, 40, 0.7)',
       borderWidth: 1,
@@ -975,135 +940,105 @@ export default function NotepadScreen({ navigation, route }: Props) {
     contentTabTextActive: {
       fontWeight: '700',
     },
-    headerMic: {
-      position: 'absolute',
-      right: 20,
-      top: insets.top + 10,
-    },
-    micBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    micBtnText: {
-      fontSize: 18,
-    },
   }), [colors, insets.bottom, insets.top]);
 
-  const renderDeletedItem = (item: Note) => {
-    const deletedTextColor = getTextColor(item.color);
-    return (
-    <View style={[styles.card, { opacity: 0.7, backgroundColor: item.color, borderColor: getTextColor(item.color) === '#FFFFFF' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)' }]}>
-      <View style={styles.cardContent}>
-        <View style={styles.cardMiddle}>
-          <Text style={[styles.cardText, { color: deletedTextColor + 'AA' }]} numberOfLines={2}>
-            {item.icon ? `${item.icon} ` : ''}{item.text}
-          </Text>
-          <Text style={[styles.deletedAgo, { color: deletedTextColor + '80' }]}>
-            {formatDeletedAgo(item.deletedAt!)}
-          </Text>
-        </View>
-        <View style={styles.cardRight}>
-          <View style={styles.btnRow}>
-            <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
-              <Text style={styles.restoreText}>Restore</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
-              <Text style={styles.foreverText}>Forever</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+  const renderDeletedItem = (item: Note) => (
+    <View style={[styles.card, { borderLeftColor: item.color, opacity: 0.7 }]}>
+      <View style={[styles.iconCircle, { backgroundColor: item.color, opacity: 0.6 }]}>
+        <Text style={styles.iconCircleText}>{item.icon || '\u{1F4DD}'}</Text>
+      </View>
+      <View style={styles.cardCenter}>
+        <Text style={[styles.cardTitle, { opacity: 0.7 }]} numberOfLines={2}>
+          {item.text}
+        </Text>
+        <Text style={styles.deletedAgo}>
+          {formatDeletedAgo(item.deletedAt!)}
+        </Text>
+      </View>
+      <View style={styles.cardActions}>
+        <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
+          <Text style={styles.restoreText}>Restore</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
+          <Text style={styles.foreverText}>Forever</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
-  };
 
   const renderDeletedVoiceMemo = (memo: VoiceMemo) => (
-    <View style={[styles.card, { opacity: 0.7, backgroundColor: 'rgba(30, 30, 50, 0.6)', borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
-      <View style={styles.cardContent}>
-        <View style={styles.cardMiddle}>
-          <Text style={[styles.cardText, { color: '#FFFFFFAA' }]} numberOfLines={2}>
-            {'\u{1F399}\uFE0F'} {memo.title || 'Voice Memo'}
-          </Text>
-          <Text style={[styles.deletedAgo, { color: '#FFFFFF80' }]}>
-            {formatDeletedAgo(memo.deletedAt!)}
-          </Text>
-        </View>
-        <View style={styles.cardRight}>
-          <View style={styles.btnRow}>
-            <TouchableOpacity onPress={() => handleRestoreVoiceMemo(memo.id)} style={styles.restoreBtn} activeOpacity={0.7}>
-              <Text style={styles.restoreText}>Restore</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handlePermanentDeleteVoiceMemo(memo.id)} style={styles.foreverBtn} activeOpacity={0.7}>
-              <Text style={styles.foreverText}>Forever</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    <View style={[styles.card, { borderLeftColor: '#A29BFE', opacity: 0.7 }]}>
+      <View style={[styles.iconCircle, { backgroundColor: '#A29BFE', opacity: 0.6 }]}>
+        <Text style={styles.iconCircleText}>{'\u{1F399}\uFE0F'}</Text>
+      </View>
+      <View style={styles.cardCenter}>
+        <Text style={[styles.cardTitle, { opacity: 0.7 }]} numberOfLines={2}>
+          {memo.title || 'Voice Memo'}
+        </Text>
+        <Text style={styles.deletedAgo}>
+          {formatDeletedAgo(memo.deletedAt!)}
+        </Text>
+      </View>
+      <View style={styles.cardActions}>
+        <TouchableOpacity onPress={() => handleRestoreVoiceMemo(memo.id)} style={styles.restoreBtn} activeOpacity={0.7}>
+          <Text style={styles.restoreText}>Restore</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handlePermanentDeleteVoiceMemo(memo.id)} style={styles.foreverBtn} activeOpacity={0.7}>
+          <Text style={styles.foreverText}>Forever</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
   const renderActiveItem = (item: Note) => {
     const pinned = isNotePinned(item.id, pinnedIds);
-    const cardFontColor = item.fontColor || getTextColor(item.color);
-    const linkColor = getTextColor(item.color) === '#FFFFFF' ? '#48DBFB' : '#0066CC';
-    const textStyle = [styles.cardText, cardFontColor ? { color: cardFontColor } : undefined];
+    const firstLine = item.text.split('\n')[0];
+    const truncated = firstLine.length > 50 ? firstLine.slice(0, 50) + '\u2026' : firstLine;
     return (
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: item.color, borderColor: getTextColor(item.color) === '#FFFFFF' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)' }]}
-        onPress={() => { hapticLight(); openEditorWithNote(item); }}
-        onLongPress={async () => {
-          hapticMedium();
-          try {
-            await Clipboard.setStringAsync(item.text);
-            ToastAndroid.show('Copied to clipboard', ToastAndroid.SHORT);
-          } catch {
-            ToastAndroid.show("Couldn't copy", ToastAndroid.SHORT);
-          }
-        }}
-        activeOpacity={0.7}
-      >
-        <View style={styles.cardContent}>
-          <View style={styles.cardMiddle}>
-            <View style={styles.cardTextRow}>
-              {item.icon ? <Text style={styles.cardIcon}>{item.icon}</Text> : null}
-              <Text style={textStyle} numberOfLines={3}>
-                {renderLinkedText(item.text, textStyle, linkColor)}
-              </Text>
-            </View>
-            <View style={styles.cardMeta}>
-              <Text style={[styles.cardTime, { color: (cardFontColor || getTextColor(item.color)) + '99' }]}>{getRelativeTime(item.updatedAt)}</Text>
-              {pinned && <Text style={styles.cardPin}>{'\u{1F4CC}'}</Text>}
-              {(item.images?.length ?? 0) > 0 && (
-                <Text style={[styles.cardTime, { color: (cardFontColor || getTextColor(item.color)) + '99' }]}>{'\u{1F4F7}'} {item.images!.length}</Text>
-              )}
-            </View>
-          </View>
-          <View style={styles.cardRight}>
-            <TouchableOpacity
-              onPress={() => handleTogglePin(item.id)}
-              style={[styles.pinBtn, pinned && styles.pinBtnActive]}
-              activeOpacity={0.6}
-            >
-              <Text style={[styles.pinBtnText, { opacity: pinned ? 1 : 0.3 }]}>
-                {'\u{1F4CC}'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDeleteFromList(item.id)}
-              style={styles.deleteBtn}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.deleteText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
+      <View style={[styles.card, { borderLeftColor: item.color }]}>
+        <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
+          <Text style={styles.iconCircleText}>{item.icon || '\u{1F4DD}'}</Text>
         </View>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.cardCenter}
+          onPress={() => { hapticLight(); openEditorWithNote(item); }}
+          onLongPress={async () => {
+            hapticMedium();
+            try {
+              await Clipboard.setStringAsync(item.text);
+              ToastAndroid.show('Copied to clipboard', ToastAndroid.SHORT);
+            } catch {
+              ToastAndroid.show("Couldn't copy", ToastAndroid.SHORT);
+            }
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.cardTitle} numberOfLines={1}>{truncated}</Text>
+          <Text style={styles.cardSubtitle} numberOfLines={1}>
+            {getRelativeTime(item.updatedAt)}
+            {pinned ? ' \u00B7 \u{1F4CC}' : ''}
+            {(item.images?.length ?? 0) > 0 ? ` \u00B7 \u{1F4F7} ${item.images!.length}` : ''}
+          </Text>
+        </TouchableOpacity>
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            onPress={() => handleTogglePin(item.id)}
+            style={[styles.pinBtn, pinned && styles.pinBtnActive]}
+            activeOpacity={0.6}
+          >
+            <Text style={[styles.pinBtnText, { opacity: pinned ? 1 : 0.3 }]}>
+              {'\u{1F4CC}'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleDeleteFromList(item.id)}
+            style={styles.deleteBtn}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.deleteText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   };
 
@@ -1121,7 +1056,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
         onPlayToggle={() => handlePlayToggle(m)}
         isPlaying={playingMemoId === m.id}
         playbackProgress={playbackProgress[m.id] || 0}
-        onDelete={filter === 'active' ? () => handleDeleteVoiceMemo(m.id) : undefined}
+        onPin={() => handleToggleVoiceMemoPin(m.id)}
+        isPinned={isVoiceMemoPinned(m.id, pinnedVoiceMemoIds)}
+        onDelete={() => handleDeleteVoiceMemo(m.id)}
       />
     );
   };
@@ -1140,17 +1077,18 @@ export default function NotepadScreen({ navigation, route }: Props) {
       return (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>{'\u{1F399}\uFE0F'}</Text>
-          <Text style={styles.emptyTitle}>No voice memos yet</Text>
+          <Text style={styles.emptyText}>{voiceEmptyMsg}</Text>
+        </View>
+      );
+    }
+    if (contentFilter === 'notes') {
+      return (
+        <View style={styles.empty}>
+          <Text style={styles.emptyIcon}>{'\u{1F4DD}'}</Text>
+          <Text style={styles.emptyTitle}>No notes yet</Text>
           <Text style={styles.emptyText}>
-            Tap the mic to record your first one.
+            Tap the notepad to create one.
           </Text>
-          <TouchableOpacity
-            style={styles.emptyBtn}
-            onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.emptyBtnText}>Record</Text>
-          </TouchableOpacity>
         </View>
       );
     }
@@ -1159,15 +1097,8 @@ export default function NotepadScreen({ navigation, route }: Props) {
         <Text style={styles.emptyIcon}>{'\u{1F4DD}'}</Text>
         <Text style={styles.emptyTitle}>Nothing here yet</Text>
         <Text style={styles.emptyText}>
-          That's either impressive or suspicious.
+          Record a voice memo or create a note to get started.
         </Text>
-        <TouchableOpacity
-          style={styles.emptyBtn}
-          onPress={() => { hapticLight(); openNewEditor(); }}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.emptyBtnText}>Create a Note</Text>
-        </TouchableOpacity>
       </View>
     );
   };
@@ -1195,21 +1126,10 @@ export default function NotepadScreen({ navigation, route }: Props) {
             <BackButton onPress={() => navigation.goBack()} />
           </View>
           <Text style={styles.title}>Notes</Text>
-          {(contentFilter === 'all' || contentFilter === 'voice') && (
-            <View style={styles.headerMic}>
-              <TouchableOpacity
-                style={styles.micBtn}
-                onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.micBtnText}>{'\u{1F399}\uFE0F'}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
 
         <View style={styles.contentFilterRow}>
-          {(['all', 'notes', 'voice'] as const).map((tab) => (
+          {(['voice', 'all', 'notes'] as const).map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[styles.contentTab, contentFilter === tab && styles.contentTabActive]}
@@ -1272,11 +1192,19 @@ export default function NotepadScreen({ navigation, route }: Props) {
         )}
 
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { left: 20 }]}
+          onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.fabText}>{'\u{1F399}\uFE0F'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.fab, { right: 20 }]}
           onPress={() => { hapticLight(); openNewEditor(); }}
           activeOpacity={0.8}
         >
-          <Text style={styles.fabText}>+</Text>
+          <Text style={styles.fabText}>{'\u{1F4DD}'}</Text>
         </TouchableOpacity>
 
         <UndoToast
@@ -1289,7 +1217,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
         <UndoToast
           key={`voice-${voiceUndoKey}`}
           visible={showVoiceUndo}
-          message="Voice memo deleted"
+          message={VOICE_DELETE_TOASTS[Math.floor(Math.random() * VOICE_DELETE_TOASTS.length)]}
           onUndo={handleUndoDeleteVoiceMemo}
           onDismiss={handleVoiceUndoDismiss}
         />

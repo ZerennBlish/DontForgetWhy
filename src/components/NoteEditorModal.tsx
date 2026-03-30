@@ -914,7 +914,7 @@ export default function NoteEditorModal({
           )}
 
           {editorVoiceMemos.length > 0 && (
-            <View style={voiceMemoStyles.memoRow}>
+            <View style={[voiceMemoStyles.memoRow, { paddingBottom: 8 + insets.bottom }]}>
               {editorVoiceMemos.map((memoUri, idx) => {
                 const isActive = activePlayerUri === memoUri;
                 const isThisPlaying = isActive && playerStatus.playing;

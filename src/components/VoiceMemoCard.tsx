@@ -32,6 +32,8 @@ interface VoiceMemoCardProps {
   onPlayToggle: () => void;
   isPlaying: boolean;
   playbackProgress: number;
+  onPin?: () => void;
+  isPinned?: boolean;
   onDelete?: () => void;
 }
 
@@ -41,6 +43,8 @@ function VoiceMemoCard({
   onPlayToggle,
   isPlaying,
   playbackProgress,
+  onPin,
+  isPinned,
   onDelete,
 }: VoiceMemoCardProps) {
   return (
@@ -79,14 +83,29 @@ function VoiceMemoCard({
         )}
       </TouchableOpacity>
 
-      {onDelete && (
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={onDelete}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.deleteIcon}>{'\u2715'}</Text>
-        </TouchableOpacity>
+      {(onPin || onDelete) && (
+        <View style={styles.actions}>
+          {onPin && (
+            <TouchableOpacity
+              style={[styles.pinBtn, isPinned && styles.pinBtnActive]}
+              onPress={onPin}
+              activeOpacity={0.6}
+            >
+              <Text style={[styles.pinBtnText, { opacity: isPinned ? 1 : 0.3 }]}>
+                {'\u{1F4CC}'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={onDelete}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.deleteText}>Delete</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
     </View>
   );
@@ -144,17 +163,36 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
     backgroundColor: '#A29BFE',
   },
-  deleteBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 100, 100, 0.3)',
-    justifyContent: 'center',
+  actions: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  deleteIcon: {
+  pinBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: 'rgba(30, 30, 40, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  pinBtnActive: {
+    backgroundColor: 'rgba(30, 30, 40, 0.85)',
+  },
+  pinBtnText: {
+    fontSize: 12,
+  },
+  deleteBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: 'rgba(30, 30, 40, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  deleteText: {
     fontSize: 11,
-    color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '600',
+    color: '#EF4444',
   },
 });

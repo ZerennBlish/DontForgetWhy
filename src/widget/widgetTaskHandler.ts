@@ -457,9 +457,24 @@ export async function getWidgetVoiceMemos(): Promise<{ id: string; title: string
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((m: any) => m && typeof m.id === 'string' && !m.deletedAt)
-      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    const active = parsed.filter((m: any) => m && typeof m.id === 'string' && !m.deletedAt);
+
+    let pinnedIds: string[] = [];
+    try {
+      const pinnedRaw = await AsyncStorage.getItem('widgetPinnedVoiceMemos');
+      if (pinnedRaw) {
+        const pinnedParsed = JSON.parse(pinnedRaw);
+        if (Array.isArray(pinnedParsed)) pinnedIds = pinnedParsed;
+      }
+    } catch { /* */ }
+    const pinnedSet = new Set(pinnedIds);
+
+    const pinned = active.filter((m: any) => pinnedSet.has(m.id));
+    const unpinned = active.filter((m: any) => !pinnedSet.has(m.id));
+    pinned.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    unpinned.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return [...pinned, ...unpinned]
       .slice(0, 4)
       .map((m: any) => ({ id: m.id, title: m.title || '', duration: m.duration || 0, createdAt: m.createdAt }));
   } catch {

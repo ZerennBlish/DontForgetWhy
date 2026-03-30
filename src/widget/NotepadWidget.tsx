@@ -155,7 +155,23 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
           marginBottom: 8,
         }}
       >
-        <FlexWidget style={{ width: 34, height: 1 }} />
+        <FlexWidget
+          clickAction="RECORD_VOICE"
+          style={{
+            backgroundColor: theme.accent as `#${string}`,
+            borderRadius: 12,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+          }}
+        >
+          <TextWidget
+            text={'\u{1F399}\uFE0F'}
+            style={{
+              fontSize: 14,
+              color: '#FFFFFF',
+            }}
+          />
+        </FlexWidget>
         <FlexWidget
           clickAction="OPEN_NOTES"
           style={{ flex: 1, alignItems: 'center' }}
@@ -170,45 +186,21 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
           />
         </FlexWidget>
         <FlexWidget
+          clickAction="ADD_NOTE"
           style={{
-            flexDirection: 'row',
+            backgroundColor: theme.accent as `#${string}`,
+            borderRadius: 12,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
           }}
         >
-          <FlexWidget
-            clickAction="RECORD_VOICE"
+          <TextWidget
+            text={'\u{1F4DD}'}
             style={{
-              backgroundColor: '#A29BFE',
-              borderRadius: 12,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
+              fontSize: 14,
+              color: '#FFFFFF',
             }}
-          >
-            <TextWidget
-              text={'\u{1F399}'}
-              style={{
-                fontSize: 14,
-                color: '#FFFFFF',
-              }}
-            />
-          </FlexWidget>
-          <FlexWidget
-            clickAction="ADD_NOTE"
-            style={{
-              backgroundColor: theme.accent as `#${string}`,
-              borderRadius: 12,
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-            }}
-          >
-            <TextWidget
-              text="+"
-              style={{
-                fontSize: 18,
-                fontWeight: 'bold',
-                color: '#FFFFFF',
-              }}
-            />
-          </FlexWidget>
+          />
         </FlexWidget>
       </FlexWidget>
 

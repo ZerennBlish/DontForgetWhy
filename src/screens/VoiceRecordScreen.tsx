@@ -8,26 +8,29 @@ import {
   Image,
   AppState,
 } from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
 import {
   useAudioRecorder,
-  useAudioPlayer,
-  useAudioPlayerStatus,
   requestRecordingPermissionsAsync,
   RecordingPresets,
 } from 'expo-audio';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticLight, hapticMedium } from '../utils/haptics';
-import { addVoiceMemo } from '../services/voiceMemoStorage';
-import { saveVoiceMemoFile, deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
+import { hapticLight } from '../utils/haptics';
+import { deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
-import { refreshWidgets } from '../widget/updateWidget';
 import BackButton from '../components/BackButton';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VoiceRecord'>;
+
+const IDLE_HINTS = [
+  "Go ahead. Talk to yourself. We won't judge.",
+  'Your phone is listening. For once, on purpose.',
+  'Speak now or forget forever.',
+  'Your future self called. They said record this.',
+  'One tap. Unlimited rambling.',
+];
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -39,37 +42,26 @@ export default function VoiceRecordScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
+  const [idleHint] = useState(() => IDLE_HINTS[Math.floor(Math.random() * IDLE_HINTS.length)]);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [recordingUri, setRecordingUri] = useState<string | null>(null);
-  const [recordingDuration, setRecordingDuration] = useState(0);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
-  const [saving, setSaving] = useState(false);
 
   const isRecordingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transitionRef = useRef(false);
-  const savingRef = useRef(false);
+  const navigatedRef = useRef(false);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-
-  const player = useAudioPlayer(recordingUri ? { uri: recordingUri } : null);
-  const playerStatus = useAudioPlayerStatus(player);
 
   useEffect(() => {
     loadBackground().then(setBgUri);
     getOverlayOpacity().then(setBgOpacity);
   }, []);
 
-  // Reset position when playback finishes
-  useEffect(() => {
-    if (playerStatus.didJustFinish) {
-      player.seekTo(0);
-    }
-  }, [playerStatus.didJustFinish, player]);
-
-  // Stop recording on app background — keep the partial recording for preview
+  // Stop recording on app background — navigate to detail with partial recording
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (nextState) => {
       if (nextState !== 'active' && isRecordingRef.current) {
@@ -84,15 +76,18 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           const status = recorder.getStatus();
           const uri = status.url;
           const durationMs = status.durationMillis || 0;
-          if (uri && durationMs > 500) {
-            setRecordingUri(uri);
-            setRecordingDuration(Math.round(durationMs / 1000));
+          if (uri && durationMs > 500 && !navigatedRef.current) {
+            navigatedRef.current = true;
+            navigation.replace('VoiceMemoDetail', {
+              tempUri: uri,
+              duration: Math.round(durationMs / 1000),
+            });
           }
         } catch { /* best-effort */ }
       }
     });
     return () => sub.remove();
-  }, [recorder]);
+  }, [recorder, navigation]);
 
   // Safety cleanup on unmount
   useEffect(() => {
@@ -112,9 +107,8 @@ export default function VoiceRecordScreen({ navigation }: Props) {
         ToastAndroid.show('Microphone permission required', ToastAndroid.SHORT);
         return;
       }
-      setRecordingUri(null);
-      setRecordingDuration(0);
       setElapsedSeconds(0);
+      setIsPaused(false);
 
       await recorder.prepareToRecordAsync();
       recorder.record();
@@ -137,6 +131,7 @@ export default function VoiceRecordScreen({ navigation }: Props) {
     const elapsed = elapsedSeconds;
     isRecordingRef.current = false;
     setIsRecording(false);
+    setIsPaused(false);
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -146,10 +141,10 @@ export default function VoiceRecordScreen({ navigation }: Props) {
       const status = recorder.getStatus();
       const uri = status.url;
       const durationMs = status.durationMillis || 0;
-      if (uri) {
+      if (uri && !navigatedRef.current) {
         const dur = durationMs > 0 ? Math.round(durationMs / 1000) : elapsed;
-        setRecordingUri(uri);
-        setRecordingDuration(dur);
+        navigatedRef.current = true;
+        navigation.replace('VoiceMemoDetail', { tempUri: uri, duration: dur });
       }
     } catch (e) {
       console.error('Stop recording failed:', e);
@@ -167,51 +162,25 @@ export default function VoiceRecordScreen({ navigation }: Props) {
     }
   };
 
-  const handleSave = async () => {
-    if (!recordingUri || saving) return;
-    savingRef.current = true;
-    setSaving(true);
-    hapticMedium();
-    try {
-      // Pause playback if active
-      try { player.pause(); } catch { /* */ }
-
-      const memoId = uuidv4();
-      const permanentUri = await saveVoiceMemoFile(memoId, recordingUri);
-      const now = new Date().toISOString();
-      await addVoiceMemo({
-        id: memoId,
-        uri: permanentUri,
-        title: '',
-        note: '',
-        duration: recordingDuration,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-        noteId: null,
-      });
-      refreshWidgets();
-      navigation.goBack();
-    } catch (e) {
-      console.error('Save failed:', e);
-      ToastAndroid.show('Failed to save recording', ToastAndroid.SHORT);
-      savingRef.current = false;
-      setSaving(false);
-    }
-  };
-
-  const handleDiscard = () => {
-    if (savingRef.current) return;
+  const handlePauseResume = () => {
     hapticLight();
-    try { player.pause(); } catch { /* */ }
-    if (recordingUri) {
-      deleteVoiceMemoFile(recordingUri).catch(() => {});
+    if (isPaused) {
+      recorder.record();
+      setIsPaused(false);
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      recorder.pause();
+      setIsPaused(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
-    navigation.goBack();
   };
 
   const handleBack = async () => {
-    if (savingRef.current) return;
     if (isRecordingRef.current) {
       isRecordingRef.current = false;
       setIsRecording(false);
@@ -224,24 +193,9 @@ export default function VoiceRecordScreen({ navigation }: Props) {
         const status = recorder.getStatus();
         if (status.url) deleteVoiceMemoFile(status.url).catch(() => {});
       } catch { /* best-effort */ }
-    } else if (recordingUri) {
-      try { player.pause(); } catch { /* */ }
-      deleteVoiceMemoFile(recordingUri).catch(() => {});
     }
     navigation.goBack();
   };
-
-  const handlePlayToggle = () => {
-    if (!recordingUri) return;
-    if (playerStatus.playing) {
-      player.pause();
-    } else {
-      player.play();
-    }
-  };
-
-  const progress =
-    playerStatus.duration > 0 ? playerStatus.currentTime / playerStatus.duration : 0;
 
   const styles = useMemo(
     () =>
@@ -275,10 +229,6 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           paddingHorizontal: 32,
           paddingBottom: insets.bottom + 32,
         },
-        micEmoji: {
-          fontSize: 64,
-          marginBottom: 24,
-        },
         timer: {
           fontSize: 48,
           fontWeight: '200',
@@ -286,13 +236,31 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           marginBottom: 40,
           fontVariant: ['tabular-nums'],
         },
+        btnRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 24,
+          marginBottom: 48,
+        },
+        pauseBtn: {
+          width: 70,
+          height: 70,
+          borderRadius: 35,
+          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        pauseBtnIcon: {
+          fontSize: 28,
+        },
         recordBtn: {
           width: 70,
           height: 70,
           borderRadius: 35,
           justifyContent: 'center',
           alignItems: 'center',
-          marginBottom: 48,
         },
         stopIcon: {
           width: 24,
@@ -306,83 +274,20 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           borderRadius: 14,
           backgroundColor: '#FFFFFF',
         },
-        previewCard: {
-          width: '100%',
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
-          borderRadius: 16,
-          padding: 20,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
-          gap: 16,
-          marginBottom: 24,
-        },
-        previewRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        },
-        playBtn: {
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          backgroundColor: colors.accent,
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-        playBtnText: {
-          fontSize: 20,
-        },
-        progressWrap: {
-          flex: 1,
-          gap: 6,
-        },
-        progressTrack: {
-          height: 4,
-          borderRadius: 2,
-          backgroundColor: 'rgba(255, 255, 255, 0.15)',
-          overflow: 'hidden',
-        },
-        progressFill: {
-          height: '100%',
-          borderRadius: 2,
-          backgroundColor: colors.accent,
-        },
-        progressTime: {
-          fontSize: 12,
-          color: 'rgba(255, 255, 255, 0.6)',
-          fontWeight: '500',
-          fontVariant: ['tabular-nums'],
-        },
-        btnRow: {
-          flexDirection: 'row',
-          gap: 12,
-          width: '100%',
-        },
-        saveBtn: {
-          flex: 1,
-          backgroundColor: colors.accent,
-          borderRadius: 20,
-          paddingVertical: 14,
-          alignItems: 'center',
-        },
-        saveBtnText: {
-          fontSize: 15,
-          fontWeight: '700',
-          color: colors.background,
-        },
-        discardBtn: {
-          flex: 1,
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
-          borderRadius: 20,
-          paddingVertical: 14,
-          alignItems: 'center',
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
-        },
-        discardBtnText: {
-          fontSize: 15,
+        recordingLabel: {
+          fontSize: 14,
           fontWeight: '600',
-          color: colors.textSecondary,
+          color: '#FF6B6B',
+          opacity: 0.8,
+          marginTop: -32,
+          marginBottom: 32,
+        },
+        pausedLabel: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: colors.textTertiary,
+          marginTop: -32,
+          marginBottom: 32,
         },
         hint: {
           fontSize: 13,
@@ -432,96 +337,47 @@ export default function VoiceRecordScreen({ navigation }: Props) {
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Mic state icon */}
-        <Text style={styles.micEmoji}>
-          {isRecording
-            ? '\u{1F534}'
-            : recordingUri
-              ? '\u2705'
-              : '\u{1F399}\uFE0F'}
+        <Text style={[styles.timer, isPaused && { color: colors.textTertiary }]}>
+          {formatTime(elapsedSeconds)}
         </Text>
 
-        {/* Timer */}
-        <Text style={styles.timer}>
-          {recordingUri && !isRecording
-            ? formatTime(recordingDuration)
-            : formatTime(elapsedSeconds)}
-        </Text>
-
-        {/* Record / Stop button — hidden once a recording exists */}
-        {!recordingUri && (
-          <TouchableOpacity
-            style={[
-              styles.recordBtn,
-              { backgroundColor: isRecording ? '#FF3B30' : '#FF6B6B' },
-            ]}
-            onPress={handleRecordPress}
-            activeOpacity={0.7}
-          >
-            {isRecording ? (
-              <View style={styles.stopIcon} />
-            ) : (
-              <View style={styles.recordDot} />
-            )}
-          </TouchableOpacity>
-        )}
-
-        {/* Preview card after recording */}
-        {recordingUri && !isRecording && (
+        {isRecording ? (
           <>
-            <View style={styles.previewCard}>
-              <View style={styles.previewRow}>
-                <TouchableOpacity
-                  style={styles.playBtn}
-                  onPress={handlePlayToggle}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.playBtnText}>
-                    {playerStatus.playing ? '\u23F8\uFE0F' : '\u25B6\uFE0F'}
-                  </Text>
-                </TouchableOpacity>
-                <View style={styles.progressWrap}>
-                  <View style={styles.progressTrack}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${progress * 100}%` },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.progressTime}>
-                    {formatTime(playerStatus.currentTime)} /{' '}
-                    {formatTime(recordingDuration)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
             <View style={styles.btnRow}>
               <TouchableOpacity
-                style={styles.discardBtn}
-                onPress={handleDiscard}
+                style={styles.pauseBtn}
+                onPress={handlePauseResume}
                 activeOpacity={0.7}
               >
-                <Text style={styles.discardBtnText}>Discard</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveBtn, saving && { opacity: 0.5 }]}
-                onPress={handleSave}
-                activeOpacity={0.7}
-                disabled={saving}
-              >
-                <Text style={styles.saveBtnText}>
-                  {saving ? 'Saving...' : 'Save'}
+                <Text style={styles.pauseBtnIcon}>
+                  {isPaused ? '\u25B6\uFE0F' : '\u23F8\uFE0F'}
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.recordBtn, { backgroundColor: '#FF3B30' }]}
+                onPress={handleRecordPress}
+                activeOpacity={0.7}
+              >
+                <View style={styles.stopIcon} />
+              </TouchableOpacity>
             </View>
+            {isPaused ? (
+              <Text style={styles.pausedLabel}>Paused</Text>
+            ) : (
+              <Text style={styles.recordingLabel}>Recording...</Text>
+            )}
           </>
-        )}
-
-        {/* Idle hint */}
-        {!isRecording && !recordingUri && (
-          <Text style={styles.hint}>Tap to start recording</Text>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[styles.recordBtn, { backgroundColor: '#FF6B6B', marginBottom: 48 }]}
+              onPress={handleRecordPress}
+              activeOpacity={0.7}
+            >
+              <View style={styles.recordDot} />
+            </TouchableOpacity>
+            <Text style={styles.hint}>{idleHint}</Text>
+          </>
         )}
       </View>
     </View>

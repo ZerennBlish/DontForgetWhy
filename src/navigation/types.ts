@@ -30,5 +30,5 @@ export type RootStackParamList = {
   Notepad: { noteId?: string; newNote?: boolean; initialFilter?: 'all' | 'notes' | 'voice' } | undefined;
   Calendar: { initialDate?: string } | undefined;
   VoiceRecord: undefined;
-  VoiceMemoDetail: { memoId: string };
+  VoiceMemoDetail: { memoId: string } | { tempUri: string; duration: number };
 };

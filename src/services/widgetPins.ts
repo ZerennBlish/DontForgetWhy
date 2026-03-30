@@ -215,3 +215,57 @@ export async function pruneNotePins(activeIds: string[]): Promise<string[]> {
 export function isNotePinned(id: string, pinnedIds: string[]): boolean {
   return pinnedIds.includes(id);
 }
+
+// --- Voice memo pins ---
+
+const VOICE_MEMO_PINNED_KEY = 'widgetPinnedVoiceMemos';
+const MAX_VOICE_MEMO_PINS = 4;
+
+export async function getPinnedVoiceMemos(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(VOICE_MEMO_PINNED_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((id): id is string => typeof id === 'string').slice(0, MAX_VOICE_MEMO_PINS);
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function togglePinVoiceMemo(id: string): Promise<string[]> {
+  const current = await getPinnedVoiceMemos();
+  const index = current.indexOf(id);
+  if (index >= 0) {
+    current.splice(index, 1);
+  } else {
+    if (current.length >= MAX_VOICE_MEMO_PINS) return current;
+    current.push(id);
+  }
+  await AsyncStorage.setItem(VOICE_MEMO_PINNED_KEY, JSON.stringify(current));
+  return current;
+}
+
+export async function unpinVoiceMemo(id: string): Promise<void> {
+  const current = await getPinnedVoiceMemos();
+  const filtered = current.filter((pinId) => pinId !== id);
+  if (filtered.length !== current.length) {
+    await AsyncStorage.setItem(VOICE_MEMO_PINNED_KEY, JSON.stringify(filtered));
+  }
+}
+
+export async function pruneVoiceMemoPins(activeIds: string[]): Promise<string[]> {
+  const current = await getPinnedVoiceMemos();
+  const validSet = new Set(activeIds);
+  const pruned = current.filter((id) => validSet.has(id));
+  if (pruned.length !== current.length) {
+    await AsyncStorage.setItem(VOICE_MEMO_PINNED_KEY, JSON.stringify(pruned));
+  }
+  return pruned;
+}
+
+export function isVoiceMemoPinned(id: string, pinnedIds: string[]): boolean {
+  return pinnedIds.includes(id);
+}
