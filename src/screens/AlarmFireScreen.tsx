@@ -67,6 +67,17 @@ async function resetSnoozeCount(alarmId: string): Promise<void> {
   } catch {}
 }
 
+const DISMISS_MESSAGES = [
+  "Fine. Leave.",
+  "Oh sure, just tap and go.",
+  "You could at least say goodbye.",
+  "Dismissed. Like my feelings.",
+  "That was quick. Rude.",
+  "Go ahead. I'll just sit here.",
+  "Wow. Not even a thank you.",
+  "And just like that... gone.",
+];
+
 export default function AlarmFireScreen({ route, navigation }: Props) {
   useKeepAwake();
   const { colors } = useTheme();
@@ -87,18 +98,23 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [photoFailed, setPhotoFailed] = useState(false);
   const [globalSilenced, setGlobalSilenced] = useState(false);
+  const globalSilencedRef = useRef(false);
   const [silenceLoaded, setSilenceLoaded] = useState(false);
   const [snoozeShameMessage, setSnoozeShameMessage] = useState<string | null>(null);
+  const [dismissMessage, setDismissMessage] = useState<string | null>(null);
   const [isSnoozing, setIsSnoozing] = useState(false);
   const snoozeShameOpacity = useRef(new Animated.Value(0)).current;
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voicePlayedRef = useRef(false);
   const isDismissingRef = useRef(false);
+  const isSnoozingRef = useRef(false);
+  const dismissTimeRef = useRef(0);
+  const snoozeTimeRef = useRef(0);
   const [isDismissing, setIsDismissing] = useState(false);
 
   useEffect(() => {
     loadSettings().then((s) => setTimeFormat(s.timeFormat)).catch(() => {});
-    getSilenceAll().then((v) => { setGlobalSilenced(v); setSilenceLoaded(true); }).catch(() => { setSilenceLoaded(true); });
+    getSilenceAll().then((v) => { setGlobalSilenced(v); globalSilencedRef.current = v; setSilenceLoaded(true); }).catch(() => { setSilenceLoaded(true); });
   }, []);
 
   // DO NOT cancel notifications on mount — the alarm sound plays FROM the
@@ -189,24 +205,24 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     if (globalSilenced) return;
     if (!silenceLoaded) return;
 
-    const isTrueSilent = isTimer
-      ? timerSoundId === 'true_silent'
-      : alarm?.soundId === 'true_silent';
-    if (isTrueSilent) return;
+    const isSilentAlarm = isTimer
+      ? (timerSoundId === 'silent' || timerSoundId === 'true_silent')
+      : (alarm?.soundId === 'silent' || alarm?.soundId === 'true_silent');
+    if (isSilentAlarm) return;
 
     voicePlayedRef.current = true;
     let cancelled = false;
     const timer = setTimeout(async () => {
-      if (cancelled) return;
+      if (cancelled || isDismissingRef.current || isSnoozingRef.current) return;
       await stopVoice();
       await stopAlarmSound();
-      if (cancelled) return;
+      if (cancelled || isDismissingRef.current || isSnoozingRef.current) return;
       if (!isTimer) {
         await playIntroIfNeeded();
       }
-      if (cancelled) return;
+      if (cancelled || isDismissingRef.current || isSnoozingRef.current) return;
       await playRandomClip(isTimer ? 'timer' : 'fire');
-      if (cancelled) return;
+      if (cancelled || isDismissingRef.current || isSnoozingRef.current) return;
       const isSilent = isTimer
         ? (timerSoundId === 'silent' || timerSoundId === 'true_silent')
         : (alarm?.soundId === 'silent' || alarm?.soundId === 'true_silent');
@@ -221,6 +237,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         } else {
           resumeSoundUri = alarm?.soundUri ?? null;
         }
+        if (cancelled || isDismissingRef.current || isSnoozingRef.current) return;
         playAlarmSound(resumeSoundUri);
       }
     }, 1500);
@@ -289,12 +306,14 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
 
   const handleDismiss = useCallback(async () => {
     if (isDismissingRef.current) {
+      if (Date.now() - dismissTimeRef.current < 500) return;
       stopVoice();
       exitToLockScreen();
       return;
     }
     isDismissingRef.current = true;
     setIsDismissing(true);
+    dismissTimeRef.current = Date.now();
     try {
       await cancelAllNotifications();
       await stopVoice();
@@ -325,6 +344,18 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         await resetSnoozeCount(alarm.id);
       }
     } catch {}
+<<<<<<< Updated upstream
+=======
+    const isSilentAlarm = isTimer
+      ? (timerSoundId === 'silent' || timerSoundId === 'true_silent')
+      : (alarm?.soundId === 'silent' || alarm?.soundId === 'true_silent');
+    if (isSilentAlarm || globalSilencedRef.current) {
+      exitToLockScreen();
+      return;
+    }
+    const msg = DISMISS_MESSAGES[Math.floor(Math.random() * DISMISS_MESSAGES.length)];
+    setDismissMessage(msg);
+>>>>>>> Stashed changes
     exitTimerRef.current = setTimeout(() => exitToLockScreen(), 10000);
     await playRandomClip('dismiss');
     exitToLockScreen();
@@ -340,12 +371,15 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   }, [handleDismiss]);
 
   const handleSnooze = useCallback(async () => {
-    if (isSnoozing) {
+    if (isSnoozingRef.current) {
+      if (Date.now() - snoozeTimeRef.current < 500) return;
       stopVoice();
       exitToLockScreen();
       return;
     }
     setIsSnoozing(true);
+    isSnoozingRef.current = true;
+    snoozeTimeRef.current = Date.now();
     if (!alarm) {
       await cancelAllNotifications();
       exitToLockScreen();
@@ -392,6 +426,11 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     }
 
     // Show escalating snooze shame message briefly before closing
+    const isSilentAlarm = alarm?.soundId === 'silent' || alarm?.soundId === 'true_silent';
+    if (isSilentAlarm || globalSilencedRef.current) {
+      exitToLockScreen();
+      return;
+    }
     const message = getSnoozeMessage(newCount);
     setSnoozeShameMessage(message);
     const snoozeTierMap: Record<number, string> = { 1: 'snooze1', 2: 'snooze2', 3: 'snooze3' };
@@ -580,6 +619,13 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       fontSize: 48,
       marginBottom: 20,
     },
+    skipHint: {
+      fontSize: 18,
+      fontWeight: '500',
+      color: 'rgba(255,255,255,0.6)',
+      textAlign: 'center',
+      marginTop: 24,
+    },
     silencedIndicator: {
       fontSize: 14,
       fontWeight: '600',
@@ -594,6 +640,23 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     ? { uri: alarm!.photoUri! }
     : require('../../assets/lightbulb.png');
 
+  // Dismiss overlay
+  if (dismissMessage) {
+    return (
+      <ImageBackground source={bgSource} style={{ flex: 1 }} resizeMode="cover" onError={hasAlarmPhoto ? () => setPhotoFailed(true) : undefined}>
+        <TouchableOpacity activeOpacity={1} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }} onPress={() => { stopVoice(); exitToLockScreen(); }}>
+          <View style={styles.container}>
+            <View style={styles.shameOverlay}>
+              <Text style={styles.shameEmoji}>{'\u2714\uFE0F'}</Text>
+              <Text style={styles.shameMessage}>{dismissMessage}</Text>
+              <Text style={styles.skipHint}>{'\u{1F446}'} Tap anywhere to skip</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </ImageBackground>
+    );
+  }
+
   // Snooze shame overlay
   if (snoozeShameMessage) {
     return (
@@ -603,7 +666,11 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
             <Animated.View style={[styles.shameOverlay, { opacity: snoozeShameOpacity }]}>
               <Text style={styles.shameEmoji}>{'\u{1F634}'}</Text>
               <Text style={styles.shameMessage}>{snoozeShameMessage}</Text>
+<<<<<<< Updated upstream
               <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 16 }}>Tap anywhere to skip</Text>
+=======
+              <Text style={styles.skipHint}>{'\u{1F446}'} Tap anywhere to skip</Text>
+>>>>>>> Stashed changes
             </Animated.View>
           </View>
         </TouchableOpacity>
@@ -647,7 +714,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
                 onPress={handleSnooze}
                 activeOpacity={0.8}
               >
-                <Text style={styles.snoozeBtnText}>{isSnoozing ? 'Tap to skip' : 'Snooze 5 min'}</Text>
+                <Text style={styles.snoozeBtnText}>Snooze 5 min</Text>
               </TouchableOpacity>
             )}
 
@@ -656,7 +723,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
               onPress={handleDismiss}
               activeOpacity={0.8}
             >
-              <Text style={styles.dismissBtnText}>{isDismissing ? 'Tap to skip' : 'Dismiss'}</Text>
+              <Text style={styles.dismissBtnText}>Dismiss</Text>
             </TouchableOpacity>
           </View>
         </View>

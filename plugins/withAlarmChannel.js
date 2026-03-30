@@ -213,8 +213,8 @@ public class AlarmChannelHelper {
 
         // Silent (vibration only)
         NotificationChannel silent = new NotificationChannel(
-                "alarms_silent_v4", "Alarms (Silent)",
-                NotificationManager.IMPORTANCE_LOW);
+                "alarms_silent_v5", "Alarms (Silent)",
+                NotificationManager.IMPORTANCE_HIGH);
         silent.setSound(null, ALARM_AUDIO);
         silent.enableVibration(true);
         silent.setVibrationPattern(new long[]{500, 500});

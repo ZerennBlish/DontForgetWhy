@@ -12,7 +12,7 @@ import type { Reminder } from '../types/reminder';
 import { getSilenceAll } from './settings';
 
 // Android notification channels are immutable after creation. Changing sound
-// or audioAttributes on an existing channel has no effect. We use 'alarms_v4'
+// or audioAttributes on an existing channel has no effect. We use 'alarms_v5'
 // with ALARM audio stream so sound plays regardless of ringer/silent mode.
 // Old channels are deleted on startup to migrate existing installs.
 const ALARM_CHANNEL_ID = 'alarms_v5';
@@ -346,7 +346,6 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
   // soundId overrides → silent/true_silent channels
   // Custom system sound (soundUri) → dynamic channel, otherwise default
   let channelId: string;
-  let customChannel = false;
 
   if (alarm.soundId === 'silent') {
     channelId = 'alarms_silent_v5';
@@ -358,7 +357,7 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string[]> {
         alarm.soundUri,
         alarm.soundName || 'Custom',
       );
-      customChannel = true;
+
     } catch {
       // Fallback to default if channel creation fails
       channelId = ALARM_CHANNEL_ID;
@@ -489,7 +488,6 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
   }
 
   let channelId = ALARM_CHANNEL_ID;
-  let customChannel = false;
   if (alarm.soundId === 'silent') {
     channelId = 'alarms_silent_v5';
   } else if (alarm.soundId === 'true_silent') {
@@ -500,7 +498,7 @@ export async function scheduleSnooze(alarm: Alarm, minutes = 5): Promise<string>
         alarm.soundUri,
         alarm.soundName || 'Custom',
       );
-      customChannel = true;
+
     } catch {
       channelId = ALARM_CHANNEL_ID;
     }
@@ -562,7 +560,6 @@ export async function scheduleTimerNotification(
   await setupNotificationChannel();
 
   let channelId = ALARM_CHANNEL_ID;
-  let customChannel = false;
   if (soundId === 'silent') {
     channelId = 'timer_vibrate_v1';
   } else if (soundId === 'true_silent') {
@@ -574,7 +571,7 @@ export async function scheduleTimerNotification(
         soundName || 'Custom',
         'timer_v2_custom_',
       );
-      customChannel = true;
+
       console.log('[Timer] Using custom channel:', channelId, 'sound:', soundUri);
     } catch (err) {
       console.error('[Timer] getOrCreateSoundChannel failed, using default:', err);
