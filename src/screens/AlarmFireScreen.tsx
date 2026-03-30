@@ -344,8 +344,6 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
         await resetSnoozeCount(alarm.id);
       }
     } catch {}
-<<<<<<< Updated upstream
-=======
     const isSilentAlarm = isTimer
       ? (timerSoundId === 'silent' || timerSoundId === 'true_silent')
       : (alarm?.soundId === 'silent' || alarm?.soundId === 'true_silent');
@@ -355,7 +353,6 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     }
     const msg = DISMISS_MESSAGES[Math.floor(Math.random() * DISMISS_MESSAGES.length)];
     setDismissMessage(msg);
->>>>>>> Stashed changes
     exitTimerRef.current = setTimeout(() => exitToLockScreen(), 10000);
     await playRandomClip('dismiss');
     exitToLockScreen();
@@ -666,11 +663,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
             <Animated.View style={[styles.shameOverlay, { opacity: snoozeShameOpacity }]}>
               <Text style={styles.shameEmoji}>{'\u{1F634}'}</Text>
               <Text style={styles.shameMessage}>{snoozeShameMessage}</Text>
-<<<<<<< Updated upstream
-              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 16 }}>Tap anywhere to skip</Text>
-=======
               <Text style={styles.skipHint}>{'\u{1F446}'} Tap anywhere to skip</Text>
->>>>>>> Stashed changes
             </Animated.View>
           </View>
         </TouchableOpacity>

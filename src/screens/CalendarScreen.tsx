@@ -154,8 +154,16 @@ function getItemsForDate(
     if (reminder.completed) continue;
     if (reminder.recurring) {
       if (!reminder.days || reminder.days.length === 0) {
-        // Daily recurring — appears every day
-        items.push({ type: 'reminder', data: reminder });
+        if (reminder.dueDate) {
+          // Date-specific recurring (e.g., annual) — match month and day only
+          const due = new Date(reminder.dueDate.slice(0, 10) + 'T00:00:00');
+          if (d.getMonth() === due.getMonth() && d.getDate() === due.getDate()) {
+            items.push({ type: 'reminder', data: reminder });
+          }
+        } else {
+          // Daily recurring — appears every day
+          items.push({ type: 'reminder', data: reminder });
+        }
       } else if (reminder.days.includes(weekday)) {
         items.push({ type: 'reminder', data: reminder });
       }
@@ -338,12 +346,26 @@ export default function CalendarScreen({ navigation, route }: Props) {
 
       if (reminder.recurring) {
         if (!reminder.days || reminder.days.length === 0) {
-          // Daily recurring — dot on every day
-          for (const day of daysInMonth) {
-            const ds = toDateString(day);
-            ensure(ds);
-            if (!hasDot(ds, 'reminder')) {
-              marks[ds].dots.push({ key: 'reminder', color: DOT_REMINDER });
+          if (reminder.dueDate) {
+            // Date-specific recurring (e.g., annual) — match month and day only
+            const due = new Date(reminder.dueDate.slice(0, 10) + 'T00:00:00');
+            for (const day of daysInMonth) {
+              if (day.getMonth() === due.getMonth() && day.getDate() === due.getDate()) {
+                const ds = toDateString(day);
+                ensure(ds);
+                if (!hasDot(ds, 'reminder')) {
+                  marks[ds].dots.push({ key: 'reminder', color: DOT_REMINDER });
+                }
+              }
+            }
+          } else {
+            // Daily recurring — dot on every day
+            for (const day of daysInMonth) {
+              const ds = toDateString(day);
+              ensure(ds);
+              if (!hasDot(ds, 'reminder')) {
+                marks[ds].dots.push({ key: 'reminder', color: DOT_REMINDER });
+              }
             }
           }
         } else {
@@ -715,7 +737,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       if (item.type === 'alarm') {
         const a = item.data;
         return (
-          <View style={[styles.card, { borderLeftColor: DOT_ALARM }]}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateAlarm', { alarm: item.data }); }} style={[styles.card, { borderLeftColor: DOT_ALARM }]}>
             <Text style={styles.cardIcon}>{a.icon || '\u23F0'}</Text>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -734,14 +756,14 @@ export default function CalendarScreen({ navigation, route }: Props) {
             >
               Alarm
             </Text>
-          </View>
+          </TouchableOpacity>
         );
       }
 
       if (item.type === 'reminder') {
         const r = item.data;
         return (
-          <View style={[styles.card, { borderLeftColor: DOT_REMINDER }]}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateReminder', { reminderId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_REMINDER }]}>
             <Text style={styles.cardIcon}>{r.icon}</Text>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -763,7 +785,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
             >
               Reminder
             </Text>
-          </View>
+          </TouchableOpacity>
         );
       }
 
@@ -771,7 +793,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       const line = n.text.split('\n')[0];
       const firstLine = line.length > 50 ? line.slice(0, 50) + '\u2026' : line;
       return (
-        <View style={[styles.card, { borderLeftColor: DOT_NOTE }]}>
+        <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('Notepad', { noteId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_NOTE }]}>
           <Text style={styles.cardIcon}>{n.icon}</Text>
           <View style={styles.cardBody}>
             <Text style={styles.cardTitle} numberOfLines={1}>
@@ -793,10 +815,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
           >
             Note
           </Text>
-        </View>
+        </TouchableOpacity>
       );
     },
-    [styles, timeFormat],
+    [styles, timeFormat, navigation],
   );
 
   const renderRow = useCallback(
