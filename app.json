@@ -73,6 +73,15 @@
               "resizeMode": "horizontal|vertical",
               "description": "Monthly calendar with event indicators",
               "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "MicWidget",
+              "label": "DFW Mic",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "resizeMode": "horizontal|vertical",
+              "description": "Quick voice memo recording",
+              "updatePeriodMillis": 0
             }
           ]
         }

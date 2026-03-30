@@ -3,6 +3,7 @@ import { requestWidgetUpdate } from 'react-native-android-widget';
 import { DetailedWidget } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
 import { CalendarWidget } from './CalendarWidget';
+import { MicWidget } from './MicWidget';
 import { getDetailedAlarms, getDetailedPresets, getCompactReminders, getWidgetNotes, getWidgetVoiceMemos, getCalendarWidgetData, getWidgetTheme } from './widgetTaskHandler';
 
 export async function refreshWidgets(): Promise<void> {
@@ -43,5 +44,15 @@ export async function refreshWidgets(): Promise<void> {
     });
   } catch (error) {
     console.warn('[refreshCalendarWidget]', error);
+  }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'MicWidget',
+      renderWidget: async () => {
+        return React.createElement(MicWidget, { theme });
+      },
+    });
+  } catch (error) {
+    console.warn('[refreshMicWidget]', error);
   }
 }

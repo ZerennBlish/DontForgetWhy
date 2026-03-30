@@ -25,6 +25,7 @@ import { formatTime } from '../utils/time';
 import { DetailedWidget } from './DetailedWidget';
 import type { DetailedAlarm, DetailedPreset, DetailedReminder } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
+import { MicWidget } from './MicWidget';
 import type { WidgetNote, WidgetVoiceMemo, WidgetTheme } from './NotepadWidget';
 import { CalendarWidget } from './CalendarWidget';
 import type { CalendarDayData } from './CalendarWidget';
@@ -567,6 +568,11 @@ async function renderCalendarWidget(props: WidgetTaskHandlerProps): Promise<void
   props.renderWidget(React.createElement(CalendarWidget, { ...data, theme }));
 }
 
+async function renderMicWidget(props: WidgetTaskHandlerProps): Promise<void> {
+  const theme = await getWidgetTheme();
+  props.renderWidget(React.createElement(MicWidget, { theme }));
+}
+
 // ── Refresh all widgets (called after timer start from widget) ──
 
 async function refreshAllWidgets(): Promise<void> {
@@ -607,6 +613,16 @@ async function refreshAllWidgets(): Promise<void> {
   } catch {
     // calendar widget may not be placed
   }
+  try {
+    await requestWidgetUpdate({
+      widgetName: 'MicWidget',
+      renderWidget: async () => {
+        return React.createElement(MicWidget, { theme });
+      },
+    });
+  } catch {
+    // mic widget may not be placed
+  }
 }
 
 // ── Task handler ──
@@ -624,6 +640,8 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         await renderNotepadWidget(props);
       } else if (widgetInfo.widgetName === 'CalendarWidget') {
         await renderCalendarWidget(props);
+      } else if (widgetInfo.widgetName === 'MicWidget') {
+        await renderMicWidget(props);
       }
       break;
     case 'WIDGET_CLICK': {
