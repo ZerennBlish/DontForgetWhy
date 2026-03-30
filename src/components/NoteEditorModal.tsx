@@ -479,6 +479,8 @@ export default function NoteEditorModal({
     },
     topBarLeft: {
       flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     topBarCenter: {
       flex: 1,
@@ -718,6 +720,15 @@ export default function NoteEditorModal({
           <View style={styles.editorTopBar}>
             <View style={styles.topBarLeft}>
               <BackButton onPress={confirmClose} />
+              {!isViewMode && (
+                <TouchableOpacity
+                  style={{ backgroundColor: 'rgba(30, 30, 40, 0.7)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, minWidth: 70, alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}
+                  onPress={handleSave}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>Save</Text>
+                </TouchableOpacity>
+              )}
             </View>
             {isViewMode ? (
               <>
@@ -759,15 +770,7 @@ export default function NoteEditorModal({
               </>
             ) : (
               <>
-                <View style={styles.topBarCenter}>
-                  <TouchableOpacity
-                    style={{ backgroundColor: 'rgba(30, 30, 40, 0.7)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, minWidth: 70, alignItems: 'center', justifyContent: 'center', marginRight: 4 }}
-                    onPress={handleSave}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>Save</Text>
-                  </TouchableOpacity>
-                </View>
+                <View style={styles.topBarCenter} />
                 <View style={styles.topBarRight}>
                   <TouchableOpacity
                     style={styles.editorTopBtn}
