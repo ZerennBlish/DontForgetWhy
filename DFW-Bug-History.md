@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 30, 2026*
+**Last updated:** March 31, 2026*
 
 ---
 
@@ -293,5 +293,15 @@
 - **Cause:** Merge conflict markers (`<<<<<<< / ======= / >>>>>>>`) accidentally committed during laptop-to-desktop sync. `git status` showed clean because markers were part of the committed content
 - **Fix:** Resolved conflict blocks manually, keeping correct code
 - **Version:** pre-v1.8.0 (dev)
+
+### Build 46 (v1.8.1) — SDK 55 Upgrade Build Failures
+- **Build 1 failure:** `react-native-notification-sounds` used `jcenter()` repository, removed in Gradle 9.0 (SDK 55). Patched with patch-package (replaced `jcenter()` with `mavenCentral()`).
+- **Build 2 failure:** Same library used deprecated `destinationDir` property in its build.gradle (removed in Gradle 9.0). patch-package could not fix this — property used deep in Android build pipeline.
+- **Decision:** Remove `react-native-notification-sounds` entirely. Added native `getSystemAlarmSounds` method to existing `AlarmChannelModule` using `RingtoneManager.TYPE_ALARM`. Same response format (`{title, url, soundID}`), so `SoundPickerModal.tsx` needed only a call site change.
+- **Build 3:** Succeeded.
+
+### Pre-existing bugs found during v1.8.1 testing
+- **Guess Why shows answer immediately:** Game screen shows the answer without presenting a guess screen first. Pre-existing, needs investigation.
+- **Yearly recurring reminder reschedules without firing:** Reminder reschedules for next year without the current-year notification firing first. Pre-existing, needs investigation.
 
 **44 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.

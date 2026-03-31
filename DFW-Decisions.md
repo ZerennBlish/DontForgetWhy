@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 30, 2026*
+**Last updated:** March 31, 2026*
 
 ---
 
@@ -125,6 +125,18 @@ Initially tried adding title/note inputs directly to VoiceRecordScreen after rec
 ### Explicit Save button, not auto-save (Mar 30)
 VoiceMemoDetailScreen originally auto-saved title/note changes on back press. Changed to explicit Save capsule in header (visible only when changes exist) + unsaved changes warning on exit. Matches user expectations — auto-save is invisible and users don't trust it.
 
+### SDK 55 upgrade timing (Mar 31)
+Done while codebase was stable and freshly audited (post v1.8.0). Avoided accumulating more drift between Expo SDK versions. SDK 55 was the primary driver for resolving Google Play's Android 15 foreground service warning on `expo-audio`'s `AudioRecordingService`.
+
+### react-native-notification-sounds removal (Mar 31)
+Library was unmaintained, used `jcenter()` (removed in Gradle 9.0) and deprecated `destinationDir` API. First attempted patching with patch-package — second build failed on `destinationDir`. Rather than endlessly patching a dead dependency, added `getSystemAlarmSounds` to existing `AlarmChannelModule` using `RingtoneManager.TYPE_ALARM`. Same response format (`{title, url, soundID}`) so `SoundPickerModal.tsx` needed only minimal changes (swap the import and call site). Uses fully qualified class names inline to avoid modifying the existing import block.
+
+### Skia version — Expo recommended over latest (Mar 31)
+Expo SDK 55 recommends `@shopify/react-native-skia` 2.4.x, not latest (2.5.x). Initially installed `@latest` (2.5.5) which caused expo-doctor version mismatch warnings. Downgraded to Expo's recommended 2.4.18 for stability — the minor version gap isn't worth the risk.
+
+### ExpoKeepAwake warnings — deferred (Mar 31)
+Dev-mode only promise rejections from stricter SDK 55 error handling during activity transitions. Not fixed in v1.8.1 — logged as known issue for investigation in a future release. Does not affect production behavior.
+
 ### useRef for undo pin state, not useState (Mar 30)
 Voice memo delete captures wasPinned for undo restore. useState caused stale closure because setDeletedVoiceMemoPinned and setVoiceUndoKey happen in same render — the undo handler captures the old false value. useRef updates synchronously. Same pattern that fixed globalSilenced and isSnoozing in P3.
 
@@ -171,7 +183,7 @@ Voice memo delete captures wasPinned for undo restore. useState caused stale clo
 - Dev and preview builds can't coexist on phone (same package name)
 - ADB: `C:\platform-tools\platform-tools\adb.exe`. `adb logcat | findstr "Term"` for native debugging.
 - Metro cache causes stale JS bundle → `npx expo start --dev-client --clear`
-- react-native-worklets MUST stay at 0.5.1
+- react-native-worklets at 0.7.2 (Expo-managed since SDK 55 — no manual pinning needed)
 - adb may not be in PATH. Full path: `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices`. Set permanent: `[Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:LOCALAPPDATA\Android\Sdk\platform-tools", "User")`
 - Download dev builds from expo.dev on phone browser to skip adb install
 - JS-only changes don't require new builds — dev server hot-reloads. Only native dependency changes need new APK.

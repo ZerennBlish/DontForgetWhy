@@ -339,6 +339,33 @@ public class AlarmChannelModule extends ReactContextBaseJavaModule {
             promise.reject("STOP_VOICE_ERROR", e.getMessage(), e);
         }
     }
+
+    @ReactMethod
+    public void getSystemAlarmSounds(Promise promise) {
+        try {
+            android.media.RingtoneManager rm = new android.media.RingtoneManager(getReactApplicationContext());
+            rm.setType(android.media.RingtoneManager.TYPE_ALARM);
+            android.database.Cursor cursor = rm.getCursor();
+
+            com.facebook.react.bridge.WritableArray results = com.facebook.react.bridge.Arguments.createArray();
+            int idx = 0;
+            while (cursor.moveToNext()) {
+                String title = cursor.getString(android.media.RingtoneManager.TITLE_COLUMN_INDEX);
+                android.net.Uri uri = rm.getRingtoneUri(idx);
+
+                com.facebook.react.bridge.WritableMap item = com.facebook.react.bridge.Arguments.createMap();
+                item.putString("title", title);
+                item.putString("url", uri.toString());
+                item.putInt("soundID", idx);
+                results.pushMap(item);
+                idx++;
+            }
+            cursor.close();
+            promise.resolve(results);
+        } catch (Exception e) {
+            promise.reject("SOUND_LIST_ERROR", e.getMessage(), e);
+        }
+    }
 }
 `;
 

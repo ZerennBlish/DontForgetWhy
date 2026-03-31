@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 30, 2026*
+**Last updated:** March 31, 2026*
 
 ---
 
@@ -10,7 +10,7 @@
 **Publisher:** Bald Guy & Company Games — "Apps that talk back"
 **Developer:** Zerenn (solo developer, age 40, Colorado)
 **Package:** com.zerennblish.DontForgetWhy
-**Stack:** React Native 0.81.5 + Expo SDK 54 + TypeScript (strict mode)
+**Stack:** React Native 0.83.4 + Expo SDK 55 + TypeScript (strict mode)
 **Platform:** Android (primary), iOS (secondary/future)
 **Monetization:** Free, no ads, no tracking. Potential future Pro features ($1.99 one-time) for online content.
 **GitHub:** https://github.com/ZerennBlish/DontForgetWhy
@@ -238,6 +238,7 @@ DontForgetWhy/
 | Mar 28 | 1.6.1 | 20 | Draw on photos: annotate photo attachments with full drawing tools. DrawingCanvas backgroundImageUri, SkImage, onLayout sizing, durable source copy. NoteEditorModal "Draw On" option for photos. noteImageStorage URI-based JSON lookup, source photo persistence. Calendar tap-to-navigate on event cards, week view = next 7 days. Audit 39: 1 critical + 1 high + 2 medium fixed — durable source photo storage, eraser disabled on photos, canvas readiness gate. | Production (live) |
 | Mar 29 | 1.7.0 | 21 | P3 Voice Roasts: 63 voice clips across 10 categories, native ALARM stream playback via AlarmChannelModule, expo-av removed, expo-audio chirp, expo-asset for URI resolution, dismiss voice toggle, double-tap dismiss/snooze to skip clips, true_silent guard, production URI handling (HTTP/asset/file/content) | Production (live) |
 | Mar 30 | 1.8.0 | 22 | Voice memos (recording, pause/resume, dual-mode detail screen, inline playback, pinning), MicWidget, card unification (dark bars with accent borders), View-based play icons, capsule buttons, calendar voice memo dots, navigation guards (beforeRemove), transactional save, personality text. Audits 44-45 complete. | Production (pending review) |
+| Mar 31 | 1.8.1 | 23 | SDK 55 upgrade: Expo 54→55, RN 0.81→0.83, React 19.1→19.2. `react-native-notification-sounds` removed (jcenter/Gradle 9.0 incompatible), replaced with native `getSystemAlarmSounds` in AlarmChannelModule. `newArchEnabled`/`edgeToEdgeEnabled` removed from app.json (always-on in SDK 55). worklets 0.5.1→0.7.2, Skia→2.4.18, screens→4.23, pager-view→8.0. Android 15 foreground service warning resolved. | Build in progress |
 
 ---
 
@@ -285,8 +286,8 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.8.0 (versionCode 22) — pending Google review |
-| Production status | v1.8.0 production build in progress |
+| Current version | v1.8.1 (versionCode 23) — SDK 55 upgrade |
+| Production status | v1.8.1 build in progress |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
@@ -300,5 +301,5 @@ DontForgetWhy/
 | Branch | Purpose | Status |
 |--------|---------|--------|
 | `main` | Production. Synced with dev at v1.8.0. | Active, clean |
-| `dev` | v1.8.0 — voice memos, card unification, audits 44-45. | Active — all new work goes here |
+| `dev` | v1.8.1 — SDK 55 upgrade, notification-sounds removal. | Active — all new work goes here |
 | `testing-setup` | Jest suite (222 tests). | Reconciled with main (Phase 1.2) |

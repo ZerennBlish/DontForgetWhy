@@ -10,24 +10,18 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  NativeModules,
 } from 'react-native';
 import { previewSystemSound, cancelSoundPreview } from '../services/notifications';
 import { useTheme } from '../theme/ThemeContext';
 
-// react-native-notification-sounds doesn't ship types
 export interface SystemSound {
   title: string;
   url: string;
   soundID: number;
 }
 
-let NotificationSounds: {
-  getNotifications: (type: string) => Promise<SystemSound[]>;
-} | null = null;
-
-try {
-  NotificationSounds = require('react-native-notification-sounds').default;
-} catch {}
+const { AlarmChannelModule } = NativeModules;
 
 interface Props {
   visible: boolean;
@@ -61,7 +55,7 @@ export default function SoundPickerModal({
 
     isActiveRef.current = true;
 
-    if (Platform.OS !== 'android' || !NotificationSounds) {
+    if (Platform.OS !== 'android' || !AlarmChannelModule) {
       setLoading(false);
       setError('System sounds only available on Android');
       return;
@@ -70,8 +64,8 @@ export default function SoundPickerModal({
     setLoading(true);
     setError(null);
     setFilter('');
-    NotificationSounds.getNotifications('alarm')
-      .then((list) => {
+    AlarmChannelModule.getSystemAlarmSounds()
+      .then((list: SystemSound[]) => {
         setSounds(list);
         setLoading(false);
       })

@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 30, 2026
+**Last updated:** March 31, 2026
 
 ---
 
@@ -145,6 +145,8 @@ Two separate MediaPlayers in AlarmChannelHelper.java (embedded in plugins/withAl
 - sPlayer: alarm/timer sounds (looping)
 - sVoicePlayer: voice clips (non-looping, completion callback resolves JS promise)
 
+Also exposes `getSystemAlarmSounds()` — lists system alarm sounds via `RingtoneManager.TYPE_ALARM`. Returns array of `{title, url, soundID}`. Replaced the third-party `react-native-notification-sounds` library (removed in v1.8.1 — unmaintained, incompatible with Gradle 9.0). Uses fully qualified class names inline (no added imports).
+
 JS service (src/services/voicePlayback.ts) uses expo-asset (Asset.fromModule + downloadAsync) to resolve bundled require() assets to local file:// URIs, then passes URIs to the native module. No expo-av involved.
 
 ### Audio Sequencing (AlarmFireScreen)
@@ -203,6 +205,24 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 - `expo-audio` added (chirp/UI sound feedback via createAudioPlayer)
 - `expo-asset` added (voice clip URI resolution: Asset.fromModule + downloadAsync → file:// URI)
 - Voice clips use native AlarmChannelModule, NOT expo-audio (ALARM stream requirement)
+
+### SDK 55 Dependency Updates (v1.8.1)
+
+| Package | Before | After |
+|---------|--------|-------|
+| Expo SDK | 54 | 55 |
+| React Native | 0.81.5 | 0.83.4 |
+| React | 19.1.0 | 19.2.0 |
+| react-native-reanimated | ~4.1.x | ~4.2.x |
+| react-native-worklets | ^0.5.1 (manual pin) | 0.7.2 (Expo-managed) |
+| @shopify/react-native-skia | 2.2.12 | 2.4.18 |
+| react-native-screens | ~4.16.x | ~4.23.x |
+| react-native-gesture-handler | ~2.28.x | ~2.30.x |
+| react-native-pager-view | 6.9.1 | 8.0.0 |
+
+- `react-native-notification-sounds` REMOVED — replaced by native `getSystemAlarmSounds` in AlarmChannelModule
+- `newArchEnabled` flag removed from app.json — New Architecture is always on in SDK 55
+- `edgeToEdgeEnabled` flag removed from app.json — edge-to-edge is default in SDK 55
 
 ### New/Modified Files in Phase 3
 

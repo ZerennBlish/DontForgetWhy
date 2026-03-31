@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: March 30, 2026
+### Source of Truth · Updated: March 31, 2026
 
 ---
 
@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.8.0 (versionCode 22) — production build in progress |
+| **Current Version** | v1.8.1 (versionCode 23) — SDK 55 upgrade build in progress |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | Voice memos — COMPLETE |
+| **Current Focus** | SDK 55 upgrade — COMPLETE |
 | **Blocked By** | Nothing |
-| **Next Action** | Play Store publish → Store screenshots update → Home screen / theme refactor planning |
+| **Next Action** | EAS build → Play Store publish → Home screen / theme refactor planning |
 | **EAS Credits** | ~13 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -451,7 +451,7 @@
 
 ### Architecture / Infrastructure
 - Home screen (main menu) — changes navigation for entire app, compartmentalizes features
-- Expo SDK 55 upgrade — the longer it waits the harder it gets
+- ~~Expo SDK 55 upgrade~~ — DONE in v1.8.1
 - Light / Dark / High Contrast themes (replacing 6 color themes) — simplifies all styling decisions
 - AsyncStorage → SQLite migration (when scale demands it)
 - Cloud backup / export (.dfw backup file — no accounts, zip AsyncStorage + voice-memos/ + note-images/)
@@ -476,6 +476,11 @@
 - Onboarding screen update (voice memos not mentioned)
 - Widget preview screenshots for store listing
 - App size audit (63 voice clips + Skia + voice memo recordings)
+
+### Known Issues (Pre-Existing)
+- Guess Why game: shows answer immediately without guess screen (needs investigation)
+- Yearly recurring reminder: reschedules without firing first (needs investigation)
+- ExpoKeepAwake promise rejections during activity transitions (dev-mode only, SDK 55 stricter promise handling)
 
 ### Recurring / Existing
 - Recurring reminder UX: annual set for today when time passed should auto-schedule next year
@@ -539,7 +544,7 @@ Batch native deps within phases to minimize dev builds.
 
 ## STANDING RULES
 
-- `react-native-worklets` pinned at `0.5.1` — do not upgrade
+- `react-native-worklets` at `0.7.2` — managed by Expo, no manual pinning needed
 - `npm install` from PowerShell after every WSL package install
 - `npx tsc --noEmit` before every production build — must be 0 errors
 - Increment `expo.version` + `expo.android.versionCode` before every production build
@@ -575,3 +580,4 @@ Batch native deps within phases to minimize dev builds.
 | Mar 30, 2026 | Calendar fixes: annual recurring reminders showing daily (month/day match), calendar event cards now tappable (navigate to edit screens). AlarmFireScreen merge conflict markers resolved. |
 | Mar 30, 2026 | Voice memos complete (Phase 3.5). VoiceRecordScreen, VoiceMemoDetailScreen, VoiceMemoCard, NotepadScreen integration (filter tabs, inline playback, pinning), MicWidget, NotepadWidget voice memo support, CalendarScreen voice memo dots. Card unification: dark bar style with accent borders. Capsule pin/delete buttons. View-based play/pause icons. Navigation guards (beforeRemove). Transactional save. Audits 44-45 complete, all findings resolved. |
 | Mar 30, 2026 | v1.8.0 production build. Voice memos, mic widget, card unification, calendar fixes, 2 full audits. |
+| Mar 31, 2026 | v1.8.1 SDK 55 upgrade. Expo 54→55, React Native 0.81→0.83, React 19.1→19.2. `react-native-notification-sounds` removed (unmaintained, jcenter/Gradle 9.0 incompatible), replaced with native `getSystemAlarmSounds` in AlarmChannelModule. `newArchEnabled` and `edgeToEdgeEnabled` removed from app.json (always-on in SDK 55). Android 15 foreground service warning resolved (expo-audio updated upstream). |
