@@ -246,14 +246,32 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           width: 70,
           height: 70,
           borderRadius: 35,
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          backgroundColor: '#4CAF50',
           justifyContent: 'center',
           alignItems: 'center',
         },
-        pauseBtnIcon: {
-          fontSize: 28,
+        pauseTriangle: {
+          width: 0,
+          height: 0,
+          borderLeftWidth: 12,
+          borderLeftColor: '#FFFFFF',
+          borderTopWidth: 8,
+          borderTopColor: 'transparent',
+          borderBottomWidth: 8,
+          borderBottomColor: 'transparent',
+          marginLeft: 3,
+        },
+        pauseBtnBars: {
+          flexDirection: 'row',
+          gap: 3,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        pauseBtnBar: {
+          width: 3,
+          height: 14,
+          backgroundColor: '#FFFFFF',
+          borderRadius: 1,
         },
         recordBtn: {
           width: 70,
@@ -349,9 +367,14 @@ export default function VoiceRecordScreen({ navigation }: Props) {
                 onPress={handlePauseResume}
                 activeOpacity={0.7}
               >
-                <Text style={styles.pauseBtnIcon}>
-                  {isPaused ? '\u25B6\uFE0F' : '\u23F8\uFE0F'}
-                </Text>
+                {isPaused ? (
+                  <View style={styles.pauseTriangle} />
+                ) : (
+                  <View style={styles.pauseBtnBars}>
+                    <View style={styles.pauseBtnBar} />
+                    <View style={styles.pauseBtnBar} />
+                  </View>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.recordBtn, { backgroundColor: '#FF3B30' }]}

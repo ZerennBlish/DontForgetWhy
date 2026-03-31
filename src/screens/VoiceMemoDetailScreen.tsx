@@ -511,7 +511,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         discardBtnText: {
           fontSize: 15,
           fontWeight: '600',
-          color: colors.textSecondary,
+          color: '#FFFFFF',
         },
       }),
     [colors, insets],
