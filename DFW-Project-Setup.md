@@ -192,6 +192,7 @@ DontForgetWhy/
     └── widget/
         ├── CalendarWidget.tsx
         ├── DetailedWidget.tsx
+        ├── MicWidget.tsx
         ├── NotepadWidget.tsx
         ├── updateWidget.ts
         └── widgetTaskHandler.ts
@@ -235,7 +236,8 @@ DontForgetWhy/
 | Mar 25 | 1.5.0 | 18 | Calendar feature (CalendarScreen), CalendarWidget (home screen mini calendar with dot indicators), AlarmListScreen refactor (AlarmsTab extraction), NotepadScreen refactor (NoteEditorModal extraction), dark capsule button uniformity, floating headers (editor/settings/riddle/calendar/memoryscore), BackButton visibility fix, 999 char note limit, initialDate prefill for create screens, daily recurring calendar mapping, timezone bucketing fix, widget alarm normalization, note sort UTC fix, week view locked to current week, tablet responsive (Onboarding/Sudoku/MemoryMatch/MemoryScore). Audits 33-35 complete. | Dev branch — ready to ship |
 | Mar 28 | 1.6.0 | 19 | Full Phase 2 production ship. Audit 38: 2 critical + 2 high fixed (Codex found, Gemini missed) — DrawingCanvas temp dir for drawings (no premature deletion), NotepadScreen sequential image save with rollback, useAlarmForm deferred photo deletion with rollback on failure. Play Store listing updated: 8 screenshots, full description rewrite. All P2 features shipped free (no Pro gate). | Production (live) |
 | Mar 28 | 1.6.1 | 20 | Draw on photos: annotate photo attachments with full drawing tools. DrawingCanvas backgroundImageUri, SkImage, onLayout sizing, durable source copy. NoteEditorModal "Draw On" option for photos. noteImageStorage URI-based JSON lookup, source photo persistence. Calendar tap-to-navigate on event cards, week view = next 7 days. Audit 39: 1 critical + 1 high + 2 medium fixed — durable source photo storage, eraser disabled on photos, canvas readiness gate. | Production (live) |
-| Mar 29 | 1.7.0 | 21 | P3 Voice Roasts: 63 voice clips across 10 categories, native ALARM stream playback via AlarmChannelModule, expo-av removed, expo-audio chirp, expo-asset for URI resolution, dismiss voice toggle, double-tap dismiss/snooze to skip clips, true_silent guard, production URI handling (HTTP/asset/file/content) | Pending production |
+| Mar 29 | 1.7.0 | 21 | P3 Voice Roasts: 63 voice clips across 10 categories, native ALARM stream playback via AlarmChannelModule, expo-av removed, expo-audio chirp, expo-asset for URI resolution, dismiss voice toggle, double-tap dismiss/snooze to skip clips, true_silent guard, production URI handling (HTTP/asset/file/content) | Production (live) |
+| Mar 30 | 1.8.0 | 22 | Voice memos (recording, pause/resume, dual-mode detail screen, inline playback, pinning), MicWidget, card unification (dark bars with accent borders), View-based play icons, capsule buttons, calendar voice memo dots, navigation guards (beforeRemove), transactional save, personality text. Audits 44-45 complete. | Production (pending review) |
 
 ---
 
@@ -283,19 +285,20 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.7.0 (versionCode 21) live. Voice memo feature on dev branch, not yet version-bumped. |
-| Production status | v1.7.0 live on Google Play |
+| Current version | v1.8.0 (versionCode 22) — pending Google review |
+| Production status | v1.8.0 production build in progress |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
 | Phase 3 (Voice Roasts) | COMPLETE |
-| Audit status | Audits 40-42 complete, all findings resolved. Audit 44 (voice memo feature) complete. |
-| Jest tests | 222 passing on testing-setup branch |
-| EAS build credits | ~15 remaining (reset April 12) |
+| Phase 3.5 (Voice Memos) | COMPLETE |
+| Audit status | Audits 44-45 complete, all findings resolved |
+| Jest tests | 222 passing on testing-setup branch (massively outdated) |
+| EAS build credits | ~13 remaining (reset April 12) |
 
 ### Git Branches
 | Branch | Purpose | Status |
 |--------|---------|--------|
-| `main` | Production. v1.7.0. | Active, clean |
-| `dev` | Voice memo feature + calendar fixes + audit 44 fixes. Not yet version-bumped. | Active — all new work goes here |
+| `main` | Production. Synced with dev at v1.8.0. | Active, clean |
+| `dev` | v1.8.0 — voice memos, card unification, audits 44-45. | Active — all new work goes here |
 | `testing-setup` | Jest suite (222 tests). | Reconciled with main (Phase 1.2) |

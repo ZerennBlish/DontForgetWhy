@@ -6,9 +6,9 @@
 
 ## 1. Summary Statistics
 
-- **~93+ unique bugs** found and fixed across the project lifetime
+- **~103+ unique bugs** found and fixed across the project lifetime
 - **Found by Zerenn:** ~30 (manual testing, device observation)
-- **Found by auditors (Codex/Gemini):** ~50
+- **Found by auditors (Codex/Gemini):** ~60
 - **Found by Opus/TypeScript:** ~10
 
 ---
@@ -250,6 +250,7 @@
 | 36 | Mar 26 | Note image attachments (P2 2.1) | Self-audit during implementation. 1 HIGH (transaction order), 2 MEDIUM (duplicate keys, image-only notes blocked), 2 MEDIUM (print broken images), 1 LOW (thumbnail memory). All resolved. Emoji picker removed. |
 | 37 | Mar 26 | Drawing canvas (P2 2.2) | 3 HIGH (drawing persistence — saveNoteImage .png extension + companion .json copy, performance — memoize parsedStrokes, loadDrawingData reads JPGs as text), 2 MEDIUM (image cache after edit — new filename cache bust, print/share MIME detection), 2 LOW (empty canvas save block, cancel confirmation). All resolved. |
 | 44 | Mar 30 | Voice memo feature (full) | Codex: 3 HIGH (VoiceRecordScreen rapid-tap race, recorder.stop not awaited, NotepadScreen listener leak), 2 MEDIUM (audio listener stale ref, AsyncStorage race). Gemini: 3 HIGH (rapid-tap race + save exit paths active during save + voiceMemoStorage swallows errors), 3 MEDIUM (detail screen no focus cleanup, seek validation, widget sort order). 8 findings fixed. voiceMemoFileStorage.ts false positive from Codex (File.copy is sync in new expo-file-system API). |
+| 45 | Mar 30 | Voice memo UI polish + integration | Codex: 4 HIGH (hardware back bypasses cleanup on both screens, non-transactional save, widget pin order destroyed), 3 MEDIUM (Save & Exit pops on failure, pause/resume race, undo doesn't restore pin). Gemini: 3 HIGH (same pin ordering, pause race, pin sort in All view), 2 MEDIUM (VoiceMemoCell hardcoded colors, stale playback progress). 10 findings fixed. |
 
 ### Audit 33 — March 25, 2026 (Codex + Gemini)
 **Scope:** Foreground notification refactor, calendar feature, AlarmsTab extraction, NoteEditorModal extraction, UI polish (dark capsules, floating headers, BackButton)

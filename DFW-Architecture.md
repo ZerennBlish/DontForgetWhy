@@ -118,7 +118,9 @@ All app-opening approaches failed (Linking.openURL, OPEN_URI, deep links). Solut
 ### Evolution
 Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWidgetCompact added. Mar 12: Trimmed to 2 — DetailedWidget redesigned, compacts deleted. Mar 25: CalendarWidget added — mini monthly calendar grid with colored dot indicators. Third widget alongside DetailedWidget and NotepadWidget. Uses getCalendarWidgetData() in widgetTaskHandler.ts for data loading. Click actions: OPEN_CALENDAR (opens CalendarScreen) and OPEN_CALENDAR_DAY__YYYY-MM-DD (opens CalendarScreen with date). pendingCalendarAction consumed in App.tsx on cold start and app resume. Widget alarm loader includes normalization for legacy alarm payloads (mode, days array, numeric weekday format) — does not import loadAlarms() to stay headless-safe, duplicates normalization inline.
 
-**NotepadWidget voice memo integration:** Widget now shows voice memos alongside notes. Combined items sorted by `createdAt` descending, sliced to 4 total. `VoiceMemoCell` component renders mic emoji + title + formatted duration on dark purple (#2A2A3E) background. Click actions: `OPEN_VOICE_MEMO__{id}` opens VoiceMemoDetailScreen, `RECORD_VOICE` opens VoiceRecordScreen. Widget task handler stores `pendingVoiceAction` in AsyncStorage (type: 'record' or 'detail' with memoId), routed by `useNotificationRouting` on cold start, warm start, and foreground resume.
+**NotepadWidget voice memo integration:** Widget shows voice memos alongside notes. Header layout: mic button (left, RECORD_VOICE), title center (OPEN_NOTES), notepad button (right, ADD_NOTE). Combined items sorted pinned-first (`isPinned` field on WidgetNote and WidgetVoiceMemo), then by `createdAt` descending, sliced to 4. `VoiceMemoCell` uses `theme.cellBg` and `theme.text` (not hardcoded colors). Click actions: `OPEN_VOICE_MEMO__{id}` opens VoiceMemoDetailScreen, `RECORD_VOICE` opens VoiceRecordScreen. Widget task handler stores `pendingVoiceAction` in AsyncStorage, routed by `useNotificationRouting`.
+
+**MicWidget:** Standalone 110dp home screen widget (MicWidget.tsx). Mic icon + "Record" text on themed background. Single click action: `RECORD_VOICE` opens VoiceRecordScreen. Registered in app.json alongside other widgets.
 
 ### CalendarWidget
 - Mini month grid: 7 columns × 5-6 rows, weekday header, month/year label
@@ -226,14 +228,21 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 - Recording uses expo-audio's `useAudioRecorder` hook with `RecordingPresets.HIGH_QUALITY` — AAC codec, `.m4a` output
 - `requestRecordingPermissionsAsync()` gates recording; `android.permission.RECORD_AUDIO` added to app.json
 - Transition guard pattern (`transitionRef`) prevents rapid-tap race conditions on record/stop toggle — if `transitionRef.current` is true, `handleRecordPress` returns immediately. Both `startRecording` and `stopRecording` set it true at entry, false in `finally`
-- Save guard pattern (`savingRef`) blocks Back/Discard handlers during the async save operation
+- Pause/resume: `isPausedRef` (useRef) for synchronous state — prevents rapid-tap race creating duplicate intervals. `recorder.pause()` / `recorder.record()` toggle. Existing interval always cleared before creating new one on resume
 - `recorder.stop()` is `await`ed everywhere before reading status/URI/duration — non-awaited stop reads stale data
-- AppState listener stops recording on app background, preserves the partial recording for preview (doesn't discard)
+- AppState listener stops recording on app background, navigates to VoiceMemoDetailScreen with partial recording (same as normal stop)
+- VoiceRecordScreen has NO post-recording UI — after `stopRecording` completes, immediately calls `navigation.replace('VoiceMemoDetail', { tempUri, duration })`. Screen only shows idle state and recording state
+- `beforeRemove` navigation listener intercepts hardware back, gesture back, and custom back button. During recording: stops, discards temp file, dispatches original action. Uses `navigatedRef` to allow programmatic `replace` navigation through
+
+### VoiceMemoDetailScreen — Dual Mode
+- Accepts `{ tempUri: string; duration: number }` for new recordings OR `{ memoId: string }` for existing memos. Mode detected via `'tempUri' in params`
+- **New recordings:** Save/Discard buttons at bottom. Save: transactional — `saveVoiceMemoFile` copies temp to permanent, then `addVoiceMemo` writes metadata. If metadata fails, permanent copy deleted, temp file preserved for retry. On success, temp file deleted (best-effort). `savingRef` blocks exit during save
+- **Existing memos:** explicit Save capsule in header (only visible when title/note differ from `initialTitleRef`/`initialNoteRef`). `handleSaveExisting` returns `Promise<boolean>` — false on failure prevents "Save & Exit" from navigating away
+- `beforeRemove` navigation listener: blocks during save (`savingRef`), new recordings get "Discard recording?" alert, existing with unsaved changes get "Unsaved changes" alert with Cancel/Discard/Save & Exit. `exitingRef` prevents re-triggering on intentional exits. Alert callbacks use `navigation.dispatch(e.data.action)` to proceed
 
 ### Playback
-- **VoiceRecordScreen:** `useAudioPlayer` hook for preview after recording. `useAudioPlayerStatus` for position/duration. `didJustFinish` resets to start
-- **VoiceMemoDetailScreen:** seekable progress bar (44px touch target, 6px visual bar), back/forward 5s, `useFocusEffect` cleanup pauses on screen blur. `Number.isFinite` validation on all seek values with try/catch on `seekTo`
-- **NotepadScreen (inline):** single player instance in `useRef` via `createAudioPlayer` (imperative, not hooks). `addListener('playbackStatusUpdate')` for finish detection. Listener ref (`playerListenerRef`) cleaned up before `player.release()` in `stopPlayback`. Focus cleanup via `useFocusEffect` stops playback when screen loses focus
+- **VoiceMemoDetailScreen:** seekable progress bar (44px touch target, 6px visual bar), back/forward 5s, `useFocusEffect` cleanup pauses on screen blur. `Number.isFinite` validation on all seek values with try/catch on `seekTo`. View-based play/pause icons (CSS border triangle for play, dual bars for pause). Play button color: #4CAF50 (Material Design green)
+- **NotepadScreen (inline):** single player instance in `useRef` via `createAudioPlayer` (imperative, not hooks). `addListener('playbackStatusUpdate')` for finish detection. Listener ref (`playerListenerRef`) cleaned up before `player.release()` in `stopPlayback`. Focus cleanup via `useFocusEffect` stops playback when screen loses focus. Stale progress reset: when switching memos, previous memo's progress set to 0 before starting new playback
 - **NoteEditorModal (note-attached):** `useAudioPlayer`/`useAudioPlayerStatus` hooks for per-note voice memo playback. Seekable via touch responders. Shared 3-attachment limit (images + voice memos)
 
 ### Key distinction from Voice Roasts

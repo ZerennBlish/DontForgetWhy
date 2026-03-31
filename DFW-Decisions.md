@@ -110,6 +110,24 @@ Unlike other storage services that swallow errors (catch → log → return void
 ### Voice memos play through MEDIA stream, not ALARM stream (Mar 30)
 Voice roasts use the native AlarmChannelModule on ALARM stream because they play during alarm fires and must be audible regardless of ringer mode. Voice memos are user-initiated playback — MEDIA stream via expo-audio is correct. No native module needed.
 
+### Card unification — dark bar style with accent borders (Mar 30)
+Replaced full-color note cards with dark bar style matching voice memo cards. Green left border (#55EFC4) for notes, purple (#A29BFE) for voice memos. Note's own color shows in icon circle only. Ensures consistent look across all content types and visibility on all theme backgrounds.
+
+### View-based play/pause icons, not emoji (Mar 30)
+Emoji play symbols (▶️⏸️) render differently across devices and look like placeholders. Replaced with CSS border triangle (play) and dual bars (pause) rendered as Views. Small change, massive visual improvement. Applied to VoiceMemoCard, VoiceMemoDetailScreen, VoiceRecordScreen.
+
+### Play button green #4CAF50, not purple (Mar 30)
+Play buttons use Material Design green — the universal "go/play" color. Purple (#A29BFE) reserved for voice memo accent borders and branding. Green for action, purple for identity.
+
+### VoiceRecord → VoiceMemoDetail flow, not inline save (Mar 30)
+Initially tried adding title/note inputs directly to VoiceRecordScreen after recording. Didn't work — centered layout pushed inputs off screen, and ScrollView solutions fought with the recording UI. Solution: VoiceRecordScreen stays clean (record only), then navigation.replace to VoiceMemoDetailScreen which handles title, note, playback, and save. Detail screen's dual-mode (tempUri vs memoId) handles both new and existing memos.
+
+### Explicit Save button, not auto-save (Mar 30)
+VoiceMemoDetailScreen originally auto-saved title/note changes on back press. Changed to explicit Save capsule in header (visible only when changes exist) + unsaved changes warning on exit. Matches user expectations — auto-save is invisible and users don't trust it.
+
+### useRef for undo pin state, not useState (Mar 30)
+Voice memo delete captures wasPinned for undo restore. useState caused stale closure because setDeletedVoiceMemoPinned and setVoiceUndoKey happen in same render — the undo handler captures the old false value. useRef updates synchronously. Same pattern that fixed globalSilenced and isSnoozing in P3.
+
 ---
 
 ## 2. Environment & Setup Knowledge Base

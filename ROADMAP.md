@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: March 29, 2026
+### Source of Truth · Updated: March 30, 2026
 
 ---
 
@@ -7,13 +7,13 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.7.0 (versionCode 21) — pending production build |
+| **Current Version** | v1.8.0 (versionCode 22) — production build in progress |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | P3 voice roasts — COMPLETE |
+| **Current Focus** | Voice memos — COMPLETE |
 | **Blocked By** | Nothing |
-| **Next Action** | Production build → Play Store publish → P4 Chess/Checkers |
-| **EAS Credits** | ~19 remaining (reset April 12) |
+| **Next Action** | Play Store publish → Store screenshots update → Home screen / theme refactor planning |
+| **EAS Credits** | ~13 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
 
@@ -26,6 +26,7 @@
 | 1 | Housekeeping | ✅ Done | main | — |
 | 2 | Photos + Drawing + Backgrounds | ✅ Done | dev | Dev + Prod |
 | 3 | Voice Roasts | ✅ Done | dev | Dev + Prod |
+| 3.5 | Voice Memos | ✅ Done | dev | Dev + Prod |
 | 4 | Chess + Checkers | ⬜ Waiting | dev | Prod only |
 | 5 | Google Calendar Sync | ⬜ Waiting | dev | Dev + Prod |
 | 6 | Memory Score Expansion | ⬜ Waiting | dev | Prod only |
@@ -245,6 +246,39 @@
 
 ---
 
+## PHASE 3.5 — VOICE MEMOS ✅ COMPLETE
+
+**Status:** ✅ Complete
+**Shipped in:** v1.8.0 (versionCode 22)
+**Branch:** `dev`
+**New deps:** None (expo-audio already installed from P3)
+**Native changes:** RECORD_AUDIO permission, MicWidget registration in app.json
+
+### Features
+
+- [x] **VoiceRecordScreen** — dedicated recording screen, tap-to-record/tap-to-stop, pause/resume, unlimited duration, random personality idle hints, recording indicator text
+- [x] **VoiceMemoDetailScreen** — dual mode (new recording via tempUri OR existing memo via memoId), title + note editing, seekable playback with back/forward 5s, explicit Save button with unsaved changes warning, transactional save (temp file preserved until metadata succeeds), soft delete with confirmation
+- [x] **VoiceMemoCard** — reusable card component, View-based play/pause icons, inline playback with progress bar, theme-aware colors, capsule pin/delete buttons matching alarm/reminder pattern
+- [x] **NotepadScreen integration** — content filter tabs (Voice / All / Notes), combined FlatList with union type ListItem, inline playback via single audio player ref, focus cleanup, pinned items float to top in All view, stale progress reset on memo switch
+- [x] **Voice memo pinning** — widgetPins.ts functions (get/toggle/unpin/prune/isPinned), max 4 pins, pin state preserved on undo delete (useRef pattern for stale closure fix), pinned sort in both list and widget
+- [x] **MicWidget** — standalone home screen widget, mic icon + "Record" text, tap opens VoiceRecordScreen, registered in app.json (110dp min)
+- [x] **NotepadWidget updated** — shows voice memos mixed with notes, pinned-first sort before slice to 4, mic button (left) + notepad button (right) in header, VoiceMemoCell with theme colors
+- [x] **CalendarScreen** — voice memos show as purple dots + tappable list items, DOT_VOICE #A29BFE, filter support
+- [x] **Card unification** — notes and voice memos use same dark bar style, green left border accent for notes, purple for voice memos, note icon circle uses note's own color
+- [x] **Navigation guards** — beforeRemove listeners on VoiceRecordScreen and VoiceMemoDetailScreen, hardware back/gesture back intercepted, save blocking during save operations
+- [x] **Storage** — voiceMemoStorage.ts (AsyncStorage CRUD, re-throws on error), voiceMemoFileStorage.ts (.m4a files at ${Paths.document}voice-memos/)
+- [x] **Personality** — random idle hints on record screen, random save toasts, random empty state messages, sarcastic delete confirmation
+
+### Audits
+- [x] Audit 44: 8 findings fixed (race conditions, stale closures, seek validation, widget sort, error swallowing)
+- [x] Audit 45: 10 findings fixed (nav guards, transactional save, pin ordering, pause race, undo pin restore, theme colors, stale progress)
+
+### Audit Gate
+- [x] `npx tsc --noEmit` — 0 errors
+- [x] Increment version + versionCode
+
+---
+
 ## PHASE 4 — NEW GAMES
 
 **Status:** ⬜ Not started
@@ -415,11 +449,40 @@
 
 ## BACKLOG (Not Scheduled)
 
-- Recurring reminder UX: annual recurring set for today when time passed should auto-schedule next year; completing recurring should gray out + reappear at next occurrence
-- Daily Riddle scoring: needs design review — unclear if point values are well-tuned
-- Expo SDK 55 upgrade: deferred until after Phase 3
-- AlarmListScreen further decomposition (~600 lines — not urgent)
-- NotepadScreen list-side extraction (~800 lines — not urgent)
+### Architecture / Infrastructure
+- Home screen (main menu) — changes navigation for entire app, compartmentalizes features
+- Expo SDK 55 upgrade — the longer it waits the harder it gets
+- Light / Dark / High Contrast themes (replacing 6 color themes) — simplifies all styling decisions
+- AsyncStorage → SQLite migration (when scale demands it)
+- Cloud backup / export (.dfw backup file — no accounts, zip AsyncStorage + voice-memos/ + note-images/)
+- Jest suite resurrection — 222 tests on testing-setup branch, massively outdated
+- NotepadScreen further decomposition (~1240 lines — getting unwieldy)
+
+### Visual Unification
+- All bars/cards across app match new dark bar style with accent borders
+- All buttons match capsule pattern (pin, delete, actions) — already done for notes/voice memos/alarms/reminders
+- All icons checked for consistency across screens
+- Pin toggle inside edit/detail screens (alarms, reminders, notes, voice memos)
+
+### Voice Expansion
+- Voice memos attachable to alarms (hear your own voice when alarm fires — "viral-worthy UX")
+- Voice memos attachable to reminders and timers
+- More voice roast clips throughout app (navigation, actions, idle moments)
+- Female voice character (alarm guy's girlfriend) — future user-selectable option
+
+### Store / Marketing
+- Play Store listing update for v1.8.0 (voice memos, mic widget, calendar improvements)
+- Play Store screenshots refresh (add voice memo screenshot with waveform background)
+- Onboarding screen update (voice memos not mentioned)
+- Widget preview screenshots for store listing
+- App size audit (63 voice clips + Skia + voice memo recordings)
+
+### Recurring / Existing
+- Recurring reminder UX: annual set for today when time passed should auto-schedule next year
+- Daily Riddle scoring design review
+- AlarmListScreen further decomposition (~600 lines)
+- Accessibility pass (screen reader labels on View-based icons)
+- OOM prevention: FlatList windowSize/removeClippedSubviews for image-heavy note lists
 
 ---
 
@@ -428,6 +491,8 @@
 ### Free Tier — Keeps Everything Current, Forever
 - All alarms, reminders, timers, notepad
 - In-app calendar (day/week/month views)
+- Calendar voice memo dots and list items
+- Voice/All/Notes filter tabs in notepad
 - All current themes + custom theme builder
 - Guess Why, Memory Match, Trivia (offline), Sudoku, Daily Riddle
 - Memory Score tracking
@@ -437,6 +502,8 @@
 - Privacy mode, Silence All mode
 
 ### Pro Tier — ~$1 One-Time Unlock
+- Voice memos (recording, playback, detail editing, pinning)
+- Mic home screen widget
 - Voice roasts (alarm fire + snooze escalation + wake-up greeting)
 - Custom photo backgrounds (main screens + per-alarm fire screen)
 - Note image attachments
@@ -456,12 +523,13 @@
 |-------|-----------|-------------|-------------|
 | 2 | 1 | 1 | ~2 |
 | 3 | 1 (or shared w/ P2) | 1 | ~1–2 |
+| 3.5 | 2 | 1 | ~3 |
 | 4 | 0 | 1 | ~1 |
 | 5 | 1 | 1 | ~2 |
 | 6 | 0 | 1 | ~1 |
 | 7 | 0 | 1+ | ~1+ |
 | 8 | 1+ | 2+ | ~3+ |
-| **Total** | **3–4** | **8+** | **~11–14** |
+| **Total** | **5–6** | **9+** | **~14–17** |
 
 Credits reset on the **12th of each month** (~30 credits/month on Starter plan).
 Batch native deps within phases to minimize dev builds.
@@ -504,3 +572,6 @@ Batch native deps within phases to minimize dev builds.
 | Mar 28, 2026 | v1.6.1 shipped. Draw on photos (annotate photo attachments with drawing tools), calendar tap-to-navigate, week view next 7 days. Audit 39 fixes: durable source photo, eraser disabled on photos, canvas readiness gate, loadDrawingData path fix. |
 | Mar 28, 2026 | P3 voice roasts pre-work complete. Custom ElevenLabs v3 voice designed. 62 voice clips generated across all categories: fire, snooze (4 tiers), guess why (before/correct/wrong), dismiss, intro. |
 | Mar 29, 2026 | P3 Voice Roasts complete. 63 voice clips across 10 categories (fire, snooze 1-4, timer, guess before/correct/wrong, dismiss, intro). Native ALARM stream playback via AlarmChannelModule. expo-av removed, replaced with expo-audio for UI chirp. Dismiss voice toggle for faster exits. Double-tap dismiss/snooze to skip voice clips. Silent alarm guard. Production URI handling via expo-asset. |
+| Mar 30, 2026 | Calendar fixes: annual recurring reminders showing daily (month/day match), calendar event cards now tappable (navigate to edit screens). AlarmFireScreen merge conflict markers resolved. |
+| Mar 30, 2026 | Voice memos complete (Phase 3.5). VoiceRecordScreen, VoiceMemoDetailScreen, VoiceMemoCard, NotepadScreen integration (filter tabs, inline playback, pinning), MicWidget, NotepadWidget voice memo support, CalendarScreen voice memo dots. Card unification: dark bar style with accent borders. Capsule pin/delete buttons. View-based play/pause icons. Navigation guards (beforeRemove). Transactional save. Audits 44-45 complete, all findings resolved. |
+| Mar 30, 2026 | v1.8.0 production build. Voice memos, mic widget, card unification, calendar fixes, 2 full audits. |
