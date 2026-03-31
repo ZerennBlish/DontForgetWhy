@@ -141,6 +141,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const [playingMemoId, setPlayingMemoId] = useState<string | null>(null);
   const [playbackProgress, setPlaybackProgress] = useState<Record<string, number>>({});
   const [deletedVoiceMemo, setDeletedVoiceMemo] = useState<VoiceMemo | null>(null);
+  const deletedVoiceMemoPinnedRef = useRef(false);
   const [showVoiceUndo, setShowVoiceUndo] = useState(false);
   const [voiceUndoKey, setVoiceUndoKey] = useState(0);
 
@@ -525,6 +526,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
       stopPlayback();
       return;
     }
+    if (playingMemoId) {
+      setPlaybackProgress(prev => ({ ...prev, [playingMemoId]: 0 }));
+    }
     stopPlayback();
     const p = createAudioPlayer({ uri: memo.uri });
     playerRef.current = p;
@@ -558,8 +562,10 @@ export default function NotepadScreen({ navigation, route }: Props) {
     const memo = voiceMemos.find(m => m.id === id);
     if (!memo) return;
     if (playingMemoId === id) stopPlayback();
+    const wasPinned = isVoiceMemoPinned(id, pinnedVoiceMemoIds);
     setDeletedVoiceMemo(memo);
-    await unpinVoiceMemo(id);
+    deletedVoiceMemoPinnedRef.current = wasPinned;
+    if (wasPinned) await unpinVoiceMemo(id);
     await VMStore.deleteVoiceMemo(id);
     await reloadVoiceMemos();
     refreshWidgets();
@@ -589,6 +595,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
     setShowVoiceUndo(false);
     if (!deletedVoiceMemo) return;
     await VMStore.restoreVoiceMemo(deletedVoiceMemo.id);
+    if (deletedVoiceMemoPinnedRef.current) {
+      await togglePinVoiceMemo(deletedVoiceMemo.id);
+    }
     await reloadVoiceMemos();
     refreshWidgets();
     setDeletedVoiceMemo(null);
@@ -667,10 +676,18 @@ export default function NotepadScreen({ navigation, route }: Props) {
     const voiceItems: ListItem[] = sortedVoiceMemos.map((m) => ({ type: 'voiceMemo' as const, data: m }));
     if (contentFilter === 'notes') return noteItems;
     if (contentFilter === 'voice') return voiceItems;
-    return [...noteItems, ...voiceItems].sort((a, b) =>
-      new Date(b.data.createdAt).getTime() - new Date(a.data.createdAt).getTime(),
-    );
-  }, [sorted, sortedVoiceMemos, contentFilter]);
+    const isPinnedItem = (item: ListItem): boolean => {
+      if (item.type === 'note') return isNotePinned(item.data.id, pinnedIds);
+      return isVoiceMemoPinned(item.data.id, pinnedVoiceMemoIds);
+    };
+    return [...noteItems, ...voiceItems].sort((a, b) => {
+      const aPinned = isPinnedItem(a);
+      const bPinned = isPinnedItem(b);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return new Date(b.data.createdAt).getTime() - new Date(a.data.createdAt).getTime();
+    });
+  }, [sorted, sortedVoiceMemos, contentFilter, pinnedIds, pinnedVoiceMemoIds]);
 
   const styles = useMemo(() => StyleSheet.create({
     outerContainer: {

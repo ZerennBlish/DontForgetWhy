@@ -8,6 +8,7 @@ export interface WidgetNote {
   icon: string;
   fontColor?: string | null;
   createdAt: string;
+  isPinned?: boolean;
 }
 
 export interface WidgetTheme {
@@ -24,6 +25,7 @@ export interface WidgetVoiceMemo {
   title: string;
   duration: number;
   createdAt: string;
+  isPinned?: boolean;
 }
 
 interface NotepadWidgetProps {
@@ -93,7 +95,7 @@ function formatMemoDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function VoiceMemoCell({ memo }: { memo: WidgetVoiceMemo }) {
+function VoiceMemoCell({ memo, theme }: { memo: WidgetVoiceMemo; theme: WidgetTheme }) {
   const label = `\u{1F399}\uFE0F ${memo.title || 'Voice Memo'}`;
   const dur = formatMemoDuration(memo.duration);
 
@@ -102,7 +104,7 @@ function VoiceMemoCell({ memo }: { memo: WidgetVoiceMemo }) {
       clickAction={`OPEN_VOICE_MEMO__${memo.id}`}
       style={{
         width: 'match_parent',
-        backgroundColor: '#2A2A3E',
+        backgroundColor: theme.cellBg as `#${string}`,
         borderRadius: 12,
         padding: 12,
         flex: 1,
@@ -117,7 +119,7 @@ function VoiceMemoCell({ memo }: { memo: WidgetVoiceMemo }) {
         style={{
           fontSize: 14,
           fontWeight: '600',
-          color: '#FFFFFF',
+          color: theme.text as `#${string}`,
         }}
       />
       <TextWidget
@@ -213,7 +215,13 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
           ...notes.map((n) => ({ type: 'note' as const, data: n, createdAt: n.createdAt })),
           ...voiceMemos.map((m) => ({ type: 'voiceMemo' as const, data: m, createdAt: m.createdAt })),
         ];
-        combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        combined.sort((a, b) => {
+          const aPinned = a.data.isPinned;
+          const bPinned = b.data.isPinned;
+          if (aPinned && !bPinned) return -1;
+          if (!aPinned && bPinned) return 1;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
         const items = combined.slice(0, 4);
         return items.length > 0 ? (
         <FlexWidget
@@ -234,7 +242,7 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
             >
               {item.type === 'note'
                 ? <NoteCell note={item.data} accent={theme.accent} />
-                : <VoiceMemoCell memo={item.data} />}
+                : <VoiceMemoCell memo={item.data} theme={theme} />}
             </FlexWidget>
           ))}
         </FlexWidget>

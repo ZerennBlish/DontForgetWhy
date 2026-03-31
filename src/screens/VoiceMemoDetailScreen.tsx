@@ -65,6 +65,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const initialNoteRef = useRef('');
   const barWidthRef = useRef(0);
   const savingRef = useRef(false);
+  const exitingRef = useRef(false);
 
   const audioUri = isNewRecording
     ? (params as { tempUri: string }).tempUri
@@ -120,8 +121,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const hasUnsavedChanges = !isNewRecording && memo &&
     (title !== initialTitleRef.current || note !== initialNoteRef.current);
 
-  const handleSaveExisting = async () => {
-    if (!memo || isNewRecording) return;
+  const handleSaveExisting = async (): Promise<boolean> => {
+    if (!memo || isNewRecording) return false;
     hapticMedium();
     Keyboard.dismiss();
     try {
@@ -138,58 +139,80 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         SAVE_TOASTS[Math.floor(Math.random() * SAVE_TOASTS.length)],
         ToastAndroid.LONG,
       );
+      return true;
     } catch {
-      ToastAndroid.show('Failed to save', ToastAndroid.SHORT);
+      ToastAndroid.show('Save failed \u2014 try again', ToastAndroid.SHORT);
+      return false;
     }
   };
 
-  const handleBack = async () => {
-    if (savingRef.current) return;
+  // Intercept all back/pop navigation
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (exitingRef.current) return;
+      if (savingRef.current) { e.preventDefault(); return; }
+
+      if (isNewRecording) {
+        e.preventDefault();
+        try { player.pause(); } catch { /* */ }
+        Alert.alert(
+          'Discard recording?',
+          "You haven't saved this recording yet.",
+          [
+            { text: 'Keep Editing', style: 'cancel' },
+            {
+              text: 'Discard',
+              style: 'destructive',
+              onPress: () => {
+                deleteVoiceMemoFile((params as { tempUri: string }).tempUri).catch(() => {});
+                exitingRef.current = true;
+                navigation.dispatch(e.data.action);
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      const hasChanges = memo &&
+        (title !== initialTitleRef.current || note !== initialNoteRef.current);
+      if (hasChanges) {
+        e.preventDefault();
+        try { player.pause(); } catch { /* */ }
+        Alert.alert(
+          'Unsaved changes',
+          "You've made changes. Save before leaving?",
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Discard',
+              style: 'destructive',
+              onPress: () => {
+                exitingRef.current = true;
+                navigation.dispatch(e.data.action);
+              },
+            },
+            {
+              text: 'Save & Exit',
+              onPress: async () => {
+                const success = await handleSaveExisting();
+                if (success) {
+                  exitingRef.current = true;
+                  navigation.dispatch(e.data.action);
+                }
+              },
+            },
+          ],
+        );
+        return;
+      }
+    });
+    return unsubscribe;
+  }, [navigation, isNewRecording, memo, title, note]);
+
+  const handleBack = () => {
     Keyboard.dismiss();
     try { player.pause(); } catch { /* */ }
-
-    if (isNewRecording) {
-      Alert.alert(
-        'Discard recording?',
-        "You haven't saved this recording yet.",
-        [
-          { text: 'Keep Editing', style: 'cancel' },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => {
-              deleteVoiceMemoFile((params as { tempUri: string }).tempUri).catch(() => {});
-              navigation.goBack();
-            },
-          },
-        ],
-      );
-      return;
-    }
-
-    if (hasUnsavedChanges) {
-      Alert.alert(
-        'Unsaved changes',
-        "You've made changes. Save before leaving?",
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => navigation.goBack(),
-          },
-          {
-            text: 'Save & Exit',
-            onPress: async () => {
-              await handleSaveExisting();
-              navigation.goBack();
-            },
-          },
-        ],
-      );
-      return;
-    }
-
     navigation.goBack();
   };
 
@@ -209,6 +232,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             try { player.pause(); } catch { /* */ }
             await deleteVoiceMemo(memoId);
             refreshWidgets();
+            exitingRef.current = true;
             navigation.goBack();
           },
         },
@@ -228,20 +252,29 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       const dur = (params as { tempUri: string; duration: number }).duration;
       const newMemoId = uuidv4();
       const permanentUri = await saveVoiceMemoFile(newMemoId, tempUri);
-      const now = new Date().toISOString();
-      await addVoiceMemo({
-        id: newMemoId,
-        uri: permanentUri,
-        title: title.trim(),
-        note: note.trim(),
-        duration: dur,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-        noteId: null,
-      });
+      try {
+        const now = new Date().toISOString();
+        await addVoiceMemo({
+          id: newMemoId,
+          uri: permanentUri,
+          title: title.trim(),
+          note: note.trim(),
+          duration: dur,
+          createdAt: now,
+          updatedAt: now,
+          deletedAt: null,
+          noteId: null,
+        });
+      } catch (metaError) {
+        deleteVoiceMemoFile(permanentUri).catch(() => {});
+        throw metaError;
+      }
+      deleteVoiceMemoFile(tempUri).catch(() => {});
       refreshWidgets();
       ToastAndroid.show(SAVE_TOASTS[Math.floor(Math.random() * SAVE_TOASTS.length)], ToastAndroid.LONG);
+      exitingRef.current = true;
+      savingRef.current = false;
+      setSaving(false);
       navigation.goBack();
     } catch (e) {
       console.error('Save failed:', e);
@@ -256,6 +289,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     hapticLight();
     try { player.pause(); } catch { /* */ }
     deleteVoiceMemoFile((params as { tempUri: string }).tempUri).catch(() => {});
+    exitingRef.current = true;
     navigation.goBack();
   };
 

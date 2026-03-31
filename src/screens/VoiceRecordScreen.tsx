@@ -50,6 +50,7 @@ export default function VoiceRecordScreen({ navigation }: Props) {
   const [bgOpacity, setBgOpacity] = useState(0.5);
 
   const isRecordingRef = useRef(false);
+  const isPausedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transitionRef = useRef(false);
   const navigatedRef = useRef(false);
@@ -89,6 +90,32 @@ export default function VoiceRecordScreen({ navigation }: Props) {
     return () => sub.remove();
   }, [recorder, navigation]);
 
+  // Intercept all back/pop navigation
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (navigatedRef.current) return;
+      if (!isRecordingRef.current) return;
+      e.preventDefault();
+      isRecordingRef.current = false;
+      isPausedRef.current = false;
+      setIsRecording(false);
+      setIsPaused(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      (async () => {
+        try {
+          await recorder.stop();
+          const status = recorder.getStatus();
+          if (status.url) deleteVoiceMemoFile(status.url).catch(() => {});
+        } catch { /* */ }
+        navigation.dispatch(e.data.action);
+      })();
+    });
+    return unsubscribe;
+  }, [navigation, recorder]);
+
   // Safety cleanup on unmount
   useEffect(() => {
     return () => {
@@ -109,6 +136,7 @@ export default function VoiceRecordScreen({ navigation }: Props) {
       }
       setElapsedSeconds(0);
       setIsPaused(false);
+      isPausedRef.current = false;
 
       await recorder.prepareToRecordAsync();
       recorder.record();
@@ -132,6 +160,7 @@ export default function VoiceRecordScreen({ navigation }: Props) {
     isRecordingRef.current = false;
     setIsRecording(false);
     setIsPaused(false);
+    isPausedRef.current = false;
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -164,13 +193,19 @@ export default function VoiceRecordScreen({ navigation }: Props) {
 
   const handlePauseResume = () => {
     hapticLight();
-    if (isPaused) {
+    if (isPausedRef.current) {
+      isPausedRef.current = false;
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       recorder.record();
       setIsPaused(false);
       timerRef.current = setInterval(() => {
         setElapsedSeconds(prev => prev + 1);
       }, 1000);
     } else {
+      isPausedRef.current = true;
       recorder.pause();
       setIsPaused(true);
       if (timerRef.current) {

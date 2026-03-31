@@ -427,7 +427,7 @@ export async function getWidgetNotes(): Promise<WidgetNote[]> {
       if (result.length >= 4) break;
       const note = allNotes.find((n) => n.id === id);
       if (note) {
-        result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor, createdAt: note.createdAt });
+        result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor, createdAt: note.createdAt, isPinned: true });
       }
     }
   } catch {
@@ -442,7 +442,7 @@ export async function getWidgetNotes(): Promise<WidgetNote[]> {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     for (const note of sorted) {
       if (result.length >= 4) break;
-      result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor, createdAt: note.createdAt });
+      result.push({ id: note.id, text: note.text, color: note.color, icon: note.icon, fontColor: note.fontColor, createdAt: note.createdAt, isPinned: false });
     }
   }
 
@@ -451,7 +451,7 @@ export async function getWidgetNotes(): Promise<WidgetNote[]> {
 
 // ── Voice memo widget data ──
 
-export async function getWidgetVoiceMemos(): Promise<{ id: string; title: string; duration: number; createdAt: string }[]> {
+export async function getWidgetVoiceMemos(): Promise<{ id: string; title: string; duration: number; createdAt: string; isPinned: boolean }[]> {
   try {
     const raw = await AsyncStorage.getItem('voiceMemos');
     if (!raw) return [];
@@ -476,7 +476,7 @@ export async function getWidgetVoiceMemos(): Promise<{ id: string; title: string
 
     return [...pinned, ...unpinned]
       .slice(0, 4)
-      .map((m: any) => ({ id: m.id, title: m.title || '', duration: m.duration || 0, createdAt: m.createdAt }));
+      .map((m: any) => ({ id: m.id, title: m.title || '', duration: m.duration || 0, createdAt: m.createdAt, isPinned: pinnedSet.has(m.id) }));
   } catch {
     return [];
   }
