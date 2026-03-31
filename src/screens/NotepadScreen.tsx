@@ -796,11 +796,11 @@ export default function NotepadScreen({ navigation, route }: Props) {
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(30, 30, 50, 0.8)',
+      backgroundColor: colors.card + 'CC',
       borderRadius: 12,
       padding: 12,
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderColor: colors.border,
       borderLeftWidth: 3,
       borderLeftColor: 'transparent',
       marginBottom: 8,
@@ -822,11 +822,11 @@ export default function NotepadScreen({ navigation, route }: Props) {
     cardTitle: {
       fontSize: 15,
       fontWeight: '600',
-      color: '#FFFFFF',
+      color: colors.textPrimary,
     },
     cardSubtitle: {
       fontSize: 12,
-      color: 'rgba(255, 255, 255, 0.5)',
+      color: colors.textSecondary,
       marginTop: 2,
     },
     cardActions: {
@@ -943,7 +943,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
   }), [colors, insets.bottom, insets.top]);
 
   const renderDeletedItem = (item: Note) => (
-    <View style={[styles.card, { borderLeftColor: item.color, opacity: 0.7 }]}>
+    <View style={[styles.card, { borderLeftColor: '#55EFC4', opacity: 0.7 }]}>
       <View style={[styles.iconCircle, { backgroundColor: item.color, opacity: 0.6 }]}>
         <Text style={styles.iconCircleText}>{item.icon || '\u{1F4DD}'}</Text>
       </View>
@@ -995,7 +995,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     const firstLine = item.text.split('\n')[0];
     const truncated = firstLine.length > 50 ? firstLine.slice(0, 50) + '\u2026' : firstLine;
     return (
-      <View style={[styles.card, { borderLeftColor: item.color }]}>
+      <View style={[styles.card, { borderLeftColor: '#55EFC4' }]}>
         <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
           <Text style={styles.iconCircleText}>{item.icon || '\u{1F4DD}'}</Text>
         </View>

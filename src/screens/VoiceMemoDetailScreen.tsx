@@ -117,6 +117,32 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     }, [player]),
   );
 
+  const hasUnsavedChanges = !isNewRecording && memo &&
+    (title !== initialTitleRef.current || note !== initialNoteRef.current);
+
+  const handleSaveExisting = async () => {
+    if (!memo || isNewRecording) return;
+    hapticMedium();
+    Keyboard.dismiss();
+    try {
+      await updateVoiceMemo({
+        ...memo,
+        title,
+        note,
+        updatedAt: new Date().toISOString(),
+      });
+      initialTitleRef.current = title;
+      initialNoteRef.current = note;
+      refreshWidgets();
+      ToastAndroid.show(
+        SAVE_TOASTS[Math.floor(Math.random() * SAVE_TOASTS.length)],
+        ToastAndroid.LONG,
+      );
+    } catch {
+      ToastAndroid.show('Failed to save', ToastAndroid.SHORT);
+    }
+  };
+
   const handleBack = async () => {
     if (savingRef.current) return;
     Keyboard.dismiss();
@@ -141,21 +167,29 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       return;
     }
 
-    if (
-      memo &&
-      (title !== initialTitleRef.current || note !== initialNoteRef.current)
-    ) {
-      try {
-        await updateVoiceMemo({
-          ...memo,
-          title,
-          note,
-          updatedAt: new Date().toISOString(),
-        });
-        refreshWidgets();
-        ToastAndroid.show('Saved', ToastAndroid.SHORT);
-      } catch { /* best-effort */ }
+    if (hasUnsavedChanges) {
+      Alert.alert(
+        'Unsaved changes',
+        "You've made changes. Save before leaving?",
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => navigation.goBack(),
+          },
+          {
+            text: 'Save & Exit',
+            onPress: async () => {
+              await handleSaveExisting();
+              navigation.goBack();
+            },
+          },
+        ],
+      );
+      return;
     }
+
     navigation.goBack();
   };
 
@@ -288,6 +322,24 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           left: 20,
           top: insets.top + 10,
         },
+        headerSave: {
+          position: 'absolute',
+          left: 64,
+          top: insets.top + 14,
+        },
+        headerSaveBtn: {
+          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderRadius: 20,
+          paddingHorizontal: 14,
+          paddingVertical: 6,
+        },
+        headerSaveBtnText: {
+          fontSize: 12,
+          fontWeight: '700',
+          color: '#FFFFFF',
+        },
         headerRight: {
           position: 'absolute',
           right: 20,
@@ -391,12 +443,32 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           width: 64,
           height: 64,
           borderRadius: 32,
-          backgroundColor: '#A29BFE',
+          backgroundColor: '#4CAF50',
           justifyContent: 'center',
           alignItems: 'center',
         },
-        playPauseIcon: {
-          fontSize: 28,
+        playTriangle: {
+          width: 0,
+          height: 0,
+          borderLeftWidth: 16,
+          borderLeftColor: '#FFFFFF',
+          borderTopWidth: 11,
+          borderTopColor: 'transparent',
+          borderBottomWidth: 11,
+          borderBottomColor: 'transparent',
+          marginLeft: 4,
+        },
+        pauseBars: {
+          flexDirection: 'row',
+          gap: 4,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        pauseBar: {
+          width: 4,
+          height: 18,
+          backgroundColor: '#FFFFFF',
+          borderRadius: 1,
         },
         notFound: {
           flex: 1,
@@ -520,6 +592,17 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         <View style={styles.headerBack}>
           <BackButton onPress={handleBack} />
         </View>
+        {!isNewRecording && hasUnsavedChanges && (
+          <View style={styles.headerSave}>
+            <TouchableOpacity
+              style={styles.headerSaveBtn}
+              onPress={handleSaveExisting}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.headerSaveBtnText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <Text style={styles.headerTitle}>{isNewRecording ? 'New Recording' : 'Voice Memo'}</Text>
         {!isNewRecording && (
           <View style={styles.headerRight}>
@@ -607,9 +690,14 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               onPress={togglePlay}
               activeOpacity={0.7}
             >
-              <Text style={styles.playPauseIcon}>
-                {playerStatus.playing ? '\u23F8\uFE0F' : '\u25B6\uFE0F'}
-              </Text>
+              {playerStatus.playing ? (
+                <View style={styles.pauseBars}>
+                  <View style={styles.pauseBar} />
+                  <View style={styles.pauseBar} />
+                </View>
+              ) : (
+                <View style={styles.playTriangle} />
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity

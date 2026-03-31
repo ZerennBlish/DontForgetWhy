@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 import type { VoiceMemo } from '../types/voiceMemo';
 
 function formatDuration(seconds: number): string {
@@ -47,6 +48,116 @@ function VoiceMemoCard({
   isPinned,
   onDelete,
 }: VoiceMemoCardProps) {
+  const { colors } = useTheme();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        card: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: colors.card + 'CC',
+          borderRadius: 12,
+          padding: 12,
+          borderWidth: 1,
+          borderColor: colors.border,
+          borderLeftWidth: 3,
+          borderLeftColor: '#A29BFE',
+          marginBottom: 8,
+        },
+        playBtn: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: '#4CAF50',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        playTriangle: {
+          width: 0,
+          height: 0,
+          borderLeftWidth: 10,
+          borderLeftColor: '#FFFFFF',
+          borderTopWidth: 7,
+          borderTopColor: 'transparent',
+          borderBottomWidth: 7,
+          borderBottomColor: 'transparent',
+          marginLeft: 3,
+        },
+        pauseBars: {
+          flexDirection: 'row',
+          gap: 3,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        pauseBar: {
+          width: 3,
+          height: 12,
+          backgroundColor: '#FFFFFF',
+          borderRadius: 1,
+        },
+        center: {
+          flex: 1,
+          marginHorizontal: 12,
+        },
+        title: {
+          fontSize: 15,
+          fontWeight: '600',
+          color: colors.textPrimary,
+        },
+        subtitle: {
+          fontSize: 12,
+          color: colors.textSecondary,
+          marginTop: 2,
+        },
+        miniTrack: {
+          height: 3,
+          borderRadius: 1.5,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          marginTop: 6,
+          overflow: 'hidden',
+        },
+        miniFill: {
+          height: '100%',
+          borderRadius: 1.5,
+          backgroundColor: '#A29BFE',
+        },
+        actions: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+        },
+        pinBtn: {
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          borderRadius: 20,
+          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+        },
+        pinBtnActive: {
+          backgroundColor: 'rgba(30, 30, 40, 0.85)',
+        },
+        pinBtnText: {
+          fontSize: 12,
+        },
+        deleteBtn: {
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 20,
+          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+        },
+        deleteText: {
+          fontSize: 11,
+          fontWeight: '600',
+          color: '#EF4444',
+        },
+      }),
+    [colors],
+  );
+
   return (
     <View style={styles.card}>
       <TouchableOpacity
@@ -54,9 +165,14 @@ function VoiceMemoCard({
         onPress={onPlayToggle}
         activeOpacity={0.7}
       >
-        <Text style={styles.playIcon}>
-          {isPlaying ? '\u23F8\uFE0F' : '\u25B6\uFE0F'}
-        </Text>
+        {isPlaying ? (
+          <View style={styles.pauseBars}>
+            <View style={styles.pauseBar} />
+            <View style={styles.pauseBar} />
+          </View>
+        ) : (
+          <View style={styles.playTriangle} />
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -112,87 +228,3 @@ function VoiceMemoCard({
 }
 
 export default React.memo(VoiceMemoCard);
-
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 30, 50, 0.8)',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderLeftWidth: 3,
-    borderLeftColor: '#A29BFE',
-    marginBottom: 8,
-  },
-  playBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#A29BFE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playIcon: {
-    fontSize: 16,
-  },
-  center: {
-    flex: 1,
-    marginHorizontal: 12,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginTop: 2,
-  },
-  miniTrack: {
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginTop: 6,
-    overflow: 'hidden',
-  },
-  miniFill: {
-    height: '100%',
-    borderRadius: 1.5,
-    backgroundColor: '#A29BFE',
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  pinBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(30, 30, 40, 0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  pinBtnActive: {
-    backgroundColor: 'rgba(30, 30, 40, 0.85)',
-  },
-  pinBtnText: {
-    fontSize: 12,
-  },
-  deleteBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(30, 30, 40, 0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  deleteText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#EF4444',
-  },
-});
