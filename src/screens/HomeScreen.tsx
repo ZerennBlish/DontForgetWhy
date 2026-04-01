@@ -15,6 +15,8 @@ import { getNotes } from '../services/noteStorage';
 import { getVoiceMemos } from '../services/voiceMemoStorage';
 import { loadActiveTimers } from '../services/timerStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
+import { loadSettings } from '../services/settings';
+import { formatTime } from '../utils/time';
 import { getRandomBannerQuote } from '../data/homeBannerQuotes';
 import type { BannerQuote } from '../data/homeBannerQuotes';
 import { useTheme } from '../theme/ThemeContext';
@@ -275,6 +277,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [todayEvents, setTodayEvents] = useState<TodayEvent[]>([]);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
+  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [bannerQuote] = useState<BannerQuote>(getRandomBannerQuote);
   const [emptyLine] = useState(() => EMPTY_TODAY_LINES[Math.floor(Math.random() * EMPTY_TODAY_LINES.length)]);
 
@@ -304,6 +307,7 @@ export default function HomeScreen({ navigation }: Props) {
         });
         setRunningTimerCount(running.length);
       });
+      loadSettings().then((s) => { if (!cancelled) setTimeFormat(s.timeFormat); });
       loadBackground().then((v) => { if (!cancelled) setBgUri(v); });
       getOverlayOpacity().then((v) => { if (!cancelled) setBgOpacity(v); });
       return () => { cancelled = true; };
@@ -365,9 +369,14 @@ export default function HomeScreen({ navigation }: Props) {
       marginBottom: 16,
     },
     title: {
+      flex: 1,
       fontSize: 28,
       fontWeight: '800',
       color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    gearSpacer: {
+      width: 44,
     },
     gearBtn: {
       padding: 4,
@@ -532,6 +541,7 @@ export default function HomeScreen({ navigation }: Props) {
       <View style={[styles.scroll, styles.scrollContent]}>
         {/* A. Title bar */}
         <View style={styles.headerRow}>
+          <View style={styles.gearSpacer} />
           <Text style={styles.title}>Don't Forget Why</Text>
           <TouchableOpacity
             onPress={() => { hapticLight(); navigation.navigate('Settings'); }}
@@ -643,7 +653,7 @@ export default function HomeScreen({ navigation }: Props) {
                   <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
                   <Text style={styles.eventSub}>
                     {event.type === 'alarm' ? 'Alarm' : 'Reminder'}
-                    {event.time ? ` \u00B7 ${event.time}` : ''}
+                    {event.time ? ` \u00B7 ${formatTime(event.time, timeFormat)}` : ''}
                   </Text>
                 </TouchableOpacity>
               ))}

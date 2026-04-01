@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: March 31, 2026
+### Source of Truth · Updated: April 1, 2026
 
 ---
 
@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.8.1 (versionCode 23) — SDK 55 upgrade build in progress |
+| **Current Version** | v1.9.0 (versionCode 24) — Home screen release |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | SDK 55 upgrade — COMPLETE |
+| **Current Focus** | Home screen release — COMPLETE |
 | **Blocked By** | Nothing |
-| **Next Action** | EAS build → Play Store publish → Home screen / theme refactor planning |
+| **Next Action** | EAS build → Play Store publish → Phase 4 planning |
 | **EAS Credits** | ~13 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -27,6 +27,7 @@
 | 2 | Photos + Drawing + Backgrounds | ✅ Done | dev | Dev + Prod |
 | 3 | Voice Roasts | ✅ Done | dev | Dev + Prod |
 | 3.5 | Voice Memos | ✅ Done | dev | Dev + Prod |
+| — | v1.9.0 Home Screen | ✅ Done | dev | Prod only |
 | 4 | Chess + Checkers | ⬜ Waiting | dev | Prod only |
 | 5 | Google Calendar Sync | ⬜ Waiting | dev | Dev + Prod |
 | 6 | Memory Score Expansion | ⬜ Waiting | dev | Prod only |
@@ -279,6 +280,43 @@
 
 ---
 
+## v1.9.0 — HOME SCREEN RELEASE ✅ COMPLETE
+
+**Status:** ✅ Complete
+**Shipped in:** v1.9.0 (versionCode 24)
+**Branch:** `dev`
+**New deps:** None
+**Native changes:** None
+
+### Completed
+
+- [x] Home screen created — new app entry point with icon grid, Quick Capture row, personality banner, scrollable Today section
+- [x] TimerScreen extracted as standalone screen (no longer a tab inside AlarmListScreen)
+- [x] Voice memos separated from Notepad into VoiceMemoListScreen
+- [x] AlarmListScreen stripped to Alarms + Reminders (2 tabs)
+- [x] Personality banner system: 63 color-coded sarcastic quotes across 7 sections (homeBannerQuotes.ts)
+- [x] Widget rebranding: Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice
+- [x] MicWidget got proper header/footer
+- [x] HomeButton component added to all screens
+- [x] Forget Log moved from home grid into Settings
+- [x] CalendarWidget displays current month
+
+### Known Bugs (Pre-Existing)
+
+- Recurring reminder with empty days array matches every day on calendar widget
+- Guess Why showing answer immediately
+- Yearly recurring reminder rescheduling without firing
+- ExpoKeepAwake promise rejections in dev mode (SDK 55)
+
+### Audits
+- [x] Audit 47: Codex — 0 P0, 2 P1 (pre-existing timer/note behaviors), 3 P2. Gemini — 0 P0, 2 P1 (widget warm-start nav, notification routing missing Home base), 3 P2 (dead appQuote code, quote count, duplicate reminder reads). Both P1s from Gemini fixed before build.
+
+### Audit Gate
+- [x] `npx tsc --noEmit` — 0 errors
+- [x] Increment version + versionCode
+
+---
+
 ## PHASE 4 — NEW GAMES
 
 **Status:** ⬜ Not started
@@ -450,7 +488,7 @@
 ## BACKLOG (Not Scheduled)
 
 ### Architecture / Infrastructure
-- Home screen (main menu) — changes navigation for entire app, compartmentalizes features
+- ~~Home screen (main menu)~~ — DONE in v1.9.0
 - ~~Expo SDK 55 upgrade~~ — DONE in v1.8.1
 - Light / Dark / High Contrast themes (replacing 6 color themes) — simplifies all styling decisions
 - AsyncStorage → SQLite migration (when scale demands it)
@@ -471,13 +509,14 @@
 - Female voice character (alarm guy's girlfriend) — future user-selectable option
 
 ### Store / Marketing
-- Play Store listing update for v1.8.0 (voice memos, mic widget, calendar improvements)
+- Play Store listing update for v1.9.0 (home screen, widget rebranding, voice memo separation)
 - Play Store screenshots refresh (add voice memo screenshot with waveform background)
-- Onboarding screen update (voice memos not mentioned)
+- Onboarding screen update (home screen, voice memos not mentioned)
 - Widget preview screenshots for store listing
 - App size audit (63 voice clips + Skia + voice memo recordings)
 
 ### Known Issues (Pre-Existing)
+- Recurring reminder with empty days array matches every day on calendar widget (needs investigation)
 - Guess Why game: shows answer immediately without guess screen (needs investigation)
 - Yearly recurring reminder: reschedules without firing first (needs investigation)
 - ExpoKeepAwake promise rejections during activity transitions (dev-mode only, SDK 55 stricter promise handling)
@@ -501,7 +540,8 @@
 - All current themes + custom theme builder
 - Guess Why, Memory Match, Trivia (offline), Sudoku, Daily Riddle
 - Memory Score tracking
-- Home screen widgets (both widget types)
+- Home screen (icon grid, Quick Capture, personality banner, Today section)
+- Home screen widgets (4 widget types)
 - All personality content (sarcastic text — quotes, roasts, snooze messages, placeholders)
 - Sound picker + custom alarm sounds
 - Privacy mode, Silence All mode
@@ -581,3 +621,4 @@ Batch native deps within phases to minimize dev builds.
 | Mar 30, 2026 | Voice memos complete (Phase 3.5). VoiceRecordScreen, VoiceMemoDetailScreen, VoiceMemoCard, NotepadScreen integration (filter tabs, inline playback, pinning), MicWidget, NotepadWidget voice memo support, CalendarScreen voice memo dots. Card unification: dark bar style with accent borders. Capsule pin/delete buttons. View-based play/pause icons. Navigation guards (beforeRemove). Transactional save. Audits 44-45 complete, all findings resolved. |
 | Mar 30, 2026 | v1.8.0 production build. Voice memos, mic widget, card unification, calendar fixes, 2 full audits. |
 | Mar 31, 2026 | v1.8.1 SDK 55 upgrade. Expo 54→55, React Native 0.81→0.83, React 19.1→19.2. `react-native-notification-sounds` removed (unmaintained, jcenter/Gradle 9.0 incompatible), replaced with native `getSystemAlarmSounds` in AlarmChannelModule. `newArchEnabled` and `edgeToEdgeEnabled` removed from app.json (always-on in SDK 55). Android 15 foreground service warning resolved (expo-audio updated upstream). |
+| Apr 1, 2026 | v1.9.0 Home screen release. HomeScreen (icon grid, Quick Capture, personality banner, Today section), TimerScreen standalone, VoiceMemoListScreen standalone, AlarmListScreen 2-tab, HomeButton on all screens, widget rebranding (Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice), MicWidget header/footer, Forget Log moved to Settings, CalendarWidget current month. Audit 47 complete — both Gemini P1s (widget warm-start nav, notification routing Home base) fixed. |

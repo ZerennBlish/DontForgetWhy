@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 31, 2026*
+**Last updated:** April 1, 2026*
 
 ---
 
@@ -139,6 +139,30 @@ Dev-mode only promise rejections from stricter SDK 55 error handling during acti
 
 ### useRef for undo pin state, not useState (Mar 30)
 Voice memo delete captures wasPinned for undo restore. useState caused stale closure because setDeletedVoiceMemoPinned and setVoiceUndoKey happen in same render — the undo handler captures the old false value. useRef updates synchronously. Same pattern that fixed globalSilenced and isSnoozing in P3.
+
+### Home screen as new entry point (Apr 1)
+Home screen compartmentalizes navigation — every future feature gets a grid icon instead of cramming into one screen. AlarmListScreen was becoming a catch-all with 3 tabs and growing navigation elements.
+
+### Timer extraction to standalone screen (Apr 1)
+Timers run differently than alarms/reminders (countdown vs scheduled). Standalone screen lets them own their state and notification logic. AlarmListScreen drops to 2 tabs (Alarms, Reminders).
+
+### Voice memo separation from Notepad (Apr 1)
+With a home screen, voice memos deserve their own front door instead of filter tabs inside Notepad. VoiceMemoListScreen is standalone. NotepadScreen becomes notes-only.
+
+### Personality banner over generic quotes (Apr 1)
+Color-coded section quotes serve as sarcastic tutorials, teaching features while roasting the user. 63 quotes across 7 sections in homeBannerQuotes.ts. More useful than random generic motivational quotes.
+
+### 2×3 grid over 3×3 (Apr 1)
+Removed Forget Log and Settings from grid (utility, not primary features). Forget Log moved into Settings. Settings accessible via gear icon in title bar. Cleaner layout — 6 primary sections only.
+
+### Quick Capture row (Apr 1)
+One-tap actions for the 3 most common "capture something now" tasks: New Note, Record Memo, Set Timer. These are time-sensitive actions where speed matters — grid navigation adds friction.
+
+### Widget headers as personality names (Apr 1)
+Memory's Timeline (DetailedWidget), Forget Me Notes (NotepadWidget), Misplaced Thoughts (CalendarWidget), Memory's Voice (MicWidget). Each widget has character. All footers say "Don't Forget Why".
+
+### Section color assignments locked (Apr 1)
+Alarms #FF6B6B, Reminders #4A90D9, Calendar #E17055, Notepad #55EFC4, Voice #A29BFE, Timers #FDCB6E, Games #A8E06C. Used in home grid icons and personality banner backgrounds. Locked to maintain visual consistency across all surfaces.
 
 ---
 

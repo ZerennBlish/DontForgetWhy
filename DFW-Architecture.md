@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 31, 2026
+**Last updated:** April 1, 2026
 
 ---
 
@@ -116,13 +116,14 @@ All app-opening approaches failed (Linking.openURL, OPEN_URI, deep links). Solut
 `getWidgetTheme()` reads theme from AsyncStorage with migration map, returns `WidgetTheme` object. `refreshWidgets()` (renamed from `refreshTimerWidget`) triggered after theme changes, data changes.
 
 ### Evolution
-Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWidgetCompact added. Mar 12: Trimmed to 2 — DetailedWidget redesigned, compacts deleted. Mar 25: CalendarWidget added — mini monthly calendar grid with colored dot indicators. Third widget alongside DetailedWidget and NotepadWidget. Uses getCalendarWidgetData() in widgetTaskHandler.ts for data loading. Click actions: OPEN_CALENDAR (opens CalendarScreen) and OPEN_CALENDAR_DAY__YYYY-MM-DD (opens CalendarScreen with date). pendingCalendarAction consumed in App.tsx on cold start and app resume. Widget alarm loader includes normalization for legacy alarm payloads (mode, days array, numeric weekday format) — does not import loadAlarms() to stay headless-safe, duplicates normalization inline.
+Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWidgetCompact added. Mar 12: Trimmed to 2 — DetailedWidget redesigned, compacts deleted. Mar 25: CalendarWidget added — mini monthly calendar grid with colored dot indicators. Third widget alongside DetailedWidget and NotepadWidget. Uses getCalendarWidgetData() in widgetTaskHandler.ts for data loading. Click actions: OPEN_CALENDAR (opens CalendarScreen) and OPEN_CALENDAR_DAY__YYYY-MM-DD (opens CalendarScreen with date). pendingCalendarAction consumed in App.tsx on cold start and app resume. Widget alarm loader includes normalization for legacy alarm payloads (mode, days array, numeric weekday format) — does not import loadAlarms() to stay headless-safe, duplicates normalization inline. Apr 1: Widget rebranding — all widgets got personality headers: Memory's Timeline (DetailedWidget), Forget Me Notes (NotepadWidget), Misplaced Thoughts (CalendarWidget), Memory's Voice (MicWidget). All footers say "Don't Forget Why".
 
-**NotepadWidget voice memo integration:** Widget shows voice memos alongside notes. Header layout: mic button (left, RECORD_VOICE), title center (OPEN_NOTES), notepad button (right, ADD_NOTE). Combined items sorted pinned-first (`isPinned` field on WidgetNote and WidgetVoiceMemo), then by `createdAt` descending, sliced to 4. `VoiceMemoCell` uses `theme.cellBg` and `theme.text` (not hardcoded colors). Click actions: `OPEN_VOICE_MEMO__{id}` opens VoiceMemoDetailScreen, `RECORD_VOICE` opens VoiceRecordScreen. Widget task handler stores `pendingVoiceAction` in AsyncStorage, routed by `useNotificationRouting`.
+**NotepadWidget (Forget Me Notes) voice memo integration:** Widget shows voice memos alongside notes. Header "Forget Me Notes" layout: mic button (left, OPEN_VOICE_MEMOS), title center (OPEN_NOTES), notepad button (right, ADD_NOTE). Footer: "Don't Forget Why". Combined items sorted pinned-first (`isPinned` field on WidgetNote and WidgetVoiceMemo), then by `createdAt` descending, sliced to 4. `VoiceMemoCell` uses `theme.cellBg` and `theme.text` (not hardcoded colors). Click actions: `OPEN_VOICE_MEMO__{id}` opens VoiceMemoDetailScreen, `RECORD_VOICE` opens VoiceRecordScreen. Widget task handler stores `pendingVoiceAction` in AsyncStorage, routed by `useNotificationRouting`.
 
-**MicWidget:** Standalone 110dp home screen widget (MicWidget.tsx). Mic icon + "Record" text on themed background. Single click action: `RECORD_VOICE` opens VoiceRecordScreen. Registered in app.json alongside other widgets.
+**MicWidget (Memory's Voice):** Standalone 110dp home screen widget (MicWidget.tsx). Header "Memory's Voice" with `OPEN_VOICE_MEMOS` click action. Mic icon + "Record" text on themed background. Footer: "Don't Forget Why". Single click action: `RECORD_VOICE` opens VoiceRecordScreen. Registered in app.json alongside other widgets.
 
-### CalendarWidget
+### CalendarWidget (Misplaced Thoughts)
+- Header: "Misplaced Thoughts"
 - Mini month grid: 7 columns × 5-6 rows, weekday header, month/year label
 - Colored dots: red (#FF6B6B) alarms, blue (#4A90D9) reminders, green (#55EFC4) notes — up to 3 per day
 - Today: accent background highlight
@@ -267,3 +268,25 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 
 ### Key distinction from Voice Roasts
 Voice roasts use the native `AlarmChannelModule` on ALARM stream because they play during alarm fires and must be audible regardless of ringer mode. Voice memos are user-initiated — MEDIA stream via expo-audio is correct.
+
+---
+
+## 7. Navigation & Screen Architecture
+
+### Home as Entry Point (v1.9.0)
+- Home is the `initialRouteName` (was AlarmList)
+- Navigation flow: Home → sections (AlarmList, Timers, Notepad, VoiceMemoList, Calendar, Games)
+- AlarmListScreen has 2 tabs: Alarms, Reminders (was 3 — Timers extracted)
+- TimerScreen is standalone, owns all timer state/notification logic
+- VoiceMemoListScreen is standalone, NotepadScreen is notes-only
+- HomeButton component on all screens for direct Home navigation
+- Deep links all route through Home as base
+
+### New/Modified Files in v1.9.0
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/screens/HomeScreen.tsx` | NEW | Home screen — icon grid, Quick Capture, personality banner, Today section |
+| `src/screens/VoiceMemoListScreen.tsx` | NEW | Standalone voice memo list (separated from NotepadScreen) |
+| `src/components/HomeButton.tsx` | NEW | Home navigation button added to all screens |
+| `src/data/homeBannerQuotes.ts` | NEW | 63 color-coded personality quotes across 7 sections |

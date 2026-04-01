@@ -1,12 +1,12 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 31, 2026*
+**Last updated:** April 1, 2026*
 
 ---
 
 ## 1. Summary Statistics
 
-- **~103+ unique bugs** found and fixed across the project lifetime
+- **~105+ unique bugs** found and fixed across the project lifetime
 - **Found by Zerenn:** ~30 (manual testing, device observation)
 - **Found by auditors (Codex/Gemini):** ~60
 - **Found by Opus/TypeScript:** ~10
@@ -251,6 +251,7 @@
 | 37 | Mar 26 | Drawing canvas (P2 2.2) | 3 HIGH (drawing persistence — saveNoteImage .png extension + companion .json copy, performance — memoize parsedStrokes, loadDrawingData reads JPGs as text), 2 MEDIUM (image cache after edit — new filename cache bust, print/share MIME detection), 2 LOW (empty canvas save block, cancel confirmation). All resolved. |
 | 44 | Mar 30 | Voice memo feature (full) | Codex: 3 HIGH (VoiceRecordScreen rapid-tap race, recorder.stop not awaited, NotepadScreen listener leak), 2 MEDIUM (audio listener stale ref, AsyncStorage race). Gemini: 3 HIGH (rapid-tap race + save exit paths active during save + voiceMemoStorage swallows errors), 3 MEDIUM (detail screen no focus cleanup, seek validation, widget sort order). 8 findings fixed. voiceMemoFileStorage.ts false positive from Codex (File.copy is sync in new expo-file-system API). |
 | 45 | Mar 30 | Voice memo UI polish + integration | Codex: 4 HIGH (hardware back bypasses cleanup on both screens, non-transactional save, widget pin order destroyed), 3 MEDIUM (Save & Exit pops on failure, pause/resume race, undo doesn't restore pin). Gemini: 3 HIGH (same pin ordering, pause race, pin sort in All view), 2 MEDIUM (VoiceMemoCell hardcoded colors, stale playback progress). 10 findings fixed. |
+| 47 | Apr 1 | v1.9.0 Home screen (full) | Codex: 0 P0, 2 P1 (pre-existing timer/note behaviors), 3 P2. Gemini: 0 P0, 2 P1 (widget warm-start nav, notification routing missing Home base), 3 P2 (dead appQuote code, quote count, duplicate reminder reads). Both Gemini P1s fixed before build. |
 
 ### Audit 33 — March 25, 2026 (Codex + Gemini)
 **Scope:** Foreground notification refactor, calendar feature, AlarmsTab extraction, NoteEditorModal extraction, UI polish (dark capsules, floating headers, BackButton)
@@ -304,4 +305,16 @@
 - **Guess Why shows answer immediately:** Game screen shows the answer without presenting a guess screen first. Pre-existing, needs investigation.
 - **Yearly recurring reminder reschedules without firing:** Reminder reschedules for next year without the current-year notification firing first. Pre-existing, needs investigation.
 
-**44 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+### Bug: Widget warm-start navigation not consumed on app resume (Audit 47)
+- **Found:** April 1, 2026 by Gemini Audit 47
+- **Cause:** `pendingTabAction` written to AsyncStorage by widget click actions but not consumed on app resume (warm start). Only consumed on cold start.
+- **Fix:** Added consumption in `useNotificationRouting` for warm-start path.
+- **Version:** v1.9.0
+
+### Bug: Notification routing rebuilds stack without Home base route (Audit 47)
+- **Found:** April 1, 2026 by Gemini Audit 47
+- **Cause:** Two notification routing paths rebuilt the navigation stack without including Home as the base route (initial route changed from AlarmList to Home in v1.9.0).
+- **Fix:** Updated both paths to include Home as base route in rebuilt stack.
+- **Version:** v1.9.0
+
+**45 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.

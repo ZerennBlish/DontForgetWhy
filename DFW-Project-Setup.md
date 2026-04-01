@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 31, 2026*
+**Last updated:** April 1, 2026*
 
 ---
 
@@ -72,7 +72,7 @@
 
 ## 3. Project Structure
 
-Codebase reorganized during Phase 1 housekeeping. All source files live under `src/` in categorized subfolders.
+Codebase reorganized during Phase 1 housekeeping. All source files live under `src/` in categorized subfolders. Home is the `initialRouteName` (changed from AlarmList in v1.9.0).
 
 ```
 DontForgetWhy/
@@ -96,6 +96,7 @@ DontForgetWhy/
     │   ├── DayPickerRow.tsx
     │   ├── DrawingCanvas.tsx
     │   ├── ErrorBoundary.tsx
+    │   ├── HomeButton.tsx              # Home navigation button for all screens
     │   ├── ImageLightbox.tsx
     │   ├── NoteEditorModal.tsx
     │   ├── ShareNoteModal.tsx
@@ -109,6 +110,7 @@ DontForgetWhy/
     │   ├── voiceClips.ts          # voice clip registry (10 categories, 63 clips)
     │   ├── guessWhyIcons.ts
     │   ├── guessWhyMessages.ts
+    │   ├── homeBannerQuotes.ts       # 63 color-coded personality quotes across 7 sections
     │   ├── memoryRanks.ts
     │   ├── placeholders.ts
     │   ├── reminderQuotes.ts
@@ -136,6 +138,7 @@ DontForgetWhy/
     │   ├── ForgetLogScreen.tsx
     │   ├── GamesScreen.tsx
     │   ├── GuessWhyScreen.tsx
+    │   ├── HomeScreen.tsx              # Home screen — icon grid, Quick Capture, personality banner
     │   ├── MemoryMatchScreen.tsx
     │   ├── MemoryScoreScreen.tsx
     │   ├── NotepadScreen.tsx
@@ -146,6 +149,7 @@ DontForgetWhy/
     │   ├── TimerScreen.tsx
     │   ├── TriviaScreen.tsx
     │   ├── VoiceMemoDetailScreen.tsx # Voice memo detail/edit/playback screen
+    │   ├── VoiceMemoListScreen.tsx   # Standalone voice memo list screen
     │   └── VoiceRecordScreen.tsx     # Dedicated voice recording screen
     ├── services/
     │   ├── alarmPhotoStorage.ts    # per-alarm photo save/delete/exists
@@ -239,6 +243,7 @@ DontForgetWhy/
 | Mar 29 | 1.7.0 | 21 | P3 Voice Roasts: 63 voice clips across 10 categories, native ALARM stream playback via AlarmChannelModule, expo-av removed, expo-audio chirp, expo-asset for URI resolution, dismiss voice toggle, double-tap dismiss/snooze to skip clips, true_silent guard, production URI handling (HTTP/asset/file/content) | Production (live) |
 | Mar 30 | 1.8.0 | 22 | Voice memos (recording, pause/resume, dual-mode detail screen, inline playback, pinning), MicWidget, card unification (dark bars with accent borders), View-based play icons, capsule buttons, calendar voice memo dots, navigation guards (beforeRemove), transactional save, personality text. Audits 44-45 complete. | Production (pending review) |
 | Mar 31 | 1.8.1 | 23 | SDK 55 upgrade: Expo 54→55, RN 0.81→0.83, React 19.1→19.2. `react-native-notification-sounds` removed (jcenter/Gradle 9.0 incompatible), replaced with native `getSystemAlarmSounds` in AlarmChannelModule. `newArchEnabled`/`edgeToEdgeEnabled` removed from app.json (always-on in SDK 55). worklets 0.5.1→0.7.2, Skia→2.4.18, screens→4.23, pager-view→8.0. Android 15 foreground service warning resolved. | Build in progress |
+| Apr 1 | 1.9.0 | 24 | Home screen (icon grid, Quick Capture, personality banner, Today section), TimerScreen standalone, VoiceMemoListScreen standalone, AlarmListScreen 2-tab, HomeButton on all screens, widget rebranding (Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice), Forget Log moved to Settings. Audit 47 complete. | Dev branch — build pending |
 
 ---
 
@@ -286,8 +291,8 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.8.1 (versionCode 23) — SDK 55 upgrade |
-| Production status | v1.8.1 build in progress |
+| Current version | v1.9.0 (versionCode 24) — Home screen release |
+| Production status | v1.9.0 build pending |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
@@ -301,5 +306,5 @@ DontForgetWhy/
 | Branch | Purpose | Status |
 |--------|---------|--------|
 | `main` | Production. Synced with dev at v1.8.0. | Active, clean |
-| `dev` | v1.8.1 — SDK 55 upgrade, notification-sounds removal. | Active — all new work goes here |
+| `dev` | v1.9.0 — Home screen, timer extraction, voice memo separation, widget rebranding. | Active — all new work goes here |
 | `testing-setup` | Jest suite (222 tests). | Reconciled with main (Phase 1.2) |
