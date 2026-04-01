@@ -319,14 +319,16 @@ export default function AlarmListScreen({ navigation }: Props) {
       paddingBottom: 2,
     },
     deletedCard: {
-      backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 12,
+      backgroundColor: colors.card + 'CC',
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 8,
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255, 107, 107, 0.4)',
+      borderLeftWidth: 3,
+      borderLeftColor: 'rgba(255, 107, 107, 0.4)',
       opacity: 0.7,
     },
     deletedLeft: { flex: 1, marginRight: 12 },
@@ -383,7 +385,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: 0.07 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
             resizeMode="cover"
           />
         )}

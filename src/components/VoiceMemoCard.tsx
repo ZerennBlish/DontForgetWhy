@@ -60,7 +60,7 @@ function VoiceMemoCard({
           borderRadius: 12,
           padding: 12,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: '#A29BFE',
           borderLeftWidth: 3,
           borderLeftColor: '#A29BFE',
           marginBottom: 8,

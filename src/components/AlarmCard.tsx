@@ -57,16 +57,17 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
-      backgroundColor: colors.card + 'BF',
-      borderRadius: 14,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      marginBottom: 10,
+      backgroundColor: colors.card + 'CC',
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 8,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: '#FF6B6B',
+      borderLeftWidth: 3,
+      borderLeftColor: '#FF6B6B',
     },
     cardDisabled: {
       opacity: 0.5,
@@ -186,7 +187,7 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
         <Switch
           value={alarm.enabled}
           onValueChange={() => onToggle(alarm.id)}
-          trackColor={{ false: colors.border, true: colors.accent }}
+          trackColor={{ false: colors.border, true: '#FF6B6B' }}
           thumbColor={alarm.enabled ? colors.textPrimary : colors.textTertiary}
         />
         <View style={styles.btnRow}>

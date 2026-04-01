@@ -157,51 +157,81 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
           marginBottom: 8,
         }}
       >
+        {/* Mic icon */}
         <FlexWidget
           clickAction="RECORD_VOICE"
           style={{
             backgroundColor: theme.accent as `#${string}`,
             borderRadius: 12,
-            paddingHorizontal: 10,
+            paddingHorizontal: 8,
             paddingVertical: 4,
           }}
         >
           <TextWidget
             text={'\u{1F399}\uFE0F'}
-            style={{
-              fontSize: 14,
-              color: '#FFFFFF',
-            }}
+            style={{ fontSize: 14, color: '#FFFFFF' }}
           />
         </FlexWidget>
+        {/* Voice capsule */}
         <FlexWidget
-          clickAction="OPEN_NOTES"
-          style={{ flex: 1, alignItems: 'center' }}
+          clickAction="OPEN_VOICE_MEMOS"
+          style={{
+            marginLeft: 4,
+            backgroundColor: theme.accent as `#${string}`,
+            borderRadius: 12,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+          }}
         >
           <TextWidget
-            text={'\u{1F4DD} Forget Me Notes'}
+            text="Voice"
+            style={{ fontSize: 11, fontWeight: '600', color: '#FFFFFF' }}
+          />
+        </FlexWidget>
+        {/* Title */}
+        <FlexWidget
+          clickAction="OPEN_NOTES"
+          style={{ flex: 1, alignItems: 'center', marginLeft: 4 }}
+        >
+          <TextWidget
+            text="Forget Me Notes"
             style={{
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: 'bold',
               color: theme.text as `#${string}`,
             }}
           />
         </FlexWidget>
+        {/* Notes capsule */}
+        <FlexWidget
+          clickAction="OPEN_NOTES"
+          style={{
+            marginLeft: 4,
+            backgroundColor: theme.accent as `#${string}`,
+            borderRadius: 12,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+          }}
+        >
+          <TextWidget
+            text="Notes"
+            style={{ fontSize: 11, fontWeight: '600', color: '#FFFFFF' }}
+          />
+        </FlexWidget>
+        {/* Note icon */}
         <FlexWidget
           clickAction="ADD_NOTE"
           style={{
+            marginLeft: 4,
             backgroundColor: theme.accent as `#${string}`,
             borderRadius: 12,
-            paddingHorizontal: 10,
+            paddingHorizontal: 8,
             paddingVertical: 4,
           }}
         >
           <TextWidget
             text={'\u{1F4DD}'}
-            style={{
-              fontSize: 14,
-              color: '#FFFFFF',
-            }}
+            style={{ fontSize: 14, color: '#FFFFFF' }}
           />
         </FlexWidget>
       </FlexWidget>

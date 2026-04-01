@@ -25,6 +25,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
+import {
+  AlarmIcon,
+  TimerIcon,
+  BellIcon,
+  DocIcon,
+  MicIcon,
+  CalendarIcon,
+  GamepadIcon,
+  PencilIcon,
+  GearIcon,
+} from '../components/Icons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -108,117 +119,6 @@ function getTodayEvents(alarms: Alarm[], reminders: Reminder[]): TodayEvent[] {
 
   events.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
   return events;
-}
-
-// ── View-based icons ────────────────────────────────────────────
-
-function AlarmIcon({ color }: { color: string }) {
-  return (
-    <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: color, alignItems: 'center', justifyContent: 'center' }}>
-        <View style={{ width: 0, height: 0, borderLeftWidth: 4, borderLeftColor: 'transparent', borderBottomWidth: 6, borderBottomColor: color, position: 'absolute', top: 2 }} />
-      </View>
-    </View>
-  );
-}
-
-function TimerIcon({ color }: { color: string }) {
-  return (
-    <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: color, alignItems: 'center' }}>
-        <View style={{ width: 2, height: 5, backgroundColor: color, marginTop: 2 }} />
-      </View>
-      <View style={{ width: 6, height: 2, backgroundColor: color, position: 'absolute', top: 1, borderRadius: 1 }} />
-    </View>
-  );
-}
-
-function BellIcon({ color }: { color: string }) {
-  return (
-    <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 12, height: 10, backgroundColor: color, borderTopLeftRadius: 6, borderTopRightRadius: 6, marginTop: 2 }} />
-      <View style={{ width: 16, height: 2, backgroundColor: color, borderRadius: 1 }} />
-      <View style={{ width: 4, height: 3, backgroundColor: color, borderBottomLeftRadius: 2, borderBottomRightRadius: 2 }} />
-    </View>
-  );
-}
-
-function DocIcon({ color }: { color: string }) {
-  return (
-    <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 13, height: 16, borderRadius: 2, borderWidth: 1.5, borderColor: color, paddingTop: 3, paddingLeft: 2, gap: 2 }}>
-        <View style={{ width: 7, height: 1.5, backgroundColor: color, borderRadius: 1 }} />
-        <View style={{ width: 5, height: 1.5, backgroundColor: color, borderRadius: 1 }} />
-        <View style={{ width: 7, height: 1.5, backgroundColor: color, borderRadius: 1 }} />
-      </View>
-    </View>
-  );
-}
-
-function MicIcon({ color }: { color: string }) {
-  return (
-    <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 8, height: 12, borderRadius: 4, backgroundColor: color }} />
-      <View style={{ width: 12, height: 6, borderRadius: 4, borderWidth: 1.5, borderColor: color, borderTopWidth: 0, position: 'absolute', bottom: 3 }} />
-      <View style={{ width: 2, height: 3, backgroundColor: color, position: 'absolute', bottom: 0 }} />
-    </View>
-  );
-}
-
-function CalendarIcon({ color }: { color: string }) {
-  return (
-    <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 16, height: 14, borderRadius: 2, borderWidth: 1.5, borderColor: color, marginTop: 2 }}>
-        <View style={{ width: '100%', height: 3, backgroundColor: color }} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: 2, position: 'absolute', bottom: 3 }}>
-        <View style={{ width: 2, height: 2, borderRadius: 1, backgroundColor: color }} />
-        <View style={{ width: 2, height: 2, borderRadius: 1, backgroundColor: color }} />
-        <View style={{ width: 2, height: 2, borderRadius: 1, backgroundColor: color }} />
-      </View>
-    </View>
-  );
-}
-
-function GamepadIcon({ color }: { color: string }) {
-  return (
-    <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 18, height: 11, borderRadius: 5, borderWidth: 1.5, borderColor: color, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 3 }}>
-        <View style={{ width: 5, height: 5, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: 5, height: 1.5, backgroundColor: color, position: 'absolute' }} />
-          <View style={{ width: 1.5, height: 5, backgroundColor: color, position: 'absolute' }} />
-        </View>
-        <View style={{ flexDirection: 'row', gap: 2 }}>
-          <View style={{ width: 2.5, height: 2.5, borderRadius: 1.25, backgroundColor: color }} />
-          <View style={{ width: 2.5, height: 2.5, borderRadius: 1.25, backgroundColor: color }} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function PencilIcon({ color }: { color: string }) {
-  return (
-    <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 3, height: 14, backgroundColor: color, borderRadius: 1, transform: [{ rotate: '-45deg' }] }} />
-      <View style={{
-        width: 0, height: 0,
-        borderLeftWidth: 2, borderRightWidth: 2, borderTopWidth: 4,
-        borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: color,
-        position: 'absolute', bottom: 2, left: 5,
-        transform: [{ rotate: '-45deg' }],
-      }} />
-    </View>
-  );
-}
-
-function GearIcon({ color }: { color: string }) {
-  return (
-    <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: color }} />
-      <View style={{ width: 14, height: 14, borderRadius: 7, borderWidth: 1.5, borderColor: color, borderStyle: 'dashed', position: 'absolute' }} />
-    </View>
-  );
 }
 
 const SECTION_ICONS: Record<string, React.FC<{ color: string }>> = {
@@ -389,7 +289,7 @@ export default function HomeScreen({ navigation }: Props) {
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -410,14 +310,14 @@ export default function HomeScreen({ navigation }: Props) {
     bannerQuote: {
       fontSize: 13,
       fontStyle: 'italic',
-      color: 'rgba(255,255,255,0.85)',
+      color: colors.textSecondary,
       lineHeight: 18,
     },
     // Quick Capture
     quickCaptureHeader: {
       fontSize: 11,
       fontWeight: '500',
-      color: 'rgba(255,255,255,0.4)',
+      color: colors.textTertiary,
       letterSpacing: 0.5,
       marginBottom: 8,
     },
@@ -431,18 +331,17 @@ export default function HomeScreen({ navigation }: Props) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
-      backgroundColor: 'rgba(255,255,255,0.08)',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
+      gap: 6,
+      paddingVertical: 10,
       borderRadius: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     quickCaptureLabel: {
       fontSize: 13,
       fontWeight: '500',
-      color: '#FFFFFF',
+      color: colors.textPrimary,
     },
     // Grid
     grid: {
@@ -472,7 +371,7 @@ export default function HomeScreen({ navigation }: Props) {
     },
     gridSubtitle: {
       fontSize: 10,
-      color: 'rgba(255,255,255,0.45)',
+      color: colors.textTertiary,
       textAlign: 'center',
     },
     // Today section
@@ -485,9 +384,9 @@ export default function HomeScreen({ navigation }: Props) {
     },
     todayContainer: {
       height: 200,
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: colors.card,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.15)',
+      borderColor: colors.border,
       borderRadius: 14,
       padding: 12,
     },
@@ -497,7 +396,7 @@ export default function HomeScreen({ navigation }: Props) {
       paddingVertical: 10,
       paddingHorizontal: 12,
       borderRadius: 10,
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
       marginBottom: 6,
       gap: 10,
     },
@@ -536,7 +435,7 @@ export default function HomeScreen({ navigation }: Props) {
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: 0.07 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
             resizeMode="cover"
           />
         )}
@@ -559,7 +458,7 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* B. Personality banner */}
-        <View style={[styles.banner, { borderLeftColor: bannerQuote.color, backgroundColor: hexToRgba(bannerQuote.color, 0.12) }]}>
+        <View style={[styles.banner, { borderLeftColor: bannerQuote.color, backgroundColor: colors.mode === 'dark' ? hexToRgba(bannerQuote.color, 0.12) : hexToRgba(bannerQuote.color, 0.08) }]}>
           <Text style={[styles.bannerHeader, { color: bannerQuote.color }]}>ALARM GUY SAYS</Text>
           <Text style={styles.bannerQuote}>{bannerQuote.text}</Text>
         </View>
@@ -615,13 +514,13 @@ export default function HomeScreen({ navigation }: Props) {
                     width: '31%' as unknown as number,
                     flexBasis: '31%' as unknown as number,
                     flexGrow: 1,
-                    backgroundColor: `${section.color}33`,
+                    backgroundColor: colors.mode === 'dark' ? `${section.color}20` : '#FFFFFF',
                     borderWidth: 1,
-                    borderColor: `${section.color}59`,
+                    borderColor: colors.mode === 'dark' ? `${section.color}40` : `${section.color}50`,
                   },
                 ]}
               >
-                <View style={[styles.iconCircle, { backgroundColor: `${section.color}4D` }]}>
+                <View style={[styles.iconCircle, { backgroundColor: colors.mode === 'dark' ? `${section.color}4D` : `${section.color}20` }]}>
                   <View style={{ transform: [{ scale: 0.9 }] }}>
                     <IconComp color={section.color} />
                   </View>

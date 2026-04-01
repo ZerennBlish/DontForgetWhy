@@ -581,7 +581,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           ) : (
             <Image
               source={require('../../assets/fullscreenicon.png')}
-              style={{ width: '100%', height: '100%', opacity: 0.07 }}
+              style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
               resizeMode="cover"
             />
           )}
@@ -624,7 +624,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: 0.07 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
             resizeMode="cover"
           />
         )}

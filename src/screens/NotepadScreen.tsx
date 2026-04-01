@@ -484,7 +484,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
       ...StyleSheet.absoluteFillObject,
       width: '100%',
       height: '100%',
-      opacity: 0.07,
+      opacity: colors.mode === 'dark' ? 0.07 : 0.04,
     },
     container: {
       flex: 1,
@@ -608,7 +608,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
       borderRadius: 12,
       padding: 12,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: '#55EFC4',
       borderLeftWidth: 3,
       borderLeftColor: 'transparent',
       marginBottom: 8,

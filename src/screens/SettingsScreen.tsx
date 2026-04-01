@@ -21,8 +21,6 @@ import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
-import type { ColorFormatsObject } from 'reanimated-color-picker';
 import notifee from '@notifee/react-native';
 import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
 import { getVoiceEnabled, setVoiceEnabled } from '../services/voicePlayback';
@@ -38,19 +36,13 @@ import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
-const presetNames = Object.keys(themes) as (ThemeName & keyof typeof themes)[];
-const themeDisplayNames: Record<string, string> = {};
-
 export default function SettingsScreen({ navigation }: Props) {
-  const { colors, themeName, customAccent, customBackground, setTheme, setCustomTheme } = useTheme();
+  const { colors, themeName, setTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [voiceRoasts, setVoiceRoastsState] = useState(true);
-  const [pickerVisible, setPickerVisible] = useState(false);
-  const pickedAccentRef = useRef(customAccent || colors.accent);
-  const pickedBgRef = useRef(customBackground || '#121220');
   const [hasPermissionIssues, setHasPermissionIssues] = useState(false);
   const [silenceAll, setSilenceAllState] = useState(false);
   const [silenceRemaining, setSilenceRemaining] = useState<string | null>(null);
@@ -192,14 +184,6 @@ export default function SettingsScreen({ navigation }: Props) {
       fontWeight: '700',
       color: colors.accent,
     },
-    rainbowRing: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 3,
-    },
     modalOverlay: {
       flex: 1,
       backgroundColor: colors.modalOverlay,
@@ -221,9 +205,6 @@ export default function SettingsScreen({ navigation }: Props) {
       color: colors.textPrimary,
       textAlign: 'center',
       marginBottom: 20,
-    },
-    pickerWrapper: {
-      gap: 16,
     },
     modalBtns: {
       flexDirection: 'row',
@@ -447,28 +428,6 @@ export default function SettingsScreen({ navigation }: Props) {
     if (value) hapticLight();
   };
 
-  const handleAccentChange = (result: ColorFormatsObject) => {
-    pickedAccentRef.current = result.hex;
-  };
-
-  const handleBgChange = (result: ColorFormatsObject) => {
-    pickedBgRef.current = result.hex;
-  };
-
-  const handleConfirmCustom = () => {
-    hapticLight();
-    setPickerVisible(false);
-    setCustomTheme(pickedAccentRef.current, pickedBgRef.current);
-  };
-
-  const handleResetTheme = () => {
-    hapticLight();
-    setPickerVisible(false);
-    setTheme('midnight');
-  };
-
-  const isCustomActive = themeName === 'custom';
-
   return (
     <ImageBackground source={require('../../assets/gear.png')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
@@ -556,9 +515,10 @@ export default function SettingsScreen({ navigation }: Props) {
       <View style={[styles.card, { marginTop: 16 }]}>
         <Text style={styles.sectionLabel}>Theme</Text>
         <View style={styles.themeGrid}>
-          {presetNames.map((name) => {
+          {(Object.keys(themes) as ThemeName[]).map((name) => {
             const t = themes[name];
             const isActive = name === themeName;
+            const displayName = name === 'highContrast' ? 'High Contrast' : name.charAt(0).toUpperCase() + name.slice(1);
             return (
               <TouchableOpacity
                 key={name}
@@ -570,7 +530,7 @@ export default function SettingsScreen({ navigation }: Props) {
                   style={[
                     styles.themeCircleOuter,
                     {
-                      borderColor: isActive ? colors.accent : t.background,
+                      borderColor: isActive ? t.accent : t.border,
                       backgroundColor: t.background,
                     },
                   ]}
@@ -579,70 +539,12 @@ export default function SettingsScreen({ navigation }: Props) {
                     {isActive && <Text style={styles.checkmark}>{'\u2713'}</Text>}
                   </View>
                 </View>
-                <Text
-                  style={[styles.themeName, isActive && styles.themeNameActive]}
-                >
-                  {themeDisplayNames[name] || name.charAt(0).toUpperCase() + name.slice(1)}
+                <Text style={[styles.themeName, isActive && styles.themeNameActive]}>
+                  {displayName}
                 </Text>
               </TouchableOpacity>
             );
           })}
-
-          {/* Custom theme circle */}
-          <TouchableOpacity
-            style={styles.themeItem}
-            onPress={() => {
-              hapticLight();
-              pickedAccentRef.current = customAccent || colors.accent;
-              pickedBgRef.current = customBackground || '#121220';
-              setPickerVisible(true);
-            }}
-            activeOpacity={0.7}
-          >
-            {customAccent ? (
-              <View
-                style={[
-                  styles.rainbowRing,
-                  {
-                    borderColor: isCustomActive ? colors.accent : colors.border,
-                    backgroundColor: colors.background,
-                  },
-                ]}
-              >
-                <View style={[styles.themeCircleInner, { backgroundColor: customAccent }]}>
-                  {isCustomActive && <Text style={styles.checkmark}>{'\u2713'}</Text>}
-                </View>
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.rainbowRing,
-                  {
-                    borderColor: isCustomActive ? colors.accent : colors.border,
-                    backgroundColor: colors.background,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.themeCircleInner,
-                    {
-                      backgroundColor: colors.card,
-                      borderWidth: 2,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  <Text style={{ fontSize: 20 }}>{'\u{1F3A8}'}</Text>
-                </View>
-              </View>
-            )}
-            <Text
-              style={[styles.themeName, isCustomActive && styles.themeNameActive]}
-            >
-              Custom
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -856,65 +758,6 @@ export default function SettingsScreen({ navigation }: Props) {
           Re-run setup. In case you forgot to do something...
         </Text>
       </View>
-
-      {/* Color Picker Modal */}
-      <Modal transparent visible={pickerVisible} animationType="fade" onRequestClose={() => { hapticLight(); setPickerVisible(false); }}>
-        <View style={styles.modalOverlay}>
-          <ScrollView style={{ width: '100%' }} contentContainerStyle={{ paddingVertical: 24 }} keyboardShouldPersistTaps="handled">
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Custom Theme</Text>
-
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 }}>Background Color</Text>
-            <ColorPicker
-              value={pickedBgRef.current}
-              onCompleteJS={handleBgChange}
-            >
-              <View style={styles.pickerWrapper}>
-                <Preview hideInitialColor />
-                <Panel1 />
-                <HueSlider />
-              </View>
-            </ColorPicker>
-
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginTop: 20, marginBottom: 8 }}>Accent Color</Text>
-            <ColorPicker
-              value={pickedAccentRef.current}
-              onCompleteJS={handleAccentChange}
-            >
-              <View style={styles.pickerWrapper}>
-                <Preview hideInitialColor />
-                <Panel1 />
-                <HueSlider />
-              </View>
-            </ColorPicker>
-
-            <View style={styles.modalBtns}>
-              <TouchableOpacity
-                onPress={() => { hapticLight(); setPickerVisible(false); }}
-                style={styles.modalCancelBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleResetTheme}
-                style={[styles.modalCancelBtn, { borderColor: colors.red }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.modalCancelText, { color: colors.red }]}>Reset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleConfirmCustom}
-                style={styles.modalSaveBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.modalSaveText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          </ScrollView>
-        </View>
-      </Modal>
 
       {/* Silence duration picker modal */}
       <Modal transparent visible={silencePickerVisible} animationType="slide" onRequestClose={handleSilencePickerCancel}>

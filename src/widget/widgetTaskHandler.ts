@@ -29,7 +29,7 @@ import { MicWidget } from './MicWidget';
 import type { WidgetNote, WidgetVoiceMemo, WidgetTheme } from './NotepadWidget';
 import { CalendarWidget } from './CalendarWidget';
 import type { CalendarDayData } from './CalendarWidget';
-import { themes, generateCustomThemeDual } from '../theme/colors';
+import { themes } from '../theme/colors';
 import { getNotes } from '../services/noteStorage';
 import { getPinnedNotes } from '../services/widgetPins';
 import { setPendingNoteAction } from '../services/noteStorage';
@@ -385,33 +385,38 @@ function getReminderSortTimestamp(reminder: Reminder): number {
 export async function getWidgetTheme(): Promise<WidgetTheme> {
   try {
     const themeName = await AsyncStorage.getItem('appTheme');
-    let key = themeName || 'midnight';
-    const themeMigration: Record<string, string> = {
-      obsidian: 'void', forest: 'neon', royal: 'ember',
-      bubblegum: 'frost', sunshine: 'sand', ocean: 'frost',
-      mint: 'frost', charcoal: 'void', amoled: 'void',
-      slate: 'neon', paper: 'frost', cream: 'sand', arctic: 'frost',
+    let key = themeName || 'dark';
+
+    // Migrate old theme names
+    const migration: Record<string, string> = {
+      midnight: 'dark', ember: 'dark', neon: 'dark', void: 'dark',
+      frost: 'light', sand: 'light', custom: 'dark',
+      obsidian: 'dark', forest: 'dark', royal: 'dark',
+      bubblegum: 'light', sunshine: 'light', ocean: 'light',
+      mint: 'light', charcoal: 'dark', amoled: 'dark',
+      slate: 'dark', paper: 'light', cream: 'light', arctic: 'light',
     };
-    if (themeMigration[key]) key = themeMigration[key];
-    if (key === 'custom') {
-      const customRaw = await AsyncStorage.getItem('customTheme');
-      if (customRaw) {
-        const parsed = JSON.parse(customRaw);
-        if (typeof parsed === 'string') {
-          const generated = generateCustomThemeDual(parsed, parsed);
-          return { background: generated.background, cellBg: generated.card, text: generated.textPrimary, textSecondary: generated.textSecondary, border: generated.border, accent: generated.accent };
-        }
-        const obj = parsed as { accent: string; background?: string };
-        const bgHex = obj.background || obj.accent;
-        const generated = generateCustomThemeDual(bgHex, obj.accent);
-        return { background: generated.background, cellBg: generated.card, text: generated.textPrimary, textSecondary: generated.textSecondary, border: generated.border, accent: generated.accent };
-      }
-    }
-    const theme = themes[key as keyof typeof themes] || themes.midnight;
-    return { background: theme.background, cellBg: theme.card, text: theme.textPrimary, textSecondary: theme.textSecondary, border: theme.border, accent: theme.accent };
+    if (migration[key]) key = migration[key];
+
+    const theme = themes[key as keyof typeof themes] || themes.dark;
+    return {
+      background: theme.background,
+      cellBg: theme.card,
+      text: theme.textPrimary,
+      textSecondary: theme.textSecondary,
+      border: theme.border,
+      accent: theme.accent,
+    };
   } catch {
-    const fallback = themes.midnight;
-    return { background: fallback.background, cellBg: fallback.card, text: fallback.textPrimary, textSecondary: fallback.textSecondary, border: fallback.border, accent: fallback.accent };
+    const fallback = themes.dark;
+    return {
+      background: fallback.background,
+      cellBg: fallback.card,
+      text: fallback.textPrimary,
+      textSecondary: fallback.textSecondary,
+      border: fallback.border,
+      accent: fallback.accent,
+    };
   }
 }
 

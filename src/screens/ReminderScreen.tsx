@@ -389,13 +389,29 @@ export default function ReminderScreen({ navigation }: Props) {
       marginBottom: 4,
     },
     card: {
-      backgroundColor: colors.card + 'BF',
-      borderRadius: 16,
-      padding: 16,
+      backgroundColor: colors.card + 'CC',
+      borderRadius: 12,
+      padding: 12,
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: '#4A90D9',
+      borderLeftWidth: 3,
+      borderLeftColor: '#4A90D9',
+      marginBottom: 8,
+    },
+    deletedCard: {
+      backgroundColor: colors.card + 'CC',
+      borderRadius: 12,
+      padding: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(74, 144, 217, 0.4)',
+      borderLeftWidth: 3,
+      borderLeftColor: 'rgba(74, 144, 217, 0.4)',
+      marginBottom: 8,
+      opacity: 0.7,
     },
     cardCompleted: {
       opacity: 0.45,
@@ -411,8 +427,8 @@ export default function ReminderScreen({ navigation }: Props) {
       marginRight: 12,
     },
     checkboxDone: {
-      backgroundColor: '#22C55E',
-      borderColor: '#22C55E',
+      backgroundColor: '#4A90D9',
+      borderColor: '#4A90D9',
     },
     checkmark: {
       fontSize: 16,
@@ -636,7 +652,7 @@ export default function ReminderScreen({ navigation }: Props) {
         ? item.text
         : null;
       return (
-        <View style={[styles.card, { opacity: 0.7 }]}>
+        <View style={styles.deletedCard}>
           <View style={styles.middle}>
             <Text style={[styles.reminderText, { color: colors.textTertiary }]} numberOfLines={2}>
               {deletedPrimary}
@@ -794,7 +810,7 @@ export default function ReminderScreen({ navigation }: Props) {
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: 0.07 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
             resizeMode="cover"
           />
         )}
