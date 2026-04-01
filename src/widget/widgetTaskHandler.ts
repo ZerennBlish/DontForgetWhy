@@ -671,8 +671,14 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         break;
       }
 
-      if (action === 'OPEN_ALARMS' || action === 'OPEN_TIMERS' || action === 'OPEN_REMINDERS') {
-        const tab = action === 'OPEN_ALARMS' ? 0 : action === 'OPEN_TIMERS' ? 1 : 2;
+      if (action === 'OPEN_TIMERS') {
+        await AsyncStorage.setItem('pendingTimerAction', JSON.stringify({ timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'OPEN_ALARMS' || action === 'OPEN_REMINDERS') {
+        const tab = action === 'OPEN_ALARMS' ? 0 : 1;
         await AsyncStorage.setItem('pendingTabAction', JSON.stringify({ tab, timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
@@ -707,6 +713,12 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
       if (action?.startsWith('OPEN_NOTE__')) {
         const noteId = action.replace('OPEN_NOTE__', '');
         await setPendingNoteAction({ type: 'edit', noteId });
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'OPEN_VOICE_MEMOS') {
+        await AsyncStorage.setItem('pendingVoiceAction', JSON.stringify({ type: 'list', timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }

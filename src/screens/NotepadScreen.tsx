@@ -34,45 +34,20 @@ import {
   unpinNote,
   pruneNotePins,
   isNotePinned,
-  getPinnedVoiceMemos,
-  togglePinVoiceMemo,
-  unpinVoiceMemo,
-  pruneVoiceMemoPins,
-  isVoiceMemoPinned,
 } from '../services/widgetPins';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { refreshWidgets } from '../widget/updateWidget';
 import UndoToast from '../components/UndoToast';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import NoteEditorModal from '../components/NoteEditorModal';
 import { CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
 import type { Note } from '../types/note';
 import type { RootStackParamList } from '../navigation/types';
-import type { VoiceMemo } from '../types/voiceMemo';
-import * as VMStore from '../services/voiceMemoStorage';
-import { deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
-import VoiceMemoCard from '../components/VoiceMemoCard';
-import { createAudioPlayer } from 'expo-audio';
 
 const MAX_NOTE_PINS = 4;
-const MAX_VOICE_MEMO_PINS = 4;
 let welcomeNoteCreating = false;
-type ListItem = { type: 'note'; data: Note } | { type: 'voiceMemo'; data: VoiceMemo };
-
-const VOICE_EMPTY_MESSAGES = [
-  'Nothing to hear here. Suspiciously quiet.',
-  'No voice memos yet. Your thoughts are still trapped in your head.',
-  'Silence. The sound of someone who keeps forgetting to record things.',
-  "Your voice memo list is empty. Your head probably isn't.",
-  'No recordings yet. All those brilliant shower thoughts, lost.',
-];
-
-const VOICE_DELETE_TOASTS = [
-  "Memo deleted. Tap to undo before it's too late.",
-  'Gone. But not forgotten. Yet. Tap undo.',
-  'Deleted. Your voice echoes into the void. Undo?',
-];
 
 const SAVE_TOASTS = [
   'Got it. Try not to forget this one too.',
@@ -114,7 +89,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const [voiceEmptyMsg] = useState(() => VOICE_EMPTY_MESSAGES[Math.floor(Math.random() * VOICE_EMPTY_MESSAGES.length)]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [filter, setFilter] = useState<'active' | 'deleted'>('active');
@@ -133,21 +107,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const [undoKey, setUndoKey] = useState(0);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
-
-  // Voice memo state
-  const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
-  const [pinnedVoiceMemoIds, setPinnedVoiceMemoIds] = useState<string[]>([]);
-  const [contentFilter, setContentFilter] = useState<'all' | 'notes' | 'voice'>('all');
-  const [playingMemoId, setPlayingMemoId] = useState<string | null>(null);
-  const [playbackProgress, setPlaybackProgress] = useState<Record<string, number>>({});
-  const [deletedVoiceMemo, setDeletedVoiceMemo] = useState<VoiceMemo | null>(null);
-  const deletedVoiceMemoPinnedRef = useRef(false);
-  const [showVoiceUndo, setShowVoiceUndo] = useState(false);
-  const [voiceUndoKey, setVoiceUndoKey] = useState(0);
-
-  const playerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
-  const playbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const playerListenerRef = useRef<{ remove: () => void } | null>(null);
 
   const handledActionRef = useRef('');
   useEffect(() => {
@@ -179,12 +138,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
     })();
   }, []);
 
-  useEffect(() => {
-    if (route.params?.initialFilter) {
-      setContentFilter(route.params.initialFilter);
-    }
-  }, [route.params?.initialFilter]);
-
   const loadData = useCallback(async () => {
     let loaded = await getAllNotes(true);
 
@@ -215,43 +168,12 @@ export default function NotepadScreen({ navigation, route }: Props) {
     setPinnedIds(pruned);
   }, []);
 
-  const reloadVoiceMemos = useCallback(async () => {
-    const memos = await VMStore.getAllVoiceMemos();
-    setVoiceMemos(memos);
-    const activeIds = memos.filter((m) => !m.deletedAt).map((m) => m.id);
-    const pruned = await pruneVoiceMemoPins(activeIds);
-    setPinnedVoiceMemoIds(pruned);
-  }, []);
-
-  const stopPlayback = useCallback(() => {
-    if (playbackIntervalRef.current) {
-      clearInterval(playbackIntervalRef.current);
-      playbackIntervalRef.current = null;
-    }
-    if (playerListenerRef.current) {
-      try { playerListenerRef.current.remove(); } catch { /* */ }
-      playerListenerRef.current = null;
-    }
-    if (playerRef.current) {
-      try {
-        playerRef.current.pause();
-        playerRef.current.release();
-      } catch { /* */ }
-      playerRef.current = null;
-    }
-    setPlayingMemoId(null);
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       loadData();
-      reloadVoiceMemos();
       loadBackground().then(setBgUri);
       getOverlayOpacity().then(setBgOpacity);
-      return () => {
-        stopPlayback();
-      };
-    }, [loadData, reloadVoiceMemos, stopPlayback]),
+    }, [loadData]),
   );
 
   // Handle route params and pending actions
@@ -521,93 +443,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
     refreshWidgets();
   };
 
-  const handlePlayToggle = (memo: VoiceMemo) => {
-    if (playingMemoId === memo.id) {
-      stopPlayback();
-      return;
-    }
-    if (playingMemoId) {
-      setPlaybackProgress(prev => ({ ...prev, [playingMemoId]: 0 }));
-    }
-    stopPlayback();
-    const p = createAudioPlayer({ uri: memo.uri });
-    playerRef.current = p;
-    setPlayingMemoId(memo.id);
-    const sub = p.addListener('playbackStatusUpdate', (status: any) => {
-      if (status.didJustFinish) {
-        playerListenerRef.current = null;
-        sub.remove();
-        stopPlayback();
-        setPlaybackProgress(prev => ({ ...prev, [memo.id]: 0 }));
-      }
-    });
-    playerListenerRef.current = sub;
-    playbackIntervalRef.current = setInterval(() => {
-      const current = playerRef.current;
-      if (!current) return;
-      try {
-        if (current.duration > 0) {
-          setPlaybackProgress(prev => ({
-            ...prev,
-            [memo.id]: current.currentTime / current.duration,
-          }));
-        }
-      } catch { /* player might be released */ }
-    }, 500);
-    p.play();
-  };
-
-  const handleDeleteVoiceMemo = async (id: string) => {
-    hapticHeavy();
-    const memo = voiceMemos.find(m => m.id === id);
-    if (!memo) return;
-    if (playingMemoId === id) stopPlayback();
-    const wasPinned = isVoiceMemoPinned(id, pinnedVoiceMemoIds);
-    setDeletedVoiceMemo(memo);
-    deletedVoiceMemoPinnedRef.current = wasPinned;
-    if (wasPinned) await unpinVoiceMemo(id);
-    await VMStore.deleteVoiceMemo(id);
-    await reloadVoiceMemos();
-    refreshWidgets();
-    setVoiceUndoKey(k => k + 1);
-    setShowVoiceUndo(true);
-  };
-
-  const handleRestoreVoiceMemo = async (id: string) => {
-    hapticLight();
-    await VMStore.restoreVoiceMemo(id);
-    await reloadVoiceMemos();
-    refreshWidgets();
-  };
-
-  const handlePermanentDeleteVoiceMemo = async (id: string) => {
-    hapticHeavy();
-    const memo = voiceMemos.find(m => m.id === id);
-    if (memo) {
-      await deleteVoiceMemoFile(memo.uri);
-    }
-    await VMStore.permanentlyDeleteVoiceMemo(id);
-    await reloadVoiceMemos();
-    refreshWidgets();
-  };
-
-  const handleUndoDeleteVoiceMemo = async () => {
-    setShowVoiceUndo(false);
-    if (!deletedVoiceMemo) return;
-    await VMStore.restoreVoiceMemo(deletedVoiceMemo.id);
-    if (deletedVoiceMemoPinnedRef.current) {
-      await togglePinVoiceMemo(deletedVoiceMemo.id);
-    }
-    await reloadVoiceMemos();
-    refreshWidgets();
-    setDeletedVoiceMemo(null);
-  };
-
-  const handleVoiceUndoDismiss = () => {
-    setShowVoiceUndo(false);
-    setDeletedVoiceMemo(null);
-  };
-
   const handleTogglePin = async (id: string) => {
     hapticMedium();
     const currentlyPinned = isNotePinned(id, pinnedIds);
@@ -621,23 +456,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
     refreshWidgets();
     ToastAndroid.show(
       currentlyPinned ? 'Unpinned from widget' : 'Pinned to widget',
-      ToastAndroid.SHORT,
-    );
-  };
-
-  const handleToggleVoiceMemoPin = async (id: string) => {
-    hapticMedium();
-    const currentlyPinned = isVoiceMemoPinned(id, pinnedVoiceMemoIds);
-    if (!currentlyPinned && pinnedVoiceMemoIds.length >= MAX_VOICE_MEMO_PINS) {
-      ToastAndroid.show('Voice memo pins full \u2014 unpin one first', ToastAndroid.SHORT);
-      return;
-    }
-    await togglePinVoiceMemo(id);
-    const updated = await getPinnedVoiceMemos();
-    setPinnedVoiceMemoIds(updated);
-    refreshWidgets();
-    ToastAndroid.show(
-      currentlyPinned ? 'Unpinned' : 'Pinned to widget',
       ToastAndroid.SHORT,
     );
   };
@@ -656,38 +474,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
     unpinned.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return [...pinned, ...unpinned];
   }, [notes, pinnedIds, filter]);
-
-  const sortedVoiceMemos = useMemo(() => {
-    if (filter === 'deleted') {
-      return voiceMemos
-        .filter((m) => !!m.deletedAt)
-        .sort((a, b) => new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime());
-    }
-    const active = voiceMemos.filter((m) => !m.deletedAt);
-    const pinned = active.filter((m) => isVoiceMemoPinned(m.id, pinnedVoiceMemoIds));
-    const unpinned = active.filter((m) => !isVoiceMemoPinned(m.id, pinnedVoiceMemoIds));
-    pinned.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    unpinned.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return [...pinned, ...unpinned];
-  }, [voiceMemos, pinnedVoiceMemoIds, filter]);
-
-  const listData: ListItem[] = useMemo(() => {
-    const noteItems: ListItem[] = sorted.map((n) => ({ type: 'note' as const, data: n }));
-    const voiceItems: ListItem[] = sortedVoiceMemos.map((m) => ({ type: 'voiceMemo' as const, data: m }));
-    if (contentFilter === 'notes') return noteItems;
-    if (contentFilter === 'voice') return voiceItems;
-    const isPinnedItem = (item: ListItem): boolean => {
-      if (item.type === 'note') return isNotePinned(item.data.id, pinnedIds);
-      return isVoiceMemoPinned(item.data.id, pinnedVoiceMemoIds);
-    };
-    return [...noteItems, ...voiceItems].sort((a, b) => {
-      const aPinned = isPinnedItem(a);
-      const bPinned = isPinnedItem(b);
-      if (aPinned && !bPinned) return -1;
-      if (!aPinned && bPinned) return 1;
-      return new Date(b.data.createdAt).getTime() - new Date(a.data.createdAt).getTime();
-    });
-  }, [sorted, sortedVoiceMemos, contentFilter, pinnedIds, pinnedVoiceMemoIds]);
 
   const styles = useMemo(() => StyleSheet.create({
     outerContainer: {
@@ -714,6 +500,11 @@ export default function NotepadScreen({ navigation, route }: Props) {
     headerBack: {
       position: 'absolute',
       left: 20,
+      top: insets.top + 10,
+    },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
       top: insets.top + 10,
     },
     title: {
@@ -931,32 +722,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
       fontWeight: '300',
       marginTop: -2,
     },
-    contentFilterRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-evenly',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-    },
-    contentTab: {
-      paddingHorizontal: 24,
-      paddingVertical: 8,
-      borderRadius: 16,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
-    },
-    contentTabActive: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent,
-    },
-    contentTabText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: '#FFFFFF',
-    },
-    contentTabTextActive: {
-      fontWeight: '700',
-    },
   }), [colors, insets.bottom, insets.top]);
 
   const renderDeletedItem = (item: Note) => (
@@ -977,30 +742,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
           <Text style={styles.restoreText}>Restore</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
-          <Text style={styles.foreverText}>Forever</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderDeletedVoiceMemo = (memo: VoiceMemo) => (
-    <View style={[styles.card, { borderLeftColor: '#A29BFE', opacity: 0.7 }]}>
-      <View style={[styles.iconCircle, { backgroundColor: '#A29BFE', opacity: 0.6 }]}>
-        <Text style={styles.iconCircleText}>{'\u{1F399}\uFE0F'}</Text>
-      </View>
-      <View style={styles.cardCenter}>
-        <Text style={[styles.cardTitle, { opacity: 0.7 }]} numberOfLines={2}>
-          {memo.title || 'Voice Memo'}
-        </Text>
-        <Text style={styles.deletedAgo}>
-          {formatDeletedAgo(memo.deletedAt!)}
-        </Text>
-      </View>
-      <View style={styles.cardActions}>
-        <TouchableOpacity onPress={() => handleRestoreVoiceMemo(memo.id)} style={styles.restoreBtn} activeOpacity={0.7}>
-          <Text style={styles.restoreText}>Restore</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePermanentDeleteVoiceMemo(memo.id)} style={styles.foreverBtn} activeOpacity={0.7}>
           <Text style={styles.foreverText}>Forever</Text>
         </TouchableOpacity>
       </View>
@@ -1059,25 +800,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
     );
   };
 
-  const renderItem = ({ item }: { item: ListItem }) => {
-    if (item.type === 'note') {
-      if (item.data.deletedAt) return renderDeletedItem(item.data);
-      return renderActiveItem(item.data);
-    }
-    const m = item.data;
-    if (m.deletedAt) return renderDeletedVoiceMemo(m);
-    return (
-      <VoiceMemoCard
-        memo={m}
-        onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: m.id }); }}
-        onPlayToggle={() => handlePlayToggle(m)}
-        isPlaying={playingMemoId === m.id}
-        playbackProgress={playbackProgress[m.id] || 0}
-        onPin={() => handleToggleVoiceMemoPin(m.id)}
-        isPinned={isVoiceMemoPinned(m.id, pinnedVoiceMemoIds)}
-        onDelete={() => handleDeleteVoiceMemo(m.id)}
-      />
-    );
+  const renderItem = ({ item }: { item: Note }) => {
+    if (item.deletedAt) return renderDeletedItem(item);
+    return renderActiveItem(item);
   };
 
   const renderEmpty = () => {
@@ -1090,31 +815,12 @@ export default function NotepadScreen({ navigation, route }: Props) {
         </View>
       );
     }
-    if (contentFilter === 'voice') {
-      return (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>{'\u{1F399}\uFE0F'}</Text>
-          <Text style={styles.emptyText}>{voiceEmptyMsg}</Text>
-        </View>
-      );
-    }
-    if (contentFilter === 'notes') {
-      return (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>{'\u{1F4DD}'}</Text>
-          <Text style={styles.emptyTitle}>No notes yet</Text>
-          <Text style={styles.emptyText}>
-            Tap the notepad to create one.
-          </Text>
-        </View>
-      );
-    }
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyIcon}>{'\u{1F4DD}'}</Text>
-        <Text style={styles.emptyTitle}>Nothing here yet</Text>
+        <Text style={styles.emptyTitle}>No notes yet</Text>
         <Text style={styles.emptyText}>
-          Record a voice memo or create a note to get started.
+          Tap the notepad to create one.
         </Text>
       </View>
     );
@@ -1142,22 +848,10 @@ export default function NotepadScreen({ navigation, route }: Props) {
           <View style={styles.headerBack}>
             <BackButton onPress={() => navigation.goBack()} />
           </View>
+          <View style={styles.headerHome}>
+            <HomeButton />
+          </View>
           <Text style={styles.title}>Notes</Text>
-        </View>
-
-        <View style={styles.contentFilterRow}>
-          {(['voice', 'all', 'notes'] as const).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.contentTab, contentFilter === tab && styles.contentTabActive]}
-              onPress={() => { hapticLight(); setContentFilter(tab); }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.contentTabText, contentFilter === tab && styles.contentTabTextActive]}>
-                {tab === 'all' ? 'All' : tab === 'notes' ? 'Notes' : 'Voice'}
-              </Text>
-            </TouchableOpacity>
-          ))}
         </View>
 
         <View style={styles.filterToggleRow}>
@@ -1196,25 +890,17 @@ export default function NotepadScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {listData.length === 0 ? (
+        {sorted.length === 0 ? (
           renderEmpty()
         ) : (
           <FlatList
-            data={listData}
-            keyExtractor={(item) => `${item.type}-${item.data.id}`}
+            data={sorted}
+            keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
           />
         )}
-
-        <TouchableOpacity
-          style={[styles.fab, { left: 20 }]}
-          onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.fabText}>{'\u{1F399}\uFE0F'}</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.fab, { right: 20 }]}
@@ -1230,13 +916,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
           message="Note deleted"
           onUndo={handleUndoDelete}
           onDismiss={handleUndoDismiss}
-        />
-        <UndoToast
-          key={`voice-${voiceUndoKey}`}
-          visible={showVoiceUndo}
-          message={VOICE_DELETE_TOASTS[Math.floor(Math.random() * VOICE_DELETE_TOASTS.length)]}
-          onUndo={handleUndoDeleteVoiceMemo}
-          onDismiss={handleVoiceUndoDismiss}
         />
       </View>
 

@@ -31,6 +31,7 @@ import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/hapti
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import { saveBackground, loadBackground, clearBackground, getOverlayOpacity, setOverlayOpacity } from '../services/backgroundStorage';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
@@ -79,6 +80,11 @@ export default function SettingsScreen({ navigation }: Props) {
     headerBack: {
       position: 'absolute',
       left: 20,
+      top: insets.top + 10,
+    },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
       top: insets.top + 10,
     },
     title: {
@@ -470,6 +476,9 @@ export default function SettingsScreen({ navigation }: Props) {
       <View style={styles.headerBack}>
         <BackButton onPress={() => navigation.goBack()} />
       </View>
+      <View style={styles.headerHome}>
+        <HomeButton />
+      </View>
       <Text style={styles.title}>Settings</Text>
     </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -803,6 +812,20 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
         <Text style={styles.description}>
           Bug reports, suggestions, or let us know how we're doing
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.card, { marginTop: 16 }]}
+        onPress={() => { hapticLight(); navigation.navigate('ForgetLog'); }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.aboutRow}>
+          <Text style={styles.label}>Forget Log</Text>
+          <Text style={styles.aboutChevron}>{'\u203A'}</Text>
+        </View>
+        <Text style={styles.description}>
+          History of your dismissed alarms and reminders.
         </Text>
       </TouchableOpacity>
 

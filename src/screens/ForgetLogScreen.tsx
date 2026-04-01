@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadForgetLog, clearForgetLog, ForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import { hapticLight } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
@@ -65,6 +66,11 @@ export default function ForgetLogScreen({ navigation }: Props) {
     headerBack: {
       position: 'absolute',
       left: 20,
+      top: insets.top + 10,
+    },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
       top: insets.top + 10,
     },
     title: {
@@ -216,6 +222,9 @@ export default function ForgetLogScreen({ navigation }: Props) {
       <View style={styles.header}>
         <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
+        </View>
+        <View style={styles.headerHome}>
+          <HomeButton />
         </View>
         <Text style={styles.title}>What Did I Forget?</Text>
       </View>

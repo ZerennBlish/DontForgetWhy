@@ -18,6 +18,7 @@ import { hapticLight, hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import {
   generatePuzzle,
   checkComplete,
@@ -545,6 +546,9 @@ export default function SudokuScreen({ navigation }: Props) {
         <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
+        <View style={styles.headerHome}>
+          <HomeButton />
+        </View>
         <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
       </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
@@ -642,6 +646,9 @@ export default function SudokuScreen({ navigation }: Props) {
         <View style={styles.winHeaderBack}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
+        <View style={styles.winHeaderHome}>
+          <HomeButton />
+        </View>
         <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
       </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
@@ -718,7 +725,10 @@ export default function SudokuScreen({ navigation }: Props) {
       {/* Header */}
       <View style={styles.gameHeader}>
         <View style={styles.gameHeaderRow}>
-          <BackButton onPress={handleBackFromGame} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <BackButton onPress={handleBackFromGame} />
+            <HomeButton />
+          </View>
           <Text style={styles.gameDifficulty}>{DIFFICULTY_CONFIG[difficulty].label}</Text>
         </View>
         <View style={styles.statsRow}>
@@ -896,6 +906,11 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       left: 20,
       top: topInset + 10,
     },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
+      top: topInset + 10,
+    },
     title: {
       fontSize: 28,
       fontWeight: '800',
@@ -989,6 +1004,11 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     winHeaderBack: {
       position: 'absolute',
       left: 20,
+      top: topInset + 10,
+    },
+    winHeaderHome: {
+      position: 'absolute',
+      left: 64,
       top: topInset + 10,
     },
     winEmoji: {

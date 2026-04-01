@@ -115,11 +115,19 @@ export function CalendarWidget({ monthLabel, weeks, theme }: CalendarWidgetProps
         }}
       >
         <TextWidget
-          text={`\u{1F4C5} ${monthLabel}`}
+          text="Misplaced Thoughts"
           style={{
             fontSize: 14,
             fontWeight: 'bold',
             color: theme.text as `#${string}`,
+          }}
+        />
+        <TextWidget
+          text={monthLabel}
+          style={{
+            fontSize: 12,
+            color: theme.textSecondary as `#${string}`,
+            marginTop: 2,
           }}
         />
       </FlexWidget>

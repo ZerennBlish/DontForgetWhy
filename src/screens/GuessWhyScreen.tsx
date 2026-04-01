@@ -22,6 +22,7 @@ import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
 import { addForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playRandomClip, stopVoice } from '../services/voicePlayback';
@@ -96,6 +97,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     top: {
       alignItems: 'center',
       marginTop: 20,
+    },
+    headerHome: {
+      marginTop: 8,
     },
     emoji: {
       fontSize: 48,
@@ -402,6 +406,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       {/* Top section */}
       <View style={styles.top}>
         <BackButton onPress={() => navigation.goBack()} />
+        <View style={styles.headerHome}>
+          <HomeButton />
+        </View>
         <Text style={styles.emoji}>{displayEmoji}</Text>
         <Text style={styles.time}>{formatTime(alarm.time, timeFormat)}</Text>
         <Text style={styles.categoryLabel}>{alarm.category.toUpperCase()}</Text>

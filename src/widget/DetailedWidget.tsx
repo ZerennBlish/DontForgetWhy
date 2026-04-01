@@ -152,7 +152,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
         }}
       >
         <TextWidget
-          text="Don't Forget Why"
+          text="Memory's Timeline"
           style={{
             fontSize: 16,
             fontWeight: 'bold',

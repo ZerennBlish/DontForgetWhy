@@ -9,7 +9,6 @@ interface MicWidgetProps {
 export function MicWidget({ theme }: MicWidgetProps) {
   return (
     <FlexWidget
-      clickAction="RECORD_VOICE"
       style={{
         height: 'match_parent',
         width: 'match_parent',
@@ -17,11 +16,33 @@ export function MicWidget({ theme }: MicWidgetProps) {
         borderRadius: 16,
         padding: 8,
         flexDirection: 'column',
-        justifyContent: 'center',
         alignItems: 'center',
       }}
     >
+      {/* Header */}
       <FlexWidget
+        clickAction="OPEN_VOICE_MEMOS"
+        style={{
+          width: 'match_parent',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: 8,
+        }}
+      >
+        <TextWidget
+          text={"\u{1F399}\uFE0F Memory's Voice"}
+          style={{
+            fontSize: 16,
+            fontWeight: 'bold',
+            color: theme.text as `#${string}`,
+          }}
+        />
+      </FlexWidget>
+
+      {/* Body */}
+      <FlexWidget
+        clickAction="RECORD_VOICE"
         style={{
           flex: 1,
           justifyContent: 'center',
@@ -44,13 +65,24 @@ export function MicWidget({ theme }: MicWidgetProps) {
           }}
         />
       </FlexWidget>
-      <TextWidget
-        text="Don't Forget Why"
+
+      {/* Footer */}
+      <FlexWidget
+        clickAction="OPEN_VOICE_MEMOS"
         style={{
-          fontSize: 10,
-          color: theme.border as `#${string}`,
+          width: 'match_parent',
+          alignItems: 'center',
+          marginTop: 6,
         }}
-      />
+      >
+        <TextWidget
+          text="Don't Forget Why"
+          style={{
+            fontSize: 10,
+            color: theme.border as `#${string}`,
+          }}
+        />
+      </FlexWidget>
     </FlexWidget>
   );
 }

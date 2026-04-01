@@ -16,6 +16,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 
@@ -423,6 +424,11 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           left: 20,
           top: insets.top + 10,
         },
+        headerHome: {
+          position: 'absolute',
+          left: 64,
+          top: insets.top + 10,
+        },
         title: {
           fontSize: 28,
           fontWeight: '800',
@@ -518,6 +524,11 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           left: 20,
           top: insets.top + 10,
         },
+        winHeaderHome: {
+          position: 'absolute',
+          left: 64,
+          top: insets.top + 10,
+        },
         winEmoji: {
           fontSize: 64,
           marginBottom: 8,
@@ -611,6 +622,9 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             <View style={styles.headerBack}>
               <BackButton onPress={() => navigation.goBack()} />
             </View>
+            <View style={styles.headerHome}>
+              <HomeButton />
+            </View>
             <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
           </View>
           <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
@@ -660,6 +674,9 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           <View style={styles.winHeader}>
             <View style={styles.winHeaderBack}>
               <BackButton onPress={() => navigation.goBack()} />
+            </View>
+            <View style={styles.winHeaderHome}>
+              <HomeButton />
             </View>
             <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
           </View>
@@ -736,7 +753,10 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         <View style={styles.container}>
           <View style={styles.gameHeader}>
             <View style={styles.gameHeaderRow}>
-              <BackButton onPress={handleBackFromGame} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <BackButton onPress={handleBackFromGame} />
+                <HomeButton />
+              </View>
               <Text style={styles.gameDifficulty}>{config.label}</Text>
             </View>
             <View style={styles.statsRow}>

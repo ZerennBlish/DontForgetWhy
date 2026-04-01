@@ -20,6 +20,7 @@ import { hapticLight } from '../utils/haptics';
 import { deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VoiceRecord'>;
@@ -252,6 +253,11 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           left: 20,
           top: insets.top + 10,
         },
+        headerHome: {
+          position: 'absolute',
+          left: 64,
+          top: insets.top + 10,
+        },
         title: {
           fontSize: 28,
           fontWeight: '800',
@@ -384,6 +390,9 @@ export default function VoiceRecordScreen({ navigation }: Props) {
       <View style={styles.header}>
         <View style={styles.headerBack}>
           <BackButton onPress={handleBack} />
+        </View>
+        <View style={styles.headerHome}>
+          <HomeButton />
         </View>
         <Text style={styles.title}>{'\u{1F3A4}'} Record</Text>
       </View>

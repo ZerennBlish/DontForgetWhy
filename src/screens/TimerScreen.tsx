@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -10,29 +11,39 @@ import {
   ToastAndroid,
   TextInput,
   Alert,
+  AppState,
 } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
+import { useFocusEffect } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { TimerPreset, ActiveTimer, UserTimer } from '../types/timer';
 import {
   loadPresets,
   saveCustomDuration,
   recordPresetUsage,
   loadRecentPresetIds,
+  loadActiveTimers,
+  saveActiveTimers,
   loadUserTimers,
   saveUserTimer,
   deleteUserTimer,
   updateUserTimer,
 } from '../services/timerStorage';
+import { scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
 import { getPinnedPresets, togglePinPreset, isPinned, unpinPreset } from '../services/widgetPins';
 import { refreshWidgets } from '../widget/updateWidget';
 import { loadSettings, getDefaultTimerSound, saveDefaultTimerSound } from '../services/settings';
+import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
+import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import TimePicker from '../components/TimePicker';
 import SoundPickerModal from '../components/SoundPickerModal';
 import type { SystemSound } from '../components/SoundPickerModal';
+import type { RootStackParamList } from '../navigation/types';
 
 
 function formatCountdown(seconds: number): string {
@@ -56,22 +67,25 @@ function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)} min`;
 }
 
-interface TimerScreenProps {
-  activeTimers: ActiveTimer[];
-  onAddTimer: (timer: ActiveTimer) => void | Promise<void>;
-  onRemoveTimer: (id: string) => void;
-  onTogglePause: (id: string) => void;
+type Props = NativeStackScreenProps<RootStackParamList, 'Timers'>;
+
+function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
+  const now = Date.now();
+  return timers.map((t) => {
+    if (!t.isRunning) return t;
+    const elapsed = Math.floor((now - new Date(t.startedAt).getTime()) / 1000);
+    const remaining = Math.max(0, t.totalSeconds - elapsed);
+    return { ...t, remainingSeconds: remaining, isRunning: remaining > 0 };
+  });
 }
 
-export default function TimerScreen({
-  activeTimers,
-  onAddTimer,
-  onRemoveTimer,
-  onTogglePause,
-}: TimerScreenProps) {
+export default function TimerScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
+  const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
+  const [bgUri, setBgUri] = useState<string | null>(null);
+  const [bgOpacity, setBgOpacity] = useState(0.5);
   const presetCardWidth = (screenWidth - 32 - 16) / 3;
   const [presets, setPresets] = useState<TimerPreset[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -416,6 +430,179 @@ export default function TimerScreen({
     getDefaultTimerSound().then((s) => { setTimerSoundName(s.name || null); setTimerSoundID(s.soundID || null); }).catch(() => {});
   }, []);
 
+  // Load and recalculate timers on focus
+  useFocusEffect(
+    useCallback(() => {
+      loadActiveTimers().then((loaded) => {
+        const recalculated = recalculateTimers(loaded);
+        setActiveTimers(recalculated);
+        const needsSave = recalculated.some(
+          (t, i) => t.remainingSeconds !== loaded[i].remainingSeconds,
+        );
+        if (needsSave) saveActiveTimers(recalculated);
+      });
+      loadBackground().then(setBgUri);
+      getOverlayOpacity().then(setBgOpacity);
+    }, []),
+  );
+
+  // Tick every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveTimers((prev) => {
+        const hasRunning = prev.some(
+          (t) => t.isRunning && t.remainingSeconds > 0,
+        );
+        if (!hasRunning) return prev;
+
+        let completed = false;
+        const updated = prev.map((t) => {
+          if (!t.isRunning || t.remainingSeconds <= 0) return t;
+          const remaining = t.remainingSeconds - 1;
+          if (remaining <= 0) {
+            completed = true;
+            return { ...t, remainingSeconds: 0, isRunning: false };
+          }
+          return { ...t, remainingSeconds: remaining };
+        });
+
+        if (completed) saveActiveTimers(updated);
+        return updated;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Reload active timers when app returns to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        loadActiveTimers().then((loaded) => {
+          const recalculated = recalculateTimers(loaded);
+          setActiveTimers(recalculated);
+          const needsSave = recalculated.some(
+            (t, i) => t.remainingSeconds !== loaded[i].remainingSeconds,
+          );
+          if (needsSave) saveActiveTimers(recalculated);
+        });
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
+  const handleAddTimer = async (timer: ActiveTimer) => {
+    const completionTimestamp = Date.now() + timer.remainingSeconds * 1000;
+    let soundUri: string | undefined;
+    let soundName: string | undefined;
+    try {
+      const defaultSound = await getDefaultTimerSound();
+      if (defaultSound.uri) {
+        soundUri = defaultSound.uri;
+        soundName = defaultSound.name || 'Custom';
+      }
+    } catch (err) {
+      console.error('[handleAddTimer] getDefaultTimerSound failed:', err);
+    }
+    let notificationId: string | undefined;
+    try {
+      notificationId = await scheduleTimerNotification(
+        timer.label, timer.icon, completionTimestamp, timer.id, soundUri, soundName, timer.soundId,
+      );
+    } catch (error) {
+      console.error('[handleAddTimer] scheduleTimerNotification failed:', error);
+      Alert.alert('Timer Started', 'Timer is running but the notification could not be scheduled.');
+    }
+    showTimerCountdownNotification(timer.label, timer.icon, completionTimestamp, timer.id).catch(
+      (e) => console.error('[handleAddTimer] showTimerCountdownNotification failed:', e),
+    );
+    const timerWithNotif = { ...timer, notificationId };
+    setActiveTimers((prev) => {
+      const updated = [...prev, timerWithNotif];
+      saveActiveTimers(updated);
+      return updated;
+    });
+  };
+
+  const handleRemoveTimer = async (id: string) => {
+    const timer = activeTimers.find((t) => t.id === id);
+    if (timer?.notificationId) {
+      await cancelTimerNotification(timer.notificationId);
+    }
+    cancelTimerCountdownNotification(id).catch(
+      (e) => console.error('[handleRemoveTimer] cancelTimerCountdownNotification failed:', e),
+    );
+    setActiveTimers((prev) => {
+      const updated = prev.filter((t) => t.id !== id);
+      saveActiveTimers(updated);
+      return updated;
+    });
+  };
+
+  const handleTogglePause = async (id: string) => {
+    const timer = activeTimers.find((t) => t.id === id);
+    if (!timer) return;
+    if (timer.isRunning) {
+      if (timer.notificationId) {
+        await cancelTimerNotification(timer.notificationId);
+      }
+      await cancelTimerCountdownNotification(timer.id).catch(
+        (e) => console.error('[handleTogglePause] cancelTimerCountdownNotification failed:', e),
+      );
+      setActiveTimers((prev) => {
+        const updated = prev.map((t) =>
+          t.id === id ? { ...t, isRunning: false, notificationId: undefined } : t,
+        );
+        saveActiveTimers(updated);
+        return updated;
+      });
+    } else {
+      const elapsed = timer.totalSeconds - timer.remainingSeconds;
+      const newStartedAt = new Date(Date.now() - elapsed * 1000).toISOString();
+      if (timer.remainingSeconds > 0) {
+        const ts = Date.now() + timer.remainingSeconds * 1000;
+        let rSoundUri: string | undefined;
+        let rSoundName: string | undefined;
+        try {
+          const defaultSound = await getDefaultTimerSound();
+          if (defaultSound.uri) {
+            rSoundUri = defaultSound.uri;
+            rSoundName = defaultSound.name || 'Custom';
+          }
+        } catch (err) {
+          console.error('[handleTogglePause] getDefaultTimerSound failed:', err);
+        }
+        try {
+          const notifId = await scheduleTimerNotification(
+            timer.label, timer.icon, ts, timer.id, rSoundUri, rSoundName, timer.soundId,
+          );
+          setActiveTimers((prev) => {
+            const updated = prev.map((t) =>
+              t.id === id
+                ? { ...t, isRunning: true, startedAt: newStartedAt, notificationId: notifId }
+                : t,
+            );
+            saveActiveTimers(updated);
+            return updated;
+          });
+          showTimerCountdownNotification(timer.label, timer.icon, ts, timer.id).catch(
+            (e) => console.error('[handleTogglePause] showTimerCountdownNotification failed:', e),
+          );
+        } catch (error) {
+          console.error('[handleTogglePause] scheduleTimerNotification failed:', error);
+          Alert.alert('Resume Failed', 'Could not schedule the timer notification. The timer remains paused.');
+        }
+      } else {
+        setActiveTimers((prev) => {
+          const updated = prev.map((t) =>
+            t.id === id ? { ...t, isRunning: true, startedAt: newStartedAt } : t,
+          );
+          saveActiveTimers(updated);
+          return updated;
+        });
+      }
+    }
+  };
+
   // Split presets into recent, rest, and custom
   const { recentPresets, restPresets, customPreset, pinnedPresets } = useMemo(() => {
     const custom = presets.find((p) => p.id === 'custom') || null;
@@ -472,9 +659,9 @@ export default function TimerScreen({
       soundId: timerSoundId,
     };
     try {
-      await onAddTimer(timer);
+      await handleAddTimer(timer);
     } catch (error) {
-      console.error('[handleStartTimer] onAddTimer failed:', error);
+      console.error('[handleStartTimer] handleAddTimer failed:', error);
     }
   };
 
@@ -603,9 +790,9 @@ export default function TimerScreen({
 
     closeModal();
     try {
-      await onAddTimer(activeTimer);
+      await handleAddTimer(activeTimer);
     } catch (error) {
-      console.error('[handleSaveNewTimer] onAddTimer failed:', error);
+      console.error('[handleSaveNewTimer] handleAddTimer failed:', error);
     }
   };
 
@@ -650,9 +837,9 @@ export default function TimerScreen({
 
     closeModal();
     try {
-      await onAddTimer(activeTimer);
+      await handleAddTimer(activeTimer);
     } catch (error) {
-      console.error('[handleSaveEditTimer] onAddTimer failed:', error);
+      console.error('[handleSaveEditTimer] handleAddTimer failed:', error);
     }
   };
 
@@ -670,9 +857,9 @@ export default function TimerScreen({
       soundId: ut.soundId,
     };
     try {
-      await onAddTimer(activeTimer);
+      await handleAddTimer(activeTimer);
     } catch (error) {
-      console.error('[handleStartUserTimer] onAddTimer failed:', error);
+      console.error('[handleStartUserTimer] handleAddTimer failed:', error);
     }
   };
 
@@ -745,11 +932,30 @@ export default function TimerScreen({
 
   const modalPresetPinned = customModal ? isPinned(customModal.id, pinnedIds) : false;
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        {bgUri ? (
+          <>
+            <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+          </>
+        ) : (
+          <Image
+            source={require('../../assets/fullscreenicon.png')}
+            style={{ width: '100%', height: '100%', opacity: 0.07 }}
+            resizeMode="cover"
+          />
+        )}
+      </View>
+      <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <HomeButton />
+      </View>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Active Timers */}
       {activeTimers.length > 0 && (
         <View style={styles.section}>
@@ -774,7 +980,7 @@ export default function TimerScreen({
                 <View style={styles.activeActions}>
                   {timer.remainingSeconds > 0 && (
                     <TouchableOpacity
-                      onPress={() => { hapticLight(); onTogglePause(timer.id); }}
+                      onPress={() => { hapticLight(); handleTogglePause(timer.id); }}
                       style={styles.actionBtn}
                       activeOpacity={0.7}
                     >
@@ -784,7 +990,7 @@ export default function TimerScreen({
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
-                    onPress={() => { hapticHeavy(); onRemoveTimer(timer.id); }}
+                    onPress={() => { hapticHeavy(); handleRemoveTimer(timer.id); }}
                     style={styles.cancelBtn}
                     activeOpacity={0.7}
                   >
@@ -1085,5 +1291,6 @@ export default function TimerScreen({
         currentSoundID={timerSoundID}
       />
     </ScrollView>
+    </View>
   );
 }

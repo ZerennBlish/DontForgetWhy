@@ -13,6 +13,7 @@ import { isAlarmPinned, togglePinAlarm, unpinAlarm } from '../services/widgetPin
 import { refreshWidgets } from '../widget/updateWidget';
 import AlarmCard from '../components/AlarmCard';
 import UndoToast from '../components/UndoToast';
+import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
 import { formatTime } from '../utils/time';
@@ -36,7 +37,6 @@ interface AlarmsTabProps {
   navigation: any;
   pinnedAlarmIds: string[];
   setPinnedAlarmIds: React.Dispatch<React.SetStateAction<string[]>>;
-  appQuote: string;
   stats: GuessWhyStats | null;
 }
 
@@ -47,11 +47,11 @@ export default function AlarmsTab({
   navigation,
   pinnedAlarmIds,
   setPinnedAlarmIds,
-  appQuote,
 }: AlarmsTabProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
+  const [appQuote] = useState(getRandomAppOpenQuote);
   const [alarmSort, setAlarmSort] = useState<'time' | 'created' | 'name'>('time');
   const [alarmFilter, setAlarmFilter] = useState<'all' | 'active' | 'one-time' | 'recurring' | 'deleted'>('all');
   const [showSortFilter, setShowSortFilter] = useState(false);

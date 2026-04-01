@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import { hapticLight } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -54,6 +55,11 @@ export default function GamesScreen({ navigation }: Props) {
         headerBack: {
           position: 'absolute',
           left: 20,
+          top: insets.top + 10,
+        },
+        headerHome: {
+          position: 'absolute',
+          left: 64,
           top: insets.top + 10,
         },
         title: {
@@ -118,6 +124,9 @@ export default function GamesScreen({ navigation }: Props) {
     <View style={styles.header}>
       <View style={styles.headerBack}>
         <BackButton onPress={() => navigation.goBack()} />
+      </View>
+      <View style={styles.headerHome}>
+        <HomeButton />
       </View>
       <Text style={styles.title}>{'\u{1F3AE}'} Brain Games</Text>
     </View>

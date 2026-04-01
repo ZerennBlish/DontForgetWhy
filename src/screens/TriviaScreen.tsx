@@ -25,6 +25,7 @@ import {
 } from '../services/triviaStorage';
 import type { TriviaQuestion, TriviaCategory } from '../types/trivia';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trivia'>;
@@ -374,6 +375,9 @@ export default function TriviaScreen({ navigation }: Props) {
         <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
+        <View style={styles.headerHome}>
+          <HomeButton />
+        </View>
         <Text style={styles.title}>Trivia Time</Text>
       </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -465,6 +469,9 @@ export default function TriviaScreen({ navigation }: Props) {
         <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
+        <View style={styles.headerHome}>
+          <HomeButton />
+        </View>
         <Text style={styles.title}>Trivia Time</Text>
       </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -539,6 +546,7 @@ export default function TriviaScreen({ navigation }: Props) {
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
           <BackButton onPress={handleBackFromGame} />
+          <HomeButton />
         </View>
         <View style={styles.topBarRight}>
           <Text style={styles.topBarCounter}>{currentIndex + 1}/{questions.length}</Text>
@@ -641,6 +649,11 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
     headerBack: {
       position: 'absolute',
       left: 20,
+      top: insets.top + 10,
+    },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
       top: insets.top + 10,
     },
     title: {

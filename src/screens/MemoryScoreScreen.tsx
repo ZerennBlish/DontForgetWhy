@@ -17,6 +17,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import type { TriviaStats, TriviaCategory } from '../types/trivia';
@@ -209,6 +210,9 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     <View style={styles.header}>
       <View style={styles.headerBack}>
         <BackButton onPress={() => navigation.goBack()} />
+      </View>
+      <View style={styles.headerHome}>
+        <HomeButton />
       </View>
       <Text style={styles.title}>{'\u{1F3C6}'} Memory Score</Text>
     </View>
@@ -541,6 +545,11 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
     headerBack: {
       position: 'absolute',
       left: 20,
+      top: topInset + 10,
+    },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
       top: topInset + 10,
     },
     title: {

@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -118,6 +119,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     headerBack: {
       position: 'absolute',
       left: 20,
+      top: insets.top + 10,
+    },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
       top: insets.top + 10,
     },
     content: {
@@ -545,6 +551,9 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       <View style={styles.header}>
         <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
+        </View>
+        <View style={styles.headerHome}>
+          <HomeButton />
         </View>
         <Text style={styles.heading}>{form.isEditing ? 'Edit Alarm' : 'New Alarm'}</Text>
         <View style={styles.headerRight}>

@@ -27,6 +27,7 @@ import { saveVoiceMemoFile, deleteVoiceMemoFile } from '../services/voiceMemoFil
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
 import type { VoiceMemo } from '../types/voiceMemo';
 
@@ -356,6 +357,11 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           left: 20,
           top: insets.top + 10,
         },
+        headerHome: {
+          position: 'absolute',
+          left: 64,
+          top: insets.top + 10,
+        },
         headerSave: {
           position: 'absolute',
           left: 64,
@@ -584,6 +590,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           <View style={styles.headerBack}>
             <BackButton onPress={() => navigation.goBack()} />
           </View>
+          <View style={styles.headerHome}>
+            <HomeButton />
+          </View>
           <Text style={styles.headerTitle}>Voice Memo</Text>
         </View>
         <View style={styles.notFound}>
@@ -625,6 +634,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       <View style={styles.header}>
         <View style={styles.headerBack}>
           <BackButton onPress={handleBack} />
+        </View>
+        <View style={styles.headerHome}>
+          <HomeButton />
         </View>
         {!isNewRecording && hasUnsavedChanges && (
           <View style={styles.headerSave}>

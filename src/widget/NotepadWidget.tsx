@@ -179,7 +179,7 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
           style={{ flex: 1, alignItems: 'center' }}
         >
           <TextWidget
-            text={'\u{1F4DD} Notes'}
+            text={'\u{1F4DD} Forget Me Notes'}
             style={{
               fontSize: 16,
               fontWeight: 'bold',

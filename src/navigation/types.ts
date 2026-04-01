@@ -1,8 +1,11 @@
 import { Alarm } from '../types/alarm';
 
 export type RootStackParamList = {
+  Home: undefined;
   Onboarding: { startSlide?: number } | undefined;
   AlarmList: { initialTab?: number } | undefined;
+  Timers: undefined;
+  VoiceMemoList: undefined;
   CreateAlarm: { alarm?: Alarm; initialDate?: string } | undefined;
   CreateReminder: { reminderId?: string; initialDate?: string } | undefined;
   AlarmFire: {
@@ -27,7 +30,7 @@ export type RootStackParamList = {
   ForgetLog: undefined;
   About: undefined;
   Trivia: undefined;
-  Notepad: { noteId?: string; newNote?: boolean; initialFilter?: 'all' | 'notes' | 'voice' } | undefined;
+  Notepad: { noteId?: string; newNote?: boolean } | undefined;
   Calendar: { initialDate?: string } | undefined;
   VoiceRecord: undefined;
   VoiceMemoDetail: { memoId: string } | { tempUri: string; duration: number };

@@ -88,9 +88,11 @@ interface InitState {
   alarmFireParams: RootStackParamList['AlarmFire'] | null;
   notepadParams: RootStackParamList['Notepad'] | null;
   alarmListParams: RootStackParamList['AlarmList'] | null;
+  timerParams: boolean;
   createAlarmParams: RootStackParamList['CreateAlarm'] | null;
   createReminderParams: RootStackParamList['CreateReminder'] | null;
   calendarParams: RootStackParamList['Calendar'] | null;
+  voiceMemoListParams: boolean;
   voiceRecordParams: RootStackParamList['VoiceRecord'] | null;
   voiceMemoDetailParams: RootStackParamList['VoiceMemoDetail'] | null;
 }
@@ -371,9 +373,24 @@ export function useNotificationRouting() {
           } catch {}
         }
 
+        // 6b. Check for pending timer action from widget deep-link
+        let timerParams = false;
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingTimerAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingTimerAction');
+              const parsed = JSON.parse(raw) as { timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                timerParams = true;
+              }
+            }
+          } catch {}
+        }
+
         // 7. Check for pending calendar action from widget deep-link
         let calendarParams: RootStackParamList['Calendar'] | null = null;
-        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams) {
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !timerParams) {
           try {
             const raw = await AsyncStorage.getItem('pendingCalendarAction');
             if (raw) {
@@ -387,16 +404,19 @@ export function useNotificationRouting() {
         }
 
         // 8. Check for pending voice action from widget deep-link
+        let voiceMemoListParams = false;
         let voiceRecordParams: RootStackParamList['VoiceRecord'] | null = null;
         let voiceMemoDetailParams: RootStackParamList['VoiceMemoDetail'] | null = null;
-        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !calendarParams) {
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !timerParams && !calendarParams) {
           try {
             const raw = await AsyncStorage.getItem('pendingVoiceAction');
             if (raw) {
               await AsyncStorage.removeItem('pendingVoiceAction');
               const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
               if (Date.now() - parsed.timestamp < 10000) {
-                if (parsed.type === 'record') {
+                if (parsed.type === 'list') {
+                  voiceMemoListParams = true;
+                } else if (parsed.type === 'record') {
                   voiceRecordParams = undefined;
                 } else if (parsed.type === 'detail' && parsed.memoId) {
                   voiceMemoDetailParams = { memoId: parsed.memoId };
@@ -407,10 +427,10 @@ export function useNotificationRouting() {
         }
 
         console.log('[NOTIF] INIT — complete. alarmFireParams:', alarmFireParams ? 'SET' : 'null');
-        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams, calendarParams, voiceRecordParams, voiceMemoDetailParams });
+        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, timerParams, createAlarmParams, createReminderParams, calendarParams, voiceMemoListParams, voiceRecordParams, voiceMemoDetailParams });
       } catch (e) {
         console.error('[NOTIF] INIT — fatal error:', e);
-        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: null, createAlarmParams: null, createReminderParams: null, calendarParams: null, voiceRecordParams: null, voiceMemoDetailParams: null });
+        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: null, timerParams: false, createAlarmParams: null, createReminderParams: null, calendarParams: null, voiceMemoListParams: false, voiceRecordParams: null, voiceMemoDetailParams: null });
       }
     })();
   }, []);
@@ -632,7 +652,7 @@ export function useNotificationRouting() {
         // If fire screen is showing, close it since alarm was handled via notification action
         if (navigationRef.current?.getCurrentRoute?.()?.name === 'AlarmFire') {
           stopAlarmSound();
-          navigationRef.current.reset({ index: 0, routes: [{ name: 'AlarmList' }] });
+          navigationRef.current.reset({ index: 0, routes: [{ name: 'Home' }, { name: 'AlarmList' }] });
         }
       }
 
@@ -751,13 +771,26 @@ export function useNotificationRouting() {
       }
     }).catch(() => {});
 
+    // Check for pending timer action from widget
+    AsyncStorage.getItem('pendingTimerAction').then((raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingTimerAction');
+        const parsed = JSON.parse(raw) as { timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          navigationRef.current.navigate('Timers');
+        }
+      }
+    }).catch(() => {});
+
     // Check for pending voice action from widget
     AsyncStorage.getItem('pendingVoiceAction').then((raw) => {
       if (raw && navigationRef.current) {
         AsyncStorage.removeItem('pendingVoiceAction');
         const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
         if (Date.now() - parsed.timestamp < 10000) {
-          if (parsed.type === 'record') {
+          if (parsed.type === 'list') {
+            navigationRef.current.navigate('VoiceMemoList');
+          } else if (parsed.type === 'record') {
             navigationRef.current.navigate('VoiceRecord');
           } else if (parsed.type === 'detail' && parsed.memoId) {
             navigationRef.current.navigate('VoiceMemoDetail', { memoId: parsed.memoId });
@@ -766,7 +799,18 @@ export function useNotificationRouting() {
       }
     }).catch(() => {});
 
-    // pendingTabAction is now handled directly by AlarmListScreen
+    // Check for pending tab action from widget (alarms/reminders)
+    AsyncStorage.getItem('pendingTabAction').then((raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingTabAction');
+        try {
+          const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+          if (Date.now() - parsed.timestamp < 10000) {
+            navigationRef.current.navigate('AlarmList', { initialTab: parsed.tab });
+          }
+        } catch {}
+      }
+    }).catch(() => {});
   }, [navigateToAlarmFire]);
 
   // ── AppState fallback ────────────────────────────────────────────
@@ -787,7 +831,7 @@ export function useNotificationRouting() {
                 }
               );
               if (!hasAlarmNotif && navigationRef.current) {
-                navigationRef.current.reset({ index: 0, routes: [{ name: 'AlarmList' }] });
+                navigationRef.current.reset({ index: 0, routes: [{ name: 'Home' }, { name: 'AlarmList' }] });
               }
             }).catch(() => {});
             return;
@@ -849,13 +893,25 @@ export function useNotificationRouting() {
             }
           }
         }).catch(() => {});
+        // Check for pending timer action from widget
+        AsyncStorage.getItem('pendingTimerAction').then((raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingTimerAction');
+            const parsed = JSON.parse(raw) as { timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              navigationRef.current.navigate('Timers');
+            }
+          }
+        }).catch(() => {});
         // Check for pending voice action from widget
         AsyncStorage.getItem('pendingVoiceAction').then((raw) => {
           if (raw && navigationRef.current) {
             AsyncStorage.removeItem('pendingVoiceAction');
             const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
             if (Date.now() - parsed.timestamp < 10000) {
-              if (parsed.type === 'record') {
+              if (parsed.type === 'list') {
+                navigationRef.current.navigate('VoiceMemoList');
+              } else if (parsed.type === 'record') {
                 navigationRef.current.navigate('VoiceRecord');
               } else if (parsed.type === 'detail' && parsed.memoId) {
                 navigationRef.current.navigate('VoiceMemoDetail', { memoId: parsed.memoId });
@@ -863,7 +919,18 @@ export function useNotificationRouting() {
             }
           }
         }).catch(() => {});
-        // pendingTabAction is now handled directly by AlarmListScreen
+        // Check for pending tab action from widget (alarms/reminders)
+        AsyncStorage.getItem('pendingTabAction').then((raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingTabAction');
+            try {
+              const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                navigationRef.current.navigate('AlarmList', { initialTab: parsed.tab });
+              }
+            } catch {}
+          }
+        }).catch(() => {});
       }
     });
     return () => subscription.remove();

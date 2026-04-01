@@ -22,6 +22,9 @@ import NotepadScreen from './src/screens/NotepadScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import VoiceRecordScreen from './src/screens/VoiceRecordScreen';
 import VoiceMemoDetailScreen from './src/screens/VoiceMemoDetailScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import TimerScreen from './src/screens/TimerScreen';
+import VoiceMemoListScreen from './src/screens/VoiceMemoListScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -52,57 +55,73 @@ function AppNavigator() {
   // Wait for init phase to complete before rendering the navigator.
   if (!initState) return null;
 
-  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, createAlarmParams, createReminderParams, calendarParams, voiceRecordParams, voiceMemoDetailParams } = initState;
+  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, timerParams, createAlarmParams, createReminderParams, calendarParams, voiceMemoListParams, voiceRecordParams, voiceMemoDetailParams } = initState;
 
   // For TRUE cold start: set initialState so the navigator renders
   // AlarmFireScreen or NotepadScreen on the very first frame.
   const initialNavState = alarmFireParams ? {
     routes: [
+      { name: 'Home' as const },
       { name: 'AlarmList' as const },
       { name: 'AlarmFire' as const, params: alarmFireParams },
     ],
-    index: 1,
+    index: 2,
   } : notepadParams ? {
     routes: [
-      { name: 'AlarmList' as const },
+      { name: 'Home' as const },
       { name: 'Notepad' as const, params: notepadParams },
     ],
     index: 1,
   } : createAlarmParams ? {
     routes: [
+      { name: 'Home' as const },
       { name: 'AlarmList' as const },
       { name: 'CreateAlarm' as const, params: createAlarmParams },
     ],
-    index: 1,
+    index: 2,
   } : createReminderParams ? {
     routes: [
+      { name: 'Home' as const },
       { name: 'AlarmList' as const },
       { name: 'CreateReminder' as const, params: createReminderParams },
     ],
-    index: 1,
+    index: 2,
   } : calendarParams ? {
     routes: [
-      { name: 'AlarmList' as const },
+      { name: 'Home' as const },
       { name: 'Calendar' as const, params: calendarParams },
+    ],
+    index: 1,
+  } : voiceMemoListParams ? {
+    routes: [
+      { name: 'Home' as const },
+      { name: 'VoiceMemoList' as const },
     ],
     index: 1,
   } : voiceRecordParams !== null ? {
     routes: [
-      { name: 'AlarmList' as const },
+      { name: 'Home' as const },
       { name: 'VoiceRecord' as const },
     ],
     index: 1,
   } : voiceMemoDetailParams ? {
     routes: [
-      { name: 'AlarmList' as const },
+      { name: 'Home' as const },
       { name: 'VoiceMemoDetail' as const, params: voiceMemoDetailParams },
     ],
     index: 1,
   } : alarmListParams ? {
     routes: [
+      { name: 'Home' as const },
       { name: 'AlarmList' as const, params: alarmListParams },
     ],
-    index: 0,
+    index: 1,
+  } : timerParams ? {
+    routes: [
+      { name: 'Home' as const },
+      { name: 'Timers' as const },
+    ],
+    index: 1,
   } : undefined;
 
   return (
@@ -115,7 +134,7 @@ function AppNavigator() {
         initialState={initialNavState}
       >
         <Stack.Navigator
-          initialRouteName={onboardingDone ? 'AlarmList' : 'Onboarding'}
+          initialRouteName={onboardingDone ? 'Home' : 'Onboarding'}
           screenOptions={{
             headerShown: false,
             animation: 'slide_from_right',
@@ -127,7 +146,13 @@ function AppNavigator() {
             component={OnboardingScreen}
             options={{ animation: 'fade', gestureEnabled: false }}
           />
+          <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="AlarmList" component={AlarmListScreen} />
+          <Stack.Screen
+            name="Timers"
+            component={TimerScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
           <Stack.Screen
             name="CreateAlarm"
             component={CreateAlarmScreen}
@@ -196,6 +221,11 @@ function AppNavigator() {
           <Stack.Screen
             name="Calendar"
             component={CalendarScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="VoiceMemoList"
+            component={VoiceMemoListScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen

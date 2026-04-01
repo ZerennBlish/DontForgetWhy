@@ -12,6 +12,7 @@ import { Calendar } from 'react-native-calendars';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import { loadAlarms } from '../services/storage';
 import { getReminders } from '../services/reminderStorage';
 import { getNotes } from '../services/noteStorage';
@@ -508,6 +509,11 @@ export default function CalendarScreen({ navigation, route }: Props) {
         headerBack: {
           position: 'absolute',
           left: 20,
+          top: insets.top + 10,
+        },
+        headerHome: {
+          position: 'absolute',
+          left: 64,
           top: insets.top + 10,
         },
         title: {
@@ -1072,6 +1078,9 @@ export default function CalendarScreen({ navigation, route }: Props) {
       <View style={styles.header}>
         <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
+        </View>
+        <View style={styles.headerHome}>
+          <HomeButton />
         </View>
         <Text style={styles.title}>{'\uD83D\uDCC5'} Calendar</Text>
       </View>

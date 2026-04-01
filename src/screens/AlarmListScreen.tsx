@@ -5,7 +5,6 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   AppState,
   useWindowDimensions,
 } from 'react-native';
@@ -13,23 +12,16 @@ import { TabView } from 'react-native-tab-view';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Alarm } from '../types/alarm';
-import type { ActiveTimer } from '../types/timer';
 import { loadAlarms } from '../services/storage';
-import { scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
-import { loadSettings, getDefaultTimerSound } from '../services/settings';
+import { loadSettings } from '../services/settings';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
-import {
-  loadActiveTimers,
-  saveActiveTimers,
-} from '../services/timerStorage';
 import { pruneAlarmPins } from '../services/widgetPins';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReminders } from '../services/reminderStorage';
-import { getNotes } from '../services/noteStorage';
-import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import AlarmsTab from './AlarmsTab';
-import TimerScreen from './TimerScreen';
 import ReminderScreen from './ReminderScreen';
+import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight } from '../utils/haptics';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
@@ -38,18 +30,6 @@ import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmList'>;
 
-function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
-  const now = Date.now();
-  return timers.map((t) => {
-    if (!t.isRunning) return t;
-    const elapsed = Math.floor(
-      (now - new Date(t.startedAt).getTime()) / 1000
-    );
-    const remaining = Math.max(0, t.totalSeconds - elapsed);
-    return { ...t, remainingSeconds: remaining, isRunning: remaining > 0 };
-  });
-}
-
 export default function AlarmListScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -57,18 +37,14 @@ export default function AlarmListScreen({ navigation, route }: Props) {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
-  const [appQuote, setAppQuote] = useState(getRandomAppOpenQuote);
   const [index, setIndex] = useState(0);
-  const tab = (['alarms', 'timers', 'reminders'] as const)[index];
+  const tab = (['alarms', 'reminders'] as const)[index];
   const [routes] = useState([
     { key: 'alarms', title: 'Alarms' },
-    { key: 'timers', title: 'Timers' },
     { key: 'reminders', title: 'Reminders' },
   ]);
-  const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const [pinnedAlarmIds, setPinnedAlarmIds] = useState<string[]>([]);
   const [reminderCount, setReminderCount] = useState(0);
-  const [noteCount, setNoteCount] = useState(0);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
 
@@ -78,72 +54,18 @@ export default function AlarmListScreen({ navigation, route }: Props) {
       backgroundColor: colors.background,
     },
     header: {
-      paddingTop: 60,
+      paddingTop: insets.top + 10,
       paddingHorizontal: 20,
       paddingBottom: 16,
     },
-    headerRow: {
+    backButton: {
       flexDirection: 'row',
-      justifyContent: 'center',
       alignItems: 'center',
-    },
-    title: {
-      fontSize: 28,
-      fontWeight: '800',
-      color: colors.textPrimary,
-    },
-    headerGear: {
-      position: 'absolute',
-      right: 0,
-      padding: 4,
-    },
-    headerGearIcon: {
-      fontSize: 24,
-    },
-    navCardRow: {
-      flexDirection: 'row',
       gap: 8,
-      marginTop: 12,
-    },
-    navCard: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      gap: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderLeftWidth: 3,
-      borderLeftColor: colors.border,
-    },
-    navCardIcon: {
-      fontSize: 20,
-    },
-    navCardText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
-    navBadge: {
-      backgroundColor: colors.accent,
-      borderRadius: 7,
-      minWidth: 14,
-      height: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 3,
-    },
-    navBadgeText: {
-      color: '#FFFFFF',
-      fontSize: 9,
-      fontWeight: '700',
+      marginBottom: 12,
     },
     subtitleRow: {
       flexDirection: 'row',
-      marginTop: 12,
       paddingHorizontal: 2,
     },
     subtitleItem: {
@@ -197,7 +119,6 @@ export default function AlarmListScreen({ navigation, route }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      setAppQuote(getRandomAppOpenQuote());
       loadAlarms(true).then((loaded) => {
         setAlarms(loaded);
         pruneAlarmPins(loaded.filter((a) => !a.deletedAt).map((a) => a.id)).then(setPinnedAlarmIds);
@@ -209,7 +130,6 @@ export default function AlarmListScreen({ navigation, route }: Props) {
       getReminders().then((loaded) => {
         setReminderCount(loaded.filter((r) => !r.completed).length);
       });
-      getNotes().then((loaded) => setNoteCount(loaded.length));
       loadBackground().then(setBgUri);
       getOverlayOpacity().then(setBgOpacity);
     }, [])
@@ -267,206 +187,6 @@ export default function AlarmListScreen({ navigation, route }: Props) {
     return () => sub.remove();
   }, []);
 
-  // Load active timers on mount (picks up widget-started timers on cold start)
-  useEffect(() => {
-    loadActiveTimers().then((loaded) => {
-      const recalculated = recalculateTimers(loaded);
-      setActiveTimers(recalculated);
-      if (route.params?.initialTab === undefined && recalculated.some((t) => t.isRunning)) {
-        setIndex(1);
-      }
-      const needsSave = recalculated.some(
-        (t, i) => t.remainingSeconds !== loaded[i].remainingSeconds
-      );
-      if (needsSave) saveActiveTimers(recalculated);
-    });
-  }, []);
-
-  // Tick every second
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveTimers((prev) => {
-        const hasRunning = prev.some(
-          (t) => t.isRunning && t.remainingSeconds > 0
-        );
-        if (!hasRunning) return prev;
-
-        let completed = false;
-        const updated = prev.map((t) => {
-          if (!t.isRunning || t.remainingSeconds <= 0) return t;
-          const remaining = t.remainingSeconds - 1;
-          if (remaining <= 0) {
-            completed = true;
-            return { ...t, remainingSeconds: 0, isRunning: false };
-          }
-          return { ...t, remainingSeconds: remaining };
-        });
-
-        if (completed) saveActiveTimers(updated);
-        return updated;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Reload active timers when app returns to foreground (picks up widget-started timers)
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active') {
-        loadActiveTimers().then((loaded) => {
-          const recalculated = recalculateTimers(loaded);
-          setActiveTimers((prev) => {
-            const prevIds = new Set(prev.map((t) => t.id));
-            if (recalculated.some((t) => !prevIds.has(t.id))) {
-              setIndex(1);
-            }
-            return recalculated;
-          });
-          const needsSave = recalculated.some(
-            (t, i) => t.remainingSeconds !== loaded[i].remainingSeconds
-          );
-          if (needsSave) saveActiveTimers(recalculated);
-        });
-      }
-    });
-    return () => subscription.remove();
-  }, []);
-
-  const handleAddTimer = async (timer: ActiveTimer) => {
-    const completionTimestamp = Date.now() + timer.remainingSeconds * 1000;
-
-    // Load default timer sound
-    let soundUri: string | undefined;
-    let soundName: string | undefined;
-    try {
-      const defaultSound = await getDefaultTimerSound();
-      console.log('[handleAddTimer] defaultSound:', JSON.stringify(defaultSound));
-      if (defaultSound.uri) {
-        soundUri = defaultSound.uri;
-        soundName = defaultSound.name || 'Custom';
-      }
-    } catch (err) {
-      console.error('[handleAddTimer] getDefaultTimerSound failed:', err);
-    }
-
-    let notificationId: string | undefined;
-    try {
-      console.log('[handleAddTimer] scheduling notification with sound:', soundUri, soundName);
-      notificationId = await scheduleTimerNotification(
-        timer.label,
-        timer.icon,
-        completionTimestamp,
-        timer.id,
-        soundUri,
-        soundName,
-        timer.soundId,
-      );
-      console.log('[handleAddTimer] notificationId:', notificationId);
-    } catch (error) {
-      console.error('[handleAddTimer] scheduleTimerNotification failed:', error);
-      Alert.alert('Timer Started', 'Timer is running but the notification could not be scheduled.');
-    }
-    showTimerCountdownNotification(timer.label, timer.icon, completionTimestamp, timer.id).catch(
-      (e) => console.error('[handleAddTimer] showTimerCountdownNotification failed:', e),
-    );
-    const timerWithNotif = { ...timer, notificationId };
-    setActiveTimers((prev) => {
-      const updated = [...prev, timerWithNotif];
-      saveActiveTimers(updated);
-      return updated;
-    });
-  };
-
-  const handleRemoveTimer = async (id: string) => {
-    const timer = activeTimers.find((t) => t.id === id);
-    if (timer?.notificationId) {
-      await cancelTimerNotification(timer.notificationId);
-    }
-    cancelTimerCountdownNotification(id).catch(
-      (e) => console.error('[handleRemoveTimer] cancelTimerCountdownNotification failed:', e),
-    );
-    setActiveTimers((prev) => {
-      const updated = prev.filter((t) => t.id !== id);
-      saveActiveTimers(updated);
-      return updated;
-    });
-  };
-
-  const handleTogglePause = async (id: string) => {
-    const timer = activeTimers.find((t) => t.id === id);
-    if (!timer) return;
-
-    if (timer.isRunning) {
-      // Pausing — await cancellation before clearing notificationId
-      if (timer.notificationId) {
-        await cancelTimerNotification(timer.notificationId);
-      }
-      await cancelTimerCountdownNotification(timer.id).catch(
-        (e) => console.error('[handleTogglePause] cancelTimerCountdownNotification failed:', e),
-      );
-      setActiveTimers((prev) => {
-        const updated = prev.map((t) =>
-          t.id === id ? { ...t, isRunning: false, notificationId: undefined } : t
-        );
-        saveActiveTimers(updated);
-        return updated;
-      });
-    } else {
-      // Resuming — schedule notification FIRST, only mark running on success
-      const elapsed = timer.totalSeconds - timer.remainingSeconds;
-      const newStartedAt = new Date(Date.now() - elapsed * 1000).toISOString();
-
-      if (timer.remainingSeconds > 0) {
-        const ts = Date.now() + timer.remainingSeconds * 1000;
-
-        // Load default timer sound for rescheduled notification
-        let rSoundUri: string | undefined;
-        let rSoundName: string | undefined;
-        try {
-          const defaultSound = await getDefaultTimerSound();
-          console.log('[handleTogglePause] defaultSound:', JSON.stringify(defaultSound));
-          if (defaultSound.uri) {
-            rSoundUri = defaultSound.uri;
-            rSoundName = defaultSound.name || 'Custom';
-          }
-        } catch (err) {
-          console.error('[handleTogglePause] getDefaultTimerSound failed:', err);
-        }
-
-        try {
-          const notifId = await scheduleTimerNotification(
-            timer.label, timer.icon, ts, timer.id, rSoundUri, rSoundName, timer.soundId,
-          );
-          // Notification scheduled — now mark timer as running
-          setActiveTimers((prev) => {
-            const updated = prev.map((t) =>
-              t.id === id
-                ? { ...t, isRunning: true, startedAt: newStartedAt, notificationId: notifId }
-                : t
-            );
-            saveActiveTimers(updated);
-            return updated;
-          });
-          showTimerCountdownNotification(timer.label, timer.icon, ts, timer.id).catch(
-            (e) => console.error('[handleTogglePause] showTimerCountdownNotification failed:', e),
-          );
-        } catch (error) {
-          console.error('[handleTogglePause] scheduleTimerNotification failed:', error);
-          Alert.alert('Resume Failed', 'Could not schedule the timer notification. The timer remains paused.');
-        }
-      } else {
-        // No time remaining — just mark as running (will finish immediately)
-        setActiveTimers((prev) => {
-          const updated = prev.map((t) =>
-            t.id === id ? { ...t, isRunning: true, startedAt: newStartedAt } : t
-          );
-          saveActiveTimers(updated);
-          return updated;
-        });
-      }
-    }
-  };
-
   const hasPlayed = stats && (stats.wins > 0 || stats.losses > 0 || stats.skips > 0);
 
   return (
@@ -486,58 +206,15 @@ export default function AlarmListScreen({ navigation, route }: Props) {
         )}
       </View>
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>Don't Forget Why</Text>
-          <TouchableOpacity
-            onPress={() => { hapticLight(); navigation.navigate('Settings'); }}
-            activeOpacity={0.7}
-            style={styles.headerGear}
-          >
-            <Text style={styles.headerGearIcon}>{'\u2699\uFE0F'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.navCardRow}>
-          <TouchableOpacity
-            onPress={() => { hapticLight(); navigation.navigate('Notepad'); }}
-            activeOpacity={0.7}
-            style={styles.navCard}
-          >
-            <Text style={styles.navCardIcon}>{'\u{1F4DD}'}</Text>
-            <Text style={styles.navCardText}>Notes</Text>
-            {noteCount > 0 && (
-              <View style={styles.navBadge}>
-                <Text style={styles.navBadgeText}>{noteCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => { hapticLight(); navigation.navigate('Calendar'); }}
-            activeOpacity={0.7}
-            style={styles.navCard}
-          >
-            <Text style={styles.navCardIcon}>{'\u{1F4C5}'}</Text>
-            <Text style={styles.navCardText}>Calendar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => { hapticLight(); navigation.navigate('Games'); }}
-            activeOpacity={0.7}
-            style={styles.navCard}
-          >
-            <Text style={styles.navCardIcon}>{'\u{1F3AE}'}</Text>
-            <Text style={styles.navCardText}>Games</Text>
-          </TouchableOpacity>
+        <View style={styles.backButton}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <HomeButton />
         </View>
 
         <View style={styles.subtitleRow}>
           <View style={styles.subtitleItem}>
             <Text style={styles.subtitleText}>
               {(() => { const c = alarms.filter(a => a.enabled && !a.deletedAt).length; return `${c} alarm${c !== 1 ? 's' : ''}`; })()}
-            </Text>
-          </View>
-          <View style={styles.subtitleItem}>
-            <Text style={styles.subtitleText}>
-              {(() => { const c = activeTimers.filter(t => t.isRunning).length; return `${c} timer${c !== 1 ? 's' : ''}`; })()}
             </Text>
           </View>
           <View style={styles.subtitleItem}>
@@ -592,17 +269,7 @@ export default function AlarmListScreen({ navigation, route }: Props) {
                   navigation={navigation}
                   pinnedAlarmIds={pinnedAlarmIds}
                   setPinnedAlarmIds={setPinnedAlarmIds}
-                  appQuote={appQuote}
                   stats={stats}
-                />
-              );
-            case 'timers':
-              return (
-                <TimerScreen
-                  activeTimers={activeTimers}
-                  onAddTimer={handleAddTimer}
-                  onRemoveTimer={handleRemoveTimer}
-                  onTogglePause={handleTogglePause}
                 />
               );
             case 'reminders':

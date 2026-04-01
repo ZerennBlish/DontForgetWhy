@@ -18,6 +18,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import TimePicker from '../components/TimePicker';
 import DayPickerRow from '../components/DayPickerRow';
 import { useReminderForm } from '../hooks/useReminderForm';
@@ -106,6 +107,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     headerBack: {
       position: 'absolute',
       left: 20,
+      top: insets.top + 10,
+    },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
       top: insets.top + 10,
     },
     content: {
@@ -515,6 +521,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       <View style={styles.header}>
         <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
+        </View>
+        <View style={styles.headerHome}>
+          <HomeButton />
         </View>
         <Text style={styles.heading}>
           {form.existing ? 'Edit Reminder' : 'New Reminder'}

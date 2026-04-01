@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticMedium, hapticLight } from '../utils/haptics';
 import { checkConnectivity } from '../utils/connectivity';
 import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
 import {
   RIDDLES,
@@ -287,6 +288,11 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         headerBack: {
           position: 'absolute',
           left: 20,
+          top: insets.top + 10,
+        },
+        headerHome: {
+          position: 'absolute',
+          left: 64,
           top: insets.top + 10,
         },
         title: {
@@ -1101,6 +1107,9 @@ export default function DailyRiddleScreen({ navigation }: Props) {
     <View style={styles.header}>
       <View style={styles.headerBack}>
         <BackButton onPress={() => navigation.goBack()} />
+      </View>
+      <View style={styles.headerHome}>
+        <HomeButton />
       </View>
       <Text style={styles.title}>{'\u{1F4A1}'} Daily Riddle</Text>
     </View>
