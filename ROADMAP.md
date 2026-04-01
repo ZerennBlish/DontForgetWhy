@@ -487,26 +487,46 @@
 
 ## BACKLOG (Not Scheduled)
 
-### Architecture / Infrastructure
-- ~~Home screen (main menu)~~ — DONE in v1.9.0
-- ~~Expo SDK 55 upgrade~~ — DONE in v1.8.1
-- Light / Dark / High Contrast themes (replacing 6 color themes) — simplifies all styling decisions
-- AsyncStorage → SQLite migration (when scale demands it)
-- Cloud backup / export (.dfw backup file — no accounts, zip AsyncStorage + voice-memos/ + note-images/)
-- Jest suite resurrection — 222 tests on testing-setup branch, massively outdated
-- NotepadScreen further decomposition (~1240 lines — getting unwieldy)
+### Bugs (Fix Before New Features)
+- Guess Why game: shows answer immediately without guess screen (pre-existing, needs investigation)
+- Yearly recurring reminder: reschedules without firing notification first (pre-existing, needs investigation)
+- Recurring reminder with empty days array matches every day on calendar widget (pre-existing, needs investigation)
+- ExpoKeepAwake promise rejections during activity transitions — wrap in try-catch instead of using hook (dev-mode only, SDK 55)
+- Home screen title centering — verify applied
 
-### Visual Unification
-- All bars/cards across app match new dark bar style with accent borders
+### UI Unification
+- Swipe to delete on cards (possible now that alarms/reminders separated from tab swiping)
+- Separate alarms and reminders into their own screens (enables swipe gesture)
+- Alarm and reminder cards restyle to match notes and voice memo dark bar style with colored left border accents
+- All cards app-wide use unified dark bar pattern
 - All buttons match capsule pattern (pin, delete, actions) — already done for notes/voice memos/alarms/reminders
 - All icons checked for consistency across screens
 - Pin toggle inside edit/detail screens (alarms, reminders, notes, voice memos)
 
-### Voice Expansion
+### Features
+- Timer notification buttons: "Go Away" (dismiss) + "Start me?" (restart same timer)
+- Add holidays to calendar
+- Onboarding voice intro — Alarm Guy audio clip on first launch explaining the app
+- Theme-responsive icon colors — home screen grid adapts to light/dark/high contrast themes
 - Voice memos attachable to alarms (hear your own voice when alarm fires — "viral-worthy UX")
-- Voice memos attachable to reminders and timers
 - More voice roast clips throughout app (navigation, actions, idle moments)
 - Female voice character (alarm guy's girlfriend) — future user-selectable option
+- P4: Chess/Checkers (pure JS, no build needed)
+- P5: Google Calendar sync
+- P6: Memory Score expansion
+- P7: Firebase online content + leaderboards
+- P8: Pro tier ($1.99 one-time, free features stay free)
+- Cloud backup / export (.dfw backup file — no accounts, zip AsyncStorage + voice-memos/ + note-images/)
+
+### Infrastructure
+- Jest suite resurrection — 222 tests on testing-setup branch, needs SDK 55 + new screen coverage
+- Storage audit — voice memo disk usage, AsyncStorage limits at scale
+- Full abandoned package audit (find and remove unused dependencies)
+- Full code audit (fresh eyes on entire codebase post-restructure)
+- R8 deobfuscation mapping file upload for Play Console crash reports
+- Light / Dark / High Contrast theme consolidation (replace 6 color themes with 3)
+- AsyncStorage → SQLite migration (when scale demands it)
+- NotepadScreen further decomposition (~1240 lines — getting unwieldy)
 
 ### Store / Marketing
 - Play Store listing update for v1.9.0 (home screen, widget rebranding, voice memo separation)
@@ -515,18 +535,16 @@
 - Widget preview screenshots for store listing
 - App size audit (63 voice clips + Skia + voice memo recordings)
 
-### Known Issues (Pre-Existing)
-- Recurring reminder with empty days array matches every day on calendar widget (needs investigation)
-- Guess Why game: shows answer immediately without guess screen (needs investigation)
-- Yearly recurring reminder: reschedules without firing first (needs investigation)
-- ExpoKeepAwake promise rejections during activity transitions (dev-mode only, SDK 55 stricter promise handling)
-
 ### Recurring / Existing
 - Recurring reminder UX: annual set for today when time passed should auto-schedule next year
 - Daily Riddle scoring design review
 - AlarmListScreen further decomposition (~600 lines)
 - Accessibility pass (screen reader labels on View-based icons)
 - OOM prevention: FlatList windowSize/removeClippedSubviews for image-heavy note lists
+
+### Completed (Backlog Items Shipped)
+- ~~Home screen (main menu)~~ — DONE in v1.9.0
+- ~~Expo SDK 55 upgrade~~ — DONE in v1.8.1
 
 ---
 
