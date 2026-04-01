@@ -336,7 +336,7 @@ export default function VoiceRecordScreen({ navigation }: Props) {
         recordingLabel: {
           fontSize: 14,
           fontWeight: '600',
-          color: '#FF6B6B',
+          color: colors.red,
           opacity: 0.8,
           marginTop: -32,
           marginBottom: 32,
@@ -373,14 +373,14 @@ export default function VoiceRecordScreen({ navigation }: Props) {
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: `rgba(0,0,0,${bgOpacity})` },
+                { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` },
               ]}
             />
           </>
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />
         )}
@@ -437,7 +437,7 @@ export default function VoiceRecordScreen({ navigation }: Props) {
         ) : (
           <>
             <TouchableOpacity
-              style={[styles.recordBtn, { backgroundColor: '#FF6B6B', marginBottom: 48 }]}
+              style={[styles.recordBtn, { backgroundColor: colors.red, marginBottom: 48 }]}
               onPress={handleRecordPress}
               activeOpacity={0.7}
             >

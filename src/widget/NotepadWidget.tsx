@@ -18,6 +18,13 @@ export interface WidgetTheme {
   textSecondary: string;
   border: string;
   accent: string;
+  sectionAlarm: string;
+  sectionReminder: string;
+  sectionCalendar: string;
+  sectionNotepad: string;
+  sectionVoice: string;
+  sectionTimer: string;
+  sectionGames: string;
 }
 
 export interface WidgetVoiceMemo {
@@ -127,7 +134,7 @@ function VoiceMemoCell({ memo, theme }: { memo: WidgetVoiceMemo; theme: WidgetTh
         style={{
           fontSize: 12,
           fontWeight: '500',
-          color: '#A29BFE',
+          color: theme.sectionVoice as `#${string}`,
           marginLeft: 8,
         }}
       />

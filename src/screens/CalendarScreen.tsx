@@ -58,10 +58,7 @@ interface DayComponentProps {
   onPress?: (date?: DayDate) => void;
 }
 
-const DOT_ALARM = '#FF6B6B';
-const DOT_REMINDER = '#4A90D9';
-const DOT_NOTE = '#55EFC4';
-const DOT_VOICE = '#A29BFE';
+// DOT_* colors defined inside component (need theme colors)
 
 const WEEKDAY_MAP: Record<number, AlarmDay> = {
   0: 'Sun',
@@ -267,6 +264,11 @@ const dayCellStyles = StyleSheet.create({
 export default function CalendarScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const DOT_ALARM = colors.sectionAlarm;
+  const DOT_REMINDER = colors.sectionReminder;
+  const DOT_NOTE = colors.sectionNotepad;
+  const DOT_VOICE = colors.sectionVoice;
 
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -653,6 +655,11 @@ export default function CalendarScreen({ navigation, route }: Props) {
           borderWidth: 1,
           borderColor: colors.border,
           borderLeftWidth: 4,
+          elevation: 1,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 2,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
@@ -1071,12 +1078,12 @@ export default function CalendarScreen({ navigation, route }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
           </>
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />
         )}

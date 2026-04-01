@@ -30,6 +30,7 @@ import type { Note } from '../types/note';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import BackButton from './BackButton';
+import { ImageIcon, CameraIcon, PaintBrushIcon, MicIcon } from './Icons';
 import DrawingCanvas from './DrawingCanvas';
 import type { StrokeData } from './DrawingCanvas';
 import ShareNoteModal from './ShareNoteModal';
@@ -223,6 +224,7 @@ export default function NoteEditorModal({
   const [editorVoiceMemos, setEditorVoiceMemos] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [activePlayerUri, setActivePlayerUri] = useState<string | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
 
   const pickedBgRef = useRef(customBgColor || '#4A90D9');
   const pickedFontRef = useRef(customFontColor || '#FF6B6B');
@@ -243,6 +245,7 @@ export default function NoteEditorModal({
       setShowColorPicker(false);
       setShowBgPicker(false);
       setShowFontPicker(false);
+      setShowMenu(false);
       setLightboxUri(null);
       setShowDrawing(false);
       setShowShareModal(false);
@@ -400,6 +403,29 @@ export default function NoteEditorModal({
     }
   };
 
+  const takePhoto = async () => {
+    if (isRecording) {
+      ToastAndroid.show('Stop recording first', ToastAndroid.SHORT);
+      return;
+    }
+    if (editorImages.length + editorVoiceMemos.length >= 3) {
+      ToastAndroid.show('3 attachments max. Delete one first.', ToastAndroid.SHORT);
+      return;
+    }
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      ToastAndroid.show('Camera permission needed', ToastAndroid.SHORT);
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setEditorImages((prev) => [...prev, result.assets[0].uri]);
+    }
+  };
+
   const handleMicPress = async () => {
     if (isRecording) {
       isRecordingRef.current = false;
@@ -484,7 +510,7 @@ export default function NoteEditorModal({
     },
     topBarCenter: {
       flex: 1,
-      alignItems: 'flex-start',
+      alignItems: 'center',
     },
     topBarRight: {
       flex: 1,
@@ -500,15 +526,15 @@ export default function NoteEditorModal({
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     editorTopBtnActive: {
       borderColor: colors.accent,
-      backgroundColor: 'rgba(30, 30, 40, 0.85)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.85)' : 'rgba(0, 0, 0, 0.10)',
     },
     editorTopBtnEmoji: {
       fontSize: 18,
@@ -522,7 +548,7 @@ export default function NoteEditorModal({
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
@@ -668,6 +694,40 @@ export default function NoteEditorModal({
       fontWeight: '700',
       color: colors.textPrimary,
     },
+    dropdownMenu: {
+      position: 'absolute',
+      top: insets.top + 56,
+      right: 16,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 4,
+      minWidth: 160,
+      zIndex: 100,
+      elevation: 8,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+    },
+    dropdownItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 10,
+    },
+    dropdownDot: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+    },
+    dropdownText: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.textPrimary,
+    },
     thumbnailRow: {
       flexDirection: 'row',
       justifyContent: 'space-evenly',
@@ -718,20 +778,11 @@ export default function NoteEditorModal({
 
           {/* Top bar */}
           <View style={styles.editorTopBar}>
-            <View style={styles.topBarLeft}>
-              <BackButton onPress={confirmClose} />
-              {!isViewMode && (
-                <TouchableOpacity
-                  style={{ backgroundColor: 'rgba(30, 30, 40, 0.7)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, minWidth: 70, alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}
-                  onPress={handleSave}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>Save</Text>
-                </TouchableOpacity>
-              )}
-            </View>
             {isViewMode ? (
               <>
+                <View style={styles.topBarLeft}>
+                  <BackButton onPress={confirmClose} />
+                </View>
                 <View style={styles.topBarCenter} />
                 <View style={styles.topBarRight}>
                   <TouchableOpacity
@@ -770,48 +821,30 @@ export default function NoteEditorModal({
               </>
             ) : (
               <>
-                <View style={styles.topBarCenter} />
+                <View style={styles.topBarLeft}>
+                  <BackButton onPress={confirmClose} />
+                </View>
+                <View style={styles.topBarCenter}>
+                  <TouchableOpacity
+                    style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+                    onPress={handleSave}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Save</Text>
+                  </TouchableOpacity>
+                </View>
                 <View style={styles.topBarRight}>
                   <TouchableOpacity
-                    style={styles.editorTopBtn}
+                    style={[styles.editorTopBtn, showMenu && styles.editorTopBtnActive]}
                     onPress={() => {
                       hapticLight();
                       Keyboard.dismiss();
                       setShowColorPicker(false);
-                      if (editorImages.length + editorVoiceMemos.length >= 3) {
-                        ToastAndroid.show('3 attachments max. Delete one first.', ToastAndroid.SHORT);
-                        return;
-                      }
-                      setShowDrawing(true);
+                      setShowMenu((v) => !v);
                     }}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.editorTopBtnEmoji}>{'\u{1F58C}\uFE0F'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.editorTopBtn}
-                    onPress={pickImage}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.editorTopBtnEmoji}>{'\u{1F4F7}'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.editorTopBtn, isRecording && { backgroundColor: 'rgba(255, 50, 50, 0.7)', borderColor: 'rgba(255, 50, 50, 0.5)' }]}
-                    onPress={handleMicPress}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.editorTopBtnEmoji}>{isRecording ? '\u23F9\uFE0F' : '\u{1F399}\uFE0F'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.editorTopBtn, showColorPicker && styles.editorTopBtnActive]}
-                    onPress={() => {
-                      hapticLight();
-                      Keyboard.dismiss();
-                      setShowColorPicker((v) => !v);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.editorColorIndicator, { backgroundColor: editorColor, borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.25)' }]} />
+                    <Text style={{ fontSize: 18, fontWeight: '600', color: colors.textPrimary }}>+</Text>
                   </TouchableOpacity>
                   {note && (
                     <TouchableOpacity
@@ -826,6 +859,80 @@ export default function NoteEditorModal({
               </>
             )}
           </View>
+
+          {/* Dropdown menu */}
+          {showMenu && (
+            <View style={styles.dropdownMenu}>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  hapticLight();
+                  setShowMenu(false);
+                  Keyboard.dismiss();
+                  setShowColorPicker((v) => !v);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.dropdownDot, { backgroundColor: editorColor, borderWidth: 1.5, borderColor: colors.border }]} />
+                <Text style={styles.dropdownText}>Colors</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  hapticLight();
+                  setShowMenu(false);
+                  pickImage();
+                }}
+                activeOpacity={0.7}
+              >
+                <ImageIcon color={colors.textSecondary} size={18} />
+                <Text style={styles.dropdownText}>Photo Library</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  hapticLight();
+                  setShowMenu(false);
+                  takePhoto();
+                }}
+                activeOpacity={0.7}
+              >
+                <CameraIcon color={colors.textSecondary} size={18} />
+                <Text style={styles.dropdownText}>Take Photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  hapticLight();
+                  setShowMenu(false);
+                  Keyboard.dismiss();
+                  setShowColorPicker(false);
+                  if (editorImages.length + editorVoiceMemos.length >= 3) {
+                    ToastAndroid.show('3 attachments max. Delete one first.', ToastAndroid.SHORT);
+                    return;
+                  }
+                  setShowDrawing(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <PaintBrushIcon color={colors.textSecondary} size={18} />
+                <Text style={styles.dropdownText}>Draw</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dropdownItem, isRecording && { backgroundColor: 'rgba(255, 50, 50, 0.15)' }]}
+                onPress={() => {
+                  hapticLight();
+                  setShowMenu(false);
+                  handleMicPress();
+                }}
+                activeOpacity={0.7}
+              >
+                <MicIcon color={isRecording ? '#FF3333' : colors.textSecondary} size={18} />
+                <Text style={styles.dropdownText}>{isRecording ? 'Stop Recording' : 'Record'}</Text>
+                {isRecording && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3333', marginLeft: 6 }} />}
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Spacer so content clears the floating top bar */}
           <View style={styles.topBarContentPad} />
@@ -862,6 +969,7 @@ export default function NoteEditorModal({
                 autoFocus={!note}
                 onFocus={() => {
                   setShowColorPicker(false);
+                  setShowMenu(false);
                 }}
               />
             </View>
@@ -1008,7 +1116,7 @@ export default function NoteEditorModal({
                         styles.colorDot,
                         customBgColor
                           ? { backgroundColor: customBgColor }
-                          : { borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.2)', borderStyle: 'dashed' as const, backgroundColor: 'rgba(30, 30, 40, 0.5)' },
+                          : { borderWidth: 2, borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)', borderStyle: 'dashed' as const, backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.5)' : 'rgba(0, 0, 0, 0.04)' },
                         isCustomBgSelected && styles.colorDotSelected,
                       ]}
                       onPress={() => {
@@ -1028,7 +1136,7 @@ export default function NoteEditorModal({
                 })()}
                 {/* Picker button */}
                 <TouchableOpacity
-                  style={[styles.colorDot, { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', backgroundColor: 'rgba(30, 30, 40, 0.7)' }]}
+                  style={[styles.colorDot, { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)', backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)' }]}
                   onPress={() => {
                     hapticLight();
                     pickedBgRef.current = customBgColor || '#4A90D9';
@@ -1076,7 +1184,7 @@ export default function NoteEditorModal({
                         styles.fontColorDot,
                         customFontColor
                           ? { backgroundColor: customFontColor }
-                          : { borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.2)', borderStyle: 'dashed' as const, backgroundColor: 'rgba(30, 30, 40, 0.5)' },
+                          : { borderWidth: 1.5, borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)', borderStyle: 'dashed' as const, backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.5)' : 'rgba(0, 0, 0, 0.04)' },
                         isCustomFcSelected && styles.fontColorDotSelected,
                       ]}
                       onPress={() => {
@@ -1096,7 +1204,7 @@ export default function NoteEditorModal({
                 })()}
                 {/* Font picker button */}
                 <TouchableOpacity
-                  style={[styles.fontColorDot, { width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', backgroundColor: 'rgba(30, 30, 40, 0.7)' }]}
+                  style={[styles.fontColorDot, { width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)', backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)' }]}
                   onPress={() => {
                     hapticLight();
                     pickedFontRef.current = customFontColor || '#FF6B6B';

@@ -151,14 +151,7 @@ interface Counts {
   todayEvents: number;
 }
 
-const SECTIONS: Section[] = [
-  { key: 'alarms', label: 'Alarms', color: '#FF6B6B', getSubtitle: (c) => `${c.alarms} set` },
-  { key: 'reminders', label: 'Reminders', color: '#4A90D9', getSubtitle: (c) => `${c.reminders} upcoming` },
-  { key: 'calendar', label: 'Calendar', color: '#E17055', getSubtitle: (c) => `${c.todayEvents} today` },
-  { key: 'notepad', label: 'Notepad', color: '#55EFC4', getSubtitle: (c) => `${c.notes} note${c.notes !== 1 ? 's' : ''}` },
-  { key: 'voice', label: 'Voice', color: '#A29BFE', getSubtitle: (c) => `${c.voiceMemos} memo${c.voiceMemos !== 1 ? 's' : ''}` },
-  { key: 'games', label: 'Games', color: '#A8E06C', getSubtitle: () => '5 games' },
-];
+// SECTIONS defined inside component as useMemo (needs colors)
 
 function hexToRgba(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -217,6 +210,25 @@ export default function HomeScreen({ navigation }: Props) {
       return () => { cancelled = true; };
     }, []),
   );
+
+  const sections: Section[] = useMemo(() => [
+    { key: 'alarms', label: 'Alarms', color: colors.sectionAlarm, getSubtitle: (c: Counts) => `${c.alarms} set` },
+    { key: 'reminders', label: 'Reminders', color: colors.sectionReminder, getSubtitle: (c: Counts) => `${c.reminders} upcoming` },
+    { key: 'calendar', label: 'Calendar', color: colors.sectionCalendar, getSubtitle: (c: Counts) => `${c.todayEvents} today` },
+    { key: 'notepad', label: 'Notepad', color: colors.sectionNotepad, getSubtitle: (c: Counts) => `${c.notes} note${c.notes !== 1 ? 's' : ''}` },
+    { key: 'voice', label: 'Voice', color: colors.sectionVoice, getSubtitle: (c: Counts) => `${c.voiceMemos} memo${c.voiceMemos !== 1 ? 's' : ''}` },
+    { key: 'games', label: 'Games', color: colors.sectionGames, getSubtitle: () => '5 games' },
+  ], [colors]);
+
+  const bannerColorMap: Record<string, string> = useMemo(() => ({
+    alarms: colors.sectionAlarm,
+    reminders: colors.sectionReminder,
+    calendar: colors.sectionCalendar,
+    notepad: colors.sectionNotepad,
+    voice: colors.sectionVoice,
+    timers: colors.sectionTimer,
+    games: colors.sectionGames,
+  }), [colors]);
 
   const counts: Counts = useMemo(() => ({
     alarms: alarms.filter((a) => a.enabled).length,
@@ -300,6 +312,11 @@ export default function HomeScreen({ navigation }: Props) {
       paddingHorizontal: 14,
       paddingVertical: 10,
       marginBottom: 18,
+      elevation: 1,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
     bannerHeader: {
       fontSize: 11,
@@ -337,6 +354,11 @@ export default function HomeScreen({ navigation }: Props) {
       backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border,
+      elevation: 1,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
     quickCaptureLabel: {
       fontSize: 13,
@@ -389,6 +411,11 @@ export default function HomeScreen({ navigation }: Props) {
       borderColor: colors.border,
       borderRadius: 14,
       padding: 12,
+      elevation: 2,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
     },
     eventRow: {
       flexDirection: 'row',
@@ -430,12 +457,12 @@ export default function HomeScreen({ navigation }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
           </>
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />
         )}
@@ -458,8 +485,8 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* B. Personality banner */}
-        <View style={[styles.banner, { borderLeftColor: bannerQuote.color, backgroundColor: colors.mode === 'dark' ? hexToRgba(bannerQuote.color, 0.12) : hexToRgba(bannerQuote.color, 0.08) }]}>
-          <Text style={[styles.bannerHeader, { color: bannerQuote.color }]}>ALARM GUY SAYS</Text>
+        <View style={[styles.banner, { borderLeftColor: bannerColorMap[bannerQuote.section] || bannerQuote.color, backgroundColor: colors.mode === 'dark' ? hexToRgba(bannerColorMap[bannerQuote.section] || bannerQuote.color, 0.12) : hexToRgba(bannerColorMap[bannerQuote.section] || bannerQuote.color, 0.08) }]}>
+          <Text style={[styles.bannerHeader, { color: bannerColorMap[bannerQuote.section] || bannerQuote.color }]}>ALARM GUY SAYS</Text>
           <Text style={styles.bannerQuote}>{bannerQuote.text}</Text>
         </View>
 
@@ -472,7 +499,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.7}
           >
             <View style={{ transform: [{ scale: 0.8 }] }}>
-              <DocIcon color="#55EFC4" />
+              <DocIcon color={colors.sectionNotepad} />
             </View>
             <Text style={styles.quickCaptureLabel}>New Note</Text>
           </TouchableOpacity>
@@ -482,7 +509,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.7}
           >
             <View style={{ transform: [{ scale: 0.8 }] }}>
-              <MicIcon color="#A29BFE" />
+              <MicIcon color={colors.sectionVoice} />
             </View>
             <Text style={styles.quickCaptureLabel}>Record Memo</Text>
           </TouchableOpacity>
@@ -492,7 +519,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.7}
           >
             <View style={{ transform: [{ scale: 0.8 }] }}>
-              <TimerIcon color="#FDCB6E" />
+              <TimerIcon color={colors.sectionTimer} />
             </View>
             <Text style={styles.quickCaptureLabel}>Set Timer</Text>
           </TouchableOpacity>
@@ -500,7 +527,7 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* D. Section grid */}
         <View style={styles.grid}>
-          {SECTIONS.map((section) => {
+          {sections.map((section) => {
             const IconComp = SECTION_ICONS[section.key];
             const subtitle = section.getSubtitle(counts);
             return (
@@ -517,6 +544,11 @@ export default function HomeScreen({ navigation }: Props) {
                     backgroundColor: colors.mode === 'dark' ? `${section.color}20` : '#FFFFFF',
                     borderWidth: 1,
                     borderColor: colors.mode === 'dark' ? `${section.color}40` : `${section.color}50`,
+                    elevation: 2,
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 3,
                   },
                 ]}
               >
@@ -550,7 +582,7 @@ export default function HomeScreen({ navigation }: Props) {
                   <View
                     style={[
                       styles.eventDot,
-                      { backgroundColor: event.type === 'alarm' ? '#FF6B6B' : '#4A90D9' },
+                      { backgroundColor: event.type === 'alarm' ? colors.sectionAlarm : colors.sectionReminder },
                     ]}
                   />
                   <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>

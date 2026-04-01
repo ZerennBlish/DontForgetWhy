@@ -250,7 +250,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       ...StyleSheet.absoluteFillObject,
       width: '100%',
       height: '100%',
-      opacity: colors.mode === 'dark' ? 0.07 : 0.04,
+      opacity: colors.mode === 'dark' ? 0.15 : 0.06,
     },
     container: {
       flex: 1,
@@ -359,7 +359,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       borderWidth: 1,
       borderColor: colors.border,
       borderLeftWidth: 3,
-      borderLeftColor: '#A29BFE',
+      borderLeftColor: colors.sectionVoice,
       marginBottom: 8,
       opacity: 0.7,
     },
@@ -369,7 +369,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       borderRadius: 18,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: '#A29BFE',
+      backgroundColor: colors.sectionVoice,
       opacity: 0.6,
     },
     iconCircleText: {
@@ -400,9 +400,9 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     restoreText: {
       fontSize: 12,
@@ -413,9 +413,9 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     foreverText: {
       fontSize: 12,
@@ -509,7 +509,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
           </>
         ) : (
           <Image

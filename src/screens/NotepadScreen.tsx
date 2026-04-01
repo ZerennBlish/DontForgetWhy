@@ -484,7 +484,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
       ...StyleSheet.absoluteFillObject,
       width: '100%',
       height: '100%',
-      opacity: colors.mode === 'dark' ? 0.07 : 0.04,
+      opacity: colors.mode === 'dark' ? 0.15 : 0.06,
     },
     container: {
       flex: 1,
@@ -604,14 +604,19 @@ export default function NotepadScreen({ navigation, route }: Props) {
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.card + 'CC',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
       borderRadius: 12,
       padding: 12,
       borderWidth: 1,
-      borderColor: '#55EFC4',
+      borderColor: colors.sectionNotepad,
       borderLeftWidth: 3,
       borderLeftColor: 'transparent',
       marginBottom: 8,
+      elevation: 2,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
     },
     iconCircle: {
       width: 36,
@@ -643,26 +648,28 @@ export default function NotepadScreen({ navigation, route }: Props) {
       gap: 6,
     },
     pinBtn: {
-      paddingHorizontal: 10,
+      paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     pinBtnActive: {
-      backgroundColor: 'rgba(30, 30, 40, 0.85)',
+      borderColor: colors.accent,
     },
     pinBtnText: {
-      fontSize: 12,
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textTertiary,
     },
     deleteBtn: {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     deleteText: {
       fontSize: 11,
@@ -679,9 +686,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     restoreText: {
       fontSize: 12,
@@ -692,9 +699,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     foreverText: {
       fontSize: 12,
@@ -725,7 +732,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
   }), [colors, insets.bottom, insets.top]);
 
   const renderDeletedItem = (item: Note) => (
-    <View style={[styles.card, { borderLeftColor: '#55EFC4', opacity: 0.7 }]}>
+    <View style={[styles.card, { borderLeftColor: colors.sectionNotepad, opacity: 0.7 }]}>
       <View style={[styles.iconCircle, { backgroundColor: item.color, opacity: 0.6 }]}>
         <Text style={styles.iconCircleText}>{item.icon || '\u{1F4DD}'}</Text>
       </View>
@@ -753,7 +760,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     const firstLine = item.text.split('\n')[0];
     const truncated = firstLine.length > 50 ? firstLine.slice(0, 50) + '\u2026' : firstLine;
     return (
-      <View style={[styles.card, { borderLeftColor: '#55EFC4' }]}>
+      <View style={[styles.card, { borderLeftColor: colors.sectionNotepad }]}>
         <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
           <Text style={styles.iconCircleText}>{item.icon || '\u{1F4DD}'}</Text>
         </View>
@@ -772,11 +779,13 @@ export default function NotepadScreen({ navigation, route }: Props) {
           activeOpacity={0.7}
         >
           <Text style={styles.cardTitle} numberOfLines={1}>{truncated}</Text>
-          <Text style={styles.cardSubtitle} numberOfLines={1}>
-            {getRelativeTime(item.updatedAt)}
-            {pinned ? ' \u00B7 \u{1F4CC}' : ''}
-            {(item.images?.length ?? 0) > 0 ? ` \u00B7 \u{1F4F7} ${item.images!.length}` : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={styles.cardSubtitle} numberOfLines={1}>
+              {getRelativeTime(item.updatedAt)}
+              {(item.images?.length ?? 0) > 0 ? ` \u00B7 \u{1F4F7} ${item.images!.length}` : ''}
+            </Text>
+            {pinned && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.sectionNotepad, marginLeft: 4 }} />}
+          </View>
         </TouchableOpacity>
         <View style={styles.cardActions}>
           <TouchableOpacity
@@ -784,8 +793,8 @@ export default function NotepadScreen({ navigation, route }: Props) {
             style={[styles.pinBtn, pinned && styles.pinBtnActive]}
             activeOpacity={0.6}
           >
-            <Text style={[styles.pinBtnText, { opacity: pinned ? 1 : 0.3 }]}>
-              {'\u{1F4CC}'}
+            <Text style={[styles.pinBtnText, pinned && { color: colors.accent }]}>
+              {pinned ? 'Pinned' : 'Pin'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -832,7 +841,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
           </>
         ) : (
           <Image

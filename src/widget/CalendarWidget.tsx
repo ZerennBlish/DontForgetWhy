@@ -19,9 +19,7 @@ export interface CalendarWidgetProps {
   theme: WidgetTheme;
 }
 
-const DOT_ALARM = '#FF6B6B';
-const DOT_REMINDER = '#4A90D9';
-const DOT_NOTE = '#55EFC4';
+// DOT colors derived from theme in CalendarWidget component props
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -33,9 +31,9 @@ function DayCell({ day, theme }: { day: CalendarDayData; theme: WidgetTheme }) {
       : theme.text;
 
   const dots: string[] = [];
-  if (day.hasAlarm) dots.push(DOT_ALARM);
-  if (day.hasReminder) dots.push(DOT_REMINDER);
-  if (day.hasNote) dots.push(DOT_NOTE);
+  if (day.hasAlarm) dots.push(theme.sectionAlarm);
+  if (day.hasReminder) dots.push(theme.sectionReminder);
+  if (day.hasNote) dots.push(theme.sectionNotepad);
 
   return (
     <FlexWidget

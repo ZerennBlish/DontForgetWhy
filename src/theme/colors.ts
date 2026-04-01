@@ -17,6 +17,14 @@ export interface ThemeColors {
   overlayButton: string;
   overlayText: string;
   modalOverlay: string;
+  // Section colors — every theme defines its own palette
+  sectionAlarm: string;
+  sectionReminder: string;
+  sectionCalendar: string;
+  sectionNotepad: string;
+  sectionVoice: string;
+  sectionTimer: string;
+  sectionGames: string;
 }
 
 const dark: ThemeColors = {
@@ -38,6 +46,13 @@ const dark: ThemeColors = {
   overlayButton: 'rgba(255, 255, 255, 0.25)',
   overlayText: '#FFFFFF',
   modalOverlay: 'rgba(0, 0, 0, 0.7)',
+  sectionAlarm: '#FF6B6B',
+  sectionReminder: '#4A90D9',
+  sectionCalendar: '#E17055',
+  sectionNotepad: '#55EFC4',
+  sectionVoice: '#A29BFE',
+  sectionTimer: '#FDCB6E',
+  sectionGames: '#A8E06C',
 };
 
 const light: ThemeColors = {
@@ -59,6 +74,13 @@ const light: ThemeColors = {
   overlayButton: 'rgba(255, 255, 255, 0.25)',
   overlayText: '#FFFFFF',
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
+  sectionAlarm: '#E05252',
+  sectionReminder: '#3B7DD8',
+  sectionCalendar: '#D05A3A',
+  sectionNotepad: '#2DB88A',
+  sectionVoice: '#7B6FE0',
+  sectionTimer: '#D4A829',
+  sectionGames: '#6BA834',
 };
 
 const highContrast: ThemeColors = {
@@ -80,12 +102,48 @@ const highContrast: ThemeColors = {
   overlayButton: 'rgba(255, 255, 255, 0.35)',
   overlayText: '#FFFFFF',
   modalOverlay: 'rgba(0, 0, 0, 0.85)',
+  sectionAlarm: '#FF4444',
+  sectionReminder: '#4DA6FF',
+  sectionCalendar: '#FF7733',
+  sectionNotepad: '#44FFBB',
+  sectionVoice: '#BB88FF',
+  sectionTimer: '#FFE044',
+  sectionGames: '#88FF44',
+};
+
+const vivid: ThemeColors = {
+  mode: 'dark',
+  background: '#0C0C18',
+  card: '#1A1A2C',
+  cardElevated: '#24243A',
+  accent: '#7C5CFC',
+  textPrimary: '#F0F0F8',
+  textSecondary: '#9898B8',
+  textTertiary: '#606078',
+  border: '#2E2E48',
+  red: '#FF5757',
+  orange: '#FF8C42',
+  activeBackground: '#1E1040',
+  overlayWin: 'rgba(66, 230, 149, 0.85)',
+  overlayLose: 'rgba(255, 87, 87, 0.85)',
+  overlaySkip: 'rgba(255, 217, 61, 0.85)',
+  overlayButton: 'rgba(255, 255, 255, 0.25)',
+  overlayText: '#FFFFFF',
+  modalOverlay: 'rgba(0, 0, 0, 0.8)',
+  sectionAlarm: '#FF6B9D',
+  sectionReminder: '#7C5CFC',
+  sectionCalendar: '#FF8C42',
+  sectionNotepad: '#42E695',
+  sectionVoice: '#42C6FF',
+  sectionTimer: '#FFD93D',
+  sectionGames: '#FF5757',
 };
 
 export const themes = {
   dark,
   light,
   highContrast,
+  vivid,
 } as const;
 
 export type ThemeName = keyof typeof themes;

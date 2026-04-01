@@ -25,6 +25,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
 import { formatTime } from '../utils/time';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
+import { FireIcon } from '../components/Icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -189,6 +190,13 @@ export default function AlarmListScreen({ navigation }: Props) {
       gap: 8,
       marginBottom: 12,
     },
+    screenTitle: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
     subtitleText: {
       fontSize: 13,
       color: colors.textTertiary,
@@ -319,17 +327,22 @@ export default function AlarmListScreen({ navigation }: Props) {
       paddingBottom: 2,
     },
     deletedCard: {
-      backgroundColor: colors.card + 'CC',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
       borderRadius: 12,
       padding: 12,
       marginBottom: 8,
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: 'rgba(255, 107, 107, 0.4)',
+      borderColor: colors.sectionAlarm + '66',
       borderLeftWidth: 3,
-      borderLeftColor: 'rgba(255, 107, 107, 0.4)',
+      borderLeftColor: colors.sectionAlarm + '66',
       opacity: 0.7,
+      elevation: 1,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
     deletedLeft: { flex: 1, marginRight: 12 },
     deletedTime: {
@@ -380,12 +393,12 @@ export default function AlarmListScreen({ navigation }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
           </>
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />
         )}
@@ -396,14 +409,16 @@ export default function AlarmListScreen({ navigation }: Props) {
           <HomeButton />
         </View>
 
+        <Text style={styles.screenTitle}>Alarms</Text>
         <Text style={styles.subtitleText}>
           {(() => { const c = alarms.filter(a => a.enabled && !a.deletedAt).length; return `${c} alarm${c !== 1 ? 's' : ''}`; })()}
         </Text>
 
         {hasPlayed && stats.streak > 0 && (
           <View style={styles.streakRow}>
+            <FireIcon color={colors.accent} size={14} />
             <Text style={[styles.streakText, { color: colors.accent }]}>
-              {`\u{1F525} ${stats.streak} in a row`}
+              {`${stats.streak} in a row`}
             </Text>
             {stats.bestStreak > 0 && (
               <Text style={styles.bestStreakText}>Best: {stats.bestStreak}</Text>

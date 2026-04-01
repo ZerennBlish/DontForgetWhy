@@ -368,9 +368,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           top: insets.top + 14,
         },
         headerSaveBtn: {
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
           borderRadius: 20,
           paddingHorizontal: 14,
           paddingVertical: 6,
@@ -396,7 +396,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           borderRadius: 20,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
           borderWidth: 1,
           borderColor: 'rgba(239, 68, 68, 0.4)',
         },
@@ -444,7 +444,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         progressFill: {
           height: '100%',
           borderRadius: 3,
-          backgroundColor: '#A29BFE',
+          backgroundColor: colors.sectionVoice,
         },
         timeRow: {
           flexDirection: 'row',
@@ -468,9 +468,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           width: 44,
           height: 44,
           borderRadius: 22,
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
           justifyContent: 'center',
           alignItems: 'center',
         },
@@ -541,7 +541,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         },
         discardBtn: {
           flex: 1,
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
           borderRadius: 20,
           paddingVertical: 14,
           alignItems: 'center',
@@ -574,14 +574,14 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               <View
                 style={[
                   StyleSheet.absoluteFill,
-                  { backgroundColor: `rgba(0,0,0,${bgOpacity})` },
+                  { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` },
                 ]}
               />
             </>
           ) : (
             <Image
               source={require('../../assets/fullscreenicon.png')}
-              style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
+              style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
               resizeMode="cover"
             />
           )}
@@ -617,14 +617,14 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: `rgba(0,0,0,${bgOpacity})` },
+                { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` },
               ]}
             />
           </>
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />
         )}

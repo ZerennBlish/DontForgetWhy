@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { Alarm, ALL_DAYS, WEEKDAYS, WEEKENDS, AlarmDay } from '../types/alarm';
 import { formatTime } from '../utils/time';
 import { useTheme } from '../theme/ThemeContext';
@@ -57,24 +57,30 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
-      backgroundColor: colors.card + 'CC',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
       borderRadius: 12,
       padding: 12,
       marginBottom: 8,
       flexDirection: 'row',
       justifyContent: 'space-between',
+      elevation: 2,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: '#FF6B6B',
+      borderColor: colors.sectionAlarm,
       borderLeftWidth: 3,
-      borderLeftColor: '#FF6B6B',
+      borderLeftColor: colors.sectionAlarm,
     },
     cardDisabled: {
       opacity: 0.5,
     },
     left: {
       flex: 1,
-      marginRight: 10,
+      alignItems: 'center',
+      marginHorizontal: 10,
     },
     timeRow: {
       flexDirection: 'row',
@@ -86,10 +92,12 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
       color: colors.textPrimary,
       letterSpacing: -1,
     },
-    pinIcon: {
-      fontSize: 10,
-      marginLeft: 5,
-      color: colors.accent,
+    pinDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.accent,
+      marginLeft: 6,
     },
     detail: {
       fontSize: 14,
@@ -119,26 +127,28 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
       gap: 6,
     },
     pinBtn: {
-      paddingHorizontal: 10,
+      paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     pinBtnActive: {
-      backgroundColor: 'rgba(30, 30, 40, 0.85)',
+      borderColor: colors.accent,
     },
     pinBtnText: {
-      fontSize: 12,
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textTertiary,
     },
     deleteBtn: {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     deleteText: {
       fontSize: 11,
@@ -164,12 +174,18 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
       onPress={() => onEdit(alarm)}
       activeOpacity={0.7}
     >
+      <Switch
+        value={alarm.enabled}
+        onValueChange={() => onToggle(alarm.id)}
+        trackColor={{ false: colors.border, true: colors.sectionAlarm }}
+        thumbColor={alarm.enabled ? colors.textPrimary : colors.textTertiary}
+      />
       <View style={styles.left}>
         <View style={styles.timeRow}>
           <Text style={[styles.time, !alarm.enabled && styles.textDisabled]}>
             {formatTime(alarm.time, timeFormat)}
           </Text>
-          {isPinned && <Text style={styles.pinIcon}>{'\u{1F4CC}'}</Text>}
+          {isPinned && <View style={styles.pinDot} />}
         </View>
         {!hideDetail && detailText !== '' && (
           <Text
@@ -184,31 +200,24 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
         </Text>
       </View>
       <View style={styles.right}>
-        <Switch
-          value={alarm.enabled}
-          onValueChange={() => onToggle(alarm.id)}
-          trackColor={{ false: colors.border, true: '#FF6B6B' }}
-          thumbColor={alarm.enabled ? colors.textPrimary : colors.textTertiary}
-        />
         <View style={styles.btnRow}>
           <TouchableOpacity
             onPress={() => onTogglePin(alarm.id)}
             style={[styles.pinBtn, isPinned && styles.pinBtnActive]}
             activeOpacity={0.6}
           >
-            <Text style={[styles.pinBtnText, { opacity: isPinned ? 1 : 0.3 }]}>{'\u{1F4CC}'}</Text>
+            <Text style={[styles.pinBtnText, isPinned && { color: colors.accent }]}>
+              {isPinned ? 'Pinned' : 'Pin'}
+            </Text>
           </TouchableOpacity>
-        </View>
-        <TouchableOpacity
-          onPress={() => Alert.alert('Delete this alarm?', '', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: () => onDelete(alarm.id) },
-          ])}
-          style={styles.deleteBtn}
-          activeOpacity={0.6}
+          <TouchableOpacity
+            onPress={() => onDelete(alarm.id)}
+            style={styles.deleteBtn}
+            activeOpacity={0.6}
         >
           <Text style={styles.deleteText}>Delete</Text>
         </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );

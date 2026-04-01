@@ -124,22 +124,6 @@ export function GearIcon({ color, size = 20 }: IconProps) {
   );
 }
 
-export function PinIcon({ color, size = 20 }: IconProps) {
-  const s = size;
-  return (
-    <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: s * 0.35, height: s * 0.45, backgroundColor: color, borderRadius: s * 0.06, transform: [{ rotate: '25deg' }] }} />
-      <View style={{
-        width: 0, height: 0,
-        borderLeftWidth: s * 0.1, borderRightWidth: s * 0.1, borderTopWidth: s * 0.2,
-        borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: color,
-        position: 'absolute', bottom: s * 0.05,
-      }} />
-      <View style={{ width: s * 0.5, height: s * 0.08, backgroundColor: color, borderRadius: s * 0.04, position: 'absolute', top: s * 0.42 }} />
-    </View>
-  );
-}
-
 export function TrashIcon({ color, size = 20 }: IconProps) {
   const s = size;
   return (
@@ -292,6 +276,40 @@ export function SearchIcon({ color, size = 20 }: IconProps) {
     <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
       <View style={{ width: s * 0.5, height: s * 0.5, borderRadius: s * 0.25, borderWidth: s * 0.08, borderColor: color, position: 'absolute', top: s * 0.1, left: s * 0.12 }} />
       <View style={{ width: s * 0.08, height: s * 0.3, backgroundColor: color, borderRadius: s * 0.04, transform: [{ rotate: '45deg' }], position: 'absolute', bottom: s * 0.08, right: s * 0.15 }} />
+    </View>
+  );
+}
+
+export function ImageIcon({ color, size = 20 }: IconProps) {
+  const s = size;
+  return (
+    <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: s * 0.8, height: s * 0.6, borderRadius: 2, borderWidth: 1.5, borderColor: color, justifyContent: 'flex-end', overflow: 'hidden' }}>
+        <View style={{ width: 0, height: 0, borderLeftWidth: s * 0.25, borderRightWidth: s * 0.25, borderBottomWidth: s * 0.3, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: color, alignSelf: 'flex-start', marginLeft: s * 0.05 }} />
+      </View>
+      <View style={{ width: s * 0.15, height: s * 0.15, borderRadius: s * 0.075, backgroundColor: color, position: 'absolute', top: s * 0.15, right: s * 0.2 }} />
+    </View>
+  );
+}
+
+export function CameraIcon({ color, size = 20 }: IconProps) {
+  const s = size;
+  return (
+    <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: s * 0.8, height: s * 0.55, borderRadius: 3, borderWidth: 1.5, borderColor: color, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: s * 0.3, height: s * 0.3, borderRadius: s * 0.15, borderWidth: 1.5, borderColor: color }} />
+      </View>
+      <View style={{ width: s * 0.25, height: s * 0.1, backgroundColor: color, borderRadius: 1, position: 'absolute', top: s * 0.15 }} />
+    </View>
+  );
+}
+
+export function PaintBrushIcon({ color, size = 20 }: IconProps) {
+  const s = size;
+  return (
+    <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: s * 0.15, height: s * 0.55, backgroundColor: color, borderRadius: 1, transform: [{ rotate: '-35deg' }], position: 'absolute', top: s * 0.05 }} />
+      <View style={{ width: s * 0.25, height: s * 0.25, backgroundColor: color, borderRadius: s * 0.06, transform: [{ rotate: '-35deg' }], position: 'absolute', bottom: s * 0.1, left: s * 0.22 }} />
     </View>
   );
 }

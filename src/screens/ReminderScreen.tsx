@@ -354,6 +354,13 @@ export default function ReminderScreen({ navigation }: Props) {
       gap: 8,
       marginBottom: 12,
     },
+    screenTitle: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
     subtitleText: {
       fontSize: 13,
       color: colors.textTertiary,
@@ -389,29 +396,39 @@ export default function ReminderScreen({ navigation }: Props) {
       marginBottom: 4,
     },
     card: {
-      backgroundColor: colors.card + 'CC',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
       borderRadius: 12,
       padding: 12,
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: '#4A90D9',
+      borderColor: colors.sectionReminder,
       borderLeftWidth: 3,
-      borderLeftColor: '#4A90D9',
+      borderLeftColor: colors.sectionReminder,
       marginBottom: 8,
+      elevation: 2,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
     },
     deletedCard: {
-      backgroundColor: colors.card + 'CC',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
       borderRadius: 12,
       padding: 12,
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: 'rgba(74, 144, 217, 0.4)',
+      borderColor: colors.sectionReminder + '66',
       borderLeftWidth: 3,
-      borderLeftColor: 'rgba(74, 144, 217, 0.4)',
+      borderLeftColor: colors.sectionReminder + '66',
       marginBottom: 8,
       opacity: 0.7,
+      elevation: 1,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
     cardCompleted: {
       opacity: 0.45,
@@ -427,8 +444,8 @@ export default function ReminderScreen({ navigation }: Props) {
       marginRight: 12,
     },
     checkboxDone: {
-      backgroundColor: '#4A90D9',
-      borderColor: '#4A90D9',
+      backgroundColor: colors.sectionReminder,
+      borderColor: colors.sectionReminder,
     },
     checkmark: {
       fontSize: 16,
@@ -473,9 +490,12 @@ export default function ReminderScreen({ navigation }: Props) {
       color: colors.red,
       fontWeight: '600',
     },
-    pinIcon: {
-      fontSize: 12,
-      color: colors.accent,
+    pinDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.accent,
+      marginLeft: 6,
     },
     right: {
       alignItems: 'center',
@@ -486,18 +506,20 @@ export default function ReminderScreen({ navigation }: Props) {
       gap: 6,
     },
     pinBtn: {
-      paddingHorizontal: 10,
+      paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     pinBtnActive: {
-      backgroundColor: 'rgba(30, 30, 40, 0.85)',
+      borderColor: colors.accent,
     },
     pinBtnText: {
-      fontSize: 13,
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textTertiary,
     },
     fab: {
       position: 'absolute',
@@ -612,9 +634,9 @@ export default function ReminderScreen({ navigation }: Props) {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: 'rgba(30, 30, 40, 0.7)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     deleteText: {
       fontSize: 12,
@@ -756,7 +778,7 @@ export default function ReminderScreen({ navigation }: Props) {
                         : ` \u2022 Daily`
                   ) : ''}
                 </Text>
-                {pinned && <Text style={styles.pinIcon}>{'\u{1F4CC}'}</Text>}
+                {pinned && <View style={styles.pinDot} />}
               </View>
             )}
             {isRecurringInCompleted && item.completionHistory && item.completionHistory.length > 0 && (
@@ -766,7 +788,7 @@ export default function ReminderScreen({ navigation }: Props) {
             )}
             {(item.completed || (!item.dueDate && !item.dueTime && !isRecurringInCompleted)) && pinned && (
               <View style={styles.dueRow}>
-                <Text style={styles.pinIcon}>{'\u{1F4CC}'}</Text>
+                <View style={styles.pinDot} />
               </View>
             )}
           </TouchableOpacity>
@@ -778,20 +800,20 @@ export default function ReminderScreen({ navigation }: Props) {
                 style={[styles.pinBtn, pinned && styles.pinBtnActive]}
                 activeOpacity={0.6}
               >
-                <Text style={[styles.pinBtnText, { opacity: pinned ? 1 : 0.3 }]}>
-                  {'\u{1F4CC}'}
+                <Text style={[styles.pinBtnText, pinned && { color: colors.accent }]}>
+                  {pinned ? 'Pinned' : 'Pin'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDeletePress}
+                style={styles.deleteBtn}
+                activeOpacity={0.6}
+              >
+                <Text style={isRecurringInCompleted ? styles.clearHistoryText : styles.deleteText}>
+                  {isRecurringInCompleted ? 'Clear' : 'Delete'}
                 </Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={handleDeletePress}
-              style={styles.deleteBtn}
-              activeOpacity={0.6}
-            >
-              <Text style={isRecurringInCompleted ? styles.clearHistoryText : styles.deleteText}>
-                {isRecurringInCompleted ? 'Clear' : 'Delete'}
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
     );
@@ -805,12 +827,12 @@ export default function ReminderScreen({ navigation }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
           </>
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.png')}
-            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.07 : 0.04 }}
+            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />
         )}
@@ -820,6 +842,7 @@ export default function ReminderScreen({ navigation }: Props) {
           <BackButton onPress={() => navigation.goBack()} />
           <HomeButton />
         </View>
+        <Text style={styles.screenTitle}>Reminders</Text>
         <Text style={styles.subtitleText}>
           {(() => { const c = reminders.filter(r => !r.completed && !r.deletedAt).length; return `${c} reminder${c !== 1 ? 's' : ''}`; })()}
         </Text>

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import { hapticLight } from '../utils/haptics';
+import { GamepadIcon, LightbulbIcon, PuzzleIcon, NumbersIcon, BrainIcon, TrophyIcon, FireIcon, ChevronRightIcon } from '../components/Icons';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Games'>;
@@ -82,12 +83,17 @@ export default function GamesScreen({ navigation }: Props) {
           borderWidth: 1,
           borderColor: 'rgba(255,255,255,0.2)',
           flexDirection: 'row',
+          elevation: 2,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.15,
+          shadowRadius: 3,
           alignItems: 'center',
           gap: 16,
         },
         gameEmoji: {
           fontSize: 40,
-        },
+        } as never,
         gameInfo: {
           flex: 1,
         },
@@ -112,7 +118,6 @@ export default function GamesScreen({ navigation }: Props) {
           fontSize: 13,
           color: colors.orange,
           fontWeight: '700',
-          marginTop: 4,
         },
       }),
     [colors, insets.bottom],
@@ -128,7 +133,10 @@ export default function GamesScreen({ navigation }: Props) {
       <View style={styles.headerHome}>
         <HomeButton />
       </View>
-      <Text style={styles.title}>{'\u{1F3AE}'} Brain Games</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <GamepadIcon color={colors.accent} size={24} />
+        <Text style={styles.title}>Brain Games</Text>
+      </View>
     </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={[styles.subtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Exercise that forgetful brain of yours</Text>
@@ -140,7 +148,7 @@ export default function GamesScreen({ navigation }: Props) {
         activeOpacity={0.7}
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.gameEmoji}>{'\u{1F4A1}'}</Text>
+          <LightbulbIcon color={colors.accent} size={28} />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Daily Riddle</Text>
@@ -148,13 +156,14 @@ export default function GamesScreen({ navigation }: Props) {
             A new brain teaser every day. Can you keep your streak?
           </Text>
           {riddleStreak > 0 && (
-            <Text style={styles.streakText}>
-              {'\u{1F525}'} {riddleStreak} day streak
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, justifyContent: 'center' }}>
+              <FireIcon color={colors.orange} size={14} />
+              <Text style={styles.streakText}>{riddleStreak} day streak</Text>
+            </View>
           )}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.chevron}>{'\u203A'}</Text>
+          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
         </View>
       </TouchableOpacity>
 
@@ -165,7 +174,7 @@ export default function GamesScreen({ navigation }: Props) {
         activeOpacity={0.7}
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.gameEmoji}>{'\u{1F9E0}'}</Text>
+          <BrainIcon color={colors.accent} size={28} />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trivia</Text>
@@ -174,7 +183,7 @@ export default function GamesScreen({ navigation }: Props) {
           </Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.chevron}>{'\u203A'}</Text>
+          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
         </View>
       </TouchableOpacity>
 
@@ -185,14 +194,14 @@ export default function GamesScreen({ navigation }: Props) {
         activeOpacity={0.7}
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.gameEmoji}>{'\u{1F522}'}</Text>
+          <NumbersIcon color={colors.accent} size={28} />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Sudoku</Text>
           <Text style={styles.gameDesc}>Classic number puzzle. No forgetting allowed.</Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.chevron}>{'\u203A'}</Text>
+          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
         </View>
       </TouchableOpacity>
 
@@ -203,14 +212,14 @@ export default function GamesScreen({ navigation }: Props) {
         activeOpacity={0.7}
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.gameEmoji}>{'\u{1F9E9}'}</Text>
+          <PuzzleIcon color={colors.accent} size={28} />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Memory Match</Text>
           <Text style={styles.gameDesc}>Flip cards and find matching pairs</Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.chevron}>{'\u203A'}</Text>
+          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
         </View>
       </TouchableOpacity>
 
@@ -221,14 +230,14 @@ export default function GamesScreen({ navigation }: Props) {
         activeOpacity={0.7}
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.gameEmoji}>{'\u{1F3C6}'}</Text>
+          <TrophyIcon color={colors.accent} size={28} />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trophies</Text>
           <Text style={styles.gameDesc}>Track your brain training progress</Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Text style={styles.chevron}>{'\u203A'}</Text>
+          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
         </View>
       </TouchableOpacity>
     </ScrollView>

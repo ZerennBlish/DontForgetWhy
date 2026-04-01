@@ -30,6 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import { ChevronRightIcon, WarningIcon } from '../components/Icons';
 import { saveBackground, loadBackground, clearBackground, getOverlayOpacity, setOverlayOpacity } from '../services/backgroundStorage';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
@@ -448,9 +449,9 @@ export default function SettingsScreen({ navigation }: Props) {
           onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
           activeOpacity={0.7}
         >
-          <Text style={styles.permissionBannerIcon}>{'\u26A0\uFE0F'}</Text>
+          <WarningIcon color={colors.orange} size={18} />
           <Text style={styles.permissionBannerText}>Some permissions need attention</Text>
-          <Text style={styles.permissionBannerChevron}>{'\u203A'}</Text>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
         </TouchableOpacity>
       )}
 
@@ -518,7 +519,7 @@ export default function SettingsScreen({ navigation }: Props) {
           {(Object.keys(themes) as ThemeName[]).map((name) => {
             const t = themes[name];
             const isActive = name === themeName;
-            const displayName = name === 'highContrast' ? 'High Contrast' : name.charAt(0).toUpperCase() + name.slice(1);
+            const displayName = name === 'highContrast' ? 'High Contrast' : name === 'vivid' ? 'Vivid' : name.charAt(0).toUpperCase() + name.slice(1);
             return (
               <TouchableOpacity
                 key={name}
@@ -637,9 +638,9 @@ export default function SettingsScreen({ navigation }: Props) {
                     paddingHorizontal: 12,
                     paddingVertical: 8,
                     borderRadius: 12,
-                    backgroundColor: bgOpacity === val ? 'rgba(74, 144, 217, 0.25)' : 'rgba(0,0,0,0.4)',
+                    backgroundColor: bgOpacity === val ? colors.activeBackground : 'rgba(0,0,0,0.4)',
                     borderWidth: 1,
-                    borderColor: bgOpacity === val ? '#4A90D9' : 'rgba(255,255,255,0.2)',
+                    borderColor: bgOpacity === val ? colors.accent : 'rgba(255,255,255,0.2)',
                   }}
                   onPress={async () => {
                     hapticLight();
@@ -710,7 +711,7 @@ export default function SettingsScreen({ navigation }: Props) {
       >
         <View style={styles.aboutRow}>
           <Text style={styles.label}>{'\u2709\uFE0F'} Send Feedback</Text>
-          <Text style={styles.aboutChevron}>{'\u203A'}</Text>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
         </View>
         <Text style={styles.description}>
           Bug reports, suggestions, or let us know how we're doing
@@ -724,7 +725,7 @@ export default function SettingsScreen({ navigation }: Props) {
       >
         <View style={styles.aboutRow}>
           <Text style={styles.label}>Forget Log</Text>
-          <Text style={styles.aboutChevron}>{'\u203A'}</Text>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
         </View>
         <Text style={styles.description}>
           History of your dismissed alarms and reminders.
@@ -738,7 +739,7 @@ export default function SettingsScreen({ navigation }: Props) {
       >
         <View style={styles.aboutRow}>
           <Text style={styles.label}>About</Text>
-          <Text style={styles.aboutChevron}>{'\u203A'}</Text>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
         </View>
         <Text style={styles.description}>
           Version info and credits.

@@ -406,6 +406,13 @@ export async function getWidgetTheme(): Promise<WidgetTheme> {
       textSecondary: theme.textSecondary,
       border: theme.border,
       accent: theme.accent,
+      sectionAlarm: theme.sectionAlarm,
+      sectionReminder: theme.sectionReminder,
+      sectionCalendar: theme.sectionCalendar,
+      sectionNotepad: theme.sectionNotepad,
+      sectionVoice: theme.sectionVoice,
+      sectionTimer: theme.sectionTimer,
+      sectionGames: theme.sectionGames,
     };
   } catch {
     const fallback = themes.dark;
@@ -416,6 +423,13 @@ export async function getWidgetTheme(): Promise<WidgetTheme> {
       textSecondary: fallback.textSecondary,
       border: fallback.border,
       accent: fallback.accent,
+      sectionAlarm: fallback.sectionAlarm,
+      sectionReminder: fallback.sectionReminder,
+      sectionCalendar: fallback.sectionCalendar,
+      sectionNotepad: fallback.sectionNotepad,
+      sectionVoice: fallback.sectionVoice,
+      sectionTimer: fallback.sectionTimer,
+      sectionGames: fallback.sectionGames,
     };
   }
 }

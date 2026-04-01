@@ -56,14 +56,19 @@ function VoiceMemoCard({
         card: {
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: colors.card + 'CC',
+          backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
           borderRadius: 12,
           padding: 12,
           borderWidth: 1,
-          borderColor: '#A29BFE',
+          borderColor: colors.sectionVoice,
           borderLeftWidth: 3,
-          borderLeftColor: '#A29BFE',
+          borderLeftColor: colors.sectionVoice,
           marginBottom: 8,
+          elevation: 2,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.15,
+          shadowRadius: 3,
         },
         playBtn: {
           width: 36,
@@ -120,7 +125,7 @@ function VoiceMemoCard({
         miniFill: {
           height: '100%',
           borderRadius: 1.5,
-          backgroundColor: '#A29BFE',
+          backgroundColor: colors.sectionVoice,
         },
         actions: {
           flexDirection: 'row',
@@ -128,26 +133,28 @@ function VoiceMemoCard({
           gap: 6,
         },
         pinBtn: {
-          paddingHorizontal: 10,
+          paddingHorizontal: 12,
           paddingVertical: 6,
           borderRadius: 20,
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
         },
         pinBtnActive: {
-          backgroundColor: 'rgba(30, 30, 40, 0.85)',
+          borderColor: colors.accent,
         },
         pinBtnText: {
-          fontSize: 12,
+          fontSize: 11,
+          fontWeight: '600',
+          color: colors.textTertiary,
         },
         deleteBtn: {
           paddingHorizontal: 12,
           paddingVertical: 6,
           borderRadius: 20,
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
         },
         deleteText: {
           fontSize: 11,
@@ -180,9 +187,12 @@ function VoiceMemoCard({
         onPress={onPress}
         activeOpacity={0.7}
       >
-        <Text style={styles.title} numberOfLines={1}>
-          {memo.title || 'Voice Memo'}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={styles.title} numberOfLines={1}>
+            {memo.title || 'Voice Memo'}
+          </Text>
+          {isPinned && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.sectionVoice, marginLeft: 6 }} />}
+        </View>
         <Text style={styles.subtitle} numberOfLines={1}>
           {formatDuration(memo.duration)} {'\u00B7'}{' '}
           {formatRelativeTime(memo.createdAt)}
@@ -207,8 +217,8 @@ function VoiceMemoCard({
               onPress={onPin}
               activeOpacity={0.6}
             >
-              <Text style={[styles.pinBtnText, { opacity: isPinned ? 1 : 0.3 }]}>
-                {'\u{1F4CC}'}
+              <Text style={[styles.pinBtnText, isPinned && { color: colors.accent }]}>
+                {isPinned ? 'Pinned' : 'Pin'}
               </Text>
             </TouchableOpacity>
           )}
