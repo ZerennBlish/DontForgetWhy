@@ -129,7 +129,7 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
   const {
     selectedDays, setSelectedDays,
     handleToggleDay: rawToggleDay, handleQuickDays: rawQuickDays,
-    isWeekdaysSelected, isWeekendsSelected,
+    isWeekdaysSelected, isWeekendsSelected, isEverydaySelected,
   } = useDaySelection(
     existingAlarm?.days?.length ? existingAlarm.days as AlarmDay[] : []
   );
@@ -588,7 +588,7 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
     // Day selection
     selectedDays, setSelectedDays,
     handleToggleDay, handleQuickDays,
-    isWeekdaysSelected, isWeekendsSelected,
+    isWeekdaysSelected, isWeekendsSelected, isEverydaySelected,
     // Calendar
     calMonth, calYear,
     showCalendar, handleCalPrev, handleCalNext,

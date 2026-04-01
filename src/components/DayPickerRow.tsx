@@ -18,8 +18,10 @@ interface DayPickerRowProps {
   onToggleDay: (day: AlarmDay) => void;
   onSelectWeekdays: () => void;
   onSelectWeekends: () => void;
+  onSelectEveryday: () => void;
   isWeekdaysSelected: boolean;
   isWeekendsSelected: boolean;
+  isEverydaySelected: boolean;
   showQuickDays?: boolean;
   onToggleCalendar?: () => void;
   isCalendarOpen?: boolean;
@@ -39,8 +41,10 @@ export default function DayPickerRow({
   onToggleDay,
   onSelectWeekdays,
   onSelectWeekends,
+  onSelectEveryday,
   isWeekdaysSelected,
   isWeekendsSelected,
+  isEverydaySelected,
   showQuickDays,
   onToggleCalendar,
   isCalendarOpen,
@@ -95,6 +99,17 @@ export default function DayPickerRow({
             activeOpacity={0.7}
           >
             <Text style={[styles.quickDayText, { color: colors.textSecondary }]}>Weekends</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.quickDayBtn,
+              { backgroundColor: cardBg, borderColor: colors.border },
+              isEverydaySelected && { backgroundColor: colors.activeBackground, borderColor: colors.accent },
+            ]}
+            onPress={() => { hapticLight(); onSelectEveryday(); }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.quickDayText, { color: colors.textSecondary }]}>Everyday</Text>
           </TouchableOpacity>
           {onToggleCalendar && (
             <TouchableOpacity

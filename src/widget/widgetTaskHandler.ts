@@ -528,9 +528,26 @@ export async function getCalendarWidgetData(): Promise<{
     for (const reminder of reminderList) {
       if (reminder.completed) continue;
       if (reminder.recurring) {
-        if (!reminder.days || reminder.days.length === 0) { hasReminder = true; break; }
-        if (reminder.days.includes(weekday)) { hasReminder = true; break; }
-      } else if (reminder.dueDate && reminder.dueDate.slice(0, 10) === dateStr) { hasReminder = true; break; }
+        if (!reminder.days || reminder.days.length === 0) {
+          if (reminder.dueDate) {
+            // Yearly recurring — match month and day only
+            const due = new Date(reminder.dueDate.slice(0, 10) + 'T00:00:00');
+            if (d.getMonth() === due.getMonth() && d.getDate() === due.getDate()) {
+              hasReminder = true; break;
+            }
+          } else if (reminder.createdAt) {
+            // Yearly from createdAt — match month and day only
+            const created = new Date(reminder.createdAt);
+            if (d.getMonth() === created.getMonth() && d.getDate() === created.getDate()) {
+              hasReminder = true; break;
+            }
+          }
+        } else if (reminder.days.includes(weekday)) {
+          hasReminder = true; break;
+        }
+      } else if (reminder.dueDate && reminder.dueDate.slice(0, 10) === dateStr) {
+        hasReminder = true; break;
+      }
     }
 
     let hasNote = false;
@@ -677,9 +694,14 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         break;
       }
 
-      if (action === 'OPEN_ALARMS' || action === 'OPEN_REMINDERS') {
-        const tab = action === 'OPEN_ALARMS' ? 0 : 1;
-        await AsyncStorage.setItem('pendingTabAction', JSON.stringify({ tab, timestamp: Date.now() }));
+      if (action === 'OPEN_ALARMS') {
+        await AsyncStorage.setItem('pendingAlarmListAction', JSON.stringify({ timestamp: Date.now() }));
+        try { await Linking.openURL('dontforgetwhy://'); } catch {}
+        break;
+      }
+
+      if (action === 'OPEN_REMINDERS') {
+        await AsyncStorage.setItem('pendingReminderListAction', JSON.stringify({ timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }

@@ -40,8 +40,21 @@ async function rescheduleYearlyReminder(reminderId: string): Promise<void> {
     const reminders = await getReminders();
     const reminder = reminders.find((r) => r.id === reminderId);
     if (!reminder) return;
-    // Only reschedule yearly pattern: recurring + dueDate + no specific days
-    if (!reminder.recurring || !reminder.dueDate || (reminder.days && reminder.days.length > 0)) return;
+    if (!reminder.recurring) return;
+    if (reminder.days && reminder.days.length > 0) return;
+
+    // Determine the yearly month/day — from dueDate if set, else from createdAt
+    let mo: number; // 1-indexed month
+    let d: number;
+    if (reminder.dueDate) {
+      [, mo, d] = reminder.dueDate.split('-').map(Number);
+    } else if (reminder.createdAt) {
+      const created = new Date(reminder.createdAt);
+      mo = created.getMonth() + 1; // 1-indexed
+      d = created.getDate();
+    } else {
+      return; // No date source, can't reschedule
+    }
 
     // Cancel old notifications
     if (reminder.notificationIds?.length) {
@@ -50,14 +63,13 @@ async function rescheduleYearlyReminder(reminderId: string): Promise<void> {
       await cancelReminderNotification(reminder.notificationId).catch(() => {});
     }
 
-    // Bump dueDate to next year (same month/day, year+1)
-    const [, mo, d] = reminder.dueDate.split('-').map(Number);
+    // Bump to next year
     const now = new Date();
     let nextDate = new Date(now.getFullYear(), mo - 1, d);
     if (nextDate.getTime() <= now.getTime()) {
       nextDate = new Date(now.getFullYear() + 1, mo - 1, d);
     }
-    // Handle invalid date (e.g. Feb 29 on non-leap year rolls to Mar)
+    // Handle invalid date (e.g. Feb 29 on non-leap year)
     if (nextDate.getMonth() !== mo - 1) {
       nextDate.setDate(0); // last day of the intended month
     }
@@ -87,7 +99,8 @@ interface InitState {
   onboardingDone: boolean;
   alarmFireParams: RootStackParamList['AlarmFire'] | null;
   notepadParams: RootStackParamList['Notepad'] | null;
-  alarmListParams: RootStackParamList['AlarmList'] | null;
+  alarmListParams: boolean;
+  reminderListParams: boolean;
   timerParams: boolean;
   createAlarmParams: RootStackParamList['CreateAlarm'] | null;
   createReminderParams: RootStackParamList['CreateReminder'] | null;
@@ -358,16 +371,31 @@ export function useNotificationRouting() {
           } catch {}
         }
 
-        // 6. Check for pending tab action from widget deep-link
-        let alarmListParams: RootStackParamList['AlarmList'] | null = null;
+        // 6. Check for pending alarm list action from widget deep-link
+        let alarmListParams = false;
         if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams) {
           try {
-            const raw = await AsyncStorage.getItem('pendingTabAction');
+            const raw = await AsyncStorage.getItem('pendingAlarmListAction');
             if (raw) {
-              await AsyncStorage.removeItem('pendingTabAction');
-              const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
+              await AsyncStorage.removeItem('pendingAlarmListAction');
+              const parsed = JSON.parse(raw) as { timestamp: number };
               if (Date.now() - parsed.timestamp < 10000) {
-                alarmListParams = { initialTab: parsed.tab };
+                alarmListParams = true;
+              }
+            }
+          } catch {}
+        }
+
+        // 6a. Check for pending reminder list action from widget deep-link
+        let reminderListParams = false;
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams) {
+          try {
+            const raw = await AsyncStorage.getItem('pendingReminderListAction');
+            if (raw) {
+              await AsyncStorage.removeItem('pendingReminderListAction');
+              const parsed = JSON.parse(raw) as { timestamp: number };
+              if (Date.now() - parsed.timestamp < 10000) {
+                reminderListParams = true;
               }
             }
           } catch {}
@@ -375,7 +403,7 @@ export function useNotificationRouting() {
 
         // 6b. Check for pending timer action from widget deep-link
         let timerParams = false;
-        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams) {
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !reminderListParams) {
           try {
             const raw = await AsyncStorage.getItem('pendingTimerAction');
             if (raw) {
@@ -390,7 +418,7 @@ export function useNotificationRouting() {
 
         // 7. Check for pending calendar action from widget deep-link
         let calendarParams: RootStackParamList['Calendar'] | null = null;
-        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !timerParams) {
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !reminderListParams && !timerParams) {
           try {
             const raw = await AsyncStorage.getItem('pendingCalendarAction');
             if (raw) {
@@ -407,7 +435,7 @@ export function useNotificationRouting() {
         let voiceMemoListParams = false;
         let voiceRecordParams: RootStackParamList['VoiceRecord'] | null = null;
         let voiceMemoDetailParams: RootStackParamList['VoiceMemoDetail'] | null = null;
-        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !timerParams && !calendarParams) {
+        if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !reminderListParams && !timerParams && !calendarParams) {
           try {
             const raw = await AsyncStorage.getItem('pendingVoiceAction');
             if (raw) {
@@ -427,10 +455,10 @@ export function useNotificationRouting() {
         }
 
         console.log('[NOTIF] INIT — complete. alarmFireParams:', alarmFireParams ? 'SET' : 'null');
-        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, timerParams, createAlarmParams, createReminderParams, calendarParams, voiceMemoListParams, voiceRecordParams, voiceMemoDetailParams });
+        setInitState({ onboardingDone, alarmFireParams, notepadParams, alarmListParams, reminderListParams, timerParams, createAlarmParams, createReminderParams, calendarParams, voiceMemoListParams, voiceRecordParams, voiceMemoDetailParams });
       } catch (e) {
         console.error('[NOTIF] INIT — fatal error:', e);
-        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: null, timerParams: false, createAlarmParams: null, createReminderParams: null, calendarParams: null, voiceMemoListParams: false, voiceRecordParams: null, voiceMemoDetailParams: null });
+        setInitState({ onboardingDone: true, alarmFireParams: null, notepadParams: null, alarmListParams: false, reminderListParams: false, timerParams: false, createAlarmParams: null, createReminderParams: null, calendarParams: null, voiceMemoListParams: false, voiceRecordParams: null, voiceMemoDetailParams: null });
       }
     })();
   }, []);
@@ -652,7 +680,7 @@ export function useNotificationRouting() {
         // If fire screen is showing, close it since alarm was handled via notification action
         if (navigationRef.current?.getCurrentRoute?.()?.name === 'AlarmFire') {
           stopAlarmSound();
-          navigationRef.current.reset({ index: 0, routes: [{ name: 'Home' }, { name: 'AlarmList' }] });
+          navigationRef.current.reset({ index: 0, routes: [{ name: 'Home' }] });
         }
       }
 
@@ -799,16 +827,25 @@ export function useNotificationRouting() {
       }
     }).catch(() => {});
 
-    // Check for pending tab action from widget (alarms/reminders)
-    AsyncStorage.getItem('pendingTabAction').then((raw) => {
+    // Check for pending alarm list action from widget
+    AsyncStorage.getItem('pendingAlarmListAction').then((raw) => {
       if (raw && navigationRef.current) {
-        AsyncStorage.removeItem('pendingTabAction');
-        try {
-          const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
-          if (Date.now() - parsed.timestamp < 10000) {
-            navigationRef.current.navigate('AlarmList', { initialTab: parsed.tab });
-          }
-        } catch {}
+        AsyncStorage.removeItem('pendingAlarmListAction');
+        const parsed = JSON.parse(raw) as { timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          navigationRef.current.navigate('AlarmList');
+        }
+      }
+    }).catch(() => {});
+
+    // Check for pending reminder list action from widget
+    AsyncStorage.getItem('pendingReminderListAction').then((raw) => {
+      if (raw && navigationRef.current) {
+        AsyncStorage.removeItem('pendingReminderListAction');
+        const parsed = JSON.parse(raw) as { timestamp: number };
+        if (Date.now() - parsed.timestamp < 10000) {
+          navigationRef.current.navigate('Reminders');
+        }
       }
     }).catch(() => {});
   }, [navigateToAlarmFire]);
@@ -831,7 +868,7 @@ export function useNotificationRouting() {
                 }
               );
               if (!hasAlarmNotif && navigationRef.current) {
-                navigationRef.current.reset({ index: 0, routes: [{ name: 'Home' }, { name: 'AlarmList' }] });
+                navigationRef.current.reset({ index: 0, routes: [{ name: 'Home' }] });
               }
             }).catch(() => {});
             return;
@@ -919,16 +956,24 @@ export function useNotificationRouting() {
             }
           }
         }).catch(() => {});
-        // Check for pending tab action from widget (alarms/reminders)
-        AsyncStorage.getItem('pendingTabAction').then((raw) => {
+        // Check for pending alarm list action from widget
+        AsyncStorage.getItem('pendingAlarmListAction').then((raw) => {
           if (raw && navigationRef.current) {
-            AsyncStorage.removeItem('pendingTabAction');
-            try {
-              const parsed = JSON.parse(raw) as { tab: number; timestamp: number };
-              if (Date.now() - parsed.timestamp < 10000) {
-                navigationRef.current.navigate('AlarmList', { initialTab: parsed.tab });
-              }
-            } catch {}
+            AsyncStorage.removeItem('pendingAlarmListAction');
+            const parsed = JSON.parse(raw) as { timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              navigationRef.current.navigate('AlarmList');
+            }
+          }
+        }).catch(() => {});
+        // Check for pending reminder list action from widget
+        AsyncStorage.getItem('pendingReminderListAction').then((raw) => {
+          if (raw && navigationRef.current) {
+            AsyncStorage.removeItem('pendingReminderListAction');
+            const parsed = JSON.parse(raw) as { timestamp: number };
+            if (Date.now() - parsed.timestamp < 10000) {
+              navigationRef.current.navigate('Reminders');
+            }
           }
         }).catch(() => {});
       }

@@ -743,7 +743,35 @@ export async function scheduleReminderNotification(
     return ids;
   }
 
-  // Scenario 2: Recurring daily (no specific days, or all 7 days selected)
+  // Scenario 2a: Recurring yearly from createdAt (no dueDate, no specific days)
+  // Reminder was created without a date or days — treat as yearly anniversary.
+  // Schedule as one-time trigger (same as Scenario 3). On completion,
+  // completeRecurringReminder sets a dueDate, so future cycles use Scenario 3.
+  if (isRecurring && !reminder.dueDate && days.length === 0) {
+    const created = new Date(reminder.createdAt);
+    const mo = created.getMonth(); // 0-indexed
+    const d = created.getDate();
+    const now = new Date();
+    let nextDate = new Date(now.getFullYear(), mo, d, hours, minutes, 0, 0);
+    if (nextDate.getTime() <= now.getTime()) {
+      nextDate = new Date(now.getFullYear() + 1, mo, d, hours, minutes, 0, 0);
+    }
+    // Handle invalid date (e.g. Feb 29 on non-leap year)
+    if (nextDate.getMonth() !== mo) {
+      nextDate = new Date(nextDate.getFullYear(), mo + 1, 0, hours, minutes, 0, 0);
+    }
+    const timestamp = nextDate.getTime();
+    if (timestamp <= Date.now()) return [];
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp,
+      alarmManager: { allowWhileIdle: true },
+    };
+    const id = await notifee.createTriggerNotification(notificationPayload, trigger);
+    return [id];
+  }
+
+  // Scenario 2b: Recurring daily (all 7 days selected)
   if (isRecurring && !reminder.dueDate) {
     let timestamp = getNextAlarmTimestamp(reminder.dueTime);
     // Early completion: if the next occurrence is today, push to tomorrow

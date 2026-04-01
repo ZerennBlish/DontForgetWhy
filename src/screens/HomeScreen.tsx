@@ -83,8 +83,12 @@ function getTodayEvents(alarms: Alarm[], reminders: Reminder[]): TodayEvent[] {
           if (now.getMonth() === due.getMonth() && now.getDate() === due.getDate()) {
             matches = true;
           }
-        } else {
-          matches = true;
+        } else if (reminder.createdAt) {
+          // Yearly from createdAt
+          const created = new Date(reminder.createdAt);
+          if (now.getMonth() === created.getMonth() && now.getDate() === created.getDate()) {
+            matches = true;
+          }
         }
       } else if (reminder.days.includes(weekday)) {
         matches = true;
@@ -326,8 +330,8 @@ export default function HomeScreen({ navigation }: Props) {
   const handleSectionPress = useCallback((key: string) => {
     hapticLight();
     switch (key) {
-      case 'alarms': navigation.navigate('AlarmList', { initialTab: 0 }); break;
-      case 'reminders': navigation.navigate('AlarmList', { initialTab: 1 }); break;
+      case 'alarms': navigation.navigate('AlarmList'); break;
+      case 'reminders': navigation.navigate('Reminders'); break;
       case 'notepad': navigation.navigate('Notepad'); break;
       case 'voice': navigation.navigate('VoiceMemoList'); break;
       case 'calendar': navigation.navigate('Calendar'); break;

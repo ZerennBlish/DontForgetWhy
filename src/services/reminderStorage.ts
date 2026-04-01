@@ -255,7 +255,18 @@ export function getCurrentCycleTimestamp(reminder: Reminder): number | null {
     return bestTs > -Infinity ? bestTs : null;
   }
 
-  // Daily (no days, all 7 days, or fallback): today at dueTime
+  // Yearly from createdAt: no dueDate, no specific days
+  if (days.length === 0 && !reminder.dueDate && reminder.createdAt) {
+    const created = new Date(reminder.createdAt);
+    const mo = created.getMonth();
+    const day = created.getDate();
+    const now = new Date();
+    // This year's occurrence at dueTime
+    const d = new Date(now.getFullYear(), mo, day, h, m, 0, 0);
+    return d.getTime();
+  }
+
+  // Daily (all 7 days or fallback): today at dueTime
   const d = new Date();
   d.setHours(h, m, 0, 0);
   return d.getTime();
@@ -308,7 +319,24 @@ export function getNextCycleTimestamp(reminder: Reminder): number | null {
     return bestTs < Infinity ? bestTs : null;
   }
 
-  // Daily (no days, all 7 days, or fallback): next occurrence of dueTime
+  // Yearly from createdAt: no dueDate, no specific days
+  if (days.length === 0 && !reminder.dueDate && reminder.createdAt) {
+    const created = new Date(reminder.createdAt);
+    const mo = created.getMonth();
+    const day = created.getDate();
+    const now = new Date();
+    let d = new Date(now.getFullYear(), mo, day, h, m, 0, 0);
+    if (d.getTime() <= now.getTime()) {
+      d = new Date(now.getFullYear() + 1, mo, day, h, m, 0, 0);
+    }
+    // Handle invalid date (Feb 29)
+    if (d.getMonth() !== mo) {
+      d = new Date(d.getFullYear(), mo + 1, 0, h, m, 0, 0);
+    }
+    return d.getTime();
+  }
+
+  // Daily (all 7 days or fallback): next occurrence of dueTime
   const d = new Date();
   d.setHours(h, m, 0, 0);
   if (d.getTime() <= Date.now()) {
@@ -377,17 +405,49 @@ export async function completeRecurringReminder(id: string): Promise<Reminder | 
     const days = reminder.days || [];
     let nextDueDate = reminder.dueDate;
 
-    // Yearly recurring (date set, no specific days): bump to next future occurrence
+    // Yearly recurring (date set, no specific days): always advance at least
+    // one year from the stored dueDate. This handles both normal completion
+    // (date passed) and early completion (date still in future). A while loop
+    // covers reminders that are multiple years overdue.
     if (reminder.dueDate && days.length === 0) {
-      const [, mo, d] = reminder.dueDate.split('-').map(Number);
+      const [origYear, mo, d] = reminder.dueDate.split('-').map(Number);
       const now = new Date();
-      let nextDate = new Date(now.getFullYear(), mo - 1, d);
-      if (nextDate.getTime() <= now.getTime()) {
-        nextDate = new Date(now.getFullYear() + 1, mo - 1, d);
-      }
+      let nextDate = new Date(origYear + 1, mo - 1, d);
       // Handle invalid date (e.g., Feb 29 on non-leap year rolls to Mar)
       if (nextDate.getMonth() !== mo - 1) {
-        nextDate.setDate(0); // last day of the intended month
+        nextDate = new Date(origYear + 1, mo - 1, 0); // last day of intended month
+      }
+      // If still in the past (multi-year overdue), keep advancing
+      while (nextDate.getTime() <= now.getTime()) {
+        const nextYear = nextDate.getFullYear() + 1;
+        nextDate = new Date(nextYear, mo - 1, d);
+        if (nextDate.getMonth() !== mo - 1) {
+          nextDate = new Date(nextYear, mo - 1, 0);
+        }
+      }
+      nextDueDate = _getDateStr(nextDate);
+    }
+
+    // Yearly from createdAt: no dueDate, no specific days.
+    // Derive yearly date from createdAt and set a dueDate for next year.
+    // After this, future completions will use the standard yearly path above.
+    if (!reminder.dueDate && days.length === 0 && reminder.createdAt) {
+      const created = new Date(reminder.createdAt);
+      const mo = created.getMonth() + 1; // 1-indexed for _getDateStr
+      const d = created.getDate();
+      const now = new Date();
+      let nextDate = new Date(now.getFullYear() + 1, mo - 1, d);
+      // Handle invalid date (Feb 29)
+      if (nextDate.getMonth() !== mo - 1) {
+        nextDate = new Date(now.getFullYear() + 1, mo - 1, 0);
+      }
+      // If still in the past (shouldn't happen, but defensive)
+      while (nextDate.getTime() <= now.getTime()) {
+        const nextYear = nextDate.getFullYear() + 1;
+        nextDate = new Date(nextYear, mo - 1, d);
+        if (nextDate.getMonth() !== mo - 1) {
+          nextDate = new Date(nextYear, mo - 1, 0);
+        }
       }
       nextDueDate = _getDateStr(nextDate);
     }

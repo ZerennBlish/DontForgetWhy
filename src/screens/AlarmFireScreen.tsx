@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useKeepAwake } from 'expo-keep-awake';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import notifee from '@notifee/react-native';
 
 import { formatTime } from '../utils/time';
@@ -79,7 +79,10 @@ const DISMISS_MESSAGES = [
 ];
 
 export default function AlarmFireScreen({ route, navigation }: Props) {
-  useKeepAwake();
+  useEffect(() => {
+    try { activateKeepAwakeAsync().catch(() => {}); } catch {}
+    return () => { try { deactivateKeepAwake(); } catch {} };
+  }, []);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const {
@@ -458,8 +461,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   const canPlayGuessWhy = useMemo(() => {
     if (isTimer || !alarm || !alarm.guessWhy || postGuessWhy) return false;
     const hasIcon = Boolean(alarm.icon) && guessWhyIcons.some((i) => i.emoji === alarm.icon);
-    const hasNickname = (alarm.nickname?.trim().length ?? 0) >= 1;
-    return hasIcon || hasNickname || (alarm.note?.length ?? 0) >= 3;
+    return hasIcon || (alarm.note?.length ?? 0) >= 3;
   }, [isTimer, alarm, postGuessWhy]);
 
   // ── Display values ──────────────────────────────────────────────

@@ -166,9 +166,12 @@ function getItemsForDate(
           if (d.getMonth() === due.getMonth() && d.getDate() === due.getDate()) {
             items.push({ type: 'reminder', data: reminder });
           }
-        } else {
-          // Daily recurring — appears every day
-          items.push({ type: 'reminder', data: reminder });
+        } else if (reminder.createdAt) {
+          // Yearly from createdAt — match month and day only
+          const created = new Date(reminder.createdAt);
+          if (d.getMonth() === created.getMonth() && d.getDate() === created.getDate()) {
+            items.push({ type: 'reminder', data: reminder });
+          }
         }
       } else if (reminder.days.includes(weekday)) {
         items.push({ type: 'reminder', data: reminder });
@@ -376,13 +379,16 @@ export default function CalendarScreen({ navigation, route }: Props) {
                 }
               }
             }
-          } else {
-            // Daily recurring — dot on every day
+          } else if (reminder.createdAt) {
+            // Yearly from createdAt — match month and day only
+            const created = new Date(reminder.createdAt);
             for (const day of daysInMonth) {
-              const ds = toDateString(day);
-              ensure(ds);
-              if (!hasDot(ds, 'reminder')) {
-                marks[ds].dots.push({ key: 'reminder', color: DOT_REMINDER });
+              if (day.getMonth() === created.getMonth() && day.getDate() === created.getDate()) {
+                const ds = toDateString(day);
+                ensure(ds);
+                if (!hasDot(ds, 'reminder')) {
+                  marks[ds].dots.push({ key: 'reminder', color: DOT_REMINDER });
+                }
               }
             }
           }

@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
+  Image,
   FlatList,
   StyleSheet,
   TouchableOpacity,
@@ -9,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Reminder } from '../types/reminder';
 import type { CompletionEntry } from '../types/reminder';
 import {
@@ -39,11 +41,12 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import UndoToast from '../components/UndoToast';
+import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
+import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
+import type { RootStackParamList } from '../navigation/types';
 
-interface ReminderScreenProps {
-  onNavigateCreate: (reminderId?: string) => void;
-  onReminderCountChange?: (count: number) => void;
-}
+type Props = NativeStackScreenProps<RootStackParamList, 'Reminders'>;
 
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 
@@ -113,7 +116,7 @@ function formatCompletionDates(history: CompletionEntry[]): string {
     .join(', ');
 }
 
-export default function ReminderScreen({ onNavigateCreate, onReminderCountChange }: ReminderScreenProps) {
+export default function ReminderScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -126,6 +129,8 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   const [deletedReminderPinned, setDeletedReminderPinned] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
   const [undoKey, setUndoKey] = useState(0);
+  const [bgUri, setBgUri] = useState<string | null>(null);
+  const [bgOpacity, setBgOpacity] = useState(0.5);
   const [appQuote, setAppQuote] = useState(getRandomReminderQuote);
 
   const loadData = useCallback(async () => {
@@ -137,6 +142,8 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
     setTimeFormat(settings.timeFormat);
     const pruned = await pruneReminderPins(loaded.map((r) => r.id));
     setPinnedIds(pruned);
+    loadBackground().then(setBgUri);
+    getOverlayOpacity().then(setBgOpacity);
   }, []);
 
   useFocusEffect(
@@ -145,13 +152,6 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
       loadData();
     }, [loadData]),
   );
-
-  // Propagate active reminder count to parent on every change
-  useEffect(() => {
-    if (onReminderCountChange) {
-      onReminderCountChange(reminders.filter((r) => !r.completed && !r.deletedAt).length);
-    }
-  }, [reminders, onReminderCountChange]);
 
   const handleToggleComplete = async (id: string) => {
     hapticMedium();
@@ -341,6 +341,23 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingTop: insets.top + 10,
+      paddingHorizontal: 20,
+      paddingBottom: 16,
+    },
+    backButtonRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
+    },
+    subtitleText: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      paddingHorizontal: 2,
     },
     list: {
       paddingHorizontal: 16,
@@ -688,7 +705,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
           <TouchableOpacity
             style={styles.middle}
-            onPress={() => { hapticLight(); onNavigateCreate(item.id); }}
+            onPress={() => { hapticLight(); navigation.navigate('CreateReminder', { reminderId: item.id }); }}
             activeOpacity={0.7}
           >
             <Text
@@ -768,6 +785,29 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
   return (
     <View style={styles.container}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        {bgUri ? (
+          <>
+            <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
+          </>
+        ) : (
+          <Image
+            source={require('../../assets/fullscreenicon.png')}
+            style={{ width: '100%', height: '100%', opacity: 0.07 }}
+            resizeMode="cover"
+          />
+        )}
+      </View>
+      <View style={styles.header}>
+        <View style={styles.backButtonRow}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <HomeButton />
+        </View>
+        <Text style={styles.subtitleText}>
+          {(() => { const c = reminders.filter(r => !r.completed && !r.deletedAt).length; return `${c} reminder${c !== 1 ? 's' : ''}`; })()}
+        </Text>
+      </View>
       <View style={styles.sortFilterToggleRow}>
         <TouchableOpacity
           style={styles.sortFilterToggleBtn}
@@ -851,7 +891,7 @@ export default function ReminderScreen({ onNavigateCreate, onReminderCountChange
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => { hapticLight(); onNavigateCreate(); }}
+        onPress={() => { hapticLight(); navigation.navigate('CreateReminder'); }}
         activeOpacity={0.8}
       >
         <Text style={styles.fabText}>+</Text>

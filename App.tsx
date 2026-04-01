@@ -23,6 +23,7 @@ import CalendarScreen from './src/screens/CalendarScreen';
 import VoiceRecordScreen from './src/screens/VoiceRecordScreen';
 import VoiceMemoDetailScreen from './src/screens/VoiceMemoDetailScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import ReminderScreen from './src/screens/ReminderScreen';
 import TimerScreen from './src/screens/TimerScreen';
 import VoiceMemoListScreen from './src/screens/VoiceMemoListScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -55,7 +56,7 @@ function AppNavigator() {
   // Wait for init phase to complete before rendering the navigator.
   if (!initState) return null;
 
-  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, timerParams, createAlarmParams, createReminderParams, calendarParams, voiceMemoListParams, voiceRecordParams, voiceMemoDetailParams } = initState;
+  const { onboardingDone, alarmFireParams, notepadParams, alarmListParams, reminderListParams, timerParams, createAlarmParams, createReminderParams, calendarParams, voiceMemoListParams, voiceRecordParams, voiceMemoDetailParams } = initState;
 
   // For TRUE cold start: set initialState so the navigator renders
   // AlarmFireScreen or NotepadScreen on the very first frame.
@@ -82,7 +83,7 @@ function AppNavigator() {
   } : createReminderParams ? {
     routes: [
       { name: 'Home' as const },
-      { name: 'AlarmList' as const },
+      { name: 'Reminders' as const },
       { name: 'CreateReminder' as const, params: createReminderParams },
     ],
     index: 2,
@@ -110,10 +111,16 @@ function AppNavigator() {
       { name: 'VoiceMemoDetail' as const, params: voiceMemoDetailParams },
     ],
     index: 1,
+  } : reminderListParams ? {
+    routes: [
+      { name: 'Home' as const },
+      { name: 'Reminders' as const },
+    ],
+    index: 1,
   } : alarmListParams ? {
     routes: [
       { name: 'Home' as const },
-      { name: 'AlarmList' as const, params: alarmListParams },
+      { name: 'AlarmList' as const },
     ],
     index: 1,
   } : timerParams ? {
@@ -148,6 +155,7 @@ function AppNavigator() {
           />
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="AlarmList" component={AlarmListScreen} />
+          <Stack.Screen name="Reminders" component={ReminderScreen} />
           <Stack.Screen
             name="Timers"
             component={TimerScreen}

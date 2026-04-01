@@ -3,7 +3,8 @@ import { Alarm } from '../types/alarm';
 export type RootStackParamList = {
   Home: undefined;
   Onboarding: { startSlide?: number } | undefined;
-  AlarmList: { initialTab?: number } | undefined;
+  AlarmList: undefined;
+  Reminders: undefined;
   Timers: undefined;
   VoiceMemoList: undefined;
   CreateAlarm: { alarm?: Alarm; initialDate?: string } | undefined;

@@ -78,7 +78,7 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
   const {
     selectedDays, setSelectedDays,
     handleToggleDay: rawToggleDay, handleQuickDays: rawQuickDays,
-    isWeekdaysSelected, isWeekendsSelected,
+    isWeekdaysSelected, isWeekendsSelected, isEverydaySelected,
   } = useDaySelection([]);
 
   const updateDateFromDays = (days: AlarmDay[]) => {
@@ -526,7 +526,7 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
     // Day selection
     selectedDays, setSelectedDays,
     handleToggleDay, handleQuickDays,
-    isWeekdaysSelected, isWeekendsSelected,
+    isWeekdaysSelected, isWeekendsSelected, isEverydaySelected,
     // Calendar
     calMonth, calYear,
     showCalendar, handleCalPrev, handleCalNext,

@@ -13,7 +13,7 @@ import {
   Keyboard,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { WEEKDAYS, WEEKENDS } from '../types/alarm';
+import { WEEKDAYS, WEEKENDS, ALL_DAYS } from '../types/alarm';
 import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
@@ -678,8 +678,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             onToggleDay={(day) => form.handleToggleDay(day, form.mode, form.clearDate)}
             onSelectWeekdays={() => form.handleQuickDays([...WEEKDAYS], form.clearDate)}
             onSelectWeekends={() => form.handleQuickDays([...WEEKENDS], form.clearDate)}
+            onSelectEveryday={() => form.handleQuickDays([...ALL_DAYS], form.clearDate)}
             isWeekdaysSelected={form.isWeekdaysSelected}
             isWeekendsSelected={form.isWeekendsSelected}
+            isEverydaySelected={form.isEverydaySelected}
             showQuickDays={form.mode === 'recurring'}
             onToggleCalendar={form.toggleCalendar}
             isCalendarOpen={form.showCalendar}
