@@ -35,7 +35,6 @@ interface VoiceMemoCardProps {
   playbackProgress: number;
   onPin?: () => void;
   isPinned?: boolean;
-  onDelete?: () => void;
 }
 
 function VoiceMemoCard({
@@ -46,7 +45,6 @@ function VoiceMemoCard({
   playbackProgress,
   onPin,
   isPinned,
-  onDelete,
 }: VoiceMemoCardProps) {
   const { colors } = useTheme();
 
@@ -56,7 +54,7 @@ function VoiceMemoCard({
         card: {
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: colors.mode === 'dark' ? colors.card + 'CC' : colors.sectionVoice + '15',
+          backgroundColor: colors.mode === 'dark' ? colors.sectionVoice + '20' : colors.sectionVoice + '15',
           borderRadius: 12,
           padding: 12,
           borderWidth: 1,
@@ -148,19 +146,6 @@ function VoiceMemoCard({
           fontWeight: '600',
           color: colors.textTertiary,
         },
-        deleteBtn: {
-          paddingHorizontal: 12,
-          paddingVertical: 6,
-          borderRadius: 20,
-          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-          borderWidth: 1,
-          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-        },
-        deleteText: {
-          fontSize: 11,
-          fontWeight: '600',
-          color: '#EF4444',
-        },
       }),
     [colors],
   );
@@ -209,7 +194,7 @@ function VoiceMemoCard({
         )}
       </TouchableOpacity>
 
-      {(onPin || onDelete) && (
+      {onPin && (
         <View style={styles.actions}>
           {onPin && (
             <TouchableOpacity
@@ -220,15 +205,6 @@ function VoiceMemoCard({
               <Text style={[styles.pinBtnText, isPinned && { color: colors.accent }]}>
                 {isPinned ? 'Pinned' : 'Pin'}
               </Text>
-            </TouchableOpacity>
-          )}
-          {onDelete && (
-            <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={onDelete}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.deleteText}>Delete</Text>
             </TouchableOpacity>
           )}
         </View>

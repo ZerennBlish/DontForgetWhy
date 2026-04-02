@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { getButtonStyles } from '../theme/buttonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import {
@@ -43,6 +44,7 @@ import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import { TrashIcon, DocIcon } from '../components/Icons';
 import NoteEditorModal from '../components/NoteEditorModal';
+import SwipeableRow from '../components/SwipeableRow';
 import { CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
 import type { Note } from '../types/note';
 import type { RootStackParamList } from '../navigation/types';
@@ -89,6 +91,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Notepad'>;
 export default function NotepadScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const btn = getButtonStyles(colors);
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
@@ -601,7 +604,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.mode === 'dark' ? colors.card + 'CC' : colors.sectionNotepad + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.sectionNotepad + '20' : colors.sectionNotepad + '15',
       borderRadius: 12,
       padding: 12,
       borderWidth: 1,
@@ -660,50 +663,11 @@ export default function NotepadScreen({ navigation, route }: Props) {
       fontWeight: '600',
       color: colors.textTertiary,
     },
-    deleteBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-      borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    deleteText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: '#EF4444',
-    },
     deletedAgo: {
       fontSize: 12,
       color: colors.textTertiary,
       marginTop: 4,
       fontStyle: 'italic',
-    },
-    restoreBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-      borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    restoreText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: '#22C55E',
-    },
-    foreverBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-      borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    foreverText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: '#EF4444',
     },
     fab: {
       position: 'absolute',
@@ -741,11 +705,11 @@ export default function NotepadScreen({ navigation, route }: Props) {
         </Text>
       </View>
       <View style={styles.cardActions}>
-        <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
-          <Text style={styles.restoreText}>Restore</Text>
+        <TouchableOpacity onPress={() => handleRestore(item.id)} style={btn.ghostSmall} activeOpacity={0.7}>
+          <Text style={btn.ghostSmallText}>Restore</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
-          <Text style={styles.foreverText}>Forever</Text>
+        <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={btn.destructiveSmall} activeOpacity={0.7}>
+          <Text style={btn.destructiveSmallText}>Forever</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -756,6 +720,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     const firstLine = item.text.split('\n')[0];
     const truncated = firstLine.length > 50 ? firstLine.slice(0, 50) + '\u2026' : firstLine;
     return (
+      <SwipeableRow onDelete={() => handleDeleteFromList(item.id)}>
       <View style={[styles.card, { borderLeftColor: colors.sectionNotepad }]}>
         <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
           <Text style={styles.iconCircleText}>{item.icon || '\u{1F4DD}'}</Text>
@@ -793,15 +758,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
               {pinned ? 'Pinned' : 'Pin'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleDeleteFromList(item.id)}
-            style={styles.deleteBtn}
-            activeOpacity={0.6}
-          >
-            <Text style={styles.deleteText}>Delete</Text>
-          </TouchableOpacity>
         </View>
       </View>
+      </SwipeableRow>
     );
   };
 

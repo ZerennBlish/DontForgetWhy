@@ -41,7 +41,6 @@ interface AlarmCardProps {
   isPinned: boolean;
   onToggle: (id: string) => void;
   onEdit: (alarm: Alarm) => void;
-  onDelete: (id: string) => void;
   onTogglePin: (id: string) => void;
 }
 
@@ -52,12 +51,12 @@ function getDetailLine(alarm: Alarm): string {
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdit, onDelete, onTogglePin }: AlarmCardProps) {
+export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdit, onTogglePin }: AlarmCardProps) {
   const { colors } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
-      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionAlarm + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.sectionAlarm + '20' : colors.sectionAlarm + '15',
       borderRadius: 12,
       padding: 12,
       marginBottom: 8,
@@ -142,19 +141,6 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
       fontWeight: '600',
       color: colors.textTertiary,
     },
-    deleteBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-      borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    deleteText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: '#EF4444',
-    },
   }), [colors]);
 
   const guessWhy = alarm.guessWhy ?? false;
@@ -210,13 +196,6 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
               {isPinned ? 'Pinned' : 'Pin'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => onDelete(alarm.id)}
-            style={styles.deleteBtn}
-            activeOpacity={0.6}
-        >
-          <Text style={styles.deleteText}>Delete</Text>
-        </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>

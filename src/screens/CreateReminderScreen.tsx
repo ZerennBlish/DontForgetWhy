@@ -15,6 +15,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WEEKDAYS, WEEKENDS, ALL_DAYS } from '../types/alarm';
 import { useTheme } from '../theme/ThemeContext';
+import { getButtonStyles } from '../theme/buttonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import BackButton from '../components/BackButton';
@@ -22,6 +23,7 @@ import HomeButton from '../components/HomeButton';
 import TimePicker from '../components/TimePicker';
 import DayPickerRow from '../components/DayPickerRow';
 import { useReminderForm } from '../hooks/useReminderForm';
+import EmojiPickerModal from '../components/EmojiPickerModal';
 import type { RootStackParamList } from '../navigation/types';
 
 function formatDateDisplay(dateStr: string): string {
@@ -35,6 +37,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CreateReminder'>;
 export default function CreateReminderScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const btn = getButtonStyles(colors);
 
   const form = useReminderForm({
     editId: route.params?.reminderId,
@@ -44,6 +47,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   // UI-only state
   const [timeModalVisible, setTimeModalVisible] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [emojiModalVisible, setEmojiModalVisible] = useState(false);
 
   const navigateBack = () => {
     if (navigation.canGoBack()) {
@@ -240,32 +244,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       gap: 12,
       marginTop: 8,
     },
-    timeModalCancelBtn: {
-      flex: 1,
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    timeModalCancelText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textTertiary,
-    },
-    timeModalDoneBtn: {
-      flex: 1,
-      backgroundColor: colors.accent,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    timeModalDoneText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
     label: {
       fontSize: 16,
       fontWeight: '600',
@@ -443,12 +421,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       borderWidth: 2,
       borderColor: colors.accent,
     },
-    hiddenInput: {
-      position: 'absolute' as const,
-      opacity: 0,
-      width: 1,
-      height: 1,
-    },
     nicknameRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -495,18 +467,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       alignItems: 'center',
       gap: 10,
     },
-    saveBtn: {
-      backgroundColor: colors.accent,
-      borderRadius: 20,
-      paddingVertical: 8,
-      paddingHorizontal: 18,
-      alignItems: 'center',
-    },
-    saveBtnText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
   }), [colors, cardBg, insets.top, insets.bottom]);
 
   return (
@@ -529,8 +489,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           {form.existing ? 'Edit Reminder' : 'New Reminder'}
         </Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={[styles.saveBtn, !form.editReady && { opacity: 0.4 }]} onPress={form.editReady ? handleSave : undefined} activeOpacity={0.8} disabled={!form.editReady}>
-            <Text style={styles.saveBtnText}>{form.existing ? 'Update' : 'Save'}</Text>
+          <TouchableOpacity style={[btn.primarySmall, !form.editReady && { opacity: 0.4 }]} onPress={form.editReady ? handleSave : undefined} activeOpacity={0.8} disabled={!form.editReady}>
+            <Text style={btn.primarySmallText}>{form.existing ? 'Update' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -639,11 +599,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               </View>
             </View>
             <View style={styles.timeModalBtns}>
-              <TouchableOpacity onPress={handleTimeModalCancel} style={styles.timeModalCancelBtn} activeOpacity={0.7}>
-                <Text style={styles.timeModalCancelText}>Cancel</Text>
+              <TouchableOpacity onPress={handleTimeModalCancel} style={[btn.secondary, { flex: 1 }]} activeOpacity={0.7}>
+                <Text style={btn.secondaryText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleTimeModalDone} style={styles.timeModalDoneBtn} activeOpacity={0.7}>
-                <Text style={styles.timeModalDoneText}>Done</Text>
+              <TouchableOpacity onPress={handleTimeModalDone} style={[btn.primary, { flex: 1 }]} activeOpacity={0.7}>
+                <Text style={btn.primaryText}>Done</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -800,26 +760,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           >
             <Text style={styles.emojiCircleText}>{form.selectedIcon || '\u{1F4DD}'}</Text>
           </TouchableOpacity>
-          <TextInput
-            ref={form.iconInputRef}
-            style={styles.hiddenInput}
-            autoCorrect={false}
-            onChangeText={(t) => {
-              if (t) {
-                const graphemes = [...t];
-                form.setSelectedIcon(graphemes[graphemes.length - 1] || '');
-              }
-              setEmojiPickerOpen(false);
-              if (form.iconInputRef.current) {
-                form.iconInputRef.current.setNativeProps({ text: '' });
-                form.iconInputRef.current.blur();
-              }
-            }}
-          />
         </View>
         {emojiPickerOpen && (
           <View style={styles.quickEmojiRow}>
-            {['\u{1F4DD}', '\u{1F4C5}', '\u{1F48A}', '\u{1F6D2}', '\u{1F4DE}', '\u{1F3CB}\u{FE0F}', '\u{1F4A7}', '\u{1F4E6}'].map((emoji) => (
+            {['\u{1F4DD}', '\u{1F4C5}', '\u{1F48A}', '\u{1F6D2}', '\u{1F4DE}', '\u{1F3CB}\u{FE0F}', '\u{1F389}', '\u{1F4E6}'].map((emoji) => (
               <TouchableOpacity
                 key={emoji}
                 onPress={() => { hapticLight(); form.setSelectedIcon(form.selectedIcon === emoji ? '' : emoji); setEmojiPickerOpen(false); }}
@@ -828,8 +772,17 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 <Text style={{ fontSize: 18 }}>{emoji}</Text>
               </TouchableOpacity>
             ))}
+            {form.selectedIcon ? (
+              <TouchableOpacity
+                onPress={() => { hapticLight(); form.setSelectedIcon(''); setEmojiPickerOpen(false); }}
+                style={[styles.quickEmojiBtn, { borderColor: colors.red + '40' }]}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 14, color: colors.red, fontWeight: '600' }}>{'\u2715'}</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
-              onPress={() => { hapticLight(); form.iconInputRef.current?.focus(); }}
+              onPress={() => { hapticLight(); setEmojiModalVisible(true); }}
               style={styles.quickEmojiBtn}
             >
               <Text style={{ fontSize: 18, color: colors.textTertiary }}>+</Text>
@@ -867,6 +820,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
       </ScrollView>
 
+      <EmojiPickerModal
+        visible={emojiModalVisible}
+        onSelect={(emoji) => form.setSelectedIcon(form.selectedIcon === emoji ? '' : emoji)}
+        onClose={() => setEmojiModalVisible(false)}
+      />
     </View>
   );
 }

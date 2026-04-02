@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { getButtonStyles } from '../theme/buttonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import * as VMStore from '../services/voiceMemoStorage';
@@ -26,6 +27,7 @@ import { refreshWidgets } from '../widget/updateWidget';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import SwipeableRow from '../components/SwipeableRow';
 import VoiceMemoCard from '../components/VoiceMemoCard';
 import UndoToast from '../components/UndoToast';
 import { createAudioPlayer } from 'expo-audio';
@@ -63,6 +65,7 @@ function formatDeletedAgo(deletedAt: string): string {
 export default function VoiceMemoListScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const btn = getButtonStyles(colors);
 
   const [emptyMsg] = useState(() => EMPTY_MESSAGES[Math.floor(Math.random() * EMPTY_MESSAGES.length)]);
   const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
@@ -396,32 +399,6 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       alignItems: 'center',
       gap: 6,
     },
-    restoreBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-      borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    restoreText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: '#22C55E',
-    },
-    foreverBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-      borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    foreverText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: '#EF4444',
-    },
     fab: {
       position: 'absolute',
       bottom: 36 + insets.bottom,
@@ -459,11 +436,11 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
         </Text>
       </View>
       <View style={styles.cardActions}>
-        <TouchableOpacity onPress={() => handleRestore(memo.id)} style={styles.restoreBtn} activeOpacity={0.7}>
-          <Text style={styles.restoreText}>Restore</Text>
+        <TouchableOpacity onPress={() => handleRestore(memo.id)} style={btn.ghostSmall} activeOpacity={0.7}>
+          <Text style={btn.ghostSmallText}>Restore</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePermanentDelete(memo.id)} style={styles.foreverBtn} activeOpacity={0.7}>
-          <Text style={styles.foreverText}>Forever</Text>
+        <TouchableOpacity onPress={() => handlePermanentDelete(memo.id)} style={btn.destructiveSmall} activeOpacity={0.7}>
+          <Text style={btn.destructiveSmallText}>Forever</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -472,16 +449,17 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
   const renderItem = ({ item }: { item: VoiceMemo }) => {
     if (item.deletedAt) return renderDeletedItem(item);
     return (
-      <VoiceMemoCard
-        memo={item}
-        onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.id }); }}
-        onPlayToggle={() => handlePlayToggle(item)}
-        isPlaying={playingMemoId === item.id}
-        playbackProgress={playbackProgress[item.id] || 0}
-        onPin={() => handleTogglePin(item.id)}
-        isPinned={isVoiceMemoPinned(item.id, pinnedIds)}
-        onDelete={() => handleDelete(item.id)}
-      />
+      <SwipeableRow onDelete={() => handleDelete(item.id)}>
+        <VoiceMemoCard
+          memo={item}
+          onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.id }); }}
+          onPlayToggle={() => handlePlayToggle(item)}
+          isPlaying={playingMemoId === item.id}
+          playbackProgress={playbackProgress[item.id] || 0}
+          onPin={() => handleTogglePin(item.id)}
+          isPinned={isVoiceMemoPinned(item.id, pinnedIds)}
+        />
+      </SwipeableRow>
     );
   };
 

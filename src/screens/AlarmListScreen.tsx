@@ -20,8 +20,10 @@ import AlarmCard from '../components/AlarmCard';
 import UndoToast from '../components/UndoToast';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import SwipeableRow from '../components/SwipeableRow';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
 import { useTheme } from '../theme/ThemeContext';
+import { getButtonStyles } from '../theme/buttonStyles';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
 import { formatTime } from '../utils/time';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
@@ -44,6 +46,7 @@ function formatDeletedAgo(deletedAt: string): string {
 export default function AlarmListScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const btn = getButtonStyles(colors);
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [stats, setStats] = useState<GuessWhyStats | null>(null);
@@ -368,29 +371,7 @@ export default function AlarmListScreen({ navigation }: Props) {
       marginTop: 4,
       fontStyle: 'italic',
     },
-    deletedRight: { gap: 8 },
-    restoreBtn: {
-      backgroundColor: colors.activeBackground,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
-    restoreText: {
-      color: colors.accent,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    foreverBtn: {
-      backgroundColor: colors.card,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
-    foreverText: {
-      color: colors.red,
-      fontSize: 13,
-      fontWeight: '600',
-    },
+    deletedRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   }), [colors, insets.bottom]);
 
   return (
@@ -526,26 +507,27 @@ export default function AlarmListScreen({ navigation }: Props) {
                     </Text>
                   </View>
                   <View style={styles.deletedRight}>
-                    <TouchableOpacity onPress={() => { hapticLight(); handleRestore(item.id); }} style={styles.restoreBtn} activeOpacity={0.7}>
-                      <Text style={styles.restoreText}>Restore</Text>
+                    <TouchableOpacity onPress={() => { hapticLight(); handleRestore(item.id); }} style={btn.ghostSmall} activeOpacity={0.7}>
+                      <Text style={btn.ghostSmallText}>Restore</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { hapticHeavy(); handlePermanentDelete(item.id); }} style={styles.foreverBtn} activeOpacity={0.7}>
-                      <Text style={styles.foreverText}>Forever</Text>
+                    <TouchableOpacity onPress={() => { hapticHeavy(); handlePermanentDelete(item.id); }} style={btn.destructiveSmall} activeOpacity={0.7}>
+                      <Text style={btn.destructiveSmallText}>Forever</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               );
             }
             return (
-                <AlarmCard
-                  alarm={item}
-                  timeFormat={timeFormat}
-                  isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
-                  onToggle={handleToggle}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onTogglePin={handleTogglePin}
-                />
+                <SwipeableRow onDelete={() => handleDelete(item.id)} enabled={!item.deletedAt}>
+                  <AlarmCard
+                    alarm={item}
+                    timeFormat={timeFormat}
+                    isPinned={isAlarmPinned(item.id, pinnedAlarmIds)}
+                    onToggle={handleToggle}
+                    onEdit={handleEdit}
+                    onTogglePin={handleTogglePin}
+                  />
+                </SwipeableRow>
             );
           }}
           contentContainerStyle={styles.list}

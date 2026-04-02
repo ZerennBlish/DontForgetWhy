@@ -21,12 +21,14 @@ import DayPickerRow from '../components/DayPickerRow';
 import SoundPickerModal from '../components/SoundPickerModal';
 import type { SystemSound } from '../components/SoundPickerModal';
 import { useTheme } from '../theme/ThemeContext';
+import { getButtonStyles } from '../theme/buttonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import TimePicker from '../components/TimePicker';
+import EmojiPickerModal from '../components/EmojiPickerModal';
 import type { RootStackParamList } from '../navigation/types';
 
 function formatDateDisplay(dateStr: string): string {
@@ -40,6 +42,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlarm'>;
 export default function CreateAlarmScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const btn = getButtonStyles(colors);
 
   const form = useAlarmForm({
     existingAlarm: route.params?.alarm,
@@ -49,6 +52,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   // UI-only state
   const [timeModalVisible, setTimeModalVisible] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [emojiModalVisible, setEmojiModalVisible] = useState(false);
   const [systemSoundPickerVisible, setSystemSoundPickerVisible] = useState(false);
 
   const cardBg = colors.card + 'BF';
@@ -242,12 +246,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       borderWidth: 2,
       borderColor: colors.accent,
     },
-    hiddenInput: {
-      position: 'absolute' as const,
-      opacity: 0,
-      width: 1,
-      height: 1,
-    },
     toggleCard: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -348,32 +346,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       flexDirection: 'row',
       gap: 12,
       marginTop: 8,
-    },
-    timeModalCancelBtn: {
-      flex: 1,
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    timeModalCancelText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textTertiary,
-    },
-    timeModalDoneBtn: {
-      flex: 1,
-      backgroundColor: colors.accent,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    timeModalDoneText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.textPrimary,
     },
     modeContainer: {
       flexDirection: 'row',
@@ -518,18 +490,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     soundModeIconText: {
       fontSize: 18,
     },
-    saveBtn: {
-      backgroundColor: colors.accent,
-      borderRadius: 20,
-      paddingVertical: 8,
-      paddingHorizontal: 18,
-      alignItems: 'center',
-    },
-    saveBtnText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
     soundRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -557,8 +517,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         </View>
         <Text style={styles.heading}>{form.isEditing ? 'Edit Alarm' : 'New Alarm'}</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-            <Text style={styles.saveBtnText}>{form.isEditing ? 'Update' : 'Save'}</Text>
+          <TouchableOpacity style={btn.primarySmall} onPress={handleSave} activeOpacity={0.8}>
+            <Text style={btn.primarySmallText}>{form.isEditing ? 'Update' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -667,11 +627,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               </View>
             </View>
             <View style={styles.timeModalBtns}>
-              <TouchableOpacity onPress={handleTimeModalCancel} style={styles.timeModalCancelBtn} activeOpacity={0.7}>
-                <Text style={styles.timeModalCancelText}>Cancel</Text>
+              <TouchableOpacity onPress={handleTimeModalCancel} style={[btn.secondary, { flex: 1 }]} activeOpacity={0.7}>
+                <Text style={btn.secondaryText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleTimeModalDone} style={styles.timeModalDoneBtn} activeOpacity={0.7}>
-                <Text style={styles.timeModalDoneText}>Done</Text>
+              <TouchableOpacity onPress={handleTimeModalDone} style={[btn.primary, { flex: 1 }]} activeOpacity={0.7}>
+                <Text style={btn.primaryText}>Done</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -828,22 +788,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
           >
             <Text style={styles.emojiCircleText}>{form.selectedIcon || '\u{1F60A}'}</Text>
           </TouchableOpacity>
-          <TextInput
-            ref={form.iconInputRef}
-            style={styles.hiddenInput}
-            autoCorrect={false}
-            onChangeText={(t) => {
-              if (t) {
-                const graphemes = [...t];
-                form.setSelectedIcon(graphemes[graphemes.length - 1] || null);
-              }
-              setEmojiPickerOpen(false);
-              if (form.iconInputRef.current) {
-                form.iconInputRef.current.setNativeProps({ text: '' });
-                form.iconInputRef.current.blur();
-              }
-            }}
-          />
         </View>
         {emojiPickerOpen && (
           <View style={styles.quickEmojiRow}>
@@ -856,8 +800,17 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 <Text style={{ fontSize: 18 }}>{emoji}</Text>
               </TouchableOpacity>
             ))}
+            {form.selectedIcon && (
+              <TouchableOpacity
+                onPress={() => { hapticLight(); form.setSelectedIcon(null); setEmojiPickerOpen(false); }}
+                style={[styles.quickEmojiBtn, { borderColor: colors.red + '40' }]}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 14, color: colors.red, fontWeight: '600' }}>{'\u2715'}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              onPress={() => { hapticLight(); form.iconInputRef.current?.focus(); }}
+              onPress={() => { hapticLight(); setEmojiModalVisible(true); }}
               style={styles.quickEmojiBtn}
             >
               <Text style={{ fontSize: 18, color: colors.textTertiary }}>+</Text>
@@ -1004,6 +957,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         />
       </ScrollView>
 
+      <EmojiPickerModal
+        visible={emojiModalVisible}
+        onSelect={(emoji) => form.setSelectedIcon(form.selectedIcon === emoji ? null : emoji)}
+        onClose={() => setEmojiModalVisible(false)}
+      />
     </View>
   );
 }

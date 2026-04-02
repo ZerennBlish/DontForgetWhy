@@ -28,6 +28,7 @@ import TimerScreen from './src/screens/TimerScreen';
 import VoiceMemoListScreen from './src/screens/VoiceMemoListScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { useNotificationRouting } from './src/hooks/useNotificationRouting';
 import type { RootStackParamList } from './src/navigation/types';
@@ -260,11 +261,13 @@ function AppNavigator() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <AppNavigator />
-        </ThemeProvider>
-      </SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <AppNavigator />
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     </ErrorBoundary>
   );
 }

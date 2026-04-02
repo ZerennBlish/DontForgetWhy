@@ -130,7 +130,7 @@ export default function TimerScreen({ navigation }: Props) {
       marginBottom: 8,
     },
     activeCard: {
-      backgroundColor: colors.mode === 'dark' ? colors.card + 'BF' : colors.sectionTimer + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.sectionTimer + '20' : colors.sectionTimer + '15',
       borderRadius: 12,
       padding: 14,
       marginBottom: 10,
@@ -196,7 +196,7 @@ export default function TimerScreen({ navigation }: Props) {
     },
     presetCard: {
       width: presetCardWidth,
-      backgroundColor: colors.mode === 'dark' ? colors.card + 'BF' : colors.sectionTimer + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.sectionTimer + '20' : colors.sectionTimer + '15',
       borderRadius: 10,
       padding: 10,
       alignItems: 'center',

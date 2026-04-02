@@ -38,11 +38,13 @@ import { loadSettings } from '../services/settings';
 import { formatTime } from '../utils/time';
 import { getRandomReminderQuote } from '../data/reminderQuotes';
 import { useTheme } from '../theme/ThemeContext';
+import { getButtonStyles } from '../theme/buttonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import UndoToast from '../components/UndoToast';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import SwipeableRow from '../components/SwipeableRow';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -119,6 +121,7 @@ function formatCompletionDates(history: CompletionEntry[]): string {
 export default function ReminderScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const btn = getButtonStyles(colors);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
@@ -402,7 +405,7 @@ export default function ReminderScreen({ navigation }: Props) {
       marginBottom: 4,
     },
     card: {
-      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionReminder + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.sectionReminder + '20' : colors.sectionReminder + '15',
       borderRadius: 12,
       padding: 12,
       flexDirection: 'row',
@@ -614,28 +617,6 @@ export default function ReminderScreen({ navigation }: Props) {
       marginTop: 4,
       fontStyle: 'italic',
     },
-    restoreBtn: {
-      backgroundColor: colors.activeBackground,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
-    restoreText: {
-      color: colors.accent,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    foreverBtn: {
-      backgroundColor: colors.card,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
-    foreverText: {
-      color: colors.red,
-      fontSize: 13,
-      fontWeight: '600',
-    },
     deleteBtn: {
       paddingHorizontal: 12,
       paddingVertical: 6,
@@ -643,11 +624,6 @@ export default function ReminderScreen({ navigation }: Props) {
       backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
       borderWidth: 1,
       borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    deleteText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: '#EF4444',
     },
     clearHistoryText: {
       fontSize: 12,
@@ -696,11 +672,11 @@ export default function ReminderScreen({ navigation }: Props) {
           </View>
           <View style={styles.right}>
             <View style={styles.btnRow}>
-              <TouchableOpacity onPress={() => handleRestore(item.id)} style={styles.restoreBtn} activeOpacity={0.7}>
-                <Text style={styles.restoreText}>Restore</Text>
+              <TouchableOpacity onPress={() => handleRestore(item.id)} style={btn.ghostSmall} activeOpacity={0.7}>
+                <Text style={btn.ghostSmallText}>Restore</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={styles.foreverBtn} activeOpacity={0.7}>
-                <Text style={styles.foreverText}>Forever</Text>
+              <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={btn.destructiveSmall} activeOpacity={0.7}>
+                <Text style={btn.destructiveSmallText}>Forever</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -738,6 +714,7 @@ export default function ReminderScreen({ navigation }: Props) {
     };
 
     return (
+        <SwipeableRow onDelete={() => handleDelete(item.id)} enabled={!item.deletedAt}>
         <View style={[styles.card, item.completed && styles.cardCompleted]}>
           <TouchableOpacity
             style={[styles.checkbox, (item.completed || (item.recurring && hasCompletedToday(item))) && styles.checkboxDone]}
@@ -810,18 +787,19 @@ export default function ReminderScreen({ navigation }: Props) {
                   {pinned ? 'Pinned' : 'Pin'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleDeletePress}
-                style={styles.deleteBtn}
-                activeOpacity={0.6}
-              >
-                <Text style={isRecurringInCompleted ? styles.clearHistoryText : styles.deleteText}>
-                  {isRecurringInCompleted ? 'Clear' : 'Delete'}
-                </Text>
-              </TouchableOpacity>
+              {isRecurringInCompleted && (
+                <TouchableOpacity
+                  onPress={handleDeletePress}
+                  style={styles.deleteBtn}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.clearHistoryText}>Clear</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
+        </SwipeableRow>
     );
   };
 
