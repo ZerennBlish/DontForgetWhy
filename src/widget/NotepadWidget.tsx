@@ -25,6 +25,7 @@ export interface WidgetTheme {
   sectionVoice: string;
   sectionTimer: string;
   sectionGames: string;
+  red: string;
 }
 
 export interface WidgetVoiceMemo {
@@ -113,6 +114,8 @@ function VoiceMemoCell({ memo, theme }: { memo: WidgetVoiceMemo; theme: WidgetTh
         width: 'match_parent',
         backgroundColor: theme.cellBg as `#${string}`,
         borderRadius: 12,
+        borderColor: theme.sectionVoice as `#${string}`,
+        borderWidth: 1,
         padding: 12,
         flex: 1,
         flexDirection: 'row',
@@ -168,7 +171,7 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
         <FlexWidget
           clickAction="RECORD_VOICE"
           style={{
-            backgroundColor: theme.accent as `#${string}`,
+            backgroundColor: theme.sectionVoice as `#${string}`,
             borderRadius: 12,
             paddingHorizontal: 8,
             paddingVertical: 4,
@@ -184,7 +187,7 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
           clickAction="OPEN_VOICE_MEMOS"
           style={{
             marginLeft: 4,
-            backgroundColor: theme.accent as `#${string}`,
+            backgroundColor: theme.sectionVoice as `#${string}`,
             borderRadius: 12,
             paddingHorizontal: 8,
             paddingVertical: 4,
@@ -214,7 +217,7 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
           clickAction="OPEN_NOTES"
           style={{
             marginLeft: 4,
-            backgroundColor: theme.accent as `#${string}`,
+            backgroundColor: theme.sectionNotepad as `#${string}`,
             borderRadius: 12,
             paddingHorizontal: 8,
             paddingVertical: 4,
@@ -230,7 +233,7 @@ export function NotepadWidget({ notes, voiceMemos, theme }: NotepadWidgetProps) 
           clickAction="ADD_NOTE"
           style={{
             marginLeft: 4,
-            backgroundColor: theme.accent as `#${string}`,
+            backgroundColor: theme.sectionNotepad as `#${string}`,
             borderRadius: 12,
             paddingHorizontal: 8,
             paddingVertical: 4,

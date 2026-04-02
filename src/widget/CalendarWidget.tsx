@@ -124,7 +124,7 @@ export function CalendarWidget({ monthLabel, weeks, theme }: CalendarWidgetProps
           text={monthLabel}
           style={{
             fontSize: 12,
-            color: theme.textSecondary as `#${string}`,
+            color: theme.sectionCalendar as `#${string}`,
             marginTop: 2,
           }}
         />

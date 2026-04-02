@@ -75,8 +75,8 @@
             {
               "name": "MicWidget",
               "label": "DFW Mic",
-              "minWidth": "110dp",
-              "minHeight": "110dp",
+              "minWidth": "70dp",
+              "minHeight": "70dp",
               "resizeMode": "horizontal|vertical",
               "description": "Quick voice memo recording",
               "updatePeriodMillis": 0

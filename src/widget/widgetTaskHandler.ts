@@ -413,6 +413,7 @@ export async function getWidgetTheme(): Promise<WidgetTheme> {
       sectionVoice: theme.sectionVoice,
       sectionTimer: theme.sectionTimer,
       sectionGames: theme.sectionGames,
+      red: theme.red,
     };
   } catch {
     const fallback = themes.dark;
@@ -430,6 +431,7 @@ export async function getWidgetTheme(): Promise<WidgetTheme> {
       sectionVoice: fallback.sectionVoice,
       sectionTimer: fallback.sectionTimer,
       sectionGames: fallback.sectionGames,
+      red: fallback.red,
     };
   }
 }

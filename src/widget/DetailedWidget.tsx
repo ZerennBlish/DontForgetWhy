@@ -38,7 +38,7 @@ function AlarmCell({ alarm, theme }: { alarm: DetailedAlarm; theme: WidgetTheme 
         width: 'match_parent',
         backgroundColor: theme.cellBg as `#${string}`,
         borderRadius: 12,
-        borderColor: theme.border as `#${string}`,
+        borderColor: theme.sectionAlarm as `#${string}`,
         borderWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
@@ -88,7 +88,7 @@ function TimerCell({ preset, theme }: { preset: DetailedPreset; theme: WidgetThe
         width: 'match_parent',
         backgroundColor: theme.cellBg as `#${string}`,
         borderRadius: 12,
-        borderColor: (preset.isPinned ? theme.accent : theme.border) as `#${string}`,
+        borderColor: theme.sectionTimer as `#${string}`,
         borderWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
@@ -182,7 +182,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
             style={{
               fontSize: 11,
               fontWeight: '600',
-              color: theme.textSecondary as `#${string}`,
+              color: theme.sectionTimer as `#${string}`,
               marginBottom: 4,
             }}
           />
@@ -213,7 +213,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
             style={{
               fontSize: 11,
               fontWeight: '600',
-              color: theme.textSecondary as `#${string}`,
+              color: theme.sectionAlarm as `#${string}`,
               marginBottom: 4,
             }}
           />
@@ -250,7 +250,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
                 height: 28,
                 backgroundColor: theme.cellBg as `#${string}`,
                 borderRadius: 8,
-                borderColor: theme.border as `#${string}`,
+                borderColor: theme.sectionReminder as `#${string}`,
                 borderWidth: 1,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -292,7 +292,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
             flex: 1,
             marginHorizontal: 2,
             backgroundColor: theme.cellBg as `#${string}`,
-            borderColor: theme.border as `#${string}`,
+            borderColor: theme.sectionAlarm as `#${string}`,
             borderWidth: 1,
             borderRadius: 16,
             paddingVertical: 6,
@@ -305,7 +305,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
             style={{
               fontSize: 11,
               fontWeight: '600',
-              color: theme.accent as `#${string}`,
+              color: theme.sectionAlarm as `#${string}`,
             }}
           />
         </FlexWidget>
@@ -315,7 +315,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
             flex: 1,
             marginHorizontal: 2,
             backgroundColor: theme.cellBg as `#${string}`,
-            borderColor: theme.border as `#${string}`,
+            borderColor: theme.sectionTimer as `#${string}`,
             borderWidth: 1,
             borderRadius: 16,
             paddingVertical: 6,
@@ -328,7 +328,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
             style={{
               fontSize: 11,
               fontWeight: '600',
-              color: theme.accent as `#${string}`,
+              color: theme.sectionTimer as `#${string}`,
             }}
           />
         </FlexWidget>
@@ -338,7 +338,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
             flex: 1,
             marginHorizontal: 2,
             backgroundColor: theme.cellBg as `#${string}`,
-            borderColor: theme.border as `#${string}`,
+            borderColor: theme.sectionReminder as `#${string}`,
             borderWidth: 1,
             borderRadius: 16,
             paddingVertical: 6,
@@ -351,7 +351,7 @@ export function DetailedWidget({ alarms, presets, reminders, theme }: DetailedWi
             style={{
               fontSize: 11,
               fontWeight: '600',
-              color: theme.accent as `#${string}`,
+              color: theme.sectionReminder as `#${string}`,
             }}
           />
         </FlexWidget>
