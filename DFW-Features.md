@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 1, 2026*
+**Last updated:** April 2, 2026
 
 ---
 
@@ -76,6 +76,36 @@
 - Card depth: elevation/shadow added to all card types for visual separation
 - Brand title: `colors.brandTitle` — per-theme title color on HomeScreen (navy dark, blue light, cyan HC, pink vivid)
 - Migration from all old theme names (midnight→dark, frost→light, etc.)
+
+### Swipe-to-Delete (Session 10)
+- SwipeableRow component: swipe both directions (left or right) to reveal delete action
+- Integrated on all 4 list screens: AlarmListScreen, ReminderScreen, NotepadScreen, VoiceMemoListScreen
+- Delete buttons removed from cards — swipe replaces them, Pin stays as capsule button
+- GestureHandlerRootView wraps App.tsx for gesture support
+
+### Emoji Picker Modal (Session 10)
+- EmojiPickerModal: bottom sheet modal with flat grid of ~128 curated emoji from emojiData.ts
+- Replaces fragile TextInput keyboard emoji hack (broke 3 times during filter attempts)
+- Quick emoji row on create screens: 8 preset emoji + clear button (✕, red border) + "+" for full modal
+- Emoji clear button on both CreateAlarmScreen and CreateReminderScreen
+- AlarmCard emoji made optional: no default fallback emoji, shows AlarmIcon when none selected
+
+### Button Hierarchy (Session 10 — IN PROGRESS)
+- Shared `buttonStyles.ts` with `getButtonStyles(colors)` returning 4 types × 2 sizes:
+  - primary (accent background), secondary (capsule/outlined), destructive (red text), ghost (minimal)
+  - Each type has large and small variants
+- Applied to: CreateAlarmScreen, CreateReminderScreen, deleted card Restore/Forever buttons
+- Pending: modals + Settings (Prompt 4)
+
+### DrawingCanvas Refactor (Session 10)
+- Modals extracted to DrawingPickerModal.tsx for safer editing and theming
+- DrawingCanvas fully themed (was partially hardcoded)
+- forceDark prop added to BackButton and HomeButton for contexts requiring dark appearance
+
+### Section-Color Card Tinting (Session 10)
+- Dark mode cards now use `sectionColor + '20'` background (was plain card color)
+- Light mode uses `sectionColor + '15'` (established Session 9)
+- Gives each section visual identity in both modes
 
 ### Icon System (Session 9)
 - `src/components/Icons.tsx`: 29+ View-based icons replacing emoji throughout app

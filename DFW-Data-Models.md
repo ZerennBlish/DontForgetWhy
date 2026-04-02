@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 1, 2026
+**Last updated:** April 2, 2026 (no data model changes in Session 10)
 
 ---
 

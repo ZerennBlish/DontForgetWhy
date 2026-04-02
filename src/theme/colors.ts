@@ -65,7 +65,7 @@ const light: ThemeColors = {
   accent: '#3B82F6',
   textPrimary: '#374151',
   textSecondary: '#6B7280',
-  textTertiary: '#B0B7C3',
+  textTertiary: '#7D8590',
   border: '#DEE0E8',
   red: '#DC2626',
   orange: '#EA580C',

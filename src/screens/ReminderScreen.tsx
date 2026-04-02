@@ -617,7 +617,7 @@ export default function ReminderScreen({ navigation }: Props) {
       marginTop: 4,
       fontStyle: 'italic',
     },
-    deleteBtn: {
+    clearBtn: {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
@@ -714,7 +714,7 @@ export default function ReminderScreen({ navigation }: Props) {
     };
 
     return (
-        <SwipeableRow onDelete={() => handleDelete(item.id)} enabled={!item.deletedAt}>
+        <SwipeableRow onDelete={() => handleDelete(item.id)} enabled={!item.deletedAt && !isRecurringInCompleted}>
         <View style={[styles.card, item.completed && styles.cardCompleted]}>
           <TouchableOpacity
             style={[styles.checkbox, (item.completed || (item.recurring && hasCompletedToday(item))) && styles.checkboxDone]}
@@ -790,7 +790,7 @@ export default function ReminderScreen({ navigation }: Props) {
               {isRecurringInCompleted && (
                 <TouchableOpacity
                   onPress={handleDeletePress}
-                  style={styles.deleteBtn}
+                  style={styles.clearBtn}
                   activeOpacity={0.6}
                 >
                   <Text style={styles.clearHistoryText}>Clear</Text>

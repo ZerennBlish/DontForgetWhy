@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 1, 2026*
+**Last updated:** April 2, 2026
 
 ---
 
@@ -95,6 +95,8 @@ DontForgetWhy/
     │   ├── BackButton.tsx
     │   ├── DayPickerRow.tsx
     │   ├── DrawingCanvas.tsx
+    │   ├── DrawingPickerModal.tsx       # Extracted drawing tool modals (Session 10)
+    │   ├── EmojiPickerModal.tsx         # Bottom sheet emoji picker (~128 curated emoji, Session 10)
     │   ├── ErrorBoundary.tsx
     │   ├── HomeButton.tsx              # Home navigation button for all screens
     │   ├── Icons.tsx                  # 29+ View-based icons (Session 9)
@@ -102,12 +104,14 @@ DontForgetWhy/
     │   ├── NoteEditorModal.tsx
     │   ├── ShareNoteModal.tsx
     │   ├── SoundPickerModal.tsx
+    │   ├── SwipeableRow.tsx             # Swipe-to-delete (both directions, Session 10)
     │   ├── TimePicker.tsx
     │   ├── UndoToast.tsx
     │   └── VoiceMemoCard.tsx         # Reusable voice memo list card with inline play/pause
     ├── data/
     │   ├── alarmSounds.ts
     │   ├── appOpenQuotes.ts
+    │   ├── emojiData.ts              # Curated emoji dataset for picker modal (Session 10)
     │   ├── voiceClips.ts          # voice clip registry (10 categories, 63 clips)
     │   ├── guessWhyIcons.ts
     │   ├── guessWhyMessages.ts
@@ -176,6 +180,7 @@ DontForgetWhy/
     │   ├── triviaStorage.ts
     │   └── widgetPins.ts
     ├── theme/
+    │   ├── buttonStyles.ts            # Shared button hierarchy: 4 types × 2 sizes (Session 10)
     │   ├── colors.ts               # 4 theme definitions + section colors (custom generator removed)
     │   └── ThemeContext.tsx         # theme provider + useTheme hook
     ├── types/
@@ -303,9 +308,17 @@ DontForgetWhy/
 | Jest tests | 222 passing on testing-setup branch (massively outdated) |
 | EAS build credits | ~13 remaining (reset April 12) |
 
+### Packages Removed (Session 10)
+- `react-native-tab-view` — tabs replaced by standalone screens (Session 9 separation)
+- `react-native-pager-view` — was only a dependency of tab-view
+- `date-fns` — unused after prior refactors
+
+### App.tsx Changes (Session 10)
+- `GestureHandlerRootView` wraps the entire app — required for SwipeableRow gesture handling
+
 ### Git Branches
 | Branch | Purpose | Status |
 |--------|---------|--------|
 | `main` | Production. Synced with dev at v1.8.0. | Active, clean |
-| `dev` | v1.9.0 — Home screen, timer extraction, voice memo separation, widget rebranding. | Active — all new work goes here |
+| `dev` | v1.9.0 + Session 10 — Home screen, visual overhaul, swipe-to-delete, emoji picker, button hierarchy. | Active — all new work goes here |
 | `testing-setup` | Jest suite (222 tests). | Reconciled with main (Phase 1.2) |

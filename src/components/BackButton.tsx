@@ -25,9 +25,9 @@ export default function BackButton({ onPress, forceDark }: BackButtonProps) {
     arrow: {
       fontSize: 22,
       marginTop: -2,
-      color: colors.textPrimary,
+      color: (forceDark || colors.mode === 'dark') ? '#F0F0F8' : colors.textPrimary,
     },
-  }), [colors]);
+  }), [colors, forceDark]);
 
   return (
     <TouchableOpacity

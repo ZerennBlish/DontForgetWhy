@@ -22,7 +22,7 @@ export default function HomeButton({ forceDark }: { forceDark?: boolean }) {
       accessibilityLabel="Go home"
       accessibilityRole="button"
     >
-      <HomeIcon color={colors.textPrimary} size={18} />
+      <HomeIcon color={(forceDark || colors.mode === 'dark') ? '#F0F0F8' : colors.textPrimary} size={18} />
     </TouchableOpacity>
   );
 }

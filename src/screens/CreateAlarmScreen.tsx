@@ -29,6 +29,7 @@ import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import TimePicker from '../components/TimePicker';
 import EmojiPickerModal from '../components/EmojiPickerModal';
+import { AlarmIcon } from '../components/Icons';
 import type { RootStackParamList } from '../navigation/types';
 
 function formatDateDisplay(dateStr: string): string {
@@ -786,7 +787,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             onPress={() => { hapticLight(); setEmojiPickerOpen((o) => !o); }}
             activeOpacity={0.7}
           >
-            <Text style={styles.emojiCircleText}>{form.selectedIcon || '\u{1F60A}'}</Text>
+            {form.selectedIcon ? <Text style={styles.emojiCircleText}>{form.selectedIcon}</Text> : <AlarmIcon color={colors.textSecondary} size={22} />}
           </TouchableOpacity>
         </View>
         {emojiPickerOpen && (

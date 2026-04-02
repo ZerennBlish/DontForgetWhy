@@ -310,7 +310,7 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
 
         const updated: Reminder = {
           ...existing,
-          icon: selectedIcon || '\u{1F4DD}',
+          icon: selectedIcon !== null && selectedIcon !== undefined ? selectedIcon : '\u{1F4DD}',
           text: text.trim(),
           nickname: nickname.trim() || undefined,
           private: selectedPrivate,
@@ -333,7 +333,7 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
       } else {
         const reminder: Reminder = {
           id: uuidv4(),
-          icon: selectedIcon || '\u{1F4DD}',
+          icon: selectedIcon !== null && selectedIcon !== undefined ? selectedIcon : '\u{1F4DD}',
           text: text.trim(),
           nickname: nickname.trim() || undefined,
           private: selectedPrivate,

@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: April 1, 2026
+### Source of Truth · Updated: April 2, 2026
 
 ---
 
@@ -10,9 +10,9 @@
 | **Current Version** | v1.9.0 (versionCode 24) — Home screen release |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | Home screen release — COMPLETE |
+| **Current Focus** | Session 10: P2 audit fixes, visual overhaul, swipe-to-delete |
 | **Blocked By** | Nothing |
-| **Next Action** | EAS build → Play Store publish → Phase 4 planning |
+| **Next Action** | Button hierarchy Prompt 4 (modals + Settings), widget visual updates, Jest, then ship |
 | **EAS Credits** | ~13 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -303,10 +303,19 @@
 
 ### Known Bugs (Pre-Existing)
 
-- Recurring reminder with empty days array matches every day on calendar widget
-- Guess Why showing answer immediately
-- Yearly recurring reminder rescheduling without firing
-- ExpoKeepAwake promise rejections in dev mode (SDK 55)
+- ~~Recurring reminder with empty days array matches every day on calendar widget~~ — FIXED Session 9
+- ~~Guess Why showing answer immediately~~ — FIXED Session 9
+- ~~Yearly recurring reminder rescheduling without firing~~ — FIXED Session 9
+- ~~ExpoKeepAwake promise rejections in dev mode (SDK 55)~~ — FIXED Session 9
+
+### Session 10 P2 Audit Findings (All 7 CLEARED)
+- Yearly label bug: no-date recurring reminders showed "Daily", now "Yearly"
+- CreateReminderScreen back stack: fell back to AlarmList, now Reminders
+- Emoji TextInput hack: broke 3 times during attempted filter, rebuilt as modal
+- VoiceMemoListScreen SyntaxError: broken StyleSheet from button style removal
+- AlarmListScreen deleted cards: Restore/Forever stacked vertically, fixed to side-by-side
+- DrawingCanvas: extracted modals, fully themed
+- Button hierarchy: shared buttonStyles.ts, 4 types × 2 sizes (create screens + trash items done, modals + Settings pending)
 
 ### Audits
 - [x] Audit 47: Codex — 0 P0, 2 P1 (pre-existing timer/note behaviors), 3 P2. Gemini — 0 P0, 2 P1 (widget warm-start nav, notification routing missing Home base), 3 P2 (dead appQuote code, quote count, duplicate reminder reads). Both P1s from Gemini fixed before build.
@@ -495,13 +504,16 @@
 - Home screen title centering — verify applied
 
 ### UI Unification
-- Swipe to delete on cards (enabled by alarm/reminder separation — no tab swiping conflict)
+- ~~Swipe to delete on cards~~ — DONE Session 10 (SwipeableRow component, both directions, all 4 list screens)
 - ~~Separate alarms and reminders into their own screens~~ — DONE Session 9
 - ~~Alarm and reminder cards restyle to match dark bar style~~ — DONE Session 9 (card unification with section-colored borders + elevation)
 - ~~All cards app-wide use unified dark bar pattern~~ — DONE Session 9
 - ~~All buttons match capsule pattern~~ — DONE Session 9 (text capsules, mode-aware backgrounds)
 - ~~All icons checked for consistency~~ — DONE Session 9 (29+ View-based icons in Icons.tsx)
-- Button hierarchy: primary (accent bg) / secondary (capsule) / destructive (red text) distinction
+- ~~Emoji picker modal~~ — DONE Session 10 (replaces TextInput hack, flat grid of ~128 curated emoji, bottom sheet)
+- ~~Package cleanup~~ — DONE Session 10 (removed react-native-tab-view, react-native-pager-view, date-fns)
+- ~~Visual overhaul~~ — DONE Session 10 (themes, icons, cards, light mode tinted cards, section tinting, DrawingCanvas refactor, forceDark prop on BackButton/HomeButton)
+- Button hierarchy: IN PROGRESS — shared buttonStyles.ts created (4 types × 2 sizes), applied to create screens + trash items. Modals + Settings pending (Prompt 4).
 - Remaining emoji cleanup (some game screens still use emoji)
 - Widget visual updates for new themes (section colors in widget renders)
 - Pin toggle inside edit/detail screens (alarms, reminders, notes, voice memos)
@@ -522,7 +534,7 @@
 - Cloud backup / export (.dfw backup file — no accounts, zip AsyncStorage + voice-memos/ + note-images/)
 
 ### Infrastructure
-- Jest suite resurrection — 222 tests on testing-setup branch, needs SDK 55 + new screen coverage
+- Jest suite resurrection — 222 tests on testing-setup branch, needs SDK 55 + new screen coverage (next after button hierarchy + widget updates)
 - Storage audit — voice memo disk usage, AsyncStorage limits at scale
 - Full abandoned package audit (find and remove unused dependencies)
 - Full code audit (fresh eyes on entire codebase post-restructure)
@@ -547,6 +559,10 @@
 
 ### Completed (Backlog Items Shipped)
 - ~~Home screen (main menu)~~ — DONE in v1.9.0
+- ~~Swipe-to-delete~~ — DONE Session 10 (SwipeableRow, both directions, all 4 list screens)
+- ~~Emoji picker modal~~ — DONE Session 10 (replaces TextInput hack)
+- ~~Package cleanup~~ — DONE Session 10 (removed tab-view, pager-view, date-fns)
+- ~~Visual overhaul~~ — DONE Session 10 (themes, icons, cards, light mode, section tinting)
 - ~~Expo SDK 55 upgrade~~ — DONE in v1.8.1
 - ~~Theme consolidation (6 → 4 + section colors)~~ — DONE Session 9
 - ~~Card unification (all cards use dark bar + section-colored borders)~~ — DONE Session 9

@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 1, 2026*
+**Last updated:** April 2, 2026
 
 ---
 
@@ -353,5 +353,32 @@
 - Found: Session 9 light mode testing
 - Cause: Capsule buttons used `rgba(30,30,40,0.7)` background and `rgba(255,255,255,0.15)` border — invisible/ugly on light backgrounds
 - Fix: Mode-aware rgba values — light mode uses `rgba(0,0,0,0.06)` background and `rgba(0,0,0,0.12)` border
+
+### Session 10 Bug Fixes (April 2, 2026)
+
+**Bug: Yearly label on no-date recurring reminders**
+- Found: Session 10 P2 audit
+- Cause: Recurring reminders with no days + no dueDate displayed "Daily" label instead of "Yearly"
+- Fix: Label now correctly shows "Yearly" for creation-anniversary pattern reminders
+
+**Bug: CreateReminderScreen back navigation goes to AlarmList**
+- Found: Session 10 P2 audit
+- Cause: Back navigation fell back to AlarmList instead of the Reminders screen
+- Fix: Back stack now correctly returns to Reminders
+
+**Bug: Emoji TextInput hack fragility**
+- Found: Session 10 (broke 3 times during attempted filter implementation)
+- Cause: TextInput-based emoji picker was a fragile hack — broke on every attempt to add filtering or improve UX
+- Fix: Rebuilt as EmojiPickerModal — controlled modal surface with flat grid of ~128 curated emoji
+
+**Bug: VoiceMemoListScreen SyntaxError after button style removal**
+- Found: Session 10
+- Cause: StyleSheet had broken references after button style properties were removed during hierarchy refactor
+- Fix: Cleaned up StyleSheet to match new button hierarchy pattern
+
+**Bug: AlarmListScreen deleted card buttons stacked vertically**
+- Found: Session 10
+- Cause: Restore and Forever Delete buttons rendered in column layout instead of side-by-side
+- Fix: Changed to row layout with proper spacing
 
 **45 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.

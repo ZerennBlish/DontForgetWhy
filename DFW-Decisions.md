@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 1, 2026*
+**Last updated:** April 2, 2026
 
 ---
 
@@ -47,7 +47,7 @@
 ### Removed Features (With Reasons)
 - **Alarm sound picker:** 6 channels all used `sound: 'default'`. Indistinguishable.
 - **Game sounds:** Enhanced haptic patterns not distinct from regular haptics.
-- **SwipeableRow:** Gesture conflicts with react-native-tab-view. Buttons more reliable.
+- **~~SwipeableRow:~~** Originally removed due to gesture conflicts with react-native-tab-view. Reinstated in Session 10 after tab-view removed and screens separated — no more gesture conflicts.
 - **expo-av for sound preview:** Failed silently in release builds. Replaced with Notifee.
 - **Category system:** Redundant after icon picker added.
 - **Compact widgets (TimerWidget, NotepadWidgetCompact):** Structurally identical to detailed after redesign. Both remaining widgets resizable.
@@ -199,6 +199,30 @@ HomeScreen "Don't Forget Why" title uses `colors.brandTitle` — a per-theme col
 
 ### HomeScreen grid: no borders, no icon box (Session 9)
 Removed borderWidth, borderColor, elevation, and shadow from grid cells. Removed iconCircle background. Tinted section-color background is enough — borders on top of tint on top of photo is too many layers. One layer, clean.
+
+### Vivid theme: cyberpunk terminal aesthetic (Session 10)
+Overhauled Vivid from purple (#7C5CFC accent, #0C0C18 bg) to neon green cyberpunk (#39FF14 accent, #0A0F0A green-tinted blacks). All 3 dark themes are now visually distinct: Dark (blue/navy), High Contrast (cyan/black), Vivid (neon green/terminal). Previously Dark and Vivid were too similar.
+
+### Section-color card tinting in dark mode (Session 10)
+Dark mode cards now use `sectionColor + '20'` background. Light mode uses `sectionColor + '15'` (from Session 9). Gives each section visual identity in both modes without sacrificing readability. Alarm cards are tinted red, reminder blue, etc.
+
+### Swipe-to-delete both directions (Session 10)
+SwipeableRow supports swiping left OR right — both reveal the same delete action. Only one swipe action (delete). Let users do what feels natural rather than forcing a direction. Originally removed (gesture conflicts with tab-view), reinstated after tab-view removed.
+
+### Delete buttons removed from cards (Session 10)
+Swipe-to-delete replaces on-card delete buttons. Pin stays as capsule button on cards. Cleaner card layout — fewer buttons, less visual noise.
+
+### Emoji picker rebuilt as modal (Session 10)
+TextInput keyboard emoji hack was fragile — broke 3 times during attempts to add filtering. Rebuilt as EmojiPickerModal with ~128 curated emoji in flat grid, bottom sheet presentation. Controlled surface, no keyboard dependency, searchable in future.
+
+### Button hierarchy: 4 types shared via getButtonStyles() (Session 10)
+`buttonStyles.ts` exports `getButtonStyles(colors)` returning primary (accent bg), secondary (capsule/outlined), destructive (red text), ghost (minimal) — each in large and small. Applied to create screens and trash items first. Modals and Settings next. Eliminates ad-hoc inline button styles.
+
+### AlarmCard emoji made optional (Session 10)
+No default fallback emoji — when no emoji selected, shows AlarmIcon component instead. Clear button (✕) added to quick emoji row on both alarm and reminder create screens. Users shouldn't have a random emoji assigned they didn't choose.
+
+### DrawingCanvas refactor before theming (Session 10)
+Extracted color/background picker modals to DrawingPickerModal.tsx before applying theme changes. Safer to theme smaller, focused files than one monolith. Modals needed their own theme-aware styling anyway.
 
 ---
 

@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 1, 2026
+**Last updated:** April 2, 2026
 
 ---
 
@@ -80,13 +80,15 @@ All prior channel versions deleted on every app startup.
 
 ## 3. Theme System
 
-### 4 Themes (Session 9 consolidation)
+### 4 Themes (Session 9 consolidation, Session 10 Vivid overhaul)
 | Theme | Mode | Background | Card | Accent |
 |-------|------|-----------|------|--------|
 | Dark | dark | #0A0A12 | #1A1A28 | #5B9EE6 |
 | Light | light | #F2F3F8 | #FFFFFF | #3B82F6 |
 | High Contrast | dark | #000000 | #1A1A1A | #00D4FF |
-| Vivid | dark | #0C0C18 | #1A1A2C | #7C5CFC |
+| Vivid | dark | #0A0F0A | #0F1A0F | #39FF14 |
+
+Vivid overhauled in Session 10: cyberpunk terminal aesthetic — green-tinted blacks, neon green accent (#39FF14). All 3 dark themes now visually distinct.
 
 ### Section Colors in Theme
 ThemeColors interface includes per-section color tokens: `sectionAlarm`, `sectionReminder`, `sectionCalendar`, `sectionNotepad`, `sectionVoice`, `sectionTimer`, `sectionGames`. Each theme defines its own palette (e.g., Vivid uses completely different section colors than Dark). All hardcoded section hex values throughout the app replaced with `colors.section*` references.
@@ -95,7 +97,7 @@ ThemeColors interface includes per-section color tokens: `sectionAlarm`, `sectio
 Feb 11: 8 themes + custom. Mar 10-11: Consolidated to 6 presets. Apr 1 (Session 9): Consolidated to 4 — Dark, Light, High Contrast, Vivid. Custom theme generator (`generateCustomThemeDual`) removed entirely. Personalization via background images, not theme colors — users picking colors that fight their backgrounds was a trap.
 
 ### Mode-Aware Rendering
-Light mode overhaul in Session 9: capsule buttons use mode-aware rgba values, watermark opacity adapts (0.15 dark / 0.06 light). Card backgrounds use section-colored tint in light mode (`sectionColor + '15'`) instead of plain white — alarm cards are light red, reminder light blue, etc. Photo overlay always uses dark dim (`rgba(0,0,0,opacity)`) regardless of mode — photos look best dimmed, not bleached. Photo-aware alpha values on HomeScreen: grid cells, quick capture buttons, today container, and banner all increase opacity when a background photo is set (e.g., grid `90` with photo, `40` without).
+Light mode overhaul in Session 9: capsule buttons use mode-aware rgba values, watermark opacity adapts (0.15 dark / 0.06 light). Card backgrounds use section-colored tint in both modes — dark mode uses `sectionColor + '20'`, light mode uses `sectionColor + '15'` (Session 10). Photo overlay always uses dark dim (`rgba(0,0,0,opacity)`) regardless of mode — photos look best dimmed, not bleached. Photo-aware alpha values on HomeScreen: grid cells, quick capture buttons, today container, and banner all increase opacity when a background photo is set (e.g., grid `90` with photo, `40` without).
 
 ### Brand Title Token
 `brandTitle` field in ThemeColors: per-theme title color for "Don't Forget Why" on HomeScreen. Dark: `#1E3A5F` (midnight navy, subtle), Light: `#2563EB` (bold blue), High Contrast: `#00D4FF` (cyan), Vivid: `#FF6B9D` (pink).
@@ -229,6 +231,14 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 - `newArchEnabled` flag removed from app.json — New Architecture is always on in SDK 55
 - `edgeToEdgeEnabled` flag removed from app.json — edge-to-edge is default in SDK 55
 
+### Package Cleanup (Session 10)
+- `react-native-tab-view` REMOVED — tabs replaced by standalone screens (Session 9 separation)
+- `react-native-pager-view` REMOVED — was only a dependency of tab-view
+- `date-fns` REMOVED — unused after prior refactors
+
+### GestureHandlerRootView (Session 10)
+- `GestureHandlerRootView` wraps the entire app in `App.tsx` — required for SwipeableRow gesture handling via react-native-gesture-handler
+
 ### New/Modified Files in Phase 3
 
 | File | Status | Purpose |
@@ -310,3 +320,17 @@ Voice roasts use the native `AlarmChannelModule` on ALARM stream because they pl
 | `src/components/HomeButton.tsx` | NEW | Home navigation button added to all screens |
 | `src/components/Icons.tsx` | NEW | 29+ View-based icons replacing emoji app-wide |
 | `src/data/homeBannerQuotes.ts` | NEW | 63 color-coded personality quotes across 7 sections |
+
+### New/Modified Files in Session 10
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/components/SwipeableRow.tsx` | NEW | Swipe-to-delete component (both directions), used on all 4 list screens |
+| `src/components/EmojiPickerModal.tsx` | NEW | Bottom sheet emoji picker modal (~128 curated emoji, flat grid) |
+| `src/components/DrawingPickerModal.tsx` | NEW | Extracted drawing tool modals from DrawingCanvas |
+| `src/data/emojiData.ts` | NEW | Curated emoji dataset for picker modal |
+| `src/theme/buttonStyles.ts` | NEW | Shared button hierarchy: getButtonStyles() returns 4 types × 2 sizes |
+| `App.tsx` | MODIFIED | GestureHandlerRootView wrapper added |
+| `src/components/DrawingCanvas.tsx` | MODIFIED | Modals extracted, fully themed |
+| `src/components/BackButton.tsx` | MODIFIED | forceDark prop added |
+| `src/components/HomeButton.tsx` | MODIFIED | forceDark prop added |

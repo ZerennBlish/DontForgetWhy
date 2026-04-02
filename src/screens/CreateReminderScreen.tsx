@@ -758,7 +758,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             onPress={() => { hapticLight(); setEmojiPickerOpen((o) => !o); }}
             activeOpacity={0.7}
           >
-            <Text style={styles.emojiCircleText}>{form.selectedIcon || '\u{1F4DD}'}</Text>
+            <Text style={styles.emojiCircleText}>{form.selectedIcon !== '' ? (form.selectedIcon || '\u{1F4DD}') : ''}</Text>
           </TouchableOpacity>
         </View>
         {emojiPickerOpen && (
