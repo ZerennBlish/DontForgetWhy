@@ -25,6 +25,7 @@ export interface ThemeColors {
   sectionVoice: string;
   sectionTimer: string;
   sectionGames: string;
+  brandTitle: string;
 }
 
 const dark: ThemeColors = {
@@ -53,6 +54,7 @@ const dark: ThemeColors = {
   sectionVoice: '#A29BFE',
   sectionTimer: '#FDCB6E',
   sectionGames: '#A8E06C',
+  brandTitle: '#1E3A5F',
 };
 
 const light: ThemeColors = {
@@ -60,10 +62,10 @@ const light: ThemeColors = {
   background: '#F2F3F8',
   card: '#FFFFFF',
   cardElevated: '#FFFFFF',
-  accent: '#2563EB',
-  textPrimary: '#111827',
-  textSecondary: '#4B5563',
-  textTertiary: '#9CA3AF',
+  accent: '#3B82F6',
+  textPrimary: '#374151',
+  textSecondary: '#6B7280',
+  textTertiary: '#B0B7C3',
   border: '#DEE0E8',
   red: '#DC2626',
   orange: '#EA580C',
@@ -74,13 +76,14 @@ const light: ThemeColors = {
   overlayButton: 'rgba(255, 255, 255, 0.25)',
   overlayText: '#FFFFFF',
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
-  sectionAlarm: '#E05252',
-  sectionReminder: '#3B7DD8',
-  sectionCalendar: '#D05A3A',
-  sectionNotepad: '#2DB88A',
-  sectionVoice: '#7B6FE0',
-  sectionTimer: '#D4A829',
-  sectionGames: '#6BA834',
+  sectionAlarm: '#EF5555',
+  sectionReminder: '#4A90E6',
+  sectionCalendar: '#E06545',
+  sectionNotepad: '#38D99A',
+  sectionVoice: '#8B7FEE',
+  sectionTimer: '#E0B830',
+  sectionGames: '#78BF3E',
+  brandTitle: '#2563EB',
 };
 
 const highContrast: ThemeColors = {
@@ -109,6 +112,7 @@ const highContrast: ThemeColors = {
   sectionVoice: '#BB88FF',
   sectionTimer: '#FFE044',
   sectionGames: '#88FF44',
+  brandTitle: '#00D4FF',
 };
 
 const vivid: ThemeColors = {
@@ -137,6 +141,7 @@ const vivid: ThemeColors = {
   sectionVoice: '#42C6FF',
   sectionTimer: '#FFD93D',
   sectionGames: '#FF5757',
+  brandTitle: '#FF6B9D',
 };
 
 export const themes = {

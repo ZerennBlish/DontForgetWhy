@@ -576,7 +576,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               <View
                 style={[
                   StyleSheet.absoluteFill,
-                  { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` },
+                  { backgroundColor: `rgba(0,0,0,${bgOpacity})` },
                 ]}
               />
             </>
@@ -619,7 +619,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` },
+                { backgroundColor: `rgba(0,0,0,${bgOpacity})` },
               ]}
             />
           </>

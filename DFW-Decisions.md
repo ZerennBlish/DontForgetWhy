@@ -83,7 +83,7 @@
 
 **Dark capsule button uniformity (Mar 25):** All tappable buttons use rgba(30,30,40,0.7) background with rgba(255,255,255,0.15) border. Ensures visibility on any background (light notes, dark notes, any theme). Applied to BackButton, NoteEditorModal toolbar, note card actions. Eliminates mixed styling where some buttons used translucent theme colors.
 
-**Text color picker removed from roadmap (Mar 25):** The dark capsule pattern (semi-transparent dark backgrounds with white text/borders) solves readability on all backgrounds without user configuration. For future photo backgrounds (P2 Pro), dark overlays or frosted-glass strips behind text regions with automatic black/white text selection based on background luminance. More reliable, zero-config, preserves visual consistency. reanimated-color-picker stays installed for custom theme builder but is NOT used for a global text color setting.
+**Text color picker removed from roadmap (Mar 25):** The dark capsule pattern (semi-transparent dark backgrounds with white text/borders) solves readability on all backgrounds without user configuration. For future photo backgrounds (P2 Pro), dark overlays or frosted-glass strips behind text regions with automatic black/white text selection based on background luminance. More reliable, zero-config, preserves visual consistency. reanimated-color-picker stays installed for NoteEditorModal and DrawingCanvas (custom theme picker removed from SettingsScreen in Session 9).
 
 **CalendarWidget as mini month grid, not agenda list (Mar 25):** Initial design was "Today's Agenda" list widget. Switched to mini calendar with dots because: (1) month-at-a-glance is more useful than duplicating DetailedWidget's item list, (2) dots answer "do I have anything on X day?" which is the core calendar question, (3) tapping any day deep-links to CalendarScreen for details. Widget can't navigate months (click-only interaction model) — always shows current month.
 
@@ -163,6 +163,27 @@ Memory's Timeline (DetailedWidget), Forget Me Notes (NotepadWidget), Misplaced T
 
 ### Section color assignments locked (Apr 1)
 Alarms #FF6B6B, Reminders #4A90D9, Calendar #E17055, Notepad #55EFC4, Voice #A29BFE, Timers #FDCB6E, Games #A8E06C. Used in home grid icons and personality banner backgrounds. Locked to maintain visual consistency across all surfaces.
+
+### Alarm/reminder separation into own screens (Session 9)
+AlarmListScreen is alarms-only (AlarmsTab absorbed). ReminderScreen is standalone with own route. Enables future swipe-to-delete (no tab swiping conflict), compartmentalizes navigation, and each section owns its own header/background/filtering.
+
+### No-date recurring reminders are yearly from createdAt (Session 9)
+Recurring + no days + no dueDate = yearly from createdAt (creation anniversary). Not daily — daily makes no sense without explicit day selection. Affects scheduling, calendar dots, Today section, widget, completion logic.
+
+### Custom theme picker removed (Session 9)
+Users pick colors that fight their own backgrounds. Personal photo + 4 well-designed themes serves better. The 4th theme (Vivid) uses a completely different color palette — proves the section color system works when themes define their own section colors.
+
+### Emoji → View-based icons (Session 9)
+Emoji render differently per device, can't be theme-colored, and signal "hobby project." View-based icons in Icons.tsx are theme-colorable, scalable, and consistent. 29+ icons covering all UI needs. Extracted from HomeScreen and added new ones for all common actions.
+
+### Pin redesign — dot + text capsule (Session 9)
+Pushpin emoji/icon is cartoonish. Small accent dot as pinned indicator + "Pin"/"Pinned" text capsule as toggle button is modern and clean. Applied to alarms, reminders, notes, voice memos.
+
+### Note editor dropdown consolidation (Session 9)
+4 action buttons (draw/photo/record/color) consolidated into single "+" dropdown menu with labeled rows and View-based icons. Cleaner toolbar, room for centered Save button. Added "Take Photo" option alongside "Photo Library."
+
+### DayPickerRow "Everyday" button (Session 9)
+Quick-select button that toggles all 7 days on/off. Common use case — saves 7 taps.
 
 ---
 

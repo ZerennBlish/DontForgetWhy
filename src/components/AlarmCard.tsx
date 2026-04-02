@@ -57,7 +57,7 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
-      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionAlarm + '15',
       borderRadius: 12,
       padding: 12,
       marginBottom: 8,

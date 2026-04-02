@@ -788,7 +788,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       if (item.type === 'alarm') {
         const a = item.data;
         return (
-          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateAlarm', { alarm: item.data }); }} style={[styles.card, { borderLeftColor: DOT_ALARM }]}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateAlarm', { alarm: item.data }); }} style={[styles.card, { borderLeftColor: DOT_ALARM, backgroundColor: colors.mode === 'dark' ? colors.card : DOT_ALARM + '15' }]}>
             <Text style={styles.cardIcon}>{a.icon || '\u23F0'}</Text>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -814,7 +814,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       if (item.type === 'reminder') {
         const r = item.data;
         return (
-          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateReminder', { reminderId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_REMINDER }]}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateReminder', { reminderId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_REMINDER, backgroundColor: colors.mode === 'dark' ? colors.card : DOT_REMINDER + '15' }]}>
             <Text style={styles.cardIcon}>{r.icon}</Text>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -844,7 +844,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         const memo = item.data;
         const dur = `${Math.floor(memo.duration / 60)}:${String(Math.floor(memo.duration % 60)).padStart(2, '0')}`;
         return (
-          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_VOICE }]}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_VOICE, backgroundColor: colors.mode === 'dark' ? colors.card : DOT_VOICE + '15' }]}>
             <Text style={styles.cardIcon}>{'\u{1F399}\uFE0F'}</Text>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -868,7 +868,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       const line = n.text.split('\n')[0];
       const firstLine = line.length > 50 ? line.slice(0, 50) + '\u2026' : line;
       return (
-        <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('Notepad', { noteId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_NOTE }]}>
+        <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('Notepad', { noteId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_NOTE, backgroundColor: colors.mode === 'dark' ? colors.card : DOT_NOTE + '15' }]}>
           <Text style={styles.cardIcon}>{n.icon}</Text>
           <View style={styles.cardBody}>
             <Text style={styles.cardTitle} numberOfLines={1}>
@@ -1081,7 +1081,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
           </>
         ) : (
           <Image

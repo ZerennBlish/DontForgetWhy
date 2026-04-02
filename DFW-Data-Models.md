@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** March 30, 2026
+**Last updated:** April 1, 2026
 
 ---
 
@@ -94,4 +94,22 @@ interface VoiceMemo {
 
 ## 6. Key AsyncStorage Keys
 
-`'alarms'`, `'reminders'`, `'activeTimers'`, `'notes'`, `'userTimers'`, `'appSettings'`, `'silenceAllAlarms'`, `'appTheme'`, `'customTheme'`, `'hapticsEnabled'`, `'onboardingComplete'`, `'defaultTimerSound'`, `'bg_main'` (background photo URI), `'bg_overlay_opacity'` (background overlay 0.3-0.8), plus game stats (guessWhyStats, forgetLog, memoryMatchScores, sudokuBestScores, dailyRiddleStats, triviaStats), widget pins (widgetPinnedPresets, widgetPinnedAlarms, widgetPinnedReminders, widgetPinnedNotes, widgetPinnedVoiceMemos), per-alarm (`snoozeCount_{alarmId}`, `snoozing_{alarmId}`), pending actions (pendingTabAction, pendingAlarmAction, pendingReminderAction, pendingNoteAction), notification dedupe (`_handledNotifs` in-memory + `handled_notifs` persistent in AsyncStorage), `'voiceMemos'` (JSON array of VoiceMemo objects — standalone voice recordings), `'pendingVoiceAction'` (JSON object with type ('record'|'detail'), optional memoId, timestamp — set by widget click handler, consumed by useNotificationRouting)
+`'alarms'`, `'reminders'`, `'activeTimers'`, `'notes'`, `'userTimers'`, `'appSettings'`, `'silenceAllAlarms'`, `'appTheme'`, `'hapticsEnabled'`, `'onboardingComplete'`, `'defaultTimerSound'`, `'bg_main'` (background photo URI), `'bg_overlay_opacity'` (background overlay 0.3-0.8), plus game stats (guessWhyStats, forgetLog, memoryMatchScores, sudokuBestScores, dailyRiddleStats, triviaStats), widget pins (widgetPinnedPresets, widgetPinnedAlarms, widgetPinnedReminders, widgetPinnedNotes, widgetPinnedVoiceMemos), per-alarm (`snoozeCount_{alarmId}`, `snoozing_{alarmId}`), pending actions (pendingAlarmListAction, pendingReminderListAction, pendingAlarmAction, pendingReminderAction, pendingNoteAction), notification dedupe (`_handledNotifs` in-memory + `handled_notifs` persistent in AsyncStorage), `'voiceMemos'` (JSON array of VoiceMemo objects — standalone voice recordings), `'pendingVoiceAction'` (JSON object with type ('record'|'detail'), optional memoId, timestamp — set by widget click handler, consumed by useNotificationRouting)
+
+### ThemeColors Interface (Session 9)
+
+```typescript
+interface ThemeColors {
+  mode: 'dark' | 'light';
+  background: string; card: string; cardElevated: string; accent: string;
+  textPrimary: string; textSecondary: string; textTertiary: string; border: string;
+  red: string; orange: string; activeBackground: string;
+  overlayWin: string; overlayLose: string; overlaySkip: string;
+  overlayButton: string; overlayText: string; modalOverlay: string;
+  // Section colors — every theme defines its own palette
+  sectionAlarm: string; sectionReminder: string; sectionCalendar: string;
+  sectionNotepad: string; sectionVoice: string; sectionTimer: string; sectionGames: string;
+}
+```
+
+**ThemeName:** `'dark' | 'light' | 'highContrast' | 'vivid'` — custom theme removed. `customTheme` AsyncStorage key cleaned up on migration.

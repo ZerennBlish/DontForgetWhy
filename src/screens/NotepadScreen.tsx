@@ -604,7 +604,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'CC' : colors.sectionNotepad + '15',
       borderRadius: 12,
       padding: 12,
       borderWidth: 1,
@@ -841,7 +841,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
           </>
         ) : (
           <Image

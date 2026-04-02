@@ -130,7 +130,7 @@ export default function TimerScreen({ navigation }: Props) {
       marginBottom: 8,
     },
     activeCard: {
-      backgroundColor: colors.card + 'BF',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'BF' : colors.sectionTimer + '15',
       borderRadius: 12,
       padding: 14,
       marginBottom: 10,
@@ -196,7 +196,7 @@ export default function TimerScreen({ navigation }: Props) {
     },
     presetCard: {
       width: presetCardWidth,
-      backgroundColor: colors.card + 'BF',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'BF' : colors.sectionTimer + '15',
       borderRadius: 10,
       padding: 10,
       alignItems: 'center',
@@ -937,7 +937,7 @@ export default function TimerScreen({ navigation }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
           </>
         ) : (
           <Image

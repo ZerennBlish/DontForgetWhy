@@ -7,13 +7,13 @@
 ## 1. App Features — Current State
 
 ### Core Utility
-- **Home Screen** — app entry point (v1.9.0). 2×3 icon grid: Alarms (#FF6B6B), Reminders (#4A90D9), Calendar (#E17055), Notepad (#55EFC4), Voice (#A29BFE), Games (#A8E06C). Quick Capture row: New Note, Record Memo, Set Timer (one-tap actions). Personality banner: 63 rotating color-coded sarcastic quotes across 7 sections (homeBannerQuotes.ts). Today section: scrollable container showing today's alarms and reminders. Settings gear in title bar. Forget Log accessible from Settings.
-- **Alarms** — reason field ("why"), 7 sound presets + custom system sounds (listed via native `AlarmChannelModule.getSystemAlarmSounds` using `RingtoneManager.TYPE_ALARM` — replaced third-party `react-native-notification-sounds` in v1.8.1), snooze (1/3/5/10/15 min), recurring (daily/weekly/monthly/yearly) + one-time, emoji icon from keyboard, per-alarm Guess Why toggle, private mode (completely blank card)
+- **Home Screen** — app entry point (v1.9.0). 2×3 icon grid: Alarms (sectionAlarm), Reminders (sectionReminder), Calendar (sectionCalendar), Notepad (sectionNotepad), Voice (sectionVoice), Games (sectionGames). Section colors defined per theme. Quick Capture row: New Note, Record Memo, Set Timer (one-tap actions). Personality banner: 63 rotating color-coded sarcastic quotes across 7 sections (homeBannerQuotes.ts). Today section: scrollable container showing today's alarms and reminders. Settings gear in title bar. Forget Log accessible from Settings.
+- **Alarms** — standalone AlarmListScreen (AlarmsTab deleted and absorbed, Session 9). Reason field ("why"), 7 sound presets + custom system sounds (listed via native `AlarmChannelModule.getSystemAlarmSounds` using `RingtoneManager.TYPE_ALARM` — replaced third-party `react-native-notification-sounds` in v1.8.1), snooze (1/3/5/10/15 min), recurring (daily/weekly/monthly/yearly) + one-time, emoji icon from keyboard, per-alarm Guess Why toggle, private mode (completely blank card)
   - Notification action buttons: "Snooze" and "Dismiss" buttons on alarm notification banners for in-app dismissal without opening fire screen
-- **Reminders** — due dates, 5 recurring patterns (daily/weekly/monthly/yearly/one-time), 6-hour completion window, date-only mode, completion history, sound mode (sound/vibrate/silent), emoji icon
+- **Reminders** — standalone ReminderScreen with own route (`Reminders`), header, background, nav (Session 9). Due dates, 5 recurring patterns (daily/weekly/monthly/yearly/one-time), 6-hour completion window, date-only mode, completion history, sound mode (sound/vibrate/silent), emoji icon
 - **Timers** — standalone TimerScreen (extracted from AlarmListScreen in v1.9.0). 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule
   - Notification action buttons: "Dismiss" button on timer completion notification
-- **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7). Notes-only (voice memos have own screen since v1.9.0). Dark bar card style with green left border accent (#55EFC4). Note icon circle uses the note's own color. Capsule pin/delete buttons matching alarm/reminder pattern.
+- **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7). Notes-only (voice memos have own screen since v1.9.0). Card style with green section-colored border. Note icon circle uses the note's own color. Text capsule pin/delete buttons. Note editor dropdown: consolidated draw/photo/record/color into single "+" dropdown menu with labeled rows and View-based icons. Added "Take Photo" option (camera) alongside "Photo Library" (Session 9). "Edit" text button in view mode (replaced pencil emoji). Share button uses ShareIcon, trash uses TrashIcon.
 - **Voice Memos** — standalone VoiceMemoListScreen (separated from Notepad in v1.9.0). VoiceRecordScreen (tap-to-record/stop, pause/resume), VoiceMemoDetailScreen (dual-mode: new via tempUri, existing via memoId, seekable playback, explicit Save), VoiceMemoCard (View-based play/pause icons, inline progress, capsule pin/delete). Pinning (max 4), soft delete with undo, dark bar card style with purple left border accent (#A29BFE). Calendar shows voice memos as purple dots. Note-attached voice memos share a 3-attachment limit with images.
 - **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing). Week view locked to current week (always shows Sunday–Saturday containing today). Tapping a date outside current week while in week view auto-switches to day view. Supports initialDate route param for deep-linking from widget or other screens.
   - **Calendar fixes (dev):** Tappable event cards — alarm cards navigate to CreateAlarm, reminder cards to CreateReminder, note cards to Notepad. Annual/date-specific recurring reminders now correctly show only on matching month/day (previously showed on every day due to missing dueDate check).
@@ -61,16 +61,24 @@
 
 ### Home Screen Widgets (4)
 - **Memory's Timeline (DetailedWidget):** Header "Memory's Timeline", two-column timers/alarms, reminder bars, nav capsules, footer "Don't Forget Why". Themed.
-- **Forget Me Notes (NotepadWidget):** Header "Forget Me Notes" with mic button (left, OPEN_VOICE_MEMOS), title center (OPEN_NOTES), notepad button (right, ADD_NOTE). Mixed notes + voice memos with pinned-first sort (`isPinned` field), sliced to 4. VoiceMemoCell uses theme colors. Footer "Don't Forget Why". Deep-link click actions for notes, voice memos, and recording.
+- **Forget Me Notes (NotepadWidget):** Header redesigned (Session 9): mic icon (RECORD_VOICE), "Voice" capsule (OPEN_VOICE_MEMOS), centered title "Forget Me Notes" (OPEN_NOTES), "Notes" capsule (OPEN_NOTES), note icon (ADD_NOTE). Size increased from 180×180dp to 300×280dp. Mixed notes + voice memos with pinned-first sort (`isPinned` field), sliced to 4. VoiceMemoCell uses theme colors. Footer "Don't Forget Why". Deep-link click actions for notes, voice memos, and recording.
 - **Misplaced Thoughts (CalendarWidget):** Header "Misplaced Thoughts", mini monthly calendar grid with colored dot indicators, shows current month. Footer "Don't Forget Why".
 - **Memory's Voice (MicWidget):** Header "Memory's Voice" with OPEN_VOICE_MEMOS action. Standalone 110dp widget, mic icon + "Record" text, footer "Don't Forget Why", tap opens VoiceRecordScreen (RECORD_VOICE).
 - All: resizable, deep-link to app sections, privacy guards on private alarms
 
-### Theme System
-- 6 presets: Midnight, Ember, Neon, Void, Frost, Sand — all WCAG AA verified
-- Dual-color custom theme with live preview
-- 60-30-10 rule: Background 60%, card 30%, accent 10%
-- Migration map from old names: charcoal→void, amoled→void, slate→neon, paper→frost, cream→sand, arctic→frost
+### Theme System (Session 9 overhaul)
+- 4 themes: Dark, Light, High Contrast, Vivid — each with section-specific color palettes
+- Custom theme picker removed (personalization via background images)
+- ThemeColors includes section color tokens (`sectionAlarm`, `sectionReminder`, etc.) — all hardcoded hex values replaced with theme references
+- Mode-aware rendering: background overlays, capsule buttons, watermark opacity, card backgrounds all branch on `colors.mode`
+- Card depth: elevation/shadow added to all card types for visual separation
+- Migration from all old theme names (midnight→dark, frost→light, etc.)
+
+### Icon System (Session 9)
+- `src/components/Icons.tsx`: 29+ View-based icons replacing emoji throughout app
+- All icons take `{ color: string; size?: number }`, default size 20, scale proportionally
+- Used in: HomeScreen grid, SettingsScreen (warning, chevrons), AlarmListScreen (fire streak), NoteEditorModal (share, trash), VoiceMemoDetailScreen (trash), HomeButton (house)
+- Pin redesign: emoji pushpin → small accent dot as indicator, "Pin"/"Pinned" text capsule as button
 
 ### Privacy System
 - Private alarms/reminders: completely blank cards (no icon, no nickname, no lock icon)
@@ -79,7 +87,7 @@
 ### Background Images
 - Game screens: AI-generated themed backgrounds with dark overlays (0.55-0.7 opacity)
 - Games Hub + Settings: semi-transparent cards over background images
-- Main tabs: user photo background with configurable dark overlay (30-80% opacity), or app icon watermark at 0.07 opacity when no photo set
+- Main tabs: user photo background with configurable overlay (dark in dark mode, white in light mode, 30-80% opacity), or app icon watermark (0.15 dark / 0.06 light opacity) when no photo set
 - Alarm fire: per-alarm photo background (if set) with 0.7 opacity overlay, or lightbulb.png default
 
 ### Sorting, Filtering, Soft Delete

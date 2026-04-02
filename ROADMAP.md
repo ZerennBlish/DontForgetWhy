@@ -155,7 +155,7 @@
 - Tablet responsive pass deferred to standalone task for remaining screens (not part of P2 scope)
 - No new native dependencies in 2.3/2.4 (expo-image-picker and expo-file-system already installed from 2.1/2.2)
 - `useCalendar` hook accepts `initialDate` and `onSelectDate` callback
-- `reanimated-color-picker` remains installed for custom theme builder
+- `reanimated-color-picker` still used in NoteEditorModal and DrawingCanvas (custom theme picker removed from SettingsScreen)
 
 ### Audit Gate
 - [x] Full dual audit (Codex + Gemini) before production build
@@ -488,19 +488,22 @@
 ## BACKLOG (Not Scheduled)
 
 ### Bugs (Fix Before New Features)
-- Guess Why game: shows answer immediately without guess screen (pre-existing, needs investigation)
-- Yearly recurring reminder: reschedules without firing notification first (pre-existing, needs investigation)
-- Recurring reminder with empty days array matches every day on calendar widget (pre-existing, needs investigation)
-- ExpoKeepAwake promise rejections during activity transitions — wrap in try-catch instead of using hook (dev-mode only, SDK 55)
+- ~~Guess Why game: shows answer immediately~~ — FIXED Session 9 (removed hasNickname from canPlayGuessWhy)
+- ~~Yearly recurring reminder: reschedules without firing~~ — FIXED Session 9 (always advance from dueDate year + 1)
+- ~~Recurring reminder with empty days matches every day~~ — FIXED Session 9 (dueDate vs daily distinction + yearly from createdAt)
+- ~~ExpoKeepAwake promise rejections~~ — FIXED Session 9 (imperative activateKeepAwakeAsync in try-catch)
 - Home screen title centering — verify applied
 
 ### UI Unification
-- Swipe to delete on cards (possible now that alarms/reminders separated from tab swiping)
-- Separate alarms and reminders into their own screens (enables swipe gesture)
-- Alarm and reminder cards restyle to match notes and voice memo dark bar style with colored left border accents
-- All cards app-wide use unified dark bar pattern
-- All buttons match capsule pattern (pin, delete, actions) — already done for notes/voice memos/alarms/reminders
-- All icons checked for consistency across screens
+- Swipe to delete on cards (enabled by alarm/reminder separation — no tab swiping conflict)
+- ~~Separate alarms and reminders into their own screens~~ — DONE Session 9
+- ~~Alarm and reminder cards restyle to match dark bar style~~ — DONE Session 9 (card unification with section-colored borders + elevation)
+- ~~All cards app-wide use unified dark bar pattern~~ — DONE Session 9
+- ~~All buttons match capsule pattern~~ — DONE Session 9 (text capsules, mode-aware backgrounds)
+- ~~All icons checked for consistency~~ — DONE Session 9 (29+ View-based icons in Icons.tsx)
+- Button hierarchy: primary (accent bg) / secondary (capsule) / destructive (red text) distinction
+- Remaining emoji cleanup (some game screens still use emoji)
+- Widget visual updates for new themes (section colors in widget renders)
 - Pin toggle inside edit/detail screens (alarms, reminders, notes, voice memos)
 
 ### Features
@@ -524,7 +527,7 @@
 - Full abandoned package audit (find and remove unused dependencies)
 - Full code audit (fresh eyes on entire codebase post-restructure)
 - R8 deobfuscation mapping file upload for Play Console crash reports
-- Light / Dark / High Contrast theme consolidation (replace 6 color themes with 3)
+- ~~Theme consolidation~~ — DONE Session 9 (6 → 4 themes + section colors + custom picker removed)
 - AsyncStorage → SQLite migration (when scale demands it)
 - NotepadScreen further decomposition (~1240 lines — getting unwieldy)
 
@@ -545,6 +548,16 @@
 ### Completed (Backlog Items Shipped)
 - ~~Home screen (main menu)~~ — DONE in v1.9.0
 - ~~Expo SDK 55 upgrade~~ — DONE in v1.8.1
+- ~~Theme consolidation (6 → 4 + section colors)~~ — DONE Session 9
+- ~~Card unification (all cards use dark bar + section-colored borders)~~ — DONE Session 9
+- ~~Alarm/reminder separation into own screens~~ — DONE Session 9
+- ~~Icon library (29+ View-based icons)~~ — DONE Session 9
+- ~~Light mode overhaul (mode-aware overlays, capsules, watermarks)~~ — DONE Session 9
+- ~~Pin redesign (dot indicator + text capsule)~~ — DONE Session 9
+- ~~Guess Why nickname bug~~ — FIXED Session 9
+- ~~Yearly reminder reschedule bug~~ — FIXED Session 9
+- ~~Calendar widget daily dots bug~~ — FIXED Session 9
+- ~~ExpoKeepAwake promise rejection~~ — FIXED Session 9
 
 ---
 
@@ -555,7 +568,7 @@
 - In-app calendar (day/week/month views)
 - Calendar voice memo dots and list items
 - Voice/All/Notes filter tabs in notepad
-- All current themes + custom theme builder
+- All 4 themes (Dark, Light, High Contrast, Vivid)
 - Guess Why, Memory Match, Trivia (offline), Sudoku, Daily Riddle
 - Memory Score tracking
 - Home screen (icon grid, Quick Capture, personality banner, Today section)
@@ -640,3 +653,4 @@ Batch native deps within phases to minimize dev builds.
 | Mar 30, 2026 | v1.8.0 production build. Voice memos, mic widget, card unification, calendar fixes, 2 full audits. |
 | Mar 31, 2026 | v1.8.1 SDK 55 upgrade. Expo 54→55, React Native 0.81→0.83, React 19.1→19.2. `react-native-notification-sounds` removed (unmaintained, jcenter/Gradle 9.0 incompatible), replaced with native `getSystemAlarmSounds` in AlarmChannelModule. `newArchEnabled` and `edgeToEdgeEnabled` removed from app.json (always-on in SDK 55). Android 15 foreground service warning resolved (expo-audio updated upstream). |
 | Apr 1, 2026 | v1.9.0 Home screen release. HomeScreen (icon grid, Quick Capture, personality banner, Today section), TimerScreen standalone, VoiceMemoListScreen standalone, AlarmListScreen 2-tab, HomeButton on all screens, widget rebranding (Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice), MicWidget header/footer, Forget Log moved to Settings, CalendarWidget current month. Audit 47 complete — both Gemini P1s (widget warm-start nav, notification routing Home base) fixed. |
+| Apr 1, 2026 | Session 9 visual overhaul. Theme consolidation (6→4 + section colors, custom picker removed). Card unification (section-colored borders + elevation). Icon library (29+ View-based icons in Icons.tsx). Light mode overhaul (mode-aware overlays, capsules, watermarks). Pin redesign (dot + text capsule). AlarmListScreen alarms-only (AlarmsTab absorbed), ReminderScreen standalone. NotepadWidget header redesign + size bump. Note editor dropdown consolidation. DayPickerRow "Everyday" button. 5 bugs fixed: Guess Why nickname, yearly reminder reschedule, calendar widget daily dots, no-date recurring yearly, ExpoKeepAwake. |

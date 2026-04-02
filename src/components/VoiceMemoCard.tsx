@@ -56,7 +56,7 @@ function VoiceMemoCard({
         card: {
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
+          backgroundColor: colors.mode === 'dark' ? colors.card + 'CC' : colors.sectionVoice + '15',
           borderRadius: 12,
           padding: 12,
           borderWidth: 1,

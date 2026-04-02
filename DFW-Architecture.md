@@ -48,7 +48,7 @@ Notifee v9.1.8 strips `audioAttributes` from JS `createChannel()`. Native config
 
 ### Safety Net — Stale AlarmFire Screen
 - Added in v1.3.9 to App.tsx AppState 'active' handler
-- When app resumes on AlarmFire with no pending alarm data AND no displayed alarm/timer notifications, resets to AlarmList
+- When app resumes on AlarmFire with no pending alarm data AND no displayed alarm/timer notifications, resets to Home
 - Uses notifee.getDisplayedNotifications() with channel ID prefix matching (startsWith('alarm') || startsWith('timer') excluding 'timer-progress')
 - Prevents stale fire screen after exitApp didn't kill the process
 - Initial version was too aggressive (only checked getPendingAlarm) — fixed after Audit 32 found it would kill live alarm screens
@@ -80,24 +80,25 @@ All prior channel versions deleted on every app startup.
 
 ## 3. Theme System
 
-### 6 Preset Themes (WCAG AA Verified)
+### 4 Themes (Session 9 consolidation)
 | Theme | Mode | Background | Card | Accent |
 |-------|------|-----------|------|--------|
-| Midnight | dark | #0F0F1A | #1A1A2E | #4A90D9 |
-| Ember | dark | #1A1008 | #2C1E10 | #E8913A |
-| Neon | dark | #0A0A14 | #141420 | #00E5CC |
-| Void | dark | #000000 | #121212 | #FF3B7A |
-| Frost | light | #F5F7FA | #FFFFFF | #2563EB |
-| Sand | light | #F5F0E6 | #FFFBF4 | #A8521E |
+| Dark | dark | #0A0A12 | #1A1A28 | #5B9EE6 |
+| Light | light | #F2F3F8 | #FFFFFF | #2563EB |
+| High Contrast | dark | #000000 | #1A1A1A | #00D4FF |
+| Vivid | dark | #0C0C18 | #1A1A2C | #7C5CFC |
+
+### Section Colors in Theme
+ThemeColors interface includes per-section color tokens: `sectionAlarm`, `sectionReminder`, `sectionCalendar`, `sectionNotepad`, `sectionVoice`, `sectionTimer`, `sectionGames`. Each theme defines its own palette (e.g., Vivid uses completely different section colors than Dark). All hardcoded section hex values throughout the app replaced with `colors.section*` references.
 
 ### Evolution
-Feb 11: 8 themes (Midnight, Obsidian, Forest, Royal, Bubblegum, Sunshine, Ocean, Mint) + custom. Mar 10-11: Replaced with current 6 — "the dark themes are all the same... 6 really distinct ones beats 8 okay ones." (Zerenn)
+Feb 11: 8 themes + custom. Mar 10-11: Consolidated to 6 presets. Apr 1 (Session 9): Consolidated to 4 — Dark, Light, High Contrast, Vivid. Custom theme generator (`generateCustomThemeDual`) removed entirely. Personalization via background images, not theme colors — users picking colors that fight their backgrounds was a trap.
 
-### Custom Theme
-`generateCustomThemeDual(bgHex, accentHex)` — auto-detects dark/light from background luminance. Two pickers in Settings with live preview. Legacy guard: if stored as raw hex string instead of JSON object, auto-converts.
+### Mode-Aware Rendering
+Light mode overhaul in Session 9: background overlays branch on `colors.mode` (white overlay in light, black in dark), capsule buttons use mode-aware rgba values, watermark opacity adapts (0.15 dark / 0.06 light), card backgrounds use `colors.card + 'E6'` in dark / `colors.card` in light.
 
 ### Migration
-charcoal→void, amoled→void, slate→neon, paper→frost, cream→sand, arctic→frost. Applied in both ThemeContext.tsx and widget theme loader.
+All old theme names migrate to new 4: midnight/ember/neon/void→dark, frost/sand→light, custom→dark. Legacy names from pre-6-theme era also mapped. Applied in both ThemeContext.tsx and widget theme loader.
 
 ---
 
@@ -275,12 +276,27 @@ Voice roasts use the native `AlarmChannelModule` on ALARM stream because they pl
 
 ### Home as Entry Point (v1.9.0)
 - Home is the `initialRouteName` (was AlarmList)
-- Navigation flow: Home → sections (AlarmList, Timers, Notepad, VoiceMemoList, Calendar, Games)
-- AlarmListScreen has 2 tabs: Alarms, Reminders (was 3 — Timers extracted)
+- Navigation flow: Home → sections (AlarmList, Reminders, Timers, Notepad, VoiceMemoList, Calendar, Games)
+- AlarmListScreen is alarms-only (AlarmsTab.tsx deleted and absorbed in Session 9)
+- ReminderScreen is standalone screen with own `Reminders` route, header, background, nav
 - TimerScreen is standalone, owns all timer state/notification logic
 - VoiceMemoListScreen is standalone, NotepadScreen is notes-only
 - HomeButton component on all screens for direct Home navigation
+- Widget deep links: `pendingAlarmListAction` and `pendingReminderListAction` (split from `pendingTabAction`)
 - Deep links all route through Home as base
+
+### Icon System (Session 9)
+- `src/components/Icons.tsx`: 29+ View-based icons replacing emoji throughout app
+- All icons: `{ color: string; size?: number }` props, default size 20, proportionally scaled inner shapes
+- Includes: AlarmIcon, TimerIcon, BellIcon, DocIcon, MicIcon, CalendarIcon, GamepadIcon, PencilIcon, GearIcon, PinIcon, TrashIcon, FireIcon, ChevronRightIcon, CheckIcon, PlusIcon, CloseIcon, LightbulbIcon, BrainIcon, NumbersIcon, PuzzleIcon, TrophyIcon, WarningIcon, SearchIcon, SortIcon, HomeIcon, ImageIcon, CameraIcon, PaintBrushIcon, ShareIcon
+- Theme-colorable, scalable, consistent stroke weight. Replaces device-dependent emoji rendering.
+
+### ExpoKeepAwake (Session 9)
+- `useKeepAwake()` hook replaced with imperative `activateKeepAwakeAsync()` in try-catch useEffect — fixes SDK 55 promise rejection during activity transitions
+
+### Reminder Scheduling — Yearly from createdAt (Session 9)
+- Recurring reminders with no days + no dueDate now treated as yearly from createdAt (not daily)
+- Affects: scheduling, calendar dots, Today section, widget, completion logic
 
 ### New/Modified Files in v1.9.0
 
@@ -289,4 +305,5 @@ Voice roasts use the native `AlarmChannelModule` on ALARM stream because they pl
 | `src/screens/HomeScreen.tsx` | NEW | Home screen — icon grid, Quick Capture, personality banner, Today section |
 | `src/screens/VoiceMemoListScreen.tsx` | NEW | Standalone voice memo list (separated from NotepadScreen) |
 | `src/components/HomeButton.tsx` | NEW | Home navigation button added to all screens |
+| `src/components/Icons.tsx` | NEW | 29+ View-based icons replacing emoji app-wide |
 | `src/data/homeBannerQuotes.ts` | NEW | 63 color-coded personality quotes across 7 sections |

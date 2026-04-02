@@ -288,7 +288,7 @@ export default function HomeScreen({ navigation }: Props) {
       flex: 1,
       fontSize: 28,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: colors.brandTitle,
       textAlign: 'center',
     },
     gearSpacer: {
@@ -351,14 +351,6 @@ export default function HomeScreen({ navigation }: Props) {
       gap: 6,
       paddingVertical: 10,
       borderRadius: 12,
-      backgroundColor: colors.card,
-      borderWidth: 1,
-      borderColor: colors.border,
-      elevation: 1,
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
     },
     quickCaptureLabel: {
       fontSize: 13,
@@ -406,7 +398,7 @@ export default function HomeScreen({ navigation }: Props) {
     },
     todayContainer: {
       height: 200,
-      backgroundColor: colors.card,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(10, 10, 18, 0.55)' : 'rgba(242, 243, 248, 0.65)',
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 14,
@@ -457,7 +449,7 @@ export default function HomeScreen({ navigation }: Props) {
         {bgUri ? (
           <>
             <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBgUri(null)} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.mode === 'dark' ? `rgba(0,0,0,${bgOpacity})` : `rgba(255,255,255,${bgOpacity})` }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${bgOpacity})` }]} />
           </>
         ) : (
           <Image
@@ -485,7 +477,7 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* B. Personality banner */}
-        <View style={[styles.banner, { borderLeftColor: bannerColorMap[bannerQuote.section] || bannerQuote.color, backgroundColor: colors.mode === 'dark' ? hexToRgba(bannerColorMap[bannerQuote.section] || bannerQuote.color, 0.12) : hexToRgba(bannerColorMap[bannerQuote.section] || bannerQuote.color, 0.08) }]}>
+        <View style={[styles.banner, { borderLeftColor: bannerColorMap[bannerQuote.section] || bannerQuote.color, backgroundColor: colors.mode === 'dark' ? hexToRgba(bannerColorMap[bannerQuote.section] || bannerQuote.color, bgUri ? 0.35 : 0.12) : hexToRgba(bannerColorMap[bannerQuote.section] || bannerQuote.color, bgUri ? 0.25 : 0.08) }]}>
           <Text style={[styles.bannerHeader, { color: bannerColorMap[bannerQuote.section] || bannerQuote.color }]}>ALARM GUY SAYS</Text>
           <Text style={styles.bannerQuote}>{bannerQuote.text}</Text>
         </View>
@@ -494,7 +486,7 @@ export default function HomeScreen({ navigation }: Props) {
         <Text style={styles.quickCaptureHeader}>QUICK CAPTURE</Text>
         <View style={styles.quickCaptureRow}>
           <TouchableOpacity
-            style={styles.quickCaptureBtn}
+            style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionNotepad + (bgUri ? '90' : '45') }]}
             onPress={() => { hapticLight(); navigation.navigate('Notepad', { newNote: true }); }}
             activeOpacity={0.7}
           >
@@ -504,7 +496,7 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.quickCaptureLabel}>New Note</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.quickCaptureBtn}
+            style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionVoice + (bgUri ? '90' : '45') }]}
             onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
             activeOpacity={0.7}
           >
@@ -514,7 +506,7 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.quickCaptureLabel}>Record Memo</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.quickCaptureBtn}
+            style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionTimer + (bgUri ? '90' : '45') }]}
             onPress={() => { hapticLight(); navigation.navigate('Timers'); }}
             activeOpacity={0.7}
           >
@@ -541,18 +533,11 @@ export default function HomeScreen({ navigation }: Props) {
                     width: '31%' as unknown as number,
                     flexBasis: '31%' as unknown as number,
                     flexGrow: 1,
-                    backgroundColor: colors.mode === 'dark' ? `${section.color}20` : '#FFFFFF',
-                    borderWidth: 1,
-                    borderColor: colors.mode === 'dark' ? `${section.color}40` : `${section.color}50`,
-                    elevation: 2,
-                    shadowColor: '#000000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 3,
+                    backgroundColor: `${section.color}${bgUri ? '90' : '40'}`,
                   },
                 ]}
               >
-                <View style={[styles.iconCircle, { backgroundColor: colors.mode === 'dark' ? `${section.color}4D` : `${section.color}20` }]}>
+                <View style={[styles.iconCircle, { backgroundColor: 'transparent' }]}>
                   <View style={{ transform: [{ scale: 0.9 }] }}>
                     <IconComp color={section.color} />
                   </View>
@@ -567,7 +552,7 @@ export default function HomeScreen({ navigation }: Props) {
         {/* D. Today section */}
         <Text style={styles.todayHeader}>TODAY {'\u2014'} {monthName} {dayNum}</Text>
 
-        <View style={styles.todayContainer}>
+        <View style={[styles.todayContainer, { backgroundColor: bgUri ? (colors.mode === 'dark' ? 'rgba(10, 10, 18, 0.88)' : 'rgba(242, 243, 248, 0.92)') : undefined }]}>
           {todayEvents.length === 0 ? (
             <Text style={styles.emptyToday}>{emptyLine}</Text>
           ) : (

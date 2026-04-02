@@ -97,6 +97,7 @@ DontForgetWhy/
     │   ├── DrawingCanvas.tsx
     │   ├── ErrorBoundary.tsx
     │   ├── HomeButton.tsx              # Home navigation button for all screens
+    │   ├── Icons.tsx                  # 29+ View-based icons (Session 9)
     │   ├── ImageLightbox.tsx
     │   ├── NoteEditorModal.tsx
     │   ├── ShareNoteModal.tsx
@@ -130,7 +131,7 @@ DontForgetWhy/
     │   ├── AboutScreen.tsx
     │   ├── AlarmFireScreen.tsx
     │   ├── AlarmListScreen.tsx
-    │   ├── AlarmsTab.tsx
+    │   ├── AlarmsTab.tsx              # DELETED Session 9 — absorbed into AlarmListScreen
     │   ├── CalendarScreen.tsx
     │   ├── CreateAlarmScreen.tsx
     │   ├── CreateReminderScreen.tsx
@@ -175,7 +176,7 @@ DontForgetWhy/
     │   ├── triviaStorage.ts
     │   └── widgetPins.ts
     ├── theme/
-    │   ├── colors.ts               # theme definitions + custom theme generator
+    │   ├── colors.ts               # 4 theme definitions + section colors (custom generator removed)
     │   └── ThemeContext.tsx         # theme provider + useTheme hook
     ├── types/
     │   ├── alarm.ts

@@ -317,4 +317,41 @@
 - **Fix:** Updated both paths to include Home as base route in rebuilt stack.
 - **Version:** v1.9.0
 
+### Session 9 Bug Fixes (April 1, 2026)
+
+**Bug: Guess Why shows answer immediately for nickname-only alarms**
+- Found: Session 9 investigation of pre-existing bug
+- Cause: `canPlayGuessWhy` included `hasNickname` as eligible — but nickname is always visible on the card, so showing it as a "guess" reveals the answer immediately
+- Fix: Removed `hasNickname` from `canPlayGuessWhy`. Now requires icon OR note ≥ 3 chars (hidden clues only)
+
+**Bug: Yearly recurring reminder rescheduled same date on early completion**
+- Found: Session 9 investigation of pre-existing bug
+- Cause: Reschedule logic used current date + 1 year when completed before due date. If completed early (e.g., day before), next occurrence would be the same date
+- Fix: Always advance from stored dueDate year + 1, not current date
+
+**Bug: Calendar widget showed reminder dots on every day for yearly reminders**
+- Found: Session 9 (pre-existing)
+- Cause: Widget calendar data treated `recurring: true` + empty `days` without checking `dueDate` — yearly reminders appeared on every day
+- Fix: Added dueDate vs daily distinction in widget calendar dot logic
+
+**Bug: No-date recurring reminders treated as daily instead of yearly**
+- Found: Session 9
+- Cause: Recurring reminders with no days + no dueDate were treated as "every day". Should be yearly from createdAt (creation anniversary pattern)
+- Fix: Updated scheduling, calendar dots, Today section, widget, and completion logic to use createdAt month/day match
+
+**Bug: ExpoKeepAwake promise rejection (SDK 55)**
+- Found: Session 9 (pre-existing dev-mode warning)
+- Cause: `useKeepAwake()` hook throws unhandled promise rejection during activity transitions in SDK 55's stricter error handling
+- Fix: Replaced with imperative `activateKeepAwakeAsync()` wrapped in try-catch inside useEffect
+
+**Bug: Light mode — dark overlays on personal photos**
+- Found: Session 9 light mode testing
+- Cause: Background photo overlay used `rgba(0,0,0,opacity)` regardless of theme mode — dark overlay on light mode made photos look muddy
+- Fix: Mode-aware overlay — `rgba(255,255,255,opacity)` in light mode, `rgba(0,0,0,opacity)` in dark mode
+
+**Bug: Light mode — dark capsule buttons on white cards**
+- Found: Session 9 light mode testing
+- Cause: Capsule buttons used `rgba(30,30,40,0.7)` background and `rgba(255,255,255,0.15)` border — invisible/ugly on light backgrounds
+- Fix: Mode-aware rgba values — light mode uses `rgba(0,0,0,0.06)` background and `rgba(0,0,0,0.12)` border
+
 **45 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
