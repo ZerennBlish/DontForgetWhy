@@ -439,10 +439,9 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       shadowRadius: 8,
     },
     fabText: {
-      fontSize: 32,
+      fontSize: 36,
       color: colors.textPrimary,
       fontWeight: '300',
-      marginTop: -2,
     },
   }), [colors, insets.bottom, insets.top]);
 
@@ -584,7 +583,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
           activeOpacity={0.8}
         >
-          <Text style={styles.fabText}>{'\u{1F399}\uFE0F'}</Text>
+          <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
 
         <UndoToast

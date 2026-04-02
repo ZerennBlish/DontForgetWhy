@@ -180,21 +180,27 @@ export default function AlarmListScreen({ navigation }: Props) {
   const styles = useMemo(() => StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
       paddingTop: insets.top + 10,
       paddingHorizontal: 20,
       paddingBottom: 16,
     },
-    backButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 12,
+    headerBack: {
+      position: 'absolute',
+      left: 20,
+      top: insets.top + 10,
+    },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
+      top: insets.top + 10,
     },
     screenTitle: {
       fontSize: 22,
       fontWeight: '700',
       color: colors.textPrimary,
-      textAlign: 'center',
       marginBottom: 8,
     },
     subtitleText: {
@@ -404,12 +410,15 @@ export default function AlarmListScreen({ navigation }: Props) {
         )}
       </View>
       <View style={styles.header}>
-        <View style={styles.backButton}>
+        <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
+        </View>
+        <View style={styles.headerHome}>
           <HomeButton />
         </View>
-
         <Text style={styles.screenTitle}>Alarms</Text>
+      </View>
+      <View style={{ paddingHorizontal: 20 }}>
         <Text style={styles.subtitleText}>
           {(() => { const c = alarms.filter(a => a.enabled && !a.deletedAt).length; return `${c} alarm${c !== 1 ? 's' : ''}`; })()}
         </Text>

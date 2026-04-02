@@ -5,9 +5,10 @@ import { useTheme } from '../theme/ThemeContext';
 
 interface BackButtonProps {
   onPress: () => void;
+  forceDark?: boolean;
 }
 
-export default function BackButton({ onPress }: BackButtonProps) {
+export default function BackButton({ onPress, forceDark }: BackButtonProps) {
   const { colors } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -17,9 +18,9 @@ export default function BackButton({ onPress }: BackButtonProps) {
       borderRadius: 20,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+      backgroundColor: (forceDark || colors.mode === 'dark') ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
       borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+      borderColor: (forceDark || colors.mode === 'dark') ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     arrow: {
       fontSize: 22,

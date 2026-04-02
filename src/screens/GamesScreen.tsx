@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import { hapticLight } from '../utils/haptics';
-import { GamepadIcon, LightbulbIcon, PuzzleIcon, NumbersIcon, BrainIcon, TrophyIcon, FireIcon, ChevronRightIcon } from '../components/Icons';
+import { LightbulbIcon, PuzzleIcon, NumbersIcon, BrainIcon, TrophyIcon, FireIcon, ChevronRightIcon } from '../components/Icons';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Games'>;
@@ -77,11 +77,12 @@ export default function GamesScreen({ navigation }: Props) {
         gameCard: {
           marginHorizontal: 16,
           marginTop: 12,
-          backgroundColor: 'rgba(255,255,255,0.15)',
+          backgroundColor: 'rgba(26, 26, 40, 0.9)',
           borderRadius: 16,
           padding: 20,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.2)',
+          borderColor: colors.sectionGames,
+          borderLeftWidth: 3,
           flexDirection: 'row',
           elevation: 2,
           shadowColor: '#000000',
@@ -91,9 +92,6 @@ export default function GamesScreen({ navigation }: Props) {
           alignItems: 'center',
           gap: 16,
         },
-        gameEmoji: {
-          fontSize: 40,
-        } as never,
         gameInfo: {
           flex: 1,
         },
@@ -110,10 +108,6 @@ export default function GamesScreen({ navigation }: Props) {
           lineHeight: 20,
           textAlign: 'center',
         },
-        chevron: {
-          fontSize: 18,
-          color: 'rgba(255,255,255,0.5)',
-        },
         streakText: {
           fontSize: 13,
           color: colors.orange,
@@ -128,15 +122,12 @@ export default function GamesScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.header}>
       <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton onPress={() => navigation.goBack()} forceDark />
       </View>
       <View style={styles.headerHome}>
-        <HomeButton />
+        <HomeButton forceDark />
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <GamepadIcon color={colors.accent} size={24} />
-        <Text style={styles.title}>Brain Games</Text>
-      </View>
+      <Text style={styles.title}>Brain Games</Text>
     </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={[styles.subtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Exercise that forgetful brain of yours</Text>
@@ -163,7 +154,7 @@ export default function GamesScreen({ navigation }: Props) {
           )}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
+          <ChevronRightIcon color={colors.sectionGames} size={16} />
         </View>
       </TouchableOpacity>
 
@@ -183,7 +174,7 @@ export default function GamesScreen({ navigation }: Props) {
           </Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
+          <ChevronRightIcon color={colors.sectionGames} size={16} />
         </View>
       </TouchableOpacity>
 
@@ -201,7 +192,7 @@ export default function GamesScreen({ navigation }: Props) {
           <Text style={styles.gameDesc}>Classic number puzzle. No forgetting allowed.</Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
+          <ChevronRightIcon color={colors.sectionGames} size={16} />
         </View>
       </TouchableOpacity>
 
@@ -219,7 +210,7 @@ export default function GamesScreen({ navigation }: Props) {
           <Text style={styles.gameDesc}>Flip cards and find matching pairs</Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
+          <ChevronRightIcon color={colors.sectionGames} size={16} />
         </View>
       </TouchableOpacity>
 
@@ -237,7 +228,7 @@ export default function GamesScreen({ navigation }: Props) {
           <Text style={styles.gameDesc}>Track your brain training progress</Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
-          <ChevronRightIcon color="rgba(255,255,255,0.5)" size={16} />
+          <ChevronRightIcon color={colors.sectionGames} size={16} />
         </View>
       </TouchableOpacity>
     </ScrollView>

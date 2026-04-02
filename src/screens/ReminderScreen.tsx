@@ -344,21 +344,27 @@ export default function ReminderScreen({ navigation }: Props) {
       backgroundColor: colors.background,
     },
     header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
       paddingTop: insets.top + 10,
       paddingHorizontal: 20,
       paddingBottom: 16,
     },
-    backButtonRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 12,
+    headerBack: {
+      position: 'absolute',
+      left: 20,
+      top: insets.top + 10,
+    },
+    headerHome: {
+      position: 'absolute',
+      left: 64,
+      top: insets.top + 10,
     },
     screenTitle: {
       fontSize: 22,
       fontWeight: '700',
       color: colors.textPrimary,
-      textAlign: 'center',
       marginBottom: 8,
     },
     subtitleText: {
@@ -773,9 +779,9 @@ export default function ReminderScreen({ navigation }: Props) {
                   {item.recurring ? (
                     item.days && item.days.length > 0 && item.days.length < 7
                       ? ` \u2022 Weekly`
-                      : item.dueDate && (!item.days || item.days.length === 0)
-                        ? ` \u2022 Yearly`
-                        : ` \u2022 Daily`
+                      : item.days && item.days.length === 7
+                        ? ` \u2022 Daily`
+                        : ` \u2022 Yearly`
                   ) : ''}
                 </Text>
                 {pinned && <View style={styles.pinDot} />}
@@ -838,11 +844,15 @@ export default function ReminderScreen({ navigation }: Props) {
         )}
       </View>
       <View style={styles.header}>
-        <View style={styles.backButtonRow}>
+        <View style={styles.headerBack}>
           <BackButton onPress={() => navigation.goBack()} />
+        </View>
+        <View style={styles.headerHome}>
           <HomeButton />
         </View>
         <Text style={styles.screenTitle}>Reminders</Text>
+      </View>
+      <View style={{ paddingHorizontal: 20 }}>
         <Text style={styles.subtitleText}>
           {(() => { const c = reminders.filter(r => !r.completed && !r.deletedAt).length; return `${c} reminder${c !== 1 ? 's' : ''}`; })()}
         </Text>

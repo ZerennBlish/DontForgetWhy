@@ -49,7 +49,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.navigate('AlarmList');
+      navigation.navigate('Reminders');
     }
   };
 

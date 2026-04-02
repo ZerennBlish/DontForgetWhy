@@ -30,7 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
-import { ChevronRightIcon, WarningIcon } from '../components/Icons';
+import { CameraIcon, ChevronRightIcon, WarningIcon } from '../components/Icons';
 import { saveBackground, loadBackground, clearBackground, getOverlayOpacity, setOverlayOpacity } from '../services/backgroundStorage';
 import TimePicker from '../components/TimePicker';
 import type { RootStackParamList } from '../navigation/types';
@@ -114,11 +114,17 @@ export default function SettingsScreen({ navigation }: Props) {
     },
     card: {
       marginHorizontal: 16,
-      backgroundColor: 'rgba(255,255,255,0.15)',
+      backgroundColor: 'rgba(26, 26, 40, 0.9)',
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
+      borderColor: colors.accent,
+      borderLeftWidth: 3,
+      elevation: 2,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
     },
     row: {
       flexDirection: 'row',
@@ -434,10 +440,10 @@ export default function SettingsScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
     <View style={styles.header}>
       <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton onPress={() => navigation.goBack()} forceDark />
       </View>
       <View style={styles.headerHome}>
-        <HomeButton />
+        <HomeButton forceDark />
       </View>
       <Text style={styles.title}>Settings</Text>
     </View>
@@ -492,7 +498,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
       <View style={[styles.card, { marginTop: 16 }]}>
         <Text style={styles.label}>Time Input Style</Text>
-        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 2, marginTop: 8 }}>
+        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 2, marginTop: 8 }}>
           <TouchableOpacity
             style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: timeInputMode === 'scroll' ? colors.accent : 'transparent' }}
             onPress={() => handleTimeInputModeChange('scroll')}
@@ -577,14 +583,14 @@ export default function SettingsScreen({ navigation }: Props) {
               <Image source={{ uri: bgUri }} style={{ width: 80, height: 80, borderRadius: 8 }} resizeMode="cover" />
             ) : (
               <View style={{ width: 80, height: 80, borderRadius: 8, borderWidth: 2, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontSize: 24 }}>{'\u{1F4F7}'}</Text>
+                <CameraIcon color="rgba(255,255,255,0.7)" size={24} />
                 <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>Tap to set</Text>
               </View>
             )}
           </TouchableOpacity>
           <View style={{ flex: 1, justifyContent: 'center', gap: 10 }}>
             <TouchableOpacity
-              style={{ backgroundColor: 'rgba(0,0,0,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}
+              style={{ backgroundColor: 'rgba(26, 26, 40, 0.7)', borderWidth: 1, borderColor: colors.accent + '60', borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}
               onPress={async () => {
                 hapticLight();
                 const result = await ImagePicker.launchImageLibraryAsync({
@@ -608,7 +614,7 @@ export default function SettingsScreen({ navigation }: Props) {
             </TouchableOpacity>
             {bgUri && (
               <TouchableOpacity
-                style={{ backgroundColor: 'rgba(0,0,0,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}
+                style={{ backgroundColor: 'rgba(26, 26, 40, 0.7)', borderWidth: 1, borderColor: colors.accent + '60', borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}
                 onPress={() => {
                   hapticLight();
                   Alert.alert('Clear Background?', 'Remove the photo background?', [
@@ -710,7 +716,7 @@ export default function SettingsScreen({ navigation }: Props) {
         activeOpacity={0.7}
       >
         <View style={styles.aboutRow}>
-          <Text style={styles.label}>{'\u2709\uFE0F'} Send Feedback</Text>
+          <Text style={styles.label}>Send Feedback</Text>
           <ChevronRightIcon color={colors.textTertiary} size={16} />
         </View>
         <Text style={styles.description}>

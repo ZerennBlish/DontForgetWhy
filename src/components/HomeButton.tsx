@@ -5,14 +5,14 @@ import { useTheme } from '../theme/ThemeContext';
 import { hapticLight } from '../utils/haptics';
 import { HomeIcon } from './Icons';
 
-export default function HomeButton() {
+export default function HomeButton({ forceDark }: { forceDark?: boolean }) {
   const navigation = useNavigation<any>();
   const { colors } = useTheme();
   return (
     <TouchableOpacity
       style={[styles.circle, {
-        backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
-        borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+        backgroundColor: (forceDark || colors.mode === 'dark') ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
+        borderColor: (forceDark || colors.mode === 'dark') ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
       }]}
       onPress={() => {
         hapticLight();

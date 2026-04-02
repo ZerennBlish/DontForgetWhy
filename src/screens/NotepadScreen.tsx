@@ -41,6 +41,7 @@ import UndoToast from '../components/UndoToast';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import { TrashIcon, DocIcon } from '../components/Icons';
 import NoteEditorModal from '../components/NoteEditorModal';
 import { CUSTOM_BG_COLOR_KEY, CUSTOM_FONT_COLOR_KEY } from '../types/note';
 import type { Note } from '../types/note';
@@ -573,10 +574,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
       paddingBottom: 80 + insets.bottom,
       paddingHorizontal: 32,
     },
-    emptyIcon: {
-      fontSize: 40,
-      marginBottom: 12,
-    },
     emptyTitle: {
       fontSize: 18,
       fontWeight: '600',
@@ -724,10 +721,9 @@ export default function NotepadScreen({ navigation, route }: Props) {
       shadowRadius: 8,
     },
     fabText: {
-      fontSize: 32,
+      fontSize: 36,
       color: colors.textPrimary,
       fontWeight: '300',
-      marginTop: -2,
     },
   }), [colors, insets.bottom, insets.top]);
 
@@ -818,7 +814,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     if (filter === 'deleted') {
       return (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>{'\u{1F5D1}\uFE0F'}</Text>
+          <View style={{ marginBottom: 12 }}><TrashIcon color={colors.textTertiary} size={40} /></View>
           <Text style={styles.emptyTitle}>Nothing in the trash</Text>
           <Text style={styles.emptyText}>How responsible of you.</Text>
         </View>
@@ -826,7 +822,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     }
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyIcon}>{'\u{1F4DD}'}</Text>
+        <View style={{ marginBottom: 12 }}><DocIcon color={colors.textTertiary} size={40} /></View>
         <Text style={styles.emptyTitle}>No notes yet</Text>
         <Text style={styles.emptyText}>
           Tap the notepad to create one.
@@ -916,7 +912,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
           onPress={() => { hapticLight(); openNewEditor(); }}
           activeOpacity={0.8}
         >
-          <Text style={styles.fabText}>{'\u{1F4DD}'}</Text>
+          <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
 
         <UndoToast

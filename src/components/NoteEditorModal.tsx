@@ -54,9 +54,6 @@ const voiceMemoStyles = StyleSheet.create({
     paddingVertical: 6,
     gap: 6,
   },
-  recordingDot: {
-    fontSize: 10,
-  },
   recordingText: {
     fontSize: 13,
     fontWeight: '600',
@@ -83,9 +80,6 @@ const voiceMemoStyles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  memoPlayText: {
-    fontSize: 16,
   },
   memoProgress: {
     flex: 1,
@@ -940,7 +934,7 @@ export default function NoteEditorModal({
 
           {isRecording && (
             <View style={voiceMemoStyles.recordingBanner}>
-              <Text style={voiceMemoStyles.recordingDot}>{'\u{1F534}'}</Text>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF4444' }} />
               <Text style={voiceMemoStyles.recordingText}>
                 Recording {formatDuration((recorderState.durationMillis ?? 0) / 1000)}
               </Text>
@@ -1040,9 +1034,14 @@ export default function NoteEditorModal({
                       onPress={() => handlePlayMemo(memoUri)}
                       activeOpacity={0.7}
                     >
-                      <Text style={voiceMemoStyles.memoPlayText}>
-                        {isThisPlaying ? '\u23F8\uFE0F' : '\u25B6\uFE0F'}
-                      </Text>
+                      {isThisPlaying ? (
+                        <View style={{ flexDirection: 'row', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
+                          <View style={{ width: 3, height: 12, backgroundColor: '#FFFFFF', borderRadius: 1 }} />
+                          <View style={{ width: 3, height: 12, backgroundColor: '#FFFFFF', borderRadius: 1 }} />
+                        </View>
+                      ) : (
+                        <View style={{ width: 0, height: 0, borderLeftWidth: 9, borderLeftColor: '#FFFFFF', borderTopWidth: 6, borderTopColor: 'transparent', borderBottomWidth: 6, borderBottomColor: 'transparent', marginLeft: 2 }} />
+                      )}
                     </TouchableOpacity>
                     <View style={voiceMemoStyles.memoProgress}>
                       <View

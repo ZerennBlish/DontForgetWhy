@@ -542,7 +542,7 @@ export default function HomeScreen({ navigation }: Props) {
                     <IconComp color={section.color} />
                   </View>
                 </View>
-                <Text style={[styles.gridLabel, { color: section.color }]}>{section.label}</Text>
+                <Text style={[styles.gridLabel, { color: colors.mode === 'dark' ? '#FFFFFF' : '#1F2937' }]}>{section.label}</Text>
                 {subtitle !== '' && <Text style={styles.gridSubtitle}>{subtitle}</Text>}
               </TouchableOpacity>
             );

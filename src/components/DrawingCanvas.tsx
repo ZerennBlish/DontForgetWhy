@@ -25,8 +25,8 @@ import { File, Directory, Paths } from 'expo-file-system';
 import { v4 as uuidv4 } from 'uuid';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
-import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
-import type { ColorFormatsObject } from 'reanimated-color-picker';
+import { useTheme } from '../theme/ThemeContext';
+import DrawingPickerModal from './DrawingPickerModal';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -99,6 +99,7 @@ export default function DrawingCanvas({
   backgroundImageUri = null,
   initialBackgroundImageUri = null,
 }: DrawingCanvasProps) {
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const canvasRef = useCanvasRef();
 
@@ -124,9 +125,6 @@ export default function DrawingCanvas({
   const currentPointsRef = useRef<{ x: number; y: number }[]>([]);
   const currentStrokeWidthRef = useRef(activeWidth);
   const currentColorRef = useRef(activeColor);
-
-  const pickedColorRef = useRef('#FF0000');
-  const pickedBgRef = useRef('#FFFFFF');
 
   // Refs for values accessed inside PanResponder (avoids stale closures)
   const activeColorRef = useRef(activeColor);
@@ -408,26 +406,26 @@ export default function DrawingCanvas({
           paddingTop: insets.top + 8,
           paddingHorizontal: 16,
           paddingBottom: 10,
-          backgroundColor: 'rgba(18, 18, 32, 0.95)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(18, 18, 32, 0.95)' : 'rgba(240, 240, 248, 0.97)',
         },
         topBtn: {
           paddingHorizontal: 18,
           paddingVertical: 8,
           borderRadius: 20,
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.08)',
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
         },
         topBtnText: {
           fontSize: 14,
           fontWeight: '700',
-          color: '#FFFFFF',
+          color: colors.textPrimary,
         },
         canvasWrapper: {
           flex: 1,
         },
         toolbar: {
-          backgroundColor: 'rgba(18, 18, 32, 0.95)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(18, 18, 32, 0.95)' : 'rgba(240, 240, 248, 0.97)',
           paddingHorizontal: 16,
           paddingTop: 12,
           paddingBottom: 12 + insets.bottom,
@@ -442,23 +440,23 @@ export default function DrawingCanvas({
           paddingHorizontal: 16,
           paddingVertical: 8,
           borderRadius: 20,
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.08)',
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
         },
         toolBtnActive: {
-          borderColor: '#4A90D9',
-          backgroundColor: 'rgba(74, 144, 217, 0.25)',
+          borderColor: colors.accent,
+          backgroundColor: colors.accent + '40',
         },
         toolBtnText: {
           fontSize: 13,
           fontWeight: '600',
-          color: '#FFFFFF',
+          color: colors.textPrimary,
         },
         separator: {
           width: 1,
           height: 24,
-          backgroundColor: 'rgba(255, 255, 255, 0.15)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
           marginHorizontal: 4,
         },
         colorRow: {
@@ -474,7 +472,7 @@ export default function DrawingCanvas({
           borderColor: 'transparent',
         },
         colorDotActive: {
-          borderColor: '#4A90D9',
+          borderColor: colors.accent,
         },
         widthRow: {
           flexDirection: 'row',
@@ -486,19 +484,19 @@ export default function DrawingCanvas({
           paddingHorizontal: 12,
           paddingVertical: 6,
           borderRadius: 20,
-          backgroundColor: 'rgba(30, 30, 40, 0.7)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.08)',
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
           alignItems: 'center',
         },
         widthBtnActive: {
-          borderColor: '#4A90D9',
-          backgroundColor: 'rgba(74, 144, 217, 0.25)',
+          borderColor: colors.accent,
+          backgroundColor: colors.accent + '40',
         },
         widthBtnText: {
           fontSize: 12,
           fontWeight: '600',
-          color: '#FFFFFF',
+          color: colors.textPrimary,
         },
         bgBtnRow: {
           flexDirection: 'row',
@@ -510,10 +508,10 @@ export default function DrawingCanvas({
           height: 16,
           borderRadius: 8,
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.3)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
         },
       }),
-    [insets],
+    [insets, colors],
   );
 
   // -----------------------------------------------------------------------
@@ -672,7 +670,7 @@ export default function DrawingCanvas({
                   styles.colorDot,
                   { backgroundColor: color },
                   color === '#FFFFFF' && {
-                    borderColor: 'rgba(255, 255, 255, 0.4)',
+                    borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.25)',
                   },
                   activeColor === color &&
                     activeTool === 'pen' &&
@@ -711,20 +709,19 @@ export default function DrawingCanvas({
                 width: 28,
                 height: 28,
                 borderRadius: 14,
-                backgroundColor: 'rgba(30, 30, 40, 0.7)',
+                backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.08)',
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.15)',
+                borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
               onPress={() => {
                 hapticLight();
-                pickedColorRef.current = customColor || '#FF0000';
                 setShowColorPicker(true);
               }}
               activeOpacity={0.7}
             >
-              <Text style={{ fontSize: 16, fontWeight: '700', color: 'rgba(255, 255, 255, 0.6)' }}>+</Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)' }}>+</Text>
             </TouchableOpacity>
           </View>
 
@@ -755,7 +752,6 @@ export default function DrawingCanvas({
                   style={[styles.toolBtn, { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12 }]}
                   onPress={() => {
                     hapticLight();
-                    pickedBgRef.current = canvasBgColor;
                     setShowBgPicker(true);
                   }}
                   activeOpacity={0.7}
@@ -770,86 +766,25 @@ export default function DrawingCanvas({
       </View>
     </Modal>
 
-    {/* Custom Color Picker Modal */}
-    <Modal transparent visible={showColorPicker} animationType="fade">
-      <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'center', alignItems: 'center' }}>
-        <View style={{ backgroundColor: 'rgba(30, 30, 40, 0.95)', borderRadius: 16, padding: 20, marginHorizontal: 32, width: '85%' }}>
-          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' }}>Pick Drawing Color</Text>
-          <ColorPicker
-            value={pickedColorRef.current}
-            onCompleteJS={(result: ColorFormatsObject) => { pickedColorRef.current = result.hex; }}
-          >
-            <View style={{ gap: 16 }}>
-              <Preview hideInitialColor />
-              <Panel1 />
-              <HueSlider />
-            </View>
-          </ColorPicker>
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
-            <TouchableOpacity
-              onPress={() => { hapticLight(); setShowColorPicker(false); }}
-              style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10, alignItems: 'center' }}
-              activeOpacity={0.7}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                hapticMedium();
-                const hex = pickedColorRef.current;
-                setCustomColor(hex);
-                setActiveColor(hex);
-                setActiveTool('pen');
-                setShowColorPicker(false);
-              }}
-              style={{ flex: 1, backgroundColor: '#4A90D9', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10, alignItems: 'center' }}
-              activeOpacity={0.7}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF' }}>Apply</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+    <DrawingPickerModal
+      visible={showColorPicker}
+      title="Pick Drawing Color"
+      initialColor={customColor || '#FF0000'}
+      onApply={(hex) => {
+        setCustomColor(hex);
+        setActiveColor(hex);
+        setActiveTool('pen');
+      }}
+      onCancel={() => setShowColorPicker(false)}
+    />
 
-    {/* Canvas Background Picker Modal */}
-    <Modal transparent visible={showBgPicker} animationType="fade">
-      <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'center', alignItems: 'center' }}>
-        <View style={{ backgroundColor: 'rgba(30, 30, 40, 0.95)', borderRadius: 16, padding: 20, marginHorizontal: 32, width: '85%' }}>
-          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' }}>Canvas Background</Text>
-          <ColorPicker
-            value={pickedBgRef.current}
-            onCompleteJS={(result: ColorFormatsObject) => { pickedBgRef.current = result.hex; }}
-          >
-            <View style={{ gap: 16 }}>
-              <Preview hideInitialColor />
-              <Panel1 />
-              <HueSlider />
-            </View>
-          </ColorPicker>
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
-            <TouchableOpacity
-              onPress={() => { hapticLight(); setShowBgPicker(false); }}
-              style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10, alignItems: 'center' }}
-              activeOpacity={0.7}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                hapticMedium();
-                setCanvasBgColor(pickedBgRef.current);
-                setShowBgPicker(false);
-              }}
-              style={{ flex: 1, backgroundColor: '#4A90D9', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10, alignItems: 'center' }}
-              activeOpacity={0.7}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF' }}>Apply</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+    <DrawingPickerModal
+      visible={showBgPicker}
+      title="Canvas Background"
+      initialColor={canvasBgColor}
+      onApply={(hex) => setCanvasBgColor(hex)}
+      onCancel={() => setShowBgPicker(false)}
+    />
     </>
   );
 }
