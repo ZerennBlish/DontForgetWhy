@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.9.0 (versionCode 24) — Home screen release |
+| **Current Version** | v1.10.0 (versionCode 25) — Visual overhaul + Jest |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | Session 10: P2 audit fixes, visual overhaul, swipe-to-delete |
+| **Current Focus** | Session 11: Button hierarchy P4, widget section colors, Jest setup |
 | **Blocked By** | Nothing |
-| **Next Action** | Button hierarchy Prompt 4 (modals + Settings), widget visual updates, Jest, then ship |
+| **Next Action** | Ship visual overhaul → Storage migration (AsyncStorage → SQLite) → P4 |
 | **EAS Credits** | ~13 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -315,7 +315,7 @@
 - VoiceMemoListScreen SyntaxError: broken StyleSheet from button style removal
 - AlarmListScreen deleted cards: Restore/Forever stacked vertically, fixed to side-by-side
 - DrawingCanvas: extracted modals, fully themed
-- Button hierarchy: shared buttonStyles.ts, 4 types × 2 sizes (create screens + trash items done, modals + Settings pending)
+- Button hierarchy: COMPLETE — shared buttonStyles.ts, 4 types × 2 sizes, all screens converted
 
 ### Audits
 - [x] Audit 47: Codex — 0 P0, 2 P1 (pre-existing timer/note behaviors), 3 P2. Gemini — 0 P0, 2 P1 (widget warm-start nav, notification routing missing Home base), 3 P2 (dead appQuote code, quote count, duplicate reminder reads). Both P1s from Gemini fixed before build.
@@ -323,6 +323,28 @@
 ### Audit Gate
 - [x] `npx tsc --noEmit` — 0 errors
 - [x] Increment version + versionCode
+
+---
+
+## STORAGE MIGRATION — AsyncStorage → SQLite
+
+**Status:** ⬜ Not started
+**Branch:** `dev`
+**Rationale:** Fewer service files to migrate now than later. Every future feature (P4 games, P5 calendar sync, P7 Firebase) builds on the storage layer — get it right before the codebase grows.
+**New deps:** TBD (expo-sqlite or similar)
+**Build cost:** 1 dev build + 1 production build
+
+### Tasks
+- [ ] Evaluate storage library (expo-sqlite, op-sqlite, etc.)
+- [ ] Design migration strategy (AsyncStorage → SQLite, data preservation)
+- [ ] Migrate service files one at a time
+- [ ] Migration path for existing users (read old AsyncStorage, write to SQLite, clean up)
+
+### Audit Gate
+- [ ] Full dual audit (Codex + Gemini) before production build
+- [ ] `npx tsc --noEmit` — 0 errors
+- [ ] `npx jest` — all tests pass
+- [ ] Increment version + versionCode
 
 ---
 
@@ -513,9 +535,10 @@
 - ~~Emoji picker modal~~ — DONE Session 10 (replaces TextInput hack, flat grid of ~128 curated emoji, bottom sheet)
 - ~~Package cleanup~~ — DONE Session 10 (removed react-native-tab-view, react-native-pager-view, date-fns)
 - ~~Visual overhaul~~ — DONE Session 10 (themes, icons, cards, light mode tinted cards, section tinting, DrawingCanvas refactor, forceDark prop on BackButton/HomeButton)
-- Button hierarchy: IN PROGRESS — shared buttonStyles.ts created (4 types × 2 sizes), applied to create screens + trash items. Modals + Settings pending (Prompt 4).
+- ~~Button hierarchy~~ — DONE Sessions 10-11 (shared buttonStyles.ts, 4 types × 2 sizes, applied to create screens, trash items, SettingsScreen, NoteEditorModal, DrawingPickerModal)
+- ~~Widget visual updates~~ — DONE Session 11 (section colors propagated to all 4 widgets, MicWidget resized to 1×1 70dp with red record circle)
+- ~~Jest setup~~ — DONE Session 11 (ts-jest, node environment, 35 tests across 3 suites on testing-setup branch, merged to dev)
 - Remaining emoji cleanup (some game screens still use emoji)
-- Widget visual updates for new themes (section colors in widget renders)
 - Pin toggle inside edit/detail screens (alarms, reminders, notes, voice memos)
 
 ### Features
@@ -534,13 +557,13 @@
 - Cloud backup / export (.dfw backup file — no accounts, zip AsyncStorage + voice-memos/ + note-images/)
 
 ### Infrastructure
-- Jest suite resurrection — 222 tests on testing-setup branch, needs SDK 55 + new screen coverage (next after button hierarchy + widget updates)
+- ~~Jest suite~~ — DONE Session 11 (ts-jest, node environment, 35 tests across 3 suites, testing-setup merged to dev)
 - Storage audit — voice memo disk usage, AsyncStorage limits at scale
 - Full abandoned package audit (find and remove unused dependencies)
 - Full code audit (fresh eyes on entire codebase post-restructure)
 - R8 deobfuscation mapping file upload for Play Console crash reports
 - ~~Theme consolidation~~ — DONE Session 9 (6 → 4 themes + section colors + custom picker removed)
-- AsyncStorage → SQLite migration (when scale demands it)
+- ~~AsyncStorage → SQLite migration~~ — promoted to scheduled phase (before P4)
 - NotepadScreen further decomposition (~1240 lines — getting unwieldy)
 
 ### Store / Marketing
@@ -563,6 +586,9 @@
 - ~~Emoji picker modal~~ — DONE Session 10 (replaces TextInput hack)
 - ~~Package cleanup~~ — DONE Session 10 (removed tab-view, pager-view, date-fns)
 - ~~Visual overhaul~~ — DONE Session 10 (themes, icons, cards, light mode, section tinting)
+- ~~Button hierarchy~~ — DONE Sessions 10-11 (all screens converted)
+- ~~Widget visual updates~~ — DONE Session 11 (section colors in all 4 widgets, MicWidget 1×1)
+- ~~Jest setup~~ — DONE Session 11 (ts-jest, 35 tests, testing-setup merged to dev)
 - ~~Expo SDK 55 upgrade~~ — DONE in v1.8.1
 - ~~Theme consolidation (6 → 4 + section colors)~~ — DONE Session 9
 - ~~Card unification (all cards use dark bar + section-colored borders)~~ — DONE Session 9

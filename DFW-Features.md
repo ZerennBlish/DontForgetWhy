@@ -60,11 +60,12 @@
 - **Memory Score** (5 games × 20 pts = 100. Ranks from "Who Are You Again? 🐟" to "The One Who Remembers 👑")
 
 ### Home Screen Widgets (4)
-- **Memory's Timeline (DetailedWidget):** Header "Memory's Timeline", two-column timers/alarms, reminder bars, nav capsules, footer "Don't Forget Why". Themed.
-- **Forget Me Notes (NotepadWidget):** Header redesigned (Session 9): mic icon (RECORD_VOICE), "Voice" capsule (OPEN_VOICE_MEMOS), centered title "Forget Me Notes" (OPEN_NOTES), "Notes" capsule (OPEN_NOTES), note icon (ADD_NOTE). Size increased from 180×180dp to 300×280dp. Mixed notes + voice memos with pinned-first sort (`isPinned` field), sliced to 4. VoiceMemoCell uses theme colors. Footer "Don't Forget Why". Deep-link click actions for notes, voice memos, and recording.
-- **Misplaced Thoughts (CalendarWidget):** Header "Misplaced Thoughts", mini monthly calendar grid with colored dot indicators, shows current month. Footer "Don't Forget Why".
-- **Memory's Voice (MicWidget):** Header "Memory's Voice" with OPEN_VOICE_MEMOS action. Standalone 110dp widget, mic icon + "Record" text, footer "Don't Forget Why", tap opens VoiceRecordScreen (RECORD_VOICE).
+- **Memory's Timeline (DetailedWidget):** Header "Memory's Timeline", two-column timers/alarms, reminder bars, nav capsules colored per section (sectionAlarm/sectionTimer/sectionReminder), footer "Don't Forget Why". Themed with section colors (Session 11).
+- **Forget Me Notes (NotepadWidget):** Header redesigned (Session 9): mic icon (RECORD_VOICE), "Voice" capsule (OPEN_VOICE_MEMOS, sectionVoice), centered title "Forget Me Notes" (OPEN_NOTES), "Notes" capsule (OPEN_NOTES, sectionNotepad), note icon (ADD_NOTE). Size increased from 180×180dp to 300×280dp. Mixed notes + voice memos with pinned-first sort (`isPinned` field), sliced to 4. VoiceMemoCell uses theme colors. Footer "Don't Forget Why". Deep-link click actions for notes, voice memos, and recording. Header capsules use section colors (Session 11).
+- **Misplaced Thoughts (CalendarWidget):** Header "Misplaced Thoughts", mini monthly calendar grid with colored dot indicators, shows current month. Month label uses sectionCalendar (Session 11). Footer "Don't Forget Why".
+- **Memory's Voice (MicWidget):** Standalone 1×1 widget (70dp min, Session 11 resize). Red record circle + footer "Don't Forget Why", tap opens VoiceRecordScreen (RECORD_VOICE). Uses sectionVoice + theme.red for record button.
 - All: resizable, deep-link to app sections, privacy guards on private alarms
+- **WidgetTheme** expanded with `red` property for theme-aware red across widgets (Session 11)
 
 ### Theme System (Session 9 overhaul)
 - 4 themes: Dark, Light, High Contrast, Vivid — each with section-specific color palettes
@@ -90,12 +91,11 @@
 - Emoji clear button on both CreateAlarmScreen and CreateReminderScreen
 - AlarmCard emoji made optional: no default fallback emoji, shows AlarmIcon when none selected
 
-### Button Hierarchy (Session 10 — IN PROGRESS)
+### Button Hierarchy (Sessions 10-11 — COMPLETE)
 - Shared `buttonStyles.ts` with `getButtonStyles(colors)` returning 4 types × 2 sizes:
   - primary (accent background), secondary (capsule/outlined), destructive (red text), ghost (minimal)
   - Each type has large and small variants
-- Applied to: CreateAlarmScreen, CreateReminderScreen, deleted card Restore/Forever buttons
-- Pending: modals + Settings (Prompt 4)
+- Applied to: CreateAlarmScreen, CreateReminderScreen, deleted card Restore/Forever buttons, SettingsScreen (silence modal, setup guide, background buttons), NoteEditorModal (color picker modals), DrawingPickerModal
 
 ### DrawingCanvas Refactor (Session 10)
 - Modals extracted to DrawingPickerModal.tsx for safer editing and theming

@@ -72,7 +72,7 @@ function VoiceMemoCard({
           width: 36,
           height: 36,
           borderRadius: 18,
-          backgroundColor: '#4CAF50',
+          backgroundColor: colors.sectionVoice,
           justifyContent: 'center',
           alignItems: 'center',
         },

@@ -49,7 +49,7 @@ export function MicWidget({ theme }: MicWidgetProps) {
           text="DFW"
           style={{
             fontSize: 8,
-            color: theme.border as `#${string}`,
+            color: theme.sectionVoice as `#${string}`,
           }}
         />
       </FlexWidget>

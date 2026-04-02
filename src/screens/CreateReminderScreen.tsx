@@ -540,9 +540,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             <TouchableOpacity
               onPress={() => { hapticLight(); Keyboard.dismiss(); }}
               activeOpacity={0.7}
-              style={{ alignSelf: 'stretch', marginHorizontal: 40, marginTop: 10, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.accent, alignItems: 'center' }}
+              style={[btn.primarySmall, { alignSelf: 'stretch', marginHorizontal: 40, marginTop: 10 }]}
             >
-              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>Done</Text>
+              <Text style={btn.primarySmallText}>Done</Text>
             </TouchableOpacity>
           </View>
         ) : (

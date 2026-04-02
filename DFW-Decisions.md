@@ -224,6 +224,18 @@ No default fallback emoji — when no emoji selected, shows AlarmIcon component 
 ### DrawingCanvas refactor before theming (Session 10)
 Extracted color/background picker modals to DrawingPickerModal.tsx before applying theme changes. Safer to theme smaller, focused files than one monolith. Modals needed their own theme-aware styling anyway.
 
+### Storage migration moved before P4 (Session 11)
+AsyncStorage → SQLite migration scheduled before Chess/Checkers (P4). Rationale: fewer service files to migrate now than after adding more features. Every future feature (games, calendar sync, Firebase) builds on the storage layer — get it right early, avoid retrofitting a growing service layer later.
+
+### Jest uses ts-jest instead of jest-expo (Session 11)
+`jest-expo` preset crashes parsing expo-modules-core TypeScript files. Since we're only testing pure utility functions (no React Native, no Expo imports), `ts-jest` with `node` environment works perfectly. `jest-expo` kept in devDependencies for future component testing when needed.
+
+### MicWidget 1×1 (Session 11)
+Stripped to essentials: red record circle + "Don't Forget Why" footer. 70dp minimum size (was 110dp). A record button doesn't need a header or descriptive text — the red circle is universally understood.
+
+### WidgetTheme expanded with red property (Session 11)
+Added `red: string` to WidgetTheme interface so widgets can use theme-aware red (e.g., MicWidget record circle, destructive actions) instead of hardcoded hex values.
+
 ---
 
 ## 2. Environment & Setup Knowledge Base

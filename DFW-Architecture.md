@@ -334,3 +334,25 @@ Voice roasts use the native `AlarmChannelModule` on ALARM stream because they pl
 | `src/components/DrawingCanvas.tsx` | MODIFIED | Modals extracted, fully themed |
 | `src/components/BackButton.tsx` | MODIFIED | forceDark prop added |
 | `src/components/HomeButton.tsx` | MODIFIED | forceDark prop added |
+
+---
+
+## 8. Testing Infrastructure
+
+### Jest Setup (Session 11)
+- **Preset:** `ts-jest` with `node` test environment (not `jest-expo` — jest-expo crashes parsing expo-modules-core TypeScript)
+- **Test location:** `__tests__/` at project root
+- **Run:** `npm test` or `npx jest`
+- **Config:** in `package.json` `"jest"` section — `moduleNameMapper` maps `../utils/*`, `../types/*`, etc. to `<rootDir>/src/` paths
+- **Scope:** Pure utility functions only (no React Native, no AsyncStorage, no native modules)
+- **jest-expo** stays in devDependencies for future component testing
+
+### Test Suites (35 tests)
+| Suite | File | Tests | Coverage |
+|-------|------|-------|----------|
+| `time.test.ts` | `src/utils/time.ts` | 7 | `formatTime` — 12h/24h format, edge cases (midnight, noon, 23:59) |
+| `noteColors.test.ts` | `src/utils/noteColors.ts` | 8 | `getTextColor` — dark/light/medium backgrounds, invalid input |
+| `soundModeUtils.test.ts` | `src/utils/soundModeUtils.ts` | 20 | All 5 pure functions: `cycleSoundMode`, `soundModeToSoundId`, `soundIdToSoundMode`, `getSoundModeIcon`, `getSoundModeLabel` |
+
+### Branch
+- `testing-setup` branch used for Jest work, merged into `dev`

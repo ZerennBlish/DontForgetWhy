@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 2, 2026 (no data model changes in Session 10)
+**Last updated:** April 2, 2026
 
 ---
 
@@ -114,3 +114,15 @@ interface ThemeColors {
 ```
 
 **ThemeName:** `'dark' | 'light' | 'highContrast' | 'vivid'` — custom theme removed. `customTheme` AsyncStorage key cleaned up on migration.
+
+### WidgetTheme Interface (Session 11)
+
+```typescript
+interface WidgetTheme {
+  bg: string; cellBg: string; text: string; textSecondary: string;
+  accent: string; border: string; red: string;  // Session 11: theme-aware red for record button, destructive actions
+  // Section colors
+  sectionAlarm: string; sectionReminder: string; sectionCalendar: string;
+  sectionNotepad: string; sectionVoice: string; sectionTimer: string; sectionGames: string;
+}
+```

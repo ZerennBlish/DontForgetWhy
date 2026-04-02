@@ -305,7 +305,7 @@ DontForgetWhy/
 | Phase 3 (Voice Roasts) | COMPLETE |
 | Phase 3.5 (Voice Memos) | COMPLETE |
 | Audit status | Audits 44-45 complete, all findings resolved |
-| Jest tests | 222 passing on testing-setup branch (massively outdated) |
+| Jest tests | 35 passing (3 suites: time, noteColors, soundModeUtils) — ts-jest, node env |
 | EAS build credits | ~13 remaining (reset April 12) |
 
 ### Packages Removed (Session 10)
@@ -316,9 +316,17 @@ DontForgetWhy/
 ### App.tsx Changes (Session 10)
 - `GestureHandlerRootView` wraps the entire app — required for SwipeableRow gesture handling
 
+### Jest Setup (Session 11)
+- **Preset:** `ts-jest` with `node` test environment
+- **Tests:** `__tests__/` at project root — `time.test.ts`, `noteColors.test.ts`, `soundModeUtils.test.ts`
+- **Run:** `npm test` or `npx jest`
+- **Config:** `package.json` `"jest"` section with `moduleNameMapper` for `src/` paths
+- **Scope:** Pure utility functions only — no native modules, no AsyncStorage mocking
+- `jest-expo` in devDependencies for future component testing (not used as preset — crashes on expo-modules-core)
+
 ### Git Branches
 | Branch | Purpose | Status |
 |--------|---------|--------|
 | `main` | Production. Synced with dev at v1.8.0. | Active, clean |
-| `dev` | v1.9.0 + Session 10 — Home screen, visual overhaul, swipe-to-delete, emoji picker, button hierarchy. | Active — all new work goes here |
-| `testing-setup` | Jest suite (222 tests). | Reconciled with main (Phase 1.2) |
+| `dev` | v1.10.0 — Visual overhaul, swipe-to-delete, emoji picker, button hierarchy, widget section colors, Jest. | Active — all new work goes here |
+| `testing-setup` | Jest work branch. Merge main INTO testing-setup only. | Merged to dev (Session 11) |
