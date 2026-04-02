@@ -33,6 +33,7 @@ import HomeButton from '../components/HomeButton';
 import { CameraIcon, ChevronRightIcon, WarningIcon } from '../components/Icons';
 import { saveBackground, loadBackground, clearBackground, getOverlayOpacity, setOverlayOpacity } from '../services/backgroundStorage';
 import TimePicker from '../components/TimePicker';
+import { getButtonStyles } from '../theme/buttonStyles';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -54,6 +55,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
 
+  const btn = getButtonStyles(colors);
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
@@ -217,43 +219,6 @@ export default function SettingsScreen({ navigation }: Props) {
       flexDirection: 'row',
       gap: 12,
       marginTop: 20,
-    },
-    modalCancelBtn: {
-      flex: 1,
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    modalCancelText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textTertiary,
-    },
-    modalSaveBtn: {
-      flex: 1,
-      backgroundColor: colors.accent,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    modalSaveText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
-    setupGuideBtn: {
-      backgroundColor: colors.accent,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    setupGuideText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.textPrimary,
     },
     setupGuideDesc: {
       fontSize: 14,
@@ -590,7 +555,7 @@ export default function SettingsScreen({ navigation }: Props) {
           </TouchableOpacity>
           <View style={{ flex: 1, justifyContent: 'center', gap: 10 }}>
             <TouchableOpacity
-              style={{ backgroundColor: 'rgba(26, 26, 40, 0.7)', borderWidth: 1, borderColor: colors.accent + '60', borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}
+              style={btn.secondarySmall}
               onPress={async () => {
                 hapticLight();
                 const result = await ImagePicker.launchImageLibraryAsync({
@@ -610,11 +575,11 @@ export default function SettingsScreen({ navigation }: Props) {
               }}
               activeOpacity={0.7}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>Change Photo</Text>
+              <Text style={btn.secondarySmallText}>Change Photo</Text>
             </TouchableOpacity>
             {bgUri && (
               <TouchableOpacity
-                style={{ backgroundColor: 'rgba(26, 26, 40, 0.7)', borderWidth: 1, borderColor: colors.accent + '60', borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}
+                style={btn.destructiveSmall}
                 onPress={() => {
                   hapticLight();
                   Alert.alert('Clear Background?', 'Remove the photo background?', [
@@ -628,7 +593,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>Clear</Text>
+                <Text style={btn.destructiveSmallText}>Clear</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -755,11 +720,11 @@ export default function SettingsScreen({ navigation }: Props) {
       <View style={[styles.card, { marginTop: 16 }]}>
         <Text style={styles.sectionLabel}>Permissions</Text>
         <TouchableOpacity
-          style={styles.setupGuideBtn}
+          style={btn.primary}
           onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
           activeOpacity={0.7}
         >
-          <Text style={styles.setupGuideText}>Setup Guide</Text>
+          <Text style={btn.primaryText}>Setup Guide</Text>
         </TouchableOpacity>
         <Text style={styles.setupGuideDesc}>
           Re-run setup. In case you forgot to do something...
@@ -830,18 +795,18 @@ export default function SettingsScreen({ navigation }: Props) {
             {/* Buttons */}
             <View style={{ marginTop: 20, gap: 10 }}>
               <TouchableOpacity
-                style={{ backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+                style={btn.primary}
                 onPress={handleSilencePickerSet}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>Set Timer</Text>
+                <Text style={btn.primaryText}>Set Timer</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ backgroundColor: 'transparent', borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.accent }}
+                style={btn.secondary}
                 onPress={handleSilencePickerIndefinite}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.accent }}>Until I Turn It Off</Text>
+                <Text style={btn.secondaryText}>Until I Turn It Off</Text>
               </TouchableOpacity>
             </View>
           </View>

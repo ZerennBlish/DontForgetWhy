@@ -35,6 +35,7 @@ import DrawingCanvas from './DrawingCanvas';
 import type { StrokeData } from './DrawingCanvas';
 import ShareNoteModal from './ShareNoteModal';
 import ImageLightbox from './ImageLightbox';
+import { getButtonStyles } from '../theme/buttonStyles';
 import { loadDrawingData } from '../services/noteImageStorage';
 import { EDITOR_PLACEHOLDERS } from '../data/placeholders';
 
@@ -199,6 +200,7 @@ export default function NoteEditorModal({
 }: NoteEditorModalProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const btn = getButtonStyles(colors);
 
   const [editorText, setEditorText] = useState('');
   const [editorColor, setEditorColor] = useState(NOTE_COLORS[0]);
@@ -662,32 +664,6 @@ export default function NoteEditorModal({
       flexDirection: 'row',
       gap: 12,
       marginTop: 20,
-    },
-    cpCancelBtn: {
-      flex: 1,
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    cpCancelText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textTertiary,
-    },
-    cpSaveBtn: {
-      flex: 1,
-      backgroundColor: colors.accent,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    cpSaveText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.textPrimary,
     },
     dropdownMenu: {
       position: 'absolute',
@@ -1241,10 +1217,10 @@ export default function NoteEditorModal({
             <View style={styles.cpBtns}>
               <TouchableOpacity
                 onPress={() => { hapticLight(); setShowBgPicker(false); }}
-                style={styles.cpCancelBtn}
+                style={[btn.secondary, { flex: 1 }]}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cpCancelText}>Cancel</Text>
+                <Text style={btn.secondaryText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -1254,10 +1230,10 @@ export default function NoteEditorModal({
                   setEditorColor(hex);
                   setShowBgPicker(false);
                 }}
-                style={styles.cpSaveBtn}
+                style={[btn.primary, { flex: 1 }]}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cpSaveText}>Apply</Text>
+                <Text style={btn.primaryText}>Apply</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1282,10 +1258,10 @@ export default function NoteEditorModal({
             <View style={styles.cpBtns}>
               <TouchableOpacity
                 onPress={() => { hapticLight(); setShowFontPicker(false); }}
-                style={styles.cpCancelBtn}
+                style={[btn.secondary, { flex: 1 }]}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cpCancelText}>Cancel</Text>
+                <Text style={btn.secondaryText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -1295,10 +1271,10 @@ export default function NoteEditorModal({
                   setEditorFontColor(hex);
                   setShowFontPicker(false);
                 }}
-                style={styles.cpSaveBtn}
+                style={[btn.primary, { flex: 1 }]}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cpSaveText}>Apply</Text>
+                <Text style={btn.primaryText}>Apply</Text>
               </TouchableOpacity>
             </View>
           </View>

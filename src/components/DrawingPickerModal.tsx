@@ -4,6 +4,7 @@ import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { useTheme } from '../theme/ThemeContext';
+import { getButtonStyles } from '../theme/buttonStyles';
 
 interface DrawingPickerModalProps {
   visible: boolean;
@@ -21,6 +22,7 @@ export default function DrawingPickerModal({
   onCancel,
 }: DrawingPickerModalProps) {
   const { colors } = useTheme();
+  const btn = getButtonStyles(colors);
   const pickedRef = useRef(initialColor);
 
   useEffect(() => {
@@ -47,10 +49,10 @@ export default function DrawingPickerModal({
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
             <TouchableOpacity
               onPress={() => { hapticLight(); onCancel(); }}
-              style={{ flex: 1, backgroundColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10, alignItems: 'center' }}
+              style={[btn.secondarySmall, { flex: 1 }]}
               activeOpacity={0.7}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Cancel</Text>
+              <Text style={btn.secondarySmallText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
@@ -58,10 +60,10 @@ export default function DrawingPickerModal({
                 onApply(pickedRef.current);
                 onCancel();
               }}
-              style={{ flex: 1, backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10, alignItems: 'center' }}
+              style={[btn.primarySmall, { flex: 1 }]}
               activeOpacity={0.7}
             >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Apply</Text>
+              <Text style={btn.primarySmallText}>Apply</Text>
             </TouchableOpacity>
           </View>
         </View>
