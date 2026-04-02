@@ -1,5 +1,5 @@
 import { File, Directory, Paths } from 'expo-file-system';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet, kvRemove } from './database';
 
 const BG_KEY = 'bg_main';
 const OPACITY_KEY = 'bg_overlay_opacity';
@@ -15,7 +15,7 @@ function ensureBgDir(): Directory {
 export async function saveBackground(sourceUri: string): Promise<string | null> {
   try {
     const dir = ensureBgDir();
-    const oldUri = await AsyncStorage.getItem(BG_KEY);
+    const oldUri = await kvGet(BG_KEY);
 
     // 1. Copy new file first
     const filename = `bg_main_${Date.now()}.jpg`;
@@ -24,7 +24,7 @@ export async function saveBackground(sourceUri: string): Promise<string | null> 
     sourceFile.copy(destFile);
 
     // 2. Persist new URI only after copy succeeds
-    await AsyncStorage.setItem(BG_KEY, destFile.uri);
+    await kvSet(BG_KEY, destFile.uri);
 
     // 3. Best-effort delete old file
     if (oldUri) {
@@ -41,32 +41,32 @@ export async function saveBackground(sourceUri: string): Promise<string | null> 
 }
 
 export async function loadBackground(): Promise<string | null> {
-  const uri = await AsyncStorage.getItem(BG_KEY);
+  const uri = await kvGet(BG_KEY);
   if (!uri) return null;
   try {
     const file = new File(uri);
     if (file.exists) return uri;
   } catch { /* fall through */ }
-  await AsyncStorage.removeItem(BG_KEY);
+  await kvRemove(BG_KEY);
   return null;
 }
 
 export async function clearBackground(): Promise<void> {
   try {
-    const uri = await AsyncStorage.getItem(BG_KEY);
+    const uri = await kvGet(BG_KEY);
     if (uri) {
       try {
         const file = new File(uri);
         if (file.exists) file.delete();
       } catch { /* best-effort */ }
     }
-    await AsyncStorage.removeItem(BG_KEY);
+    await kvRemove(BG_KEY);
   } catch { /* best-effort */ }
 }
 
 export async function getOverlayOpacity(): Promise<number> {
   try {
-    const raw = await AsyncStorage.getItem(OPACITY_KEY);
+    const raw = await kvGet(OPACITY_KEY);
     if (raw !== null) {
       const val = parseFloat(raw);
       if (!isNaN(val) && val >= 0.3 && val <= 0.8) return val;
@@ -76,5 +76,5 @@ export async function getOverlayOpacity(): Promise<number> {
 }
 
 export async function setOverlayOpacity(value: number): Promise<void> {
-  await AsyncStorage.setItem(OPACITY_KEY, String(value));
+  await kvSet(OPACITY_KEY, String(value));
 }

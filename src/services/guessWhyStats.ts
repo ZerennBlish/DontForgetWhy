@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet } from './database';
 
 const STORAGE_KEY = 'guessWhyStats';
 
@@ -33,7 +33,7 @@ function validateStats(parsed: Record<string, unknown>): GuessWhyStats {
 }
 
 export async function loadStats(): Promise<GuessWhyStats> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  const raw = await kvGet(STORAGE_KEY);
   if (!raw) return { ...defaultStats };
   try {
     return validateStats(JSON.parse(raw));
@@ -43,7 +43,7 @@ export async function loadStats(): Promise<GuessWhyStats> {
 }
 
 async function saveStats(stats: GuessWhyStats): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+  await kvSet(STORAGE_KEY, JSON.stringify(stats));
 }
 
 export async function recordWin(): Promise<GuessWhyStats> {

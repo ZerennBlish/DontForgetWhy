@@ -18,7 +18,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet } from '../services/database';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import notifee from '@notifee/react-native';
@@ -243,14 +243,12 @@ export default function SettingsScreen({ navigation }: Props) {
       setTimeInputMode(s.timeInputMode);
     });
     // Load haptics setting
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem('hapticsEnabled');
-        if (raw !== null) {
-          setHapticsEnabled(raw !== 'false');
-        }
-      } catch {}
-    })();
+    try {
+      const raw = kvGet('hapticsEnabled');
+      if (raw !== null) {
+        setHapticsEnabled(raw !== 'false');
+      }
+    } catch {}
     getVoiceEnabled().then(setVoiceRoastsState).catch(() => {});
   }, []);
 
@@ -394,7 +392,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const handleHapticsToggle = async (value: boolean) => {
     setHapticsEnabled(value);
     try {
-      await AsyncStorage.setItem('hapticsEnabled', value ? 'true' : 'false');
+      kvSet('hapticsEnabled', value ? 'true' : 'false');
     } catch {}
     await refreshHapticsSetting();
     if (value) hapticLight();

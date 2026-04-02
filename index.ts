@@ -10,7 +10,7 @@ import { scheduleReminderNotification, cancelReminderNotification, cancelReminde
 import { refreshWidgets } from './src/widget/updateWidget';
 import { setPendingAlarm, clearPendingAlarm, markNotifHandled, persistNotifHandled } from './src/services/pendingAlarm';
 import { loadActiveTimers, saveActiveTimers } from './src/services/timerStorage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet, kvRemove } from './src/services/database';
 import { playAlarmSoundForNotification, stopAlarmSound } from './src/services/alarmSound';
 
 // ── Yearly reminder reschedule helper ──────────────────────────────
@@ -150,9 +150,9 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
           const alarms = await loadAlarms();
           const alarm = alarms.find((a) => a.id === alarmId);
           if (alarm?.mode === 'one-time') {
-            const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+            const snoozingFlag = kvGet(`snoozing_${alarmId}`);
             if (snoozingFlag) {
-              await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+              kvRemove(`snoozing_${alarmId}`);
             } else {
               await deleteAlarm(alarmId);
               await refreshWidgets();
@@ -190,7 +190,7 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
       // Set snoozing flag BEFORE cancelling notification (prevents one-time alarm deletion)
       // Abort if flag write fails — a failed snooze is better than a deleted alarm
       try {
-        await AsyncStorage.setItem(`snoozing_${alarmId}`, '1');
+        kvSet(`snoozing_${alarmId}`, '1');
       } catch (e) {
         console.error('[NOTIF] snooze flag failed, aborting snooze:', e);
         return;
@@ -245,9 +245,9 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
         if (alarm?.mode === 'one-time') {
           // Check if this DISMISSED was triggered by a snooze cancellation.
           // The snoozing flag is set atomically before cancel in AlarmFireScreen.
-          const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+          const snoozingFlag = kvGet(`snoozing_${alarmId}`);
           if (snoozingFlag) {
-            await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+            kvRemove(`snoozing_${alarmId}`);
           } else {
             await deleteAlarm(alarmId);
             await refreshWidgets();

@@ -173,7 +173,8 @@ DontForgetWhy/
     │   ├── settings.ts
     │   ├── voicePlayback.ts        # voice playback service (native module bridge)
     │   ├── voiceMemoFileStorage.ts   # Voice memo .m4a file management (expo-file-system)
-    │   ├── voiceMemoStorage.ts       # Voice memo AsyncStorage CRUD with soft-delete
+    │   ├── database.ts              # SQLite singleton, schema, KV helpers, AsyncStorage migration
+    │   ├── voiceMemoStorage.ts       # Voice memo SQLite CRUD with soft-delete
     │   ├── storage.ts
     │   ├── timerStorage.ts
     │   ├── triviaAI.ts
@@ -321,7 +322,7 @@ DontForgetWhy/
 - **Tests:** `__tests__/` at project root — `time.test.ts`, `noteColors.test.ts`, `soundModeUtils.test.ts`
 - **Run:** `npm test` or `npx jest`
 - **Config:** `package.json` `"jest"` section with `moduleNameMapper` for `src/` paths
-- **Scope:** Pure utility functions only — no native modules, no AsyncStorage mocking
+- **Scope:** Pure utility functions only — no native modules, no storage mocking
 - `jest-expo` in devDependencies for future component testing (not used as preset — crashes on expo-modules-core)
 
 ### Git Branches

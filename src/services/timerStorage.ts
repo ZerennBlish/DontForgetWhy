@@ -1,35 +1,16 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDb, kvGet, kvSet } from './database';
 import type { TimerPreset, ActiveTimer, UserTimer } from '../types/timer';
 import { defaultPresets } from '../data/timerPresets';
 
 const PRESETS_KEY = 'timerPresets';
-const ACTIVE_KEY = 'activeTimers';
 const RECENT_KEY = 'recentPresets';
-const USER_TIMERS_KEY = 'userTimers';
 
-// Async mutex for serializing read-modify-write operations on ACTIVE_KEY
-let _mutex: Promise<void> = Promise.resolve();
-
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  let release: () => void;
-  const next = new Promise<void>((resolve) => { release = resolve; });
-  const prev = _mutex;
-  _mutex = next;
-  return prev.then(async () => {
-    try {
-      return await fn();
-    } finally {
-      release!();
-    }
-  });
-}
-
-async function _writeActiveTimers(timers: ActiveTimer[]): Promise<void> {
-  await AsyncStorage.setItem(ACTIVE_KEY, JSON.stringify(timers));
-}
+// ---------------------------------------------------------------------------
+// Timer Presets (custom durations) → kv_store
+// ---------------------------------------------------------------------------
 
 export async function loadPresets(): Promise<TimerPreset[]> {
-  const raw = await AsyncStorage.getItem(PRESETS_KEY);
+  const raw = kvGet(PRESETS_KEY);
   let customDurations: Record<string, number> = {};
   if (raw) {
     try {
@@ -37,9 +18,7 @@ export async function loadPresets(): Promise<TimerPreset[]> {
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         customDurations = parsed;
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
   return defaultPresets.map((p) => ({
     ...p,
@@ -49,9 +28,9 @@ export async function loadPresets(): Promise<TimerPreset[]> {
 
 export async function saveCustomDuration(
   presetId: string,
-  seconds: number
+  seconds: number,
 ): Promise<void> {
-  const raw = await AsyncStorage.getItem(PRESETS_KEY);
+  const raw = kvGet(PRESETS_KEY);
   let customDurations: Record<string, number> = {};
   if (raw) {
     try {
@@ -59,90 +38,107 @@ export async function saveCustomDuration(
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         customDurations = parsed;
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
   customDurations[presetId] = seconds;
-  await AsyncStorage.setItem(PRESETS_KEY, JSON.stringify(customDurations));
+  kvSet(PRESETS_KEY, JSON.stringify(customDurations));
+}
+
+// ---------------------------------------------------------------------------
+// Active Timers → active_timers table
+// ---------------------------------------------------------------------------
+
+interface ActiveTimerRow {
+  id: string;
+  presetId: string;
+  label: string;
+  icon: string;
+  totalSeconds: number;
+  remainingSeconds: number;
+  startedAt: string;
+  isRunning: number;
+  notificationId: string | null;
+  soundId: string | null;
+}
+
+function rowToActiveTimer(row: ActiveTimerRow): ActiveTimer {
+  return {
+    id: row.id,
+    presetId: row.presetId,
+    label: row.label,
+    icon: row.icon,
+    totalSeconds: row.totalSeconds,
+    remainingSeconds: row.remainingSeconds,
+    startedAt: row.startedAt,
+    isRunning: !!row.isRunning,
+    notificationId: row.notificationId ?? undefined,
+    soundId: row.soundId ?? undefined,
+  };
 }
 
 export async function loadActiveTimers(): Promise<ActiveTimer[]> {
-  const raw = await AsyncStorage.getItem(ACTIVE_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item: unknown): item is ActiveTimer =>
-        item !== null &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).label === 'string' &&
-        typeof (item as Record<string, unknown>).totalSeconds === 'number' &&
-        typeof (item as Record<string, unknown>).remainingSeconds === 'number' &&
-        typeof (item as Record<string, unknown>).startedAt === 'string' &&
-        typeof (item as Record<string, unknown>).isRunning === 'boolean'
-    );
-  } catch {
-    return [];
-  }
+  const db = getDb();
+  return db.getAllSync<ActiveTimerRow>('SELECT * FROM active_timers').map(rowToActiveTimer);
 }
 
-export function saveActiveTimers(
-  timers: ActiveTimer[]
-): Promise<void> {
-  return withLock(() => _writeActiveTimers(timers));
-}
-
-export function addActiveTimer(
-  timer: ActiveTimer
-): Promise<ActiveTimer[]> {
-  return withLock(async () => {
-    const timers = await loadActiveTimers();
-    timers.push(timer);
-    await _writeActiveTimers(timers);
-    return timers;
+export async function saveActiveTimers(timers: ActiveTimer[]): Promise<void> {
+  const db = getDb();
+  db.withTransactionSync(() => {
+    db.runSync('DELETE FROM active_timers');
+    for (const t of timers) {
+      db.runSync(
+        `INSERT INTO active_timers (id, presetId, label, icon, totalSeconds, remainingSeconds, startedAt, isRunning, notificationId, soundId)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [t.id, t.presetId, t.label, t.icon, t.totalSeconds, t.remainingSeconds,
+         t.startedAt, t.isRunning ? 1 : 0, t.notificationId ?? null, t.soundId ?? null],
+      );
+    }
   });
 }
 
-export function removeActiveTimer(
-  id: string
-): Promise<ActiveTimer[]> {
-  return withLock(async () => {
-    const timers = await loadActiveTimers();
-    const filtered = timers.filter((t) => t.id !== id);
-    await _writeActiveTimers(filtered);
-    return filtered;
-  });
+export async function addActiveTimer(timer: ActiveTimer): Promise<ActiveTimer[]> {
+  const db = getDb();
+  db.runSync(
+    `INSERT INTO active_timers (id, presetId, label, icon, totalSeconds, remainingSeconds, startedAt, isRunning, notificationId, soundId)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [timer.id, timer.presetId, timer.label, timer.icon, timer.totalSeconds, timer.remainingSeconds,
+     timer.startedAt, timer.isRunning ? 1 : 0, timer.notificationId ?? null, timer.soundId ?? null],
+  );
+  return loadActiveTimers();
 }
+
+export async function removeActiveTimer(id: string): Promise<ActiveTimer[]> {
+  const db = getDb();
+  db.runSync('DELETE FROM active_timers WHERE id=?', [id]);
+  return loadActiveTimers();
+}
+
+// ---------------------------------------------------------------------------
+// Recent Presets → kv_store
+// ---------------------------------------------------------------------------
 
 interface RecentEntry {
   presetId: string;
   timestamp: number;
 }
 
-export async function recordPresetUsage(
-  presetId: string
-): Promise<void> {
-  const raw = await AsyncStorage.getItem(RECENT_KEY);
+export async function recordPresetUsage(presetId: string): Promise<void> {
+  const raw = kvGet(RECENT_KEY);
   let entries: RecentEntry[] = [];
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) entries = parsed;
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
   entries = entries.filter((e) => e.presetId !== presetId);
   entries.unshift({ presetId, timestamp: Date.now() });
   if (entries.length > 20) entries = entries.slice(0, 20);
-  await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(entries));
+  kvSet(RECENT_KEY, JSON.stringify(entries));
 }
 
 export async function loadRecentPresetIds(): Promise<string[]> {
-  const raw = await AsyncStorage.getItem(RECENT_KEY);
+  const raw = kvGet(RECENT_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -155,7 +151,7 @@ export async function loadRecentPresetIds(): Promise<string[]> {
     } catch {}
     const pruned = entries.filter((e) => validIds.has(e.presetId));
     if (pruned.length !== entries.length) {
-      await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(pruned));
+      kvSet(RECENT_KEY, JSON.stringify(pruned));
     }
     return pruned.map((e) => e.presetId);
   } catch {
@@ -163,40 +159,60 @@ export async function loadRecentPresetIds(): Promise<string[]> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// User Timers → user_timers table
+// ---------------------------------------------------------------------------
+
+interface UserTimerRow {
+  id: string;
+  icon: string;
+  label: string;
+  seconds: number;
+  soundId: string | null;
+  createdAt: string;
+}
+
+function rowToUserTimer(row: UserTimerRow): UserTimer {
+  return {
+    id: row.id,
+    icon: row.icon,
+    label: row.label,
+    seconds: row.seconds,
+    soundId: row.soundId ?? undefined,
+    createdAt: row.createdAt,
+  };
+}
+
 export async function loadUserTimers(): Promise<UserTimer[]> {
-  const raw = await AsyncStorage.getItem(USER_TIMERS_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.sort(
-      (a: UserTimer, b: UserTimer) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  } catch {
-    return [];
-  }
+  const db = getDb();
+  return db.getAllSync<UserTimerRow>('SELECT * FROM user_timers ORDER BY createdAt DESC')
+    .map(rowToUserTimer);
 }
 
 export async function saveUserTimer(timer: UserTimer): Promise<void> {
-  const existing = await loadUserTimers();
-  existing.push(timer);
-  await AsyncStorage.setItem(USER_TIMERS_KEY, JSON.stringify(existing));
+  const db = getDb();
+  db.runSync(
+    `INSERT INTO user_timers (id, icon, label, seconds, soundId, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [timer.id, timer.icon, timer.label, timer.seconds, timer.soundId ?? null, timer.createdAt],
+  );
 }
 
 export async function deleteUserTimer(id: string): Promise<void> {
-  const existing = await loadUserTimers();
-  const filtered = existing.filter((t) => t.id !== id);
-  await AsyncStorage.setItem(USER_TIMERS_KEY, JSON.stringify(filtered));
+  const db = getDb();
+  db.runSync('DELETE FROM user_timers WHERE id=?', [id]);
 }
 
 export async function updateUserTimer(
   id: string,
-  updates: Partial<UserTimer>
+  updates: Partial<UserTimer>,
 ): Promise<void> {
-  const existing = await loadUserTimers();
-  const updated = existing.map((t) =>
-    t.id === id ? { ...t, ...updates } : t
+  const db = getDb();
+  const current = db.getFirstSync<UserTimerRow>('SELECT * FROM user_timers WHERE id=?', [id]);
+  if (!current) return;
+  const merged = { ...rowToUserTimer(current), ...updates };
+  db.runSync(
+    'UPDATE user_timers SET icon=?, label=?, seconds=?, soundId=? WHERE id=?',
+    [merged.icon, merged.label, merged.seconds, merged.soundId ?? null, id],
   );
-  await AsyncStorage.setItem(USER_TIMERS_KEY, JSON.stringify(updated));
 }

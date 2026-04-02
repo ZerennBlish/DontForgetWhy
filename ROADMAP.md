@@ -10,9 +10,9 @@
 | **Current Version** | v1.10.0 (versionCode 25) — Visual overhaul + Jest |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | Session 11: Button hierarchy P4, widget section colors, Jest setup |
+| **Current Focus** | Session 12: Storage migration (AsyncStorage → SQLite) |
 | **Blocked By** | Nothing |
-| **Next Action** | Ship visual overhaul → Storage migration (AsyncStorage → SQLite) → P4 |
+| **Next Action** | Audit storage migration → Ship → P4 |
 | **EAS Credits** | ~13 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -326,19 +326,22 @@
 
 ---
 
-## STORAGE MIGRATION — AsyncStorage → SQLite
+## STORAGE MIGRATION — AsyncStorage → SQLite ✅ COMPLETE
 
-**Status:** ⬜ Not started
+**Status:** ✅ Complete (Session 12)
 **Branch:** `dev`
-**Rationale:** Fewer service files to migrate now than later. Every future feature (P4 games, P5 calendar sync, P7 Firebase) builds on the storage layer — get it right before the codebase grows.
-**New deps:** TBD (expo-sqlite or similar)
+**New deps:** `expo-sqlite`
 **Build cost:** 1 dev build + 1 production build
 
-### Tasks
-- [ ] Evaluate storage library (expo-sqlite, op-sqlite, etc.)
-- [ ] Design migration strategy (AsyncStorage → SQLite, data preservation)
-- [ ] Migrate service files one at a time
-- [ ] Migration path for existing users (read old AsyncStorage, write to SQLite, clean up)
+### Completed
+- [x] Chose `expo-sqlite` (Expo-managed, synchronous API, no extra native deps)
+- [x] Created `src/services/database.ts` — singleton, schema (8 tables + kv_store), KV helpers, migration runner
+- [x] Migrated KV services (settings, theme, haptics, voice, background, game stats) — 15 files
+- [x] Migrated entity services (notes, voice memos, forget log, timers, alarms, reminders) — 6 files
+- [x] Migrated widget pins, pending actions, snooze flags, notification routing — 6 files
+- [x] One-time `migrateFromAsyncStorage()` copies all existing data to SQLite on first launch
+- [x] AsyncStorage import removed from all files except `database.ts` (migration runner)
+- [x] `npx tsc --noEmit` — 0 errors
 
 ### Audit Gate
 - [ ] Full dual audit (Codex + Gemini) before production build
@@ -554,16 +557,16 @@
 - P6: Memory Score expansion
 - P7: Firebase online content + leaderboards
 - P8: Pro tier ($1.99 one-time, free features stay free)
-- Cloud backup / export (.dfw backup file — no accounts, zip AsyncStorage + voice-memos/ + note-images/)
+- Cloud backup / export (.dfw backup file — no accounts, zip dfw.db + voice-memos/ + note-images/)
 
 ### Infrastructure
 - ~~Jest suite~~ — DONE Session 11 (ts-jest, node environment, 35 tests across 3 suites, testing-setup merged to dev)
-- Storage audit — voice memo disk usage, AsyncStorage limits at scale
+- Storage audit — voice memo disk usage, SQLite database size at scale
 - Full abandoned package audit (find and remove unused dependencies)
 - Full code audit (fresh eyes on entire codebase post-restructure)
 - R8 deobfuscation mapping file upload for Play Console crash reports
 - ~~Theme consolidation~~ — DONE Session 9 (6 → 4 themes + section colors + custom picker removed)
-- ~~AsyncStorage → SQLite migration~~ — promoted to scheduled phase (before P4)
+- ~~AsyncStorage → SQLite migration~~ — DONE Session 12 (expo-sqlite, 8 tables + kv_store, all services migrated)
 - NotepadScreen further decomposition (~1240 lines — getting unwieldy)
 
 ### Store / Marketing

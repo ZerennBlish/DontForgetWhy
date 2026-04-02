@@ -1,100 +1,85 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDb } from './database';
 import type { VoiceMemo } from '../types/voiceMemo';
 
-const STORAGE_KEY = 'voiceMemos';
+// ---------------------------------------------------------------------------
+// Row type & conversion
+// ---------------------------------------------------------------------------
 
-async function _loadAll(): Promise<VoiceMemo[]> {
-  try {
-    const data = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!data) return [];
-    const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item: unknown): item is VoiceMemo =>
-        item !== null &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).uri === 'string' &&
-        typeof (item as Record<string, unknown>).title === 'string' &&
-        typeof (item as Record<string, unknown>).createdAt === 'string',
-    );
-  } catch (e) {
-    console.error('[voiceMemoStorage] _loadAll failed:', e);
-    return [];
-  }
+interface VoiceMemoRow {
+  id: string;
+  uri: string;
+  title: string;
+  note: string;
+  duration: number;
+  noteId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 }
 
-async function _saveAll(memos: VoiceMemo[]): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+function rowToMemo(row: VoiceMemoRow): VoiceMemo {
+  return {
+    id: row.id,
+    uri: row.uri,
+    title: row.title,
+    note: row.note || '',
+    duration: row.duration || 0,
+    noteId: row.noteId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    deletedAt: row.deletedAt,
+  };
 }
+
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
 
 export async function getVoiceMemos(): Promise<VoiceMemo[]> {
-  const all = await _loadAll();
-  return all.filter((m) => !m.deletedAt);
+  const db = getDb();
+  const rows = db.getAllSync<VoiceMemoRow>('SELECT * FROM voice_memos WHERE deletedAt IS NULL');
+  return rows.map(rowToMemo);
 }
 
 export async function getAllVoiceMemos(): Promise<VoiceMemo[]> {
-  return _loadAll();
+  const db = getDb();
+  return db.getAllSync<VoiceMemoRow>('SELECT * FROM voice_memos').map(rowToMemo);
 }
 
 export async function addVoiceMemo(memo: VoiceMemo): Promise<void> {
-  try {
-    const memos = await _loadAll();
-    memos.push(memo);
-    await _saveAll(memos);
-  } catch (e) {
-    console.error('[voiceMemoStorage] addVoiceMemo failed:', e);
-    throw e;
-  }
+  const db = getDb();
+  db.runSync(
+    `INSERT INTO voice_memos (id, uri, title, note, duration, noteId, createdAt, updatedAt, deletedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [memo.id, memo.uri, memo.title, memo.note || '', memo.duration || 0,
+     memo.noteId ?? null, memo.createdAt, memo.updatedAt, memo.deletedAt ?? null],
+  );
 }
 
 export async function updateVoiceMemo(updated: VoiceMemo): Promise<void> {
-  try {
-    const memos = await _loadAll();
-    const index = memos.findIndex((m) => m.id === updated.id);
-    if (index >= 0) {
-      memos[index] = updated;
-      await _saveAll(memos);
-    }
-  } catch (e) {
-    console.error('[voiceMemoStorage] updateVoiceMemo failed:', e);
-    throw e;
-  }
+  const db = getDb();
+  db.runSync(
+    `UPDATE voice_memos SET uri=?, title=?, note=?, duration=?, noteId=?, updatedAt=?, deletedAt=?
+     WHERE id=?`,
+    [updated.uri, updated.title, updated.note || '', updated.duration || 0,
+     updated.noteId ?? null, updated.updatedAt, updated.deletedAt ?? null, updated.id],
+  );
 }
 
 export async function deleteVoiceMemo(id: string): Promise<void> {
-  try {
-    const memos = await _loadAll();
-    const updated = memos.map((m) =>
-      m.id === id ? { ...m, deletedAt: new Date().toISOString() } : m,
-    );
-    await _saveAll(updated);
-  } catch (e) {
-    console.error('[voiceMemoStorage] deleteVoiceMemo failed:', e);
-    throw e;
-  }
+  const db = getDb();
+  db.runSync(
+    'UPDATE voice_memos SET deletedAt=? WHERE id=?',
+    [new Date().toISOString(), id],
+  );
 }
 
 export async function restoreVoiceMemo(id: string): Promise<void> {
-  try {
-    const memos = await _loadAll();
-    const updated = memos.map((m) =>
-      m.id === id ? { ...m, deletedAt: null } : m,
-    );
-    await _saveAll(updated);
-  } catch (e) {
-    console.error('[voiceMemoStorage] restoreVoiceMemo failed:', e);
-    throw e;
-  }
+  const db = getDb();
+  db.runSync('UPDATE voice_memos SET deletedAt=NULL WHERE id=?', [id]);
 }
 
 export async function permanentlyDeleteVoiceMemo(id: string): Promise<void> {
-  try {
-    const memos = await _loadAll();
-    const filtered = memos.filter((m) => m.id !== id);
-    await _saveAll(filtered);
-  } catch (e) {
-    console.error('[voiceMemoStorage] permanentlyDeleteVoiceMemo failed:', e);
-    throw e;
-  }
+  const db = getDb();
+  db.runSync('DELETE FROM voice_memos WHERE id=?', [id]);
 }

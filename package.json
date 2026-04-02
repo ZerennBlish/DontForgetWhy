@@ -29,6 +29,7 @@
     "expo-notifications": "~55.0.14",
     "expo-print": "~55.0.9",
     "expo-sharing": "~55.0.14",
+    "expo-sqlite": "~55.0.12",
     "expo-status-bar": "~55.0.4",
     "react": "19.2.0",
     "react-native": "0.83.4",
@@ -54,7 +55,12 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "moduleFileExtensions": ["ts", "tsx", "js", "jsx"],
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx"
+    ],
     "moduleNameMapper": {
       "^../services/(.*)$": "<rootDir>/src/services/$1",
       "^../utils/(.*)$": "<rootDir>/src/utils/$1",

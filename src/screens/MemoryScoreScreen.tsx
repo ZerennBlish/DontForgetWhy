@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ImageBackground } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
@@ -122,34 +122,33 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     loadStats().then(setGuessWhyStats);
     getTriviaStats().then(setTriviaStats);
 
-    AsyncStorage.getItem('memoryMatchScores').then((data) => {
-      if (data) { try { setMmScores(JSON.parse(data)); } catch {} }
-      else { setMmScores({}); }
-    });
-    AsyncStorage.getItem('sudokuBestScores').then((data) => {
-      if (data) { try { setSudokuScores(JSON.parse(data)); } catch {} }
-      else { setSudokuScores({}); }
-    });
-    AsyncStorage.getItem('dailyRiddleStats').then((data) => {
-      if (data) {
-        try {
-          const parsed = JSON.parse(data);
-          setRiddleStats({
-            lastPlayedDate: parsed.lastPlayedDate || '',
-            streak: parsed.streak || 0,
-            longestStreak: parsed.longestStreak ?? parsed.streak ?? 0,
-            totalPlayed: parsed.totalPlayed || 0,
-            totalCorrect: parsed.totalCorrect || 0,
-            seenRiddleIds: parsed.seenRiddleIds || [],
-          });
-        } catch {}
-      } else {
+    const mmData = kvGet('memoryMatchScores');
+    if (mmData) { try { setMmScores(JSON.parse(mmData)); } catch {} }
+    else { setMmScores({}); }
+
+    const sudData = kvGet('sudokuBestScores');
+    if (sudData) { try { setSudokuScores(JSON.parse(sudData)); } catch {} }
+    else { setSudokuScores({}); }
+
+    const ridData = kvGet('dailyRiddleStats');
+    if (ridData) {
+      try {
+        const parsed = JSON.parse(ridData);
         setRiddleStats({
-          lastPlayedDate: '', streak: 0, longestStreak: 0,
-          totalPlayed: 0, totalCorrect: 0, seenRiddleIds: [],
+          lastPlayedDate: parsed.lastPlayedDate || '',
+          streak: parsed.streak || 0,
+          longestStreak: parsed.longestStreak ?? parsed.streak ?? 0,
+          totalPlayed: parsed.totalPlayed || 0,
+          totalCorrect: parsed.totalCorrect || 0,
+          seenRiddleIds: parsed.seenRiddleIds || [],
         });
-      }
-    });
+      } catch {}
+    } else {
+      setRiddleStats({
+        lastPlayedDate: '', streak: 0, longestStreak: 0,
+        totalPlayed: 0, totalCorrect: 0, seenRiddleIds: [],
+      });
+    }
   }, []);
 
   useFocusEffect(

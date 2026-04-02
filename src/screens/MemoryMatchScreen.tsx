@@ -9,7 +9,7 @@ import {
   ScrollView,
   ImageBackground,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
@@ -212,13 +212,12 @@ export default function MemoryMatchScreen({ navigation }: Props) {
   // Load best scores and settings on focus
   useFocusEffect(
     useCallback(() => {
-      AsyncStorage.getItem(SCORES_KEY).then((data) => {
-        if (data) {
-          try {
-            setBestScores(JSON.parse(data));
-          } catch {}
-        }
-      });
+      const data = kvGet(SCORES_KEY);
+      if (data) {
+        try {
+          setBestScores(JSON.parse(data));
+        } catch {}
+      }
     }, []),
   );
 
@@ -335,21 +334,20 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           setFinalTime(totalTime);
 
           // Save best score
-          AsyncStorage.getItem(SCORES_KEY)
-            .then((data) => {
-              const scores: BestScores = data ? JSON.parse(data) : {};
-              const current = scores[diff];
-              const isBetter =
-                !current ||
-                totalMoves < current.bestMoves ||
-                (totalMoves === current.bestMoves && totalTime < current.bestTime);
-              if (isBetter) {
-                scores[diff] = { bestMoves: totalMoves, bestTime: totalTime };
-                AsyncStorage.setItem(SCORES_KEY, JSON.stringify(scores));
-                setBestScores({ ...scores });
-              }
-            })
-            .catch(() => {});
+          try {
+            const data = kvGet(SCORES_KEY);
+            const scores: BestScores = data ? JSON.parse(data) : {};
+            const current = scores[diff];
+            const isBetter =
+              !current ||
+              totalMoves < current.bestMoves ||
+              (totalMoves === current.bestMoves && totalTime < current.bestTime);
+            if (isBetter) {
+              scores[diff] = { bestMoves: totalMoves, bestTime: totalTime };
+              kvSet(SCORES_KEY, JSON.stringify(scores));
+              setBestScores({ ...scores });
+            }
+          } catch {}
 
           setTimeout(() => setGamePhase('won'), 600);
         }

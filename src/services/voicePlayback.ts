@@ -13,7 +13,7 @@
 
 import { NativeModules, Platform } from 'react-native';
 import { Asset } from 'expo-asset';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet } from './database';
 import voiceClips, { type VoiceCategory } from '../data/voiceClips';
 
 const VOICE_ENABLED_KEY = 'voiceRoastsEnabled';
@@ -39,21 +39,21 @@ export async function stopVoice(): Promise<void> {
 }
 
 export async function getVoiceEnabled(): Promise<boolean> {
-  const raw = await AsyncStorage.getItem(VOICE_ENABLED_KEY);
+  const raw = await kvGet(VOICE_ENABLED_KEY);
   return raw !== 'false';
 }
 
 export async function setVoiceEnabled(enabled: boolean): Promise<void> {
-  await AsyncStorage.setItem(VOICE_ENABLED_KEY, String(enabled));
+  await kvSet(VOICE_ENABLED_KEY, String(enabled));
 }
 
 export async function hasIntroPlayed(): Promise<boolean> {
-  const raw = await AsyncStorage.getItem(INTRO_PLAYED_KEY);
+  const raw = await kvGet(INTRO_PLAYED_KEY);
   return raw === 'true';
 }
 
 export async function markIntroPlayed(): Promise<void> {
-  await AsyncStorage.setItem(INTRO_PLAYED_KEY, 'true');
+  await kvSet(INTRO_PLAYED_KEY, 'true');
 }
 
 /**

@@ -1,282 +1,271 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
+import { getDb } from './database';
+import type { SQLiteBindValue } from 'expo-sqlite';
 import { Alarm, AlarmDay, ALL_DAYS } from '../types/alarm';
+import type { AlarmCategory } from '../types/alarm';
 import { scheduleAlarm, cancelAlarmNotifications } from './notifications';
 import { deleteAlarmPhoto } from './alarmPhotoStorage';
 
-const STORAGE_KEY = 'alarms';
+// ---------------------------------------------------------------------------
+// Row type & conversion
+// ---------------------------------------------------------------------------
 
-const NUM_TO_DAY: Record<number, AlarmDay> = {
-  0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat',
-};
-
-function migrateAlarm(item: Record<string, unknown>): Alarm {
-  const raw = item as unknown as Alarm & { recurring?: boolean; notificationId?: string };
-
-  // Migrate old notificationId (string) to notificationIds (string[])
-  let notificationIds: string[] = raw.notificationIds || [];
-  if (notificationIds.length === 0 && raw.notificationId) {
-    notificationIds = [raw.notificationId];
-  }
-
-  // Migrate mode: check legacy `recurring` field
-  let mode: 'recurring' | 'one-time' = raw.mode || 'recurring';
-  if (!raw.mode && raw.recurring === false) {
-    mode = 'one-time';
-  }
-
-  // Migrate days: convert numeric arrays to string arrays
-  let days: AlarmDay[];
-  if (!Array.isArray(raw.days)) {
-    days = [...ALL_DAYS];
-  } else if (typeof raw.days[0] === 'number') {
-    days = (raw.days as unknown as number[])
-      .map((n) => NUM_TO_DAY[n])
-      .filter((d): d is AlarmDay => d !== undefined);
-    if (days.length === 0) days = [...ALL_DAYS];
-  } else {
-    days = raw.days as AlarmDay[];
-  }
-
-  const date = raw.date ?? null;
-
-  // Default soundId for alarms without one
-  const soundId = typeof raw.soundId === 'string' ? raw.soundId : 'default';
-
-  return { ...raw, mode, days, date, notificationIds, soundId } as Alarm;
+interface AlarmRow {
+  id: string;
+  time: string;
+  note: string;
+  quote: string;
+  enabled: number;
+  mode: string;
+  days: string | null;
+  date: string | null;
+  category: string;
+  icon: string | null;
+  nickname: string | null;
+  guessWhy: number;
+  private: number;
+  soundId: string | null;
+  soundUri: string | null;
+  soundName: string | null;
+  soundID: number | null;
+  photoUri: string | null;
+  notificationIds: string | null;
+  createdAt: string;
+  deletedAt: string | null;
 }
 
-// Internal: loads ALL alarms from storage including soft-deleted
-async function _loadAllAlarms(): Promise<Alarm[]> {
-  const data = await AsyncStorage.getItem(STORAGE_KEY);
-  if (!data) return [];
-  try {
-    const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return [];
-    const filtered = parsed
-      .filter(
-        (item: unknown): item is Record<string, unknown> =>
-          item !== null &&
-          typeof item === 'object' &&
-          typeof (item as Record<string, unknown>).id === 'string' &&
-          typeof (item as Record<string, unknown>).time === 'string' &&
-          typeof (item as Record<string, unknown>).note === 'string' &&
-          typeof (item as Record<string, unknown>).enabled === 'boolean' &&
-          typeof (item as Record<string, unknown>).category === 'string' &&
-          typeof (item as Record<string, unknown>).private === 'boolean' &&
-          typeof (item as Record<string, unknown>).createdAt === 'string'
-      );
-
-    const migrated = filtered.map(migrateAlarm);
-
-    // Save back migrated data so migration only runs once
-    const needsMigration = filtered.some(
-      (item) =>
-        item.recurring !== undefined ||
-        item.notificationId !== undefined ||
-        (Array.isArray(item.days) && item.days.length > 0 && typeof item.days[0] === 'number') ||
-        item.mode === undefined ||
-        item.soundId === undefined,
-    );
-    if (needsMigration) {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-    }
-
-    return migrated;
-  } catch {
-    return [];
-  }
+function rowToAlarm(row: AlarmRow): Alarm {
+  return {
+    id: row.id,
+    time: row.time,
+    note: row.note,
+    quote: row.quote || '',
+    enabled: !!row.enabled,
+    mode: (row.mode as 'recurring' | 'one-time') || 'recurring',
+    days: row.days ? JSON.parse(row.days) : [...ALL_DAYS],
+    date: row.date,
+    category: row.category as AlarmCategory,
+    icon: row.icon ?? undefined,
+    nickname: row.nickname ?? undefined,
+    guessWhy: !!row.guessWhy || undefined,
+    private: !!row.private,
+    soundId: row.soundId || 'default',
+    soundUri: row.soundUri,
+    soundName: row.soundName,
+    soundID: row.soundID,
+    photoUri: row.photoUri,
+    notificationIds: row.notificationIds ? JSON.parse(row.notificationIds) : [],
+    createdAt: row.createdAt,
+    deletedAt: row.deletedAt,
+  };
 }
+
+function alarmToParams(a: Alarm): SQLiteBindValue[] {
+  return [
+    a.id, a.time, a.note, a.quote || '', a.enabled ? 1 : 0,
+    a.mode || 'recurring', JSON.stringify(a.days || []), a.date ?? null,
+    a.category, a.icon ?? null, a.nickname ?? null,
+    a.guessWhy ? 1 : 0, a.private ? 1 : 0,
+    a.soundId || 'default', a.soundUri ?? null, a.soundName ?? null, a.soundID ?? null,
+    a.photoUri ?? null, JSON.stringify(a.notificationIds || []),
+    a.createdAt, a.deletedAt ?? null,
+  ];
+}
+
+const ALARM_INSERT = `INSERT OR REPLACE INTO alarms
+  (id, time, note, quote, enabled, mode, days, date, category, icon, nickname,
+   guessWhy, private, soundId, soundUri, soundName, soundID, photoUri, notificationIds,
+   createdAt, deletedAt)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
 
 export async function loadAlarms(includeDeleted = false): Promise<Alarm[]> {
-  const all = await _loadAllAlarms();
-  if (includeDeleted) return all;
-  return all.filter((a) => !a.deletedAt);
+  const db = getDb();
+  const sql = includeDeleted
+    ? 'SELECT * FROM alarms'
+    : 'SELECT * FROM alarms WHERE deletedAt IS NULL';
+  return db.getAllSync<AlarmRow>(sql).map(rowToAlarm);
 }
 
+/** Compatibility shim — replaces all alarms in the table. */
 export async function saveAlarms(alarms: Alarm[]): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(alarms));
+  const db = getDb();
+  db.withTransactionSync(() => {
+    db.runSync('DELETE FROM alarms');
+    for (const a of alarms) {
+      db.runSync(ALARM_INSERT, alarmToParams(a));
+    }
+  });
 }
 
 export async function addAlarm(alarm: Alarm): Promise<Alarm[]> {
-  const alarms = await _loadAllAlarms();
-  alarms.push(alarm);
-  await saveAlarms(alarms);
-  return alarms;
+  const db = getDb();
+  db.runSync(ALARM_INSERT, alarmToParams(alarm));
+  return loadAlarms();
 }
 
 export async function updateAlarm(updatedAlarm: Alarm): Promise<Alarm[]> {
-  const alarms = await _loadAllAlarms();
-  const updated: Alarm[] = [];
-  for (const a of alarms) {
-    if (a.id !== updatedAlarm.id) {
-      updated.push(a);
-      continue;
-    }
-    // Cancel all existing notifications
-    if (a.notificationIds?.length) {
-      await cancelAlarmNotifications(a.notificationIds);
-    }
-    if (updatedAlarm.enabled) {
-      try {
-        const notificationIds = await scheduleAlarm(updatedAlarm);
-        updated.push({ ...updatedAlarm, notificationIds });
-      } catch (error) {
-        console.error('[updateAlarm] scheduleAlarm failed:', error);
-        updated.push({ ...updatedAlarm, enabled: false, notificationIds: [] });
-        Alert.alert('Scheduling Failed', "Alarm saved but couldn't schedule notifications. Check notification permissions.");
-      }
-    } else {
-      updated.push({ ...updatedAlarm, notificationIds: [] });
+  const db = getDb();
+
+  // Cancel old notifications
+  const oldRow = db.getFirstSync<AlarmRow>('SELECT * FROM alarms WHERE id=?', [updatedAlarm.id]);
+  if (oldRow) {
+    const oldIds = oldRow.notificationIds ? JSON.parse(oldRow.notificationIds) as string[] : [];
+    if (oldIds.length) {
+      await cancelAlarmNotifications(oldIds);
     }
   }
-  await saveAlarms(updated);
-  return updated;
+
+  let finalAlarm = { ...updatedAlarm };
+  if (finalAlarm.enabled) {
+    try {
+      const notificationIds = await scheduleAlarm(finalAlarm);
+      finalAlarm = { ...finalAlarm, notificationIds };
+    } catch (error) {
+      console.error('[updateAlarm] scheduleAlarm failed:', error);
+      finalAlarm = { ...finalAlarm, enabled: false, notificationIds: [] };
+      Alert.alert('Scheduling Failed', "Alarm saved but couldn't schedule notifications. Check notification permissions.");
+    }
+  } else {
+    finalAlarm = { ...finalAlarm, notificationIds: [] };
+  }
+
+  db.runSync(ALARM_INSERT, alarmToParams(finalAlarm));
+  return loadAlarms();
 }
 
 export async function deleteAlarm(id: string): Promise<Alarm[]> {
-  const alarms = await _loadAllAlarms();
-  const alarm = alarms.find(a => a.id === id);
-  if (alarm?.notificationIds?.length) {
-    await cancelAlarmNotifications(alarm.notificationIds);
+  const db = getDb();
+  const row = db.getFirstSync<AlarmRow>('SELECT * FROM alarms WHERE id=?', [id]);
+  if (row) {
+    const ids = row.notificationIds ? JSON.parse(row.notificationIds) as string[] : [];
+    if (ids.length) await cancelAlarmNotifications(ids);
   }
-  const updated = alarms.map(a =>
-    a.id === id ? { ...a, deletedAt: new Date().toISOString(), notificationIds: [] } : a
+  db.runSync(
+    'UPDATE alarms SET deletedAt=?, notificationIds=? WHERE id=?',
+    [new Date().toISOString(), '[]', id],
   );
-  await saveAlarms(updated);
-  return updated;
+  return loadAlarms();
 }
 
 export async function restoreAlarm(id: string): Promise<Alarm[]> {
-  const alarms = await _loadAllAlarms();
-  const updated: Alarm[] = [];
-  for (const a of alarms) {
-    if (a.id !== id) {
-      updated.push(a);
-      continue;
+  const db = getDb();
+  const row = db.getFirstSync<AlarmRow>('SELECT * FROM alarms WHERE id=?', [id]);
+  if (!row) return loadAlarms();
+
+  const alarm = rowToAlarm(row);
+  const restored: Alarm = { ...alarm, deletedAt: null };
+
+  if (restored.enabled) {
+    try {
+      const notificationIds = await scheduleAlarm(restored);
+      db.runSync(ALARM_INSERT, alarmToParams({ ...restored, notificationIds }));
+    } catch {
+      db.runSync(ALARM_INSERT, alarmToParams({ ...restored, enabled: false, notificationIds: [] }));
     }
-    const restored: Alarm = { ...a, deletedAt: null };
-    if (restored.enabled) {
-      try {
-        const notificationIds = await scheduleAlarm(restored);
-        updated.push({ ...restored, notificationIds });
-      } catch {
-        updated.push({ ...restored, enabled: false, notificationIds: [] });
-      }
-    } else {
-      updated.push(restored);
-    }
+  } else {
+    db.runSync(ALARM_INSERT, alarmToParams(restored));
   }
-  await saveAlarms(updated);
-  return updated;
+
+  return loadAlarms();
 }
 
 export async function permanentlyDeleteAlarm(id: string): Promise<Alarm[]> {
-  const alarms = await _loadAllAlarms();
-  const alarm = alarms.find(a => a.id === id);
-  if (alarm?.notificationIds?.length) {
-    await cancelAlarmNotifications(alarm.notificationIds);
+  const db = getDb();
+  const row = db.getFirstSync<AlarmRow>('SELECT * FROM alarms WHERE id=?', [id]);
+  if (row) {
+    const ids = row.notificationIds ? JSON.parse(row.notificationIds) as string[] : [];
+    if (ids.length) await cancelAlarmNotifications(ids);
+    if (row.photoUri) await deleteAlarmPhoto(row.photoUri);
   }
-  if (alarm?.photoUri) {
-    await deleteAlarmPhoto(alarm.photoUri);
-  }
-  const filtered = alarms.filter(a => a.id !== id);
-  await saveAlarms(filtered);
-  return filtered;
+  db.runSync('DELETE FROM alarms WHERE id=?', [id]);
+  return loadAlarms();
 }
 
 export async function purgeDeletedAlarms(): Promise<void> {
-  const alarms = await _loadAllAlarms();
-  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  // Clean up photos for alarms being purged
-  for (const a of alarms) {
-    if (a.deletedAt && new Date(a.deletedAt).getTime() <= cutoff && a.photoUri) {
-      await deleteAlarmPhoto(a.photoUri);
-    }
+  const db = getDb();
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const toPurge = db.getAllSync<AlarmRow>(
+    'SELECT * FROM alarms WHERE deletedAt IS NOT NULL AND deletedAt <= ?',
+    [cutoff],
+  );
+  for (const row of toPurge) {
+    if (row.photoUri) await deleteAlarmPhoto(row.photoUri);
   }
-  const kept = alarms.filter((a) => {
-    if (!a.deletedAt) return true;
-    return new Date(a.deletedAt).getTime() > cutoff;
-  });
-  if (kept.length < alarms.length) {
-    await saveAlarms(kept);
-  }
+  db.runSync(
+    'DELETE FROM alarms WHERE deletedAt IS NOT NULL AND deletedAt <= ?',
+    [cutoff],
+  );
 }
 
-/**
- * Atomically update a single alarm by ID without affecting other alarms.
- * Loads ALL alarms (including soft-deleted), applies the update function
- * to the matching alarm, and saves the full array back.
- *
- * Use this instead of loadAlarms() + saveAlarms() to avoid wiping
- * soft-deleted alarms from storage.
- */
 export async function updateSingleAlarm(
   alarmId: string,
   updateFn: (alarm: Alarm) => Alarm,
 ): Promise<void> {
-  const alarms = await _loadAllAlarms();
-  const idx = alarms.findIndex((a) => a.id === alarmId);
-  if (idx === -1) return;
-  alarms[idx] = updateFn(alarms[idx]);
-  await saveAlarms(alarms);
+  const db = getDb();
+  const row = db.getFirstSync<AlarmRow>('SELECT * FROM alarms WHERE id=?', [alarmId]);
+  if (!row) return;
+  const updated = updateFn(rowToAlarm(row));
+  db.runSync(ALARM_INSERT, alarmToParams(updated));
 }
 
 export async function toggleAlarm(id: string): Promise<Alarm[]> {
-  const alarms = await _loadAllAlarms();
-  const updated: Alarm[] = [];
-  for (const a of alarms) {
-    if (a.id !== id) {
-      updated.push(a);
-      continue;
+  const db = getDb();
+  const row = db.getFirstSync<AlarmRow>('SELECT * FROM alarms WHERE id=?', [id]);
+  if (!row) return loadAlarms();
+
+  const alarm = rowToAlarm(row);
+  const toggled = { ...alarm, enabled: !alarm.enabled };
+
+  if (toggled.enabled) {
+    // Auto-update past dates for one-time alarms being toggled on
+    if (toggled.mode === 'one-time' && toggled.date) {
+      const [h, m] = toggled.time.split(':').map(Number);
+      const [y, mo, d] = toggled.date.split('-').map(Number);
+      const alarmDate = new Date(y, mo - 1, d, h, m, 0, 0);
+      if (alarmDate.getTime() <= Date.now()) {
+        const now = new Date();
+        const todayWithTime = new Date();
+        todayWithTime.setHours(h, m, 0, 0);
+        const newDate = todayWithTime.getTime() > Date.now() ? now : new Date(now.getTime() + 86400000);
+        toggled.date = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-${String(newDate.getDate()).padStart(2, '0')}`;
+        console.log('[toggleAlarm] updated past date to:', toggled.date);
+      }
     }
-    const toggled = { ...a, enabled: !a.enabled };
-    if (toggled.enabled) {
-      // Auto-update past dates for one-time alarms being toggled on
-      if (toggled.mode === 'one-time' && toggled.date) {
-        const [h, m] = toggled.time.split(':').map(Number);
-        const [y, mo, d] = toggled.date.split('-').map(Number);
-        const alarmDate = new Date(y, mo - 1, d, h, m, 0, 0);
-        if (alarmDate.getTime() <= Date.now()) {
-          const now = new Date();
-          const todayWithTime = new Date();
-          todayWithTime.setHours(h, m, 0, 0);
-          const newDate = todayWithTime.getTime() > Date.now() ? now : new Date(now.getTime() + 86400000);
-          toggled.date = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-${String(newDate.getDate()).padStart(2, '0')}`;
-          console.log('[toggleAlarm] updated past date to:', toggled.date);
-        }
-      }
-      try {
-        const notificationIds = await scheduleAlarm(toggled);
-        toggled.notificationIds = notificationIds;
-      } catch (error) {
-        console.error('[toggleAlarm] scheduleAlarm failed:', error);
-        toggled.enabled = false;
-        toggled.notificationIds = [];
-        Alert.alert('Scheduling Failed', "Couldn't schedule notifications. Check notification permissions.");
-      }
-    } else if (a.notificationIds?.length) {
-      await cancelAlarmNotifications(a.notificationIds);
+    try {
+      const notificationIds = await scheduleAlarm(toggled);
+      toggled.notificationIds = notificationIds;
+    } catch (error) {
+      console.error('[toggleAlarm] scheduleAlarm failed:', error);
+      toggled.enabled = false;
       toggled.notificationIds = [];
+      Alert.alert('Scheduling Failed', "Couldn't schedule notifications. Check notification permissions.");
     }
-    updated.push(toggled);
+  } else if (alarm.notificationIds?.length) {
+    await cancelAlarmNotifications(alarm.notificationIds);
+    toggled.notificationIds = [];
   }
-  await saveAlarms(updated);
-  return updated;
+
+  db.runSync(ALARM_INSERT, alarmToParams(toggled));
+  return loadAlarms();
 }
 
 export async function disableAlarm(id: string): Promise<void> {
-  const alarms = await _loadAllAlarms();
-  const alarm = alarms.find((a) => a.id === id);
-  if (alarm?.notificationIds?.length) {
-    try {
-      await cancelAlarmNotifications(alarm.notificationIds);
-    } catch (e) {
-      console.error('[disableAlarm] cancelAlarmNotifications failed:', e);
+  const db = getDb();
+  const row = db.getFirstSync<AlarmRow>('SELECT * FROM alarms WHERE id=?', [id]);
+  if (row) {
+    const ids = row.notificationIds ? JSON.parse(row.notificationIds) as string[] : [];
+    if (ids.length) {
+      try { await cancelAlarmNotifications(ids); } catch (e) {
+        console.error('[disableAlarm] cancelAlarmNotifications failed:', e);
+      }
     }
   }
-  const updated = alarms.map((a) =>
-    a.id === id ? { ...a, enabled: false, notificationIds: [] } : a,
+  db.runSync(
+    'UPDATE alarms SET enabled=0, notificationIds=? WHERE id=?',
+    ['[]', id],
   );
-  await saveAlarms(updated);
 }

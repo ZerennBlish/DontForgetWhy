@@ -86,7 +86,8 @@
       ],
       "expo-asset",
       "expo-audio",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-sqlite"
     ],
     "extra": {
       "eas": {

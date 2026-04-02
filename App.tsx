@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -30,6 +30,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import { migrateFromAsyncStorage } from './src/services/database';
 import { useNotificationRouting } from './src/hooks/useNotificationRouting';
 import type { RootStackParamList } from './src/navigation/types';
 
@@ -259,6 +260,19 @@ function AppNavigator() {
 }
 
 export default function App() {
+  const [dbReady, setDbReady] = useState(false);
+
+  useEffect(() => {
+    migrateFromAsyncStorage()
+      .then(() => setDbReady(true))
+      .catch((e) => {
+        console.error('[App] DB migration failed:', e);
+        setDbReady(true); // still render — AsyncStorage code is still in place
+      });
+  }, []);
+
+  if (!dbReady) return null;
+
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>

@@ -1,23 +1,21 @@
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet } from '../services/database';
 
 const HAPTICS_KEY = 'hapticsEnabled';
 
 let _hapticsEnabled: boolean | null = null;
 
 // Load setting on module init
-(async () => {
-  try {
-    const raw = await AsyncStorage.getItem(HAPTICS_KEY);
-    if (raw !== null) {
-      _hapticsEnabled = raw !== 'false';
-    }
-  } catch {}
-})();
+try {
+  const raw = kvGet(HAPTICS_KEY);
+  if (raw !== null) {
+    _hapticsEnabled = raw !== 'false';
+  }
+} catch {}
 
 export async function refreshHapticsSetting(): Promise<void> {
   try {
-    const raw = await AsyncStorage.getItem(HAPTICS_KEY);
+    const raw = kvGet(HAPTICS_KEY);
     if (raw !== null) {
       _hapticsEnabled = raw !== 'false';
     } else {

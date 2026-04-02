@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet, kvRemove } from './database';
 
 const STORAGE_KEY = 'appSettings';
 
@@ -15,7 +15,7 @@ const defaultSettings: AppSettings = {
 };
 
 export async function loadSettings(): Promise<AppSettings> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  const raw = await kvGet(STORAGE_KEY);
   if (!raw) return { ...defaultSettings };
   try {
     const parsed = JSON.parse(raw);
@@ -41,14 +41,14 @@ export async function loadSettings(): Promise<AppSettings> {
 export async function saveSettings(partial: Partial<AppSettings>): Promise<void> {
   const current = await loadSettings();
   const updated = { ...current, ...partial };
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  await kvSet(STORAGE_KEY, JSON.stringify(updated));
 }
 
 const ONBOARDING_KEY = 'onboardingComplete';
 
 export async function getOnboardingComplete(): Promise<boolean> {
   try {
-    const raw = await AsyncStorage.getItem(ONBOARDING_KEY);
+    const raw = await kvGet(ONBOARDING_KEY);
     return raw === 'true';
   } catch {
     return false;
@@ -56,7 +56,7 @@ export async function getOnboardingComplete(): Promise<boolean> {
 }
 
 export async function setOnboardingComplete(): Promise<void> {
-  await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+  await kvSet(ONBOARDING_KEY, 'true');
 }
 
 // --- Default timer sound ---
@@ -71,7 +71,7 @@ export interface TimerSoundSetting {
 
 export async function getDefaultTimerSound(): Promise<TimerSoundSetting> {
   try {
-    const raw = await AsyncStorage.getItem(DEFAULT_TIMER_SOUND_KEY);
+    const raw = await kvGet(DEFAULT_TIMER_SOUND_KEY);
     if (!raw) return { uri: null, name: null, soundID: null };
     const parsed = JSON.parse(raw);
     return {
@@ -86,7 +86,7 @@ export async function getDefaultTimerSound(): Promise<TimerSoundSetting> {
 
 export async function saveDefaultTimerSound(sound: TimerSoundSetting): Promise<void> {
   try {
-    await AsyncStorage.setItem(DEFAULT_TIMER_SOUND_KEY, JSON.stringify(sound));
+    await kvSet(DEFAULT_TIMER_SOUND_KEY, JSON.stringify(sound));
   } catch {}
 }
 
@@ -101,13 +101,13 @@ interface SilenceAllData {
 
 export async function getSilenceAll(): Promise<boolean> {
   try {
-    const raw = await AsyncStorage.getItem(SILENCE_ALL_KEY);
+    const raw = await kvGet(SILENCE_ALL_KEY);
     if (!raw) return false;
     const data: SilenceAllData = JSON.parse(raw);
     if (!data.enabled) return false;
     if (data.expiresAt) {
       if (new Date(data.expiresAt).getTime() <= Date.now()) {
-        await AsyncStorage.removeItem(SILENCE_ALL_KEY);
+        await kvRemove(SILENCE_ALL_KEY);
         return false;
       }
     }
@@ -119,24 +119,24 @@ export async function getSilenceAll(): Promise<boolean> {
 
 export async function setSilenceAll(enabled: boolean, durationMinutes?: number | null): Promise<void> {
   if (!enabled) {
-    await AsyncStorage.removeItem(SILENCE_ALL_KEY);
+    await kvRemove(SILENCE_ALL_KEY);
     return;
   }
   const expiresAt = durationMinutes
     ? new Date(Date.now() + durationMinutes * 60 * 1000).toISOString()
     : null;
-  await AsyncStorage.setItem(SILENCE_ALL_KEY, JSON.stringify({ enabled: true, expiresAt }));
+  await kvSet(SILENCE_ALL_KEY, JSON.stringify({ enabled: true, expiresAt }));
 }
 
 export async function getSilenceExpiry(): Promise<number | null> {
   try {
-    const raw = await AsyncStorage.getItem(SILENCE_ALL_KEY);
+    const raw = await kvGet(SILENCE_ALL_KEY);
     if (!raw) return null;
     const data: SilenceAllData = JSON.parse(raw);
     if (!data.enabled || !data.expiresAt) return null;
     const remaining = Math.max(0, new Date(data.expiresAt).getTime() - Date.now());
     if (remaining === 0) {
-      await AsyncStorage.removeItem(SILENCE_ALL_KEY);
+      await kvRemove(SILENCE_ALL_KEY);
       return null;
     }
     return Math.ceil(remaining / 60000);

@@ -9,7 +9,7 @@ import {
   Animated,
   ImageBackground,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet, kvRemove } from '../services/database';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import notifee from '@notifee/react-native';
@@ -43,7 +43,7 @@ const SNOOZE_COUNT_PREFIX = 'snoozeCount_';
 
 async function getSnoozeCount(alarmId: string): Promise<number> {
   try {
-    const raw = await AsyncStorage.getItem(`${SNOOZE_COUNT_PREFIX}${alarmId}`);
+    const raw = kvGet(`${SNOOZE_COUNT_PREFIX}${alarmId}`);
     return raw ? parseInt(raw, 10) || 0 : 0;
   } catch {
     return 0;
@@ -54,7 +54,7 @@ async function incrementSnoozeCount(alarmId: string): Promise<number> {
   try {
     const current = await getSnoozeCount(alarmId);
     const next = current + 1;
-    await AsyncStorage.setItem(`${SNOOZE_COUNT_PREFIX}${alarmId}`, String(next));
+    kvSet(`${SNOOZE_COUNT_PREFIX}${alarmId}`, String(next));
     return next;
   } catch {
     return 1;
@@ -63,7 +63,7 @@ async function incrementSnoozeCount(alarmId: string): Promise<number> {
 
 async function resetSnoozeCount(alarmId: string): Promise<void> {
   try {
-    await AsyncStorage.removeItem(`${SNOOZE_COUNT_PREFIX}${alarmId}`);
+    kvRemove(`${SNOOZE_COUNT_PREFIX}${alarmId}`);
   } catch {}
 }
 
@@ -135,7 +135,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     // Clean up any stale snoozing flag from a previous session that
     // was never consumed by a DISMISSED handler (e.g., app was killed).
     if (alarm?.id) {
-      AsyncStorage.removeItem(`snoozing_${alarm.id}`).catch(() => {});
+      try { kvRemove(`snoozing_${alarm.id}`); } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -393,7 +393,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     // than a deleted alarm.
     let newCount = 1;
     try {
-      await AsyncStorage.setItem(`snoozing_${alarm.id}`, '1');
+      kvSet(`snoozing_${alarm.id}`, '1');
     } catch (e) {
       console.error('[AlarmFire] snooze flag failed, aborting snooze:', e);
       setIsSnoozing(false);

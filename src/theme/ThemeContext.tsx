@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet, kvRemove } from '../services/database';
 import { themes, type ThemeColors, type ThemeName } from './colors';
 import { refreshWidgets } from '../widget/updateWidget';
 
@@ -46,27 +46,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeName, setThemeName] = useState<ThemeName>('dark');
 
   useEffect(() => {
-    AsyncStorage.getItem(THEME_KEY).then((saved) => {
-      if (!saved) return;
-      if (saved in themes) {
-        setThemeName(saved as ThemeName);
-      } else if (saved in MIGRATION) {
-        const migrated = MIGRATION[saved];
-        setThemeName(migrated);
-        AsyncStorage.setItem(THEME_KEY, migrated);
-        // Clean up old custom theme data
-        if (saved === 'custom') {
-          AsyncStorage.removeItem('customTheme').catch(() => {});
-        }
+    const saved = kvGet(THEME_KEY);
+    if (!saved) return;
+    if (saved in themes) {
+      setThemeName(saved as ThemeName);
+    } else if (saved in MIGRATION) {
+      const migrated = MIGRATION[saved];
+      setThemeName(migrated);
+      kvSet(THEME_KEY, migrated);
+      if (saved === 'custom') {
+        kvRemove('customTheme');
       }
-    }).catch(() => {});
+    }
   }, []);
 
   const setTheme = useCallback((name: ThemeName) => {
     setThemeName(name);
-    AsyncStorage.setItem(THEME_KEY, name).then(() => {
-      refreshWidgets().catch(() => {});
-    });
+    kvSet(THEME_KEY, name);
+    refreshWidgets().catch(() => {});
   }, []);
 
   const colors = themes[themeName];

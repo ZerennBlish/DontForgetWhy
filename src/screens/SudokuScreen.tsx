@@ -9,7 +9,7 @@ import {
   Alert,
   ImageBackground,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet, kvRemove } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
@@ -138,17 +138,14 @@ export default function SudokuScreen({ navigation }: Props) {
   // Load best scores, settings, and check for saved game
   useFocusEffect(
     useCallback(() => {
-      AsyncStorage.getItem(SCORES_KEY).then((data) => {
-        console.log('[Sudoku] loaded scores from storage:', data);
-        if (data) {
-          try { setBestScores(JSON.parse(data)); } catch (e) {
-            console.error('[Sudoku] parse scores failed:', e);
-          }
+      const scoresData = kvGet(SCORES_KEY);
+      console.log('[Sudoku] loaded scores from storage:', scoresData);
+      if (scoresData) {
+        try { setBestScores(JSON.parse(scoresData)); } catch (e) {
+          console.error('[Sudoku] parse scores failed:', e);
         }
-      }).catch((e) => console.error('[Sudoku] load scores failed:', e));
-      AsyncStorage.getItem(GAME_KEY).then((data) => {
-        setHasSavedGame(!!data);
-      });
+      }
+      setHasSavedGame(!!kvGet(GAME_KEY));
     }, []),
   );
 
@@ -185,11 +182,11 @@ export default function SudokuScreen({ navigation }: Props) {
       elapsed: elapsedRef.current,
       hintsUsed: hintsUsedRef.current,
     };
-    AsyncStorage.setItem(GAME_KEY, JSON.stringify(saved)).catch(() => {});
+    try { kvSet(GAME_KEY, JSON.stringify(saved)); } catch {}
   }, []);
 
   const clearSavedGame = useCallback(() => {
-    AsyncStorage.removeItem(GAME_KEY).catch(() => {});
+    try { kvRemove(GAME_KEY); } catch {}
     setHasSavedGame(false);
   }, []);
 
@@ -222,7 +219,7 @@ export default function SudokuScreen({ navigation }: Props) {
   }, [startTimer, clearSavedGame]);
 
   const resumeGame = useCallback(async () => {
-    const data = await AsyncStorage.getItem(GAME_KEY);
+    const data = kvGet(GAME_KEY);
     if (!data) return;
     try {
       const saved: SavedGame = JSON.parse(data);
@@ -341,7 +338,8 @@ export default function SudokuScreen({ navigation }: Props) {
 
       const diff = difficultyRef.current;
       console.log('[Sudoku] game won — saving stats for', diff);
-      AsyncStorage.getItem(SCORES_KEY).then((data) => {
+      try {
+        const data = kvGet(SCORES_KEY);
         console.log('[Sudoku] existing scores raw:', data);
         const scores: BestScores = data ? JSON.parse(data) : {};
         const current = scores[diff];
@@ -355,11 +353,9 @@ export default function SudokuScreen({ navigation }: Props) {
           scores[diff] = { ...current!, gamesPlayed };
         }
         console.log('[Sudoku] writing scores:', JSON.stringify(scores));
-        AsyncStorage.setItem(SCORES_KEY, JSON.stringify(scores)).catch((e) =>
-          console.error('[Sudoku] setItem failed:', e),
-        );
+        kvSet(SCORES_KEY, JSON.stringify(scores));
         setBestScores({ ...scores });
-      }).catch((e) => console.error('[Sudoku] getItem failed:', e));
+      } catch (e) { console.error('[Sudoku] save scores failed:', e); }
 
       setTimeout(() => setGamePhase('won'), 400);
       return;
@@ -436,7 +432,8 @@ export default function SudokuScreen({ navigation }: Props) {
 
       const diff = difficultyRef.current;
       console.log('[Sudoku] game won via hint — saving stats for', diff);
-      AsyncStorage.getItem(SCORES_KEY).then((data) => {
+      try {
+        const data = kvGet(SCORES_KEY);
         console.log('[Sudoku] existing scores raw:', data);
         const scores: BestScores = data ? JSON.parse(data) : {};
         const current = scores[diff];
@@ -450,11 +447,9 @@ export default function SudokuScreen({ navigation }: Props) {
           scores[diff] = { ...current!, gamesPlayed };
         }
         console.log('[Sudoku] writing scores:', JSON.stringify(scores));
-        AsyncStorage.setItem(SCORES_KEY, JSON.stringify(scores)).catch((e) =>
-          console.error('[Sudoku] setItem failed:', e),
-        );
+        kvSet(SCORES_KEY, JSON.stringify(scores));
         setBestScores({ ...scores });
-      }).catch((e) => console.error('[Sudoku] getItem failed:', e));
+      } catch (e) { console.error('[Sudoku] save scores failed:', e); }
 
       setTimeout(() => setGamePhase('won'), 400);
       return;

@@ -28,8 +28,8 @@ Notifee v9.1.8 strips `audioAttributes` from JS `createChannel()`. Native config
 ### Key Distinctions
 - `cancelNotification(id)` — kills display AND recurring trigger
 - `cancelDisplayedNotification(id)` — kills display only, trigger survives (used for recurring alarms)
-- `snoozing_{alarmId}` AsyncStorage flag — prevents DISMISSED handler from deleting one-time alarms during snooze
-- Persistent notification dedupe via AsyncStorage for cold-start `getInitialNotification()` path (module-level Map doesn't survive process death)
+- `snoozing_{alarmId}` kv_store flag — prevents DISMISSED handler from deleting one-time alarms during snooze
+- Persistent notification dedupe via kv_store for cold-start `getInitialNotification()` path (module-level Map doesn't survive process death)
 
 ### Notification Action Buttons
 - Added in v1.3.9 to alarm and timer-done notification payloads
@@ -112,19 +112,19 @@ All old theme names migrate to new 4: midnight/ember/neon/void→dark, frost/san
 ### Architecture
 - `index.ts` at project root: `registerWidgetTaskHandler(widgetTaskHandler)` + `registerRootComponent(App)`. Required because Expo's AppEntry.js doesn't support headless JS task registration.
 - Widgets run bundled JS from APK, NOT from metro dev server. Any JS widget change requires new EAS build.
-- Headless JS context: no React Native bridge, no Activity, no Linking. CAN access AsyncStorage, Notifee, JS modules.
+- Headless JS context: no React Native bridge, no Activity, no Linking. CAN access SQLite (expo-sqlite), Notifee, JS modules.
 - `flex: 1` must be at EVERY level of widget hierarchy. No `position: 'absolute'`.
 
 ### Timer Start from Widget
-All app-opening approaches failed (Linking.openURL, OPEN_URI, deep links). Solution: headless timer start. `START_TIMER__{presetId}` clickAction → handler creates ActiveTimer, saves to AsyncStorage, schedules notifications. User sees countdown notification immediately. App loads running timer from AsyncStorage when opened later.
+All app-opening approaches failed (Linking.openURL, OPEN_URI, deep links). Solution: headless timer start. `START_TIMER__{presetId}` clickAction → handler creates ActiveTimer, saves to SQLite `active_timers` table, schedules notifications. User sees countdown notification immediately. App loads running timer from SQLite when opened later.
 
 ### Widget Theming
-`getWidgetTheme()` reads theme from AsyncStorage with migration map, returns `WidgetTheme` object. `refreshWidgets()` (renamed from `refreshTimerWidget`) triggered after theme changes, data changes.
+`getWidgetTheme()` reads theme from SQLite `kv_store` with migration map, returns `WidgetTheme` object. `refreshWidgets()` (renamed from `refreshTimerWidget`) triggered after theme changes, data changes.
 
 ### Evolution
 Feb 12: TimerWidget (compact) + DetailedWidget. Mar 6: NotepadWidget + NotepadWidgetCompact added. Mar 12: Trimmed to 2 — DetailedWidget redesigned, compacts deleted. Mar 25: CalendarWidget added — mini monthly calendar grid with colored dot indicators. Third widget alongside DetailedWidget and NotepadWidget. Uses getCalendarWidgetData() in widgetTaskHandler.ts for data loading. Click actions: OPEN_CALENDAR (opens CalendarScreen) and OPEN_CALENDAR_DAY__YYYY-MM-DD (opens CalendarScreen with date). pendingCalendarAction consumed in App.tsx on cold start and app resume. Widget alarm loader includes normalization for legacy alarm payloads (mode, days array, numeric weekday format) — does not import loadAlarms() to stay headless-safe, duplicates normalization inline. Apr 1: Widget rebranding — all widgets got personality headers: Memory's Timeline (DetailedWidget), Forget Me Notes (NotepadWidget), Misplaced Thoughts (CalendarWidget), Memory's Voice (MicWidget). All footers say "Don't Forget Why".
 
-**NotepadWidget (Forget Me Notes) voice memo integration:** Widget shows voice memos alongside notes. Header "Forget Me Notes" layout: mic button (left, OPEN_VOICE_MEMOS), title center (OPEN_NOTES), notepad button (right, ADD_NOTE). Footer: "Don't Forget Why". Combined items sorted pinned-first (`isPinned` field on WidgetNote and WidgetVoiceMemo), then by `createdAt` descending, sliced to 4. `VoiceMemoCell` uses `theme.cellBg` and `theme.text` (not hardcoded colors). Click actions: `OPEN_VOICE_MEMO__{id}` opens VoiceMemoDetailScreen, `RECORD_VOICE` opens VoiceRecordScreen. Widget task handler stores `pendingVoiceAction` in AsyncStorage, routed by `useNotificationRouting`.
+**NotepadWidget (Forget Me Notes) voice memo integration:** Widget shows voice memos alongside notes. Header "Forget Me Notes" layout: mic button (left, OPEN_VOICE_MEMOS), title center (OPEN_NOTES), notepad button (right, ADD_NOTE). Footer: "Don't Forget Why". Combined items sorted pinned-first (`isPinned` field on WidgetNote and WidgetVoiceMemo), then by `createdAt` descending, sliced to 4. `VoiceMemoCell` uses `theme.cellBg` and `theme.text` (not hardcoded colors). Click actions: `OPEN_VOICE_MEMO__{id}` opens VoiceMemoDetailScreen, `RECORD_VOICE` opens VoiceRecordScreen. Widget task handler stores `pendingVoiceAction` in SQLite `kv_store`, routed by `useNotificationRouting`.
 
 **MicWidget (Memory's Voice):** Standalone 110dp home screen widget (MicWidget.tsx). Header "Memory's Voice" with `OPEN_VOICE_MEMOS` click action. Mic icon + "Record" text on themed background. Footer: "Don't Forget Why". Single click action: `RECORD_VOICE` opens VoiceRecordScreen. Registered in app.json alongside other widgets.
 
@@ -160,7 +160,7 @@ JS service (src/services/voicePlayback.ts) uses expo-asset (Asset.fromModule + d
 1. Alarm sound plays for 1.5 seconds
 2. stopVoice() kills any lingering clip from previous fire
 3. Alarm sound stops (stopAlarmSound)
-4. Intro clip plays if first alarm ever (one-time, stored in AsyncStorage) — alarms only, not timers
+4. Intro clip plays if first alarm ever (one-time, stored in SQLite kv_store) — alarms only, not timers
 5. Random fire/timer clip plays (await playRandomClip)
 6. Alarm sound resumes (unless silent/true_silent alarm)
 - True silent alarms skip voice entirely (guard before voicePlayedRef)
@@ -183,8 +183,8 @@ JS service (src/services/voicePlayback.ts) uses expo-asset (Asset.fromModule + d
 Total: 63 bundled MP3 files in assets/voice/
 
 ### Settings
-- Voice Roasts toggle: AsyncStorage key 'voiceRoastsEnabled', defaults to true (opt-out)
-- Dismiss Voice toggle: AsyncStorage key 'dismissVoiceEnabled', defaults to true, only shown when voice roasts is on
+- Voice Roasts toggle: kv_store key 'voiceRoastsEnabled', defaults to true (opt-out)
+- Dismiss Voice toggle: kv_store key 'dismissVoiceEnabled', defaults to true, only shown when voice roasts is on
 - Settings UI in SettingsScreen.tsx, read by voicePlayback.ts
 
 ### Native URI Handling (plugins/withAlarmChannel.js)
@@ -337,7 +337,45 @@ Voice roasts use the native `AlarmChannelModule` on ALARM stream because they pl
 
 ---
 
-## 8. Testing Infrastructure
+## 8. Storage Layer (SQLite)
+
+### Migration from AsyncStorage (Session 12)
+All persistent storage migrated from `@react-native-async-storage/async-storage` to `expo-sqlite` (synchronous API). AsyncStorage kept temporarily in `database.ts` only — the one-time migration runner reads old AsyncStorage data and writes it to SQLite on first launch post-update.
+
+### Database file
+`dfw.db` — singleton via `getDb()` in `src/services/database.ts`. Schema initialized on every launch via `CREATE TABLE IF NOT EXISTS`.
+
+### Tables (8 total)
+| Table | Purpose |
+|-------|---------|
+| `alarms` | Alarm entities (individual rows, not serialized array) |
+| `reminders` | Reminder entities |
+| `notes` | Note entities (soft-delete via `deletedAt`) |
+| `voice_memos` | Voice memo metadata |
+| `active_timers` | Currently running timers |
+| `user_timers` | User-created custom timer presets |
+| `forget_log` | Guess Why loss/skip history |
+| `kv_store` | Key-value pairs for settings, game stats, widget pins, pending actions, flags |
+
+### KV store keys (partial list)
+Settings: `appSettings`, `appTheme`, `onboardingComplete`, `hapticsEnabled`, `voiceRoastsEnabled`, `silenceAllAlarms`, `defaultTimerSound`, `bg_main`, `bg_overlay_opacity`
+Game stats: `guessWhyStats`, `memoryMatchScores`, `sudokuBestScores`, `sudokuCurrentGame`, `dailyRiddleStats`, `triviaStats`, `triviaSeenQuestions`
+Widget pins: `widgetPinnedPresets`, `widgetPinnedAlarms`, `widgetPinnedReminders`, `widgetPinnedNotes`, `widgetPinnedVoiceMemos`
+Pending actions: `pendingNoteAction`, `pendingAlarmAction`, `pendingReminderAction`, `pendingTimerAction`, `pendingCalendarAction`, `pendingVoiceAction`, `pendingAlarmListAction`, `pendingReminderListAction`
+Ephemeral: `snoozing_{alarmId}`, `snoozeCount_{alarmId}`, `handledNotifIds`
+
+### Key API
+- `kvGet(key)` / `kvSet(key, value)` / `kvRemove(key)` — synchronous KV helpers
+- `getDb()` — returns singleton `SQLiteDatabase`, initializes schema on first call
+- `migrateFromAsyncStorage()` — async one-time migration, called in App.tsx before render
+
+### Pattern change
+Old: load entire JSON array → mutate in memory → serialize entire array back.
+New: individual SQL `INSERT`/`UPDATE`/`DELETE` per entity. `SELECT` queries replace `JSON.parse` of full arrays. Notification scheduling logic unchanged — only the storage calls changed.
+
+---
+
+## 9. Testing Infrastructure
 
 ### Jest Setup (Session 11)
 - **Preset:** `ts-jest` with `node` test environment (not `jest-expo` — jest-expo crashes parsing expo-modules-core TypeScript)

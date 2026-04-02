@@ -2,7 +2,7 @@ import React from 'react';
 import { Linking } from 'react-native';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDb, kvGet, kvSet } from '../services/database';
 import { defaultPresets } from '../data/timerPresets';
 import {
   setupNotificationChannel,
@@ -128,40 +128,36 @@ function formatSchedule(alarm: Alarm): string {
   return days.join(', ');
 }
 
-// ── Load alarms from AsyncStorage ──
+// ── Load alarms from SQLite ──
 
 async function loadWidgetAlarms(): Promise<Alarm[]> {
   try {
-    const raw = await AsyncStorage.getItem(ALARMS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const DAY_NAMES: AlarmDay[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return parsed.filter(
-      (item: unknown): item is Alarm =>
-        item !== null &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).time === 'string' &&
-        typeof (item as Record<string, unknown>).enabled === 'boolean',
-    ).filter((a) => !a.deletedAt).map((alarm) => {
-      // Normalize legacy alarms (mirrors storage.ts migrateAlarm)
-      let mode: Alarm['mode'] = alarm.mode || 'recurring';
-      if (!alarm.mode && (alarm as unknown as { recurring?: boolean }).recurring === false) {
-        mode = 'one-time';
-      }
-      let days: AlarmDay[];
-      if (!Array.isArray(alarm.days)) {
-        days = [];
-      } else if (alarm.days.length > 0 && typeof alarm.days[0] === 'number') {
-        days = (alarm.days as unknown as number[])
-          .map((n) => DAY_NAMES[n])
-          .filter((d): d is AlarmDay => d !== undefined);
-      } else {
-        days = alarm.days;
-      }
-      return { ...alarm, mode, days, date: alarm.date ?? null };
-    });
+    const db = getDb();
+    const rows = db.getAllSync<{
+      id: string; time: string; note: string; quote: string; nickname: string | null;
+      icon: string | null; enabled: number; mode: string; days: string | null;
+      date: string | null; category: string; notificationIds: string | null;
+      soundId: string | null; guessWhy: number; private: number; photoUri: string | null;
+    }>('SELECT * FROM alarms WHERE deletedAt IS NULL');
+    return rows.map((row) => ({
+      id: row.id,
+      time: row.time,
+      note: row.note,
+      quote: row.quote || '',
+      nickname: row.nickname ?? undefined,
+      icon: row.icon ?? undefined,
+      enabled: !!row.enabled,
+      mode: (row.mode as 'recurring' | 'one-time') || 'recurring',
+      days: row.days ? JSON.parse(row.days) : [],
+      date: row.date ?? null,
+      category: row.category as Alarm['category'],
+      notificationIds: row.notificationIds ? JSON.parse(row.notificationIds) : [],
+      soundId: row.soundId || 'default',
+      guessWhy: !!row.guessWhy || undefined,
+      private: !!row.private,
+      photoUri: row.photoUri,
+      createdAt: '',
+    }));
   } catch {
     return [];
   }
@@ -298,7 +294,7 @@ export async function getDetailedPresets(): Promise<DetailedPreset[]> {
 
   if (result.length < 3) {
     try {
-      const raw = await AsyncStorage.getItem(RECENT_KEY);
+      const raw = kvGet(RECENT_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -337,18 +333,34 @@ const REMINDERS_KEY = 'reminders';
 
 async function loadWidgetReminders(): Promise<Reminder[]> {
   try {
-    const raw = await AsyncStorage.getItem(REMINDERS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item: unknown): item is Reminder =>
-        item !== null &&
-        typeof item === 'object' &&
-        typeof (item as Record<string, unknown>).id === 'string' &&
-        typeof (item as Record<string, unknown>).text === 'string' &&
-        typeof (item as Record<string, unknown>).icon === 'string',
-    ).filter((r) => !r.deletedAt);
+    const db = getDb();
+    const rows = db.getAllSync<{
+      id: string; text: string; icon: string; nickname: string | null;
+      completed: number; completedAt: string | null; private: number;
+      recurring: number; dueDate: string | null; dueTime: string | null;
+      days: string | null; soundId: string | null; pinned: number;
+      notificationId: string | null; notificationIds: string | null;
+      completionHistory: string | null; createdAt: string;
+    }>('SELECT * FROM reminders WHERE deletedAt IS NULL');
+    return rows.map((row) => ({
+      id: row.id,
+      text: row.text,
+      icon: row.icon,
+      nickname: row.nickname ?? undefined,
+      completed: !!row.completed,
+      completedAt: row.completedAt,
+      private: !!row.private,
+      recurring: !!row.recurring || undefined,
+      dueDate: row.dueDate,
+      dueTime: row.dueTime,
+      days: row.days ? JSON.parse(row.days) : undefined,
+      soundId: row.soundId ?? undefined,
+      pinned: !!row.pinned,
+      notificationId: row.notificationId,
+      notificationIds: row.notificationIds ? JSON.parse(row.notificationIds) : undefined,
+      completionHistory: row.completionHistory ? JSON.parse(row.completionHistory) : undefined,
+      createdAt: row.createdAt,
+    }));
   } catch {
     return [];
   }
@@ -384,7 +396,7 @@ function getReminderSortTimestamp(reminder: Reminder): number {
 
 export async function getWidgetTheme(): Promise<WidgetTheme> {
   try {
-    const themeName = await AsyncStorage.getItem('appTheme');
+    const themeName = kvGet('appTheme');
     let key = themeName || 'dark';
 
     // Migrate old theme names
@@ -474,15 +486,14 @@ export async function getWidgetNotes(): Promise<WidgetNote[]> {
 
 export async function getWidgetVoiceMemos(): Promise<{ id: string; title: string; duration: number; createdAt: string; isPinned: boolean }[]> {
   try {
-    const raw = await AsyncStorage.getItem('voiceMemos');
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const active = parsed.filter((m: any) => m && typeof m.id === 'string' && !m.deletedAt);
+    const db = getDb();
+    const active = db.getAllSync<{ id: string; title: string; duration: number; createdAt: string }>(
+      'SELECT id, title, duration, createdAt FROM voice_memos WHERE deletedAt IS NULL',
+    );
 
     let pinnedIds: string[] = [];
     try {
-      const pinnedRaw = await AsyncStorage.getItem('widgetPinnedVoiceMemos');
+      const pinnedRaw = kvGet('widgetPinnedVoiceMemos');
       if (pinnedRaw) {
         const pinnedParsed = JSON.parse(pinnedRaw);
         if (Array.isArray(pinnedParsed)) pinnedIds = pinnedParsed;
@@ -710,33 +721,33 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
       }
 
       if (action === 'OPEN_TIMERS') {
-        await AsyncStorage.setItem('pendingTimerAction', JSON.stringify({ timestamp: Date.now() }));
+        kvSet('pendingTimerAction', JSON.stringify({ timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
 
       if (action === 'OPEN_ALARMS') {
-        await AsyncStorage.setItem('pendingAlarmListAction', JSON.stringify({ timestamp: Date.now() }));
+        kvSet('pendingAlarmListAction', JSON.stringify({ timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
 
       if (action === 'OPEN_REMINDERS') {
-        await AsyncStorage.setItem('pendingReminderListAction', JSON.stringify({ timestamp: Date.now() }));
+        kvSet('pendingReminderListAction', JSON.stringify({ timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
 
       if (action?.startsWith('OPEN_ALARM__')) {
         const alarmId = action.replace('OPEN_ALARM__', '');
-        await AsyncStorage.setItem('pendingAlarmAction', JSON.stringify({ action: 'editAlarm', alarmId, timestamp: Date.now() }));
+        kvSet('pendingAlarmAction', JSON.stringify({ action: 'editAlarm', alarmId, timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
 
       if (action?.startsWith('OPEN_REMINDER__')) {
         const reminderId = action.replace('OPEN_REMINDER__', '');
-        await AsyncStorage.setItem('pendingReminderAction', JSON.stringify({ action: 'editReminder', reminderId, timestamp: Date.now() }));
+        kvSet('pendingReminderAction', JSON.stringify({ action: 'editReminder', reminderId, timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
@@ -761,33 +772,33 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
       }
 
       if (action === 'OPEN_VOICE_MEMOS') {
-        await AsyncStorage.setItem('pendingVoiceAction', JSON.stringify({ type: 'list', timestamp: Date.now() }));
+        kvSet('pendingVoiceAction', JSON.stringify({ type: 'list', timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
 
       if (action === 'RECORD_VOICE') {
-        await AsyncStorage.setItem('pendingVoiceAction', JSON.stringify({ type: 'record', timestamp: Date.now() }));
+        kvSet('pendingVoiceAction', JSON.stringify({ type: 'record', timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
 
       if (action?.startsWith('OPEN_VOICE_MEMO__')) {
         const memoId = action.replace('OPEN_VOICE_MEMO__', '');
-        await AsyncStorage.setItem('pendingVoiceAction', JSON.stringify({ type: 'detail', memoId, timestamp: Date.now() }));
+        kvSet('pendingVoiceAction', JSON.stringify({ type: 'detail', memoId, timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
 
       if (action === 'OPEN_CALENDAR') {
-        await AsyncStorage.setItem('pendingCalendarAction', JSON.stringify({ date: null, timestamp: Date.now() }));
+        kvSet('pendingCalendarAction', JSON.stringify({ date: null, timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }
 
       if (action?.startsWith('OPEN_CALENDAR_DAY__')) {
         const date = action.replace('OPEN_CALENDAR_DAY__', '');
-        await AsyncStorage.setItem('pendingCalendarAction', JSON.stringify({ date, timestamp: Date.now() }));
+        kvSet('pendingCalendarAction', JSON.stringify({ date, timestamp: Date.now() }));
         try { await Linking.openURL('dontforgetwhy://'); } catch {}
         break;
       }

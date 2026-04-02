@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
@@ -20,18 +20,17 @@ export default function GamesScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      AsyncStorage.getItem('dailyRiddleStats').then((data) => {
-        try {
-          if (data) {
-            const stats = JSON.parse(data);
-            setRiddleStreak(stats.streak || 0);
-          } else {
-            setRiddleStreak(0);
-          }
-        } catch {
+      try {
+        const data = kvGet('dailyRiddleStats');
+        if (data) {
+          const stats = JSON.parse(data);
+          setRiddleStreak(stats.streak || 0);
+        } else {
           setRiddleStreak(0);
         }
-      });
+      } catch {
+        setRiddleStreak(0);
+      }
     }, []),
   );
 

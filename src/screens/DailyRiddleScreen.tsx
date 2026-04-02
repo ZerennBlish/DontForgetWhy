@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   ImageBackground,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
@@ -114,14 +114,14 @@ const DEFAULT_STATS: DailyRiddleStats = {
 
 async function loadStats(): Promise<DailyRiddleStats> {
   try {
-    const data = await AsyncStorage.getItem(STATS_KEY);
+    const data = kvGet(STATS_KEY);
     if (data) return { ...DEFAULT_STATS, ...JSON.parse(data) };
   } catch {}
   return { ...DEFAULT_STATS };
 }
 
 async function saveStats(stats: DailyRiddleStats): Promise<void> {
-  await AsyncStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  kvSet(STATS_KEY, JSON.stringify(stats));
 }
 
 export default function DailyRiddleScreen({ navigation }: Props) {

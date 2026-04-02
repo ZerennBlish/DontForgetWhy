@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvRemove } from './database';
 
 export interface ScoreBreakdown {
   guessWhy: number;
@@ -144,13 +144,11 @@ function scoreTrivia(data: Record<string, unknown> | null): number {
 // --- Main ---
 
 export async function calculateCompositeScore(): Promise<CompositeScore> {
-  const [gwRaw, mmRaw, sudRaw, ridRaw, trivRaw] = await Promise.all([
-    AsyncStorage.getItem('guessWhyStats').catch(() => null),
-    AsyncStorage.getItem('memoryMatchScores').catch(() => null),
-    AsyncStorage.getItem('sudokuBestScores').catch(() => null),
-    AsyncStorage.getItem('dailyRiddleStats').catch(() => null),
-    AsyncStorage.getItem('triviaStats').catch(() => null),
-  ]);
+  const gwRaw = kvGet('guessWhyStats');
+  const mmRaw = kvGet('memoryMatchScores');
+  const sudRaw = kvGet('sudokuBestScores');
+  const ridRaw = kvGet('dailyRiddleStats');
+  const trivRaw = kvGet('triviaStats');
 
   const gw = scoreGuessWhy(safeParseJSON(gwRaw));
   const mm = scoreMemoryMatch(safeParseJSON(mmRaw));
@@ -183,5 +181,7 @@ export const ALL_STATS_KEYS = [
 ];
 
 export async function resetAllScores(): Promise<void> {
-  await AsyncStorage.multiRemove(ALL_STATS_KEYS);
+  for (const key of ALL_STATS_KEYS) {
+    kvRemove(key);
+  }
 }

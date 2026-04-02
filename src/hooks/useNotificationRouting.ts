@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { AppState } from 'react-native';
 import type { NavigationContainerRef } from '@react-navigation/native';
 import notifee, { EventType } from '@notifee/react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet, kvRemove } from '../services/database';
 import type { RootStackParamList } from '../navigation/types';
 import { loadAlarms, deleteAlarm, purgeDeletedAlarms, updateSingleAlarm } from '../services/storage';
 import { getReminders, updateReminder, purgeDeletedReminders } from '../services/reminderStorage';
@@ -335,9 +335,9 @@ export function useNotificationRouting() {
         let createAlarmParams: RootStackParamList['CreateAlarm'] | null = null;
         if (!alarmFireParams && !notepadParams) {
           try {
-            const raw = await AsyncStorage.getItem('pendingAlarmAction');
+            const raw = kvGet('pendingAlarmAction');
             if (raw) {
-              await AsyncStorage.removeItem('pendingAlarmAction');
+              kvRemove('pendingAlarmAction');
               const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
               if (Date.now() - parsed.timestamp < 10000) {
                 if (parsed.action === 'createAlarm') {
@@ -356,9 +356,9 @@ export function useNotificationRouting() {
         let createReminderParams: RootStackParamList['CreateReminder'] | null = null;
         if (!alarmFireParams && !notepadParams && !createAlarmParams) {
           try {
-            const raw = await AsyncStorage.getItem('pendingReminderAction');
+            const raw = kvGet('pendingReminderAction');
             if (raw) {
-              await AsyncStorage.removeItem('pendingReminderAction');
+              kvRemove('pendingReminderAction');
               const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
               if (Date.now() - parsed.timestamp < 10000) {
                 if (parsed.action === 'createReminder') {
@@ -375,9 +375,9 @@ export function useNotificationRouting() {
         let alarmListParams = false;
         if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams) {
           try {
-            const raw = await AsyncStorage.getItem('pendingAlarmListAction');
+            const raw = kvGet('pendingAlarmListAction');
             if (raw) {
-              await AsyncStorage.removeItem('pendingAlarmListAction');
+              kvRemove('pendingAlarmListAction');
               const parsed = JSON.parse(raw) as { timestamp: number };
               if (Date.now() - parsed.timestamp < 10000) {
                 alarmListParams = true;
@@ -390,9 +390,9 @@ export function useNotificationRouting() {
         let reminderListParams = false;
         if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams) {
           try {
-            const raw = await AsyncStorage.getItem('pendingReminderListAction');
+            const raw = kvGet('pendingReminderListAction');
             if (raw) {
-              await AsyncStorage.removeItem('pendingReminderListAction');
+              kvRemove('pendingReminderListAction');
               const parsed = JSON.parse(raw) as { timestamp: number };
               if (Date.now() - parsed.timestamp < 10000) {
                 reminderListParams = true;
@@ -405,9 +405,9 @@ export function useNotificationRouting() {
         let timerParams = false;
         if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !reminderListParams) {
           try {
-            const raw = await AsyncStorage.getItem('pendingTimerAction');
+            const raw = kvGet('pendingTimerAction');
             if (raw) {
-              await AsyncStorage.removeItem('pendingTimerAction');
+              kvRemove('pendingTimerAction');
               const parsed = JSON.parse(raw) as { timestamp: number };
               if (Date.now() - parsed.timestamp < 10000) {
                 timerParams = true;
@@ -420,9 +420,9 @@ export function useNotificationRouting() {
         let calendarParams: RootStackParamList['Calendar'] | null = null;
         if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !reminderListParams && !timerParams) {
           try {
-            const raw = await AsyncStorage.getItem('pendingCalendarAction');
+            const raw = kvGet('pendingCalendarAction');
             if (raw) {
-              await AsyncStorage.removeItem('pendingCalendarAction');
+              kvRemove('pendingCalendarAction');
               const parsed = JSON.parse(raw) as { date: string | null; timestamp: number };
               if (Date.now() - parsed.timestamp < 10000) {
                 calendarParams = parsed.date ? { initialDate: parsed.date } : {};
@@ -437,9 +437,9 @@ export function useNotificationRouting() {
         let voiceMemoDetailParams: RootStackParamList['VoiceMemoDetail'] | null = null;
         if (!alarmFireParams && !notepadParams && !createAlarmParams && !createReminderParams && !alarmListParams && !reminderListParams && !timerParams && !calendarParams) {
           try {
-            const raw = await AsyncStorage.getItem('pendingVoiceAction');
+            const raw = kvGet('pendingVoiceAction');
             if (raw) {
-              await AsyncStorage.removeItem('pendingVoiceAction');
+              kvRemove('pendingVoiceAction');
               const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
               if (Date.now() - parsed.timestamp < 10000) {
                 if (parsed.type === 'list') {
@@ -598,9 +598,9 @@ export function useNotificationRouting() {
               const alarms = await loadAlarms();
               const alarm = alarms.find((a) => a.id === alarmId);
               if (alarm?.mode === 'one-time') {
-                const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+                const snoozingFlag = kvGet(`snoozing_${alarmId}`);
                 if (snoozingFlag) {
-                  await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+                  kvRemove(`snoozing_${alarmId}`);
                 } else {
                   await deleteAlarm(alarmId);
                   await refreshWidgets();
@@ -636,7 +636,7 @@ export function useNotificationRouting() {
 
           // Set snoozing flag BEFORE cancelling notification (prevents one-time alarm deletion)
           try {
-            await AsyncStorage.setItem(`snoozing_${alarmId}`, '1');
+            kvSet(`snoozing_${alarmId}`, '1');
           } catch (e) {
             console.error('[NOTIF] snooze flag failed, aborting snooze:', e);
             return;
@@ -693,9 +693,9 @@ export function useNotificationRouting() {
             const alarms = await loadAlarms();
             const alarm = alarms.find((a) => a.id === alarmId);
             if (alarm?.mode === 'one-time') {
-              const snoozingFlag = await AsyncStorage.getItem(`snoozing_${alarmId}`);
+              const snoozingFlag = kvGet(`snoozing_${alarmId}`);
               if (snoozingFlag) {
-                await AsyncStorage.removeItem(`snoozing_${alarmId}`);
+                kvRemove(`snoozing_${alarmId}`);
               } else {
                 await deleteAlarm(alarmId);
                 refreshWidgets();
@@ -753,29 +753,32 @@ export function useNotificationRouting() {
     }).catch(() => {});
 
     // Check for pending alarm action from widget (create or edit)
-    AsyncStorage.getItem('pendingAlarmAction').then(async (raw) => {
-      if (raw && navigationRef.current) {
-        AsyncStorage.removeItem('pendingAlarmAction');
-        const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
+    try {
+      const rawAlarm = kvGet('pendingAlarmAction');
+      if (rawAlarm && navigationRef.current) {
+        kvRemove('pendingAlarmAction');
+        const parsed = JSON.parse(rawAlarm) as { action: string; alarmId?: string; timestamp: number };
         if (Date.now() - parsed.timestamp < 10000) {
           if (parsed.action === 'createAlarm') {
             navigationRef.current.navigate('CreateAlarm');
           } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
-            const allAlarms = await loadAlarms();
-            const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
-            if (alarm && navigationRef.current) {
-              navigationRef.current.navigate('CreateAlarm', { alarm });
-            }
+            loadAlarms().then((allAlarms) => {
+              const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
+              if (alarm && navigationRef.current) {
+                navigationRef.current.navigate('CreateAlarm', { alarm });
+              }
+            });
           }
         }
       }
-    }).catch(() => {});
+    } catch {}
 
     // Check for pending reminder action from widget (create or edit)
-    AsyncStorage.getItem('pendingReminderAction').then((raw) => {
-      if (raw && navigationRef.current) {
-        AsyncStorage.removeItem('pendingReminderAction');
-        const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
+    try {
+      const rawReminder = kvGet('pendingReminderAction');
+      if (rawReminder && navigationRef.current) {
+        kvRemove('pendingReminderAction');
+        const parsed = JSON.parse(rawReminder) as { action: string; reminderId?: string; timestamp: number };
         if (Date.now() - parsed.timestamp < 10000) {
           if (parsed.action === 'createReminder') {
             navigationRef.current.navigate('CreateReminder');
@@ -784,35 +787,38 @@ export function useNotificationRouting() {
           }
         }
       }
-    }).catch(() => {});
+    } catch {}
 
     // Check for pending calendar action from widget
-    AsyncStorage.getItem('pendingCalendarAction').then((raw) => {
-      if (raw && navigationRef.current) {
-        AsyncStorage.removeItem('pendingCalendarAction');
-        const parsed = JSON.parse(raw) as { date: string | null; timestamp: number };
+    try {
+      const rawCal = kvGet('pendingCalendarAction');
+      if (rawCal && navigationRef.current) {
+        kvRemove('pendingCalendarAction');
+        const parsed = JSON.parse(rawCal) as { date: string | null; timestamp: number };
         if (Date.now() - parsed.timestamp < 10000) {
           navigationRef.current.navigate('Calendar', parsed.date ? { initialDate: parsed.date } : undefined);
         }
       }
-    }).catch(() => {});
+    } catch {}
 
     // Check for pending timer action from widget
-    AsyncStorage.getItem('pendingTimerAction').then((raw) => {
-      if (raw && navigationRef.current) {
-        AsyncStorage.removeItem('pendingTimerAction');
-        const parsed = JSON.parse(raw) as { timestamp: number };
+    try {
+      const rawTimer = kvGet('pendingTimerAction');
+      if (rawTimer && navigationRef.current) {
+        kvRemove('pendingTimerAction');
+        const parsed = JSON.parse(rawTimer) as { timestamp: number };
         if (Date.now() - parsed.timestamp < 10000) {
           navigationRef.current.navigate('Timers');
         }
       }
-    }).catch(() => {});
+    } catch {}
 
     // Check for pending voice action from widget
-    AsyncStorage.getItem('pendingVoiceAction').then((raw) => {
-      if (raw && navigationRef.current) {
-        AsyncStorage.removeItem('pendingVoiceAction');
-        const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
+    try {
+      const rawVoice = kvGet('pendingVoiceAction');
+      if (rawVoice && navigationRef.current) {
+        kvRemove('pendingVoiceAction');
+        const parsed = JSON.parse(rawVoice) as { type: string; memoId?: string; timestamp: number };
         if (Date.now() - parsed.timestamp < 10000) {
           if (parsed.type === 'list') {
             navigationRef.current.navigate('VoiceMemoList');
@@ -823,29 +829,31 @@ export function useNotificationRouting() {
           }
         }
       }
-    }).catch(() => {});
+    } catch {}
 
     // Check for pending alarm list action from widget
-    AsyncStorage.getItem('pendingAlarmListAction').then((raw) => {
-      if (raw && navigationRef.current) {
-        AsyncStorage.removeItem('pendingAlarmListAction');
-        const parsed = JSON.parse(raw) as { timestamp: number };
+    try {
+      const rawAlarmList = kvGet('pendingAlarmListAction');
+      if (rawAlarmList && navigationRef.current) {
+        kvRemove('pendingAlarmListAction');
+        const parsed = JSON.parse(rawAlarmList) as { timestamp: number };
         if (Date.now() - parsed.timestamp < 10000) {
           navigationRef.current.navigate('AlarmList');
         }
       }
-    }).catch(() => {});
+    } catch {}
 
     // Check for pending reminder list action from widget
-    AsyncStorage.getItem('pendingReminderListAction').then((raw) => {
-      if (raw && navigationRef.current) {
-        AsyncStorage.removeItem('pendingReminderListAction');
-        const parsed = JSON.parse(raw) as { timestamp: number };
+    try {
+      const rawReminderList = kvGet('pendingReminderListAction');
+      if (rawReminderList && navigationRef.current) {
+        kvRemove('pendingReminderListAction');
+        const parsed = JSON.parse(rawReminderList) as { timestamp: number };
         if (Date.now() - parsed.timestamp < 10000) {
           navigationRef.current.navigate('Reminders');
         }
       }
-    }).catch(() => {});
+    } catch {}
   }, [navigateToAlarmFire]);
 
   // ── AppState fallback ────────────────────────────────────────────
@@ -887,28 +895,31 @@ export function useNotificationRouting() {
           }
         }).catch(() => {});
         // Check for pending alarm action from widget (create or edit)
-        AsyncStorage.getItem('pendingAlarmAction').then(async (raw) => {
-          if (raw && navigationRef.current) {
-            AsyncStorage.removeItem('pendingAlarmAction');
-            const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
+        try {
+          const rawAlarm2 = kvGet('pendingAlarmAction');
+          if (rawAlarm2 && navigationRef.current) {
+            kvRemove('pendingAlarmAction');
+            const parsed = JSON.parse(rawAlarm2) as { action: string; alarmId?: string; timestamp: number };
             if (Date.now() - parsed.timestamp < 10000) {
               if (parsed.action === 'createAlarm') {
                 navigationRef.current.navigate('CreateAlarm');
               } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
-                const allAlarms = await loadAlarms();
-                const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
-                if (alarm && navigationRef.current) {
-                  navigationRef.current.navigate('CreateAlarm', { alarm });
-                }
+                loadAlarms().then((allAlarms) => {
+                  const alarm = allAlarms.find((a) => a.id === parsed.alarmId);
+                  if (alarm && navigationRef.current) {
+                    navigationRef.current.navigate('CreateAlarm', { alarm });
+                  }
+                });
               }
             }
           }
-        }).catch(() => {});
+        } catch {}
         // Check for pending reminder action from widget (create or edit)
-        AsyncStorage.getItem('pendingReminderAction').then((raw) => {
-          if (raw && navigationRef.current) {
-            AsyncStorage.removeItem('pendingReminderAction');
-            const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
+        try {
+          const rawReminder2 = kvGet('pendingReminderAction');
+          if (rawReminder2 && navigationRef.current) {
+            kvRemove('pendingReminderAction');
+            const parsed = JSON.parse(rawReminder2) as { action: string; reminderId?: string; timestamp: number };
             if (Date.now() - parsed.timestamp < 10000) {
               if (parsed.action === 'createReminder') {
                 navigationRef.current.navigate('CreateReminder');
@@ -917,32 +928,35 @@ export function useNotificationRouting() {
               }
             }
           }
-        }).catch(() => {});
+        } catch {}
         // Check for pending calendar action from widget
-        AsyncStorage.getItem('pendingCalendarAction').then((raw) => {
-          if (raw && navigationRef.current) {
-            AsyncStorage.removeItem('pendingCalendarAction');
-            const parsed = JSON.parse(raw) as { date: string | null; timestamp: number };
+        try {
+          const rawCal2 = kvGet('pendingCalendarAction');
+          if (rawCal2 && navigationRef.current) {
+            kvRemove('pendingCalendarAction');
+            const parsed = JSON.parse(rawCal2) as { date: string | null; timestamp: number };
             if (Date.now() - parsed.timestamp < 10000) {
               navigationRef.current.navigate('Calendar', parsed.date ? { initialDate: parsed.date } : undefined);
             }
           }
-        }).catch(() => {});
+        } catch {}
         // Check for pending timer action from widget
-        AsyncStorage.getItem('pendingTimerAction').then((raw) => {
-          if (raw && navigationRef.current) {
-            AsyncStorage.removeItem('pendingTimerAction');
-            const parsed = JSON.parse(raw) as { timestamp: number };
+        try {
+          const rawTimer2 = kvGet('pendingTimerAction');
+          if (rawTimer2 && navigationRef.current) {
+            kvRemove('pendingTimerAction');
+            const parsed = JSON.parse(rawTimer2) as { timestamp: number };
             if (Date.now() - parsed.timestamp < 10000) {
               navigationRef.current.navigate('Timers');
             }
           }
-        }).catch(() => {});
+        } catch {}
         // Check for pending voice action from widget
-        AsyncStorage.getItem('pendingVoiceAction').then((raw) => {
-          if (raw && navigationRef.current) {
-            AsyncStorage.removeItem('pendingVoiceAction');
-            const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
+        try {
+          const rawVoice2 = kvGet('pendingVoiceAction');
+          if (rawVoice2 && navigationRef.current) {
+            kvRemove('pendingVoiceAction');
+            const parsed = JSON.parse(rawVoice2) as { type: string; memoId?: string; timestamp: number };
             if (Date.now() - parsed.timestamp < 10000) {
               if (parsed.type === 'list') {
                 navigationRef.current.navigate('VoiceMemoList');
@@ -953,27 +967,29 @@ export function useNotificationRouting() {
               }
             }
           }
-        }).catch(() => {});
+        } catch {}
         // Check for pending alarm list action from widget
-        AsyncStorage.getItem('pendingAlarmListAction').then((raw) => {
-          if (raw && navigationRef.current) {
-            AsyncStorage.removeItem('pendingAlarmListAction');
-            const parsed = JSON.parse(raw) as { timestamp: number };
+        try {
+          const rawAlarmList2 = kvGet('pendingAlarmListAction');
+          if (rawAlarmList2 && navigationRef.current) {
+            kvRemove('pendingAlarmListAction');
+            const parsed = JSON.parse(rawAlarmList2) as { timestamp: number };
             if (Date.now() - parsed.timestamp < 10000) {
               navigationRef.current.navigate('AlarmList');
             }
           }
-        }).catch(() => {});
+        } catch {}
         // Check for pending reminder list action from widget
-        AsyncStorage.getItem('pendingReminderListAction').then((raw) => {
-          if (raw && navigationRef.current) {
-            AsyncStorage.removeItem('pendingReminderListAction');
-            const parsed = JSON.parse(raw) as { timestamp: number };
+        try {
+          const rawReminderList2 = kvGet('pendingReminderListAction');
+          if (rawReminderList2 && navigationRef.current) {
+            kvRemove('pendingReminderListAction');
+            const parsed = JSON.parse(rawReminderList2) as { timestamp: number };
             if (Date.now() - parsed.timestamp < 10000) {
               navigationRef.current.navigate('Reminders');
             }
           }
-        }).catch(() => {});
+        } catch {}
       }
     });
     return () => subscription.remove();

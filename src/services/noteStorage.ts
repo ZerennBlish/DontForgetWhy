@@ -1,8 +1,8 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDb } from './database';
+import { kvGet, kvSet, kvRemove } from './database';
 import type { Note } from '../types/note';
 import { deleteAllNoteImages } from './noteImageStorage';
 
-const NOTES_KEY = 'notes';
 const PENDING_ACTION_KEY = 'pendingNoteAction';
 
 export interface PendingNoteAction {
@@ -10,125 +10,138 @@ export interface PendingNoteAction {
   noteId?: string;
 }
 
-async function _loadAllNotes(): Promise<Note[]> {
-  try {
-    const raw = await AsyncStorage.getItem(NOTES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (item: unknown): item is Record<string, unknown> =>
-          item !== null &&
-          typeof item === 'object' &&
-          typeof (item as Record<string, unknown>).id === 'string' &&
-          typeof (item as Record<string, unknown>).text === 'string' &&
-          typeof (item as Record<string, unknown>).createdAt === 'string',
-      )
-      .map((item): Note => ({
-        id: item.id as string,
-        text: item.text as string,
-        createdAt: item.createdAt as string,
-        color: typeof item.color === 'string' ? item.color : '#FFFFFF',
-        icon: typeof item.icon === 'string' ? item.icon : '',
-        updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : (item.createdAt as string),
-        pinned: typeof item.pinned === 'boolean' ? item.pinned : false,
-        fontColor: typeof item.fontColor === 'string' ? item.fontColor : null,
-        deletedAt: typeof item.deletedAt === 'string' ? item.deletedAt : null,
-        images: Array.isArray(item.images) ? (item.images as unknown[]).filter((i): i is string => typeof i === 'string') : undefined,
-      }));
-  } catch {
-    return [];
-  }
+// ---------------------------------------------------------------------------
+// Row type & conversion
+// ---------------------------------------------------------------------------
+
+interface NoteRow {
+  id: string;
+  text: string;
+  color: string;
+  icon: string;
+  fontColor: string | null;
+  pinned: number;
+  images: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 }
 
+function rowToNote(row: NoteRow): Note {
+  return {
+    id: row.id,
+    text: row.text,
+    color: row.color || '#FFFFFF',
+    icon: row.icon || '',
+    fontColor: row.fontColor,
+    pinned: !!row.pinned,
+    images: row.images ? JSON.parse(row.images) : undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    deletedAt: row.deletedAt,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
+
 export async function getNotes(): Promise<Note[]> {
-  const all = await _loadAllNotes();
-  return all.filter((n) => !n.deletedAt);
+  const db = getDb();
+  const rows = db.getAllSync<NoteRow>('SELECT * FROM notes WHERE deletedAt IS NULL');
+  return rows.map(rowToNote);
 }
 
 export async function getAllNotes(includeDeleted = false): Promise<Note[]> {
-  const all = await _loadAllNotes();
-  if (includeDeleted) return all;
-  return all.filter((n) => !n.deletedAt);
-}
-
-async function _saveNotes(notes: Note[]): Promise<void> {
-  await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  const db = getDb();
+  const sql = includeDeleted
+    ? 'SELECT * FROM notes'
+    : 'SELECT * FROM notes WHERE deletedAt IS NULL';
+  return db.getAllSync<NoteRow>(sql).map(rowToNote);
 }
 
 export async function addNote(note: Note): Promise<Note[]> {
-  const notes = await _loadAllNotes();
-  notes.push(note);
-  await _saveNotes(notes);
-  return notes.filter((n) => !n.deletedAt);
+  const db = getDb();
+  db.runSync(
+    `INSERT INTO notes (id, text, color, icon, fontColor, pinned, images, createdAt, updatedAt, deletedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [note.id, note.text, note.color, note.icon || '', note.fontColor ?? null,
+     note.pinned ? 1 : 0, note.images ? JSON.stringify(note.images) : null,
+     note.createdAt, note.updatedAt || note.createdAt, note.deletedAt ?? null],
+  );
+  return getNotes();
 }
 
 export async function updateNote(updated: Note): Promise<Note[]> {
-  const notes = await _loadAllNotes();
-  const idx = notes.findIndex((n) => n.id === updated.id);
-  if (idx !== -1) {
-    notes[idx] = updated;
-    await _saveNotes(notes);
-  }
-  return notes.filter((n) => !n.deletedAt);
+  const db = getDb();
+  db.runSync(
+    `UPDATE notes SET text=?, color=?, icon=?, fontColor=?, pinned=?, images=?, updatedAt=?, deletedAt=?
+     WHERE id=?`,
+    [updated.text, updated.color, updated.icon || '', updated.fontColor ?? null,
+     updated.pinned ? 1 : 0, updated.images ? JSON.stringify(updated.images) : null,
+     updated.updatedAt, updated.deletedAt ?? null, updated.id],
+  );
+  return getNotes();
 }
 
 export async function deleteNote(id: string): Promise<Note[]> {
-  const notes = await _loadAllNotes();
-  const updated = notes.map((n) =>
-    n.id === id ? { ...n, deletedAt: new Date().toISOString(), pinned: false } : n,
+  const db = getDb();
+  db.runSync(
+    'UPDATE notes SET deletedAt=?, pinned=0 WHERE id=?',
+    [new Date().toISOString(), id],
   );
-  await _saveNotes(updated);
-  return updated.filter((n) => !n.deletedAt);
+  return getNotes();
 }
 
 export async function restoreNote(id: string): Promise<Note[]> {
-  const notes = await _loadAllNotes();
-  const updated = notes.map((n) =>
-    n.id === id ? { ...n, deletedAt: null } : n,
-  );
-  await _saveNotes(updated);
-  return updated.filter((n) => !n.deletedAt);
+  const db = getDb();
+  db.runSync('UPDATE notes SET deletedAt=NULL WHERE id=?', [id]);
+  return getNotes();
 }
 
 export async function permanentlyDeleteNote(id: string): Promise<Note[]> {
-  const notes = await _loadAllNotes();
-  const target = notes.find((n) => n.id === id);
-  if (target?.images) {
-    await deleteAllNoteImages(target.images);
+  const db = getDb();
+  const row = db.getFirstSync<NoteRow>('SELECT * FROM notes WHERE id=?', [id]);
+  if (row?.images) {
+    const imgs = JSON.parse(row.images) as string[];
+    await deleteAllNoteImages(imgs);
   }
-  const updated = notes.filter((n) => n.id !== id);
-  await _saveNotes(updated);
-  return updated.filter((n) => !n.deletedAt);
+  db.runSync('DELETE FROM notes WHERE id=?', [id]);
+  return getNotes();
 }
 
 export async function purgeDeletedNotes(): Promise<void> {
-  const notes = await _loadAllNotes();
-  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const kept = notes.filter(
-    (n) => !n.deletedAt || new Date(n.deletedAt).getTime() > cutoff,
+  const db = getDb();
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const toPurge = db.getAllSync<NoteRow>(
+    'SELECT * FROM notes WHERE deletedAt IS NOT NULL AND deletedAt <= ?',
+    [cutoff],
   );
-  if (kept.length !== notes.length) {
-    const purged = notes.filter((n) => !kept.includes(n));
-    for (const note of purged) {
-      if (note.images) {
-        await deleteAllNoteImages(note.images);
-      }
+  for (const row of toPurge) {
+    if (row.images) {
+      const imgs = JSON.parse(row.images) as string[];
+      await deleteAllNoteImages(imgs);
     }
-    await _saveNotes(kept);
   }
+  db.runSync(
+    'DELETE FROM notes WHERE deletedAt IS NOT NULL AND deletedAt <= ?',
+    [cutoff],
+  );
 }
 
+// ---------------------------------------------------------------------------
+// Pending note action (widget → screen)
+// ---------------------------------------------------------------------------
+
 export async function setPendingNoteAction(action: PendingNoteAction): Promise<void> {
-  await AsyncStorage.setItem(PENDING_ACTION_KEY, JSON.stringify(action));
+  kvSet(PENDING_ACTION_KEY, JSON.stringify(action));
 }
 
 export async function getPendingNoteAction(): Promise<PendingNoteAction | null> {
   try {
-    const raw = await AsyncStorage.getItem(PENDING_ACTION_KEY);
+    const raw = kvGet(PENDING_ACTION_KEY);
     if (!raw) return null;
-    await AsyncStorage.removeItem(PENDING_ACTION_KEY);
+    kvRemove(PENDING_ACTION_KEY);
     return JSON.parse(raw) as PendingNoteAction;
   } catch {
     return null;

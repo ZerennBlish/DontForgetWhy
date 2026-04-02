@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet, kvRemove } from './database';
 import type {
   TriviaStats,
   TriviaCategory,
@@ -84,7 +84,7 @@ function validateStats(parsed: Record<string, unknown>): TriviaStats {
 
 export async function getTriviaStats(): Promise<TriviaStats> {
   try {
-    const raw = await AsyncStorage.getItem(STATS_KEY);
+    const raw = await kvGet(STATS_KEY);
     if (!raw) return defaultStats();
     return validateStats(JSON.parse(raw));
   } catch {
@@ -94,7 +94,7 @@ export async function getTriviaStats(): Promise<TriviaStats> {
 
 export async function saveTriviaStats(stats: TriviaStats): Promise<void> {
   try {
-    await AsyncStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    await kvSet(STATS_KEY, JSON.stringify(stats));
   } catch {}
 }
 
@@ -131,13 +131,13 @@ type SeenData = Record<string, string[]>;
 
 async function loadSeenData(): Promise<SeenData> {
   try {
-    const raw = await AsyncStorage.getItem(SEEN_KEY);
+    const raw = await kvGet(SEEN_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     // Migration: old format was a flat string array — treat as 'general'
     if (Array.isArray(parsed)) {
       const migrated: SeenData = { general: parsed.filter((id) => typeof id === 'string') };
-      await AsyncStorage.setItem(SEEN_KEY, JSON.stringify(migrated));
+      await kvSet(SEEN_KEY, JSON.stringify(migrated));
       return migrated;
     }
     if (parsed && typeof parsed === 'object') return parsed as SeenData;
@@ -149,7 +149,7 @@ async function loadSeenData(): Promise<SeenData> {
 
 async function saveSeenData(data: SeenData): Promise<void> {
   try {
-    await AsyncStorage.setItem(SEEN_KEY, JSON.stringify(data));
+    await kvSet(SEEN_KEY, JSON.stringify(data));
   } catch {}
 }
 
@@ -173,7 +173,7 @@ export async function addSeenQuestionIds(category: string, ids: string[]): Promi
 
 export async function resetSeenQuestions(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(SEEN_KEY);
+    await kvRemove(SEEN_KEY);
   } catch {}
 }
 
@@ -182,7 +182,7 @@ export async function resetSeenQuestionsForCategory(category: string): Promise<v
     const data = await loadSeenData();
     delete data[category];
     if (Object.keys(data).length === 0) {
-      await AsyncStorage.removeItem(SEEN_KEY);
+      await kvRemove(SEEN_KEY);
     } else {
       await saveSeenData(data);
     }

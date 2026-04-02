@@ -68,7 +68,7 @@ export function wasNotifHandled(notifId: string | undefined): boolean {
 // notification again. These helpers persist handled IDs in AsyncStorage
 // so cold-start dedupe works across process restarts.
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet } from './database';
 
 const HANDLED_NOTIFS_KEY = 'handledNotifIds';
 
@@ -80,14 +80,14 @@ interface PersistedNotifEntry {
 export async function persistNotifHandled(notifId: string): Promise<void> {
   markNotifHandled(notifId); // keep in-memory Map in sync
   try {
-    const raw = await AsyncStorage.getItem(HANDLED_NOTIFS_KEY);
+    const raw = kvGet(HANDLED_NOTIFS_KEY);
     let entries: PersistedNotifEntry[] = raw ? JSON.parse(raw) : [];
     const now = Date.now();
     // Remove any existing entry for this ID, then add fresh
     entries = entries.filter((e) => e.id !== notifId);
     entries.push({ id: notifId, ts: now });
     const filtered = entries.filter((e) => now - e.ts <= HANDLED_TTL);
-    await AsyncStorage.setItem(HANDLED_NOTIFS_KEY, JSON.stringify(filtered));
+    kvSet(HANDLED_NOTIFS_KEY, JSON.stringify(filtered));
   } catch {}
 }
 
@@ -97,7 +97,7 @@ export async function wasNotifHandledPersistent(notifId: string | undefined): Pr
   if (wasNotifHandled(notifId)) return true;
   // Slow path: check AsyncStorage
   try {
-    const raw = await AsyncStorage.getItem(HANDLED_NOTIFS_KEY);
+    const raw = kvGet(HANDLED_NOTIFS_KEY);
     if (!raw) return false;
     const entries: PersistedNotifEntry[] = JSON.parse(raw);
     const now = Date.now();
@@ -110,7 +110,7 @@ export async function wasNotifHandledPersistent(notifId: string | undefined): Pr
     // Clean up expired entries if we found one
     if (entry) {
       const filtered = entries.filter((e) => now - e.ts <= HANDLED_TTL);
-      await AsyncStorage.setItem(HANDLED_NOTIFS_KEY, JSON.stringify(filtered));
+      kvSet(HANDLED_NOTIFS_KEY, JSON.stringify(filtered));
     }
   } catch {}
   return false;

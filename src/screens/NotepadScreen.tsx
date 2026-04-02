@@ -36,7 +36,7 @@ import {
   pruneNotePins,
   isNotePinned,
 } from '../services/widgetPins';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet } from '../services/database';
 import { refreshWidgets } from '../widget/updateWidget';
 import UndoToast from '../components/UndoToast';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
@@ -114,42 +114,38 @@ export default function NotepadScreen({ navigation, route }: Props) {
 
   const handledActionRef = useRef('');
   useEffect(() => {
-    (async () => {
-      const [bg, fc] = await Promise.all([
-        AsyncStorage.getItem(CUSTOM_BG_COLOR_KEY),
-        AsyncStorage.getItem(CUSTOM_FONT_COLOR_KEY),
-      ]);
-      const validHex = /^#[0-9A-Fa-f]{6}$/;
-      // Migrate old keys if new keys are empty
-      let resolvedBg = bg;
-      let resolvedFc = fc;
-      if (!bg) {
-        const oldBg = await AsyncStorage.getItem('noteCustomBgColor');
-        if (oldBg && validHex.test(oldBg)) {
-          resolvedBg = oldBg;
-          AsyncStorage.setItem(CUSTOM_BG_COLOR_KEY, oldBg);
-        }
+    const bg = kvGet(CUSTOM_BG_COLOR_KEY);
+    const fc = kvGet(CUSTOM_FONT_COLOR_KEY);
+    const validHex = /^#[0-9A-Fa-f]{6}$/;
+    // Migrate old keys if new keys are empty
+    let resolvedBg = bg;
+    let resolvedFc = fc;
+    if (!bg) {
+      const oldBg = kvGet('noteCustomBgColor');
+      if (oldBg && validHex.test(oldBg)) {
+        resolvedBg = oldBg;
+        kvSet(CUSTOM_BG_COLOR_KEY, oldBg);
       }
-      if (!fc) {
-        const oldFc = await AsyncStorage.getItem('noteCustomFontColor');
-        if (oldFc && validHex.test(oldFc)) {
-          resolvedFc = oldFc;
-          AsyncStorage.setItem(CUSTOM_FONT_COLOR_KEY, oldFc);
-        }
+    }
+    if (!fc) {
+      const oldFc = kvGet('noteCustomFontColor');
+      if (oldFc && validHex.test(oldFc)) {
+        resolvedFc = oldFc;
+        kvSet(CUSTOM_FONT_COLOR_KEY, oldFc);
       }
-      if (resolvedBg && validHex.test(resolvedBg)) { setCustomBgColor(resolvedBg); }
-      if (resolvedFc && validHex.test(resolvedFc)) { setCustomFontColor(resolvedFc); }
-    })();
+    }
+    if (resolvedBg && validHex.test(resolvedBg)) { setCustomBgColor(resolvedBg); }
+    if (resolvedFc && validHex.test(resolvedFc)) { setCustomFontColor(resolvedFc); }
   }, []);
 
   const loadData = useCallback(async () => {
     let loaded = await getAllNotes(true);
 
     // First-launch welcome note — in-memory guard + persisted flag prevent duplicates
-    const onboarded = await AsyncStorage.getItem('notepadOnboarded');
+    const onboarded = kvGet('notepadOnboarded');
     if (!onboarded && !welcomeNoteCreating && loaded.filter((n) => !n.deletedAt).length === 0) {
       welcomeNoteCreating = true;
-      await AsyncStorage.setItem('notepadOnboarded', 'true');
+      kvSet('notepadOnboarded', 'true');
       const now = new Date().toISOString();
       const welcomeNote: Note = {
         id: uuidv4(),
@@ -891,8 +887,8 @@ export default function NotepadScreen({ navigation, route }: Props) {
         onSave={handleEditorSave}
         onDelete={handleEditorDelete}
         onClose={closeEditor}
-        onCustomBgColorChange={(c) => { setCustomBgColor(c); AsyncStorage.setItem(CUSTOM_BG_COLOR_KEY, c); }}
-        onCustomFontColorChange={(c) => { setCustomFontColor(c); AsyncStorage.setItem(CUSTOM_FONT_COLOR_KEY, c); }}
+        onCustomBgColorChange={(c) => { setCustomBgColor(c); kvSet(CUSTOM_BG_COLOR_KEY, c); }}
+        onCustomFontColorChange={(c) => { setCustomFontColor(c); kvSet(CUSTOM_FONT_COLOR_KEY, c); }}
       />
     </View>
   );

@@ -230,6 +230,9 @@ AsyncStorage → SQLite migration scheduled before Chess/Checkers (P4). Rational
 ### Jest uses ts-jest instead of jest-expo (Session 11)
 `jest-expo` preset crashes parsing expo-modules-core TypeScript files. Since we're only testing pure utility functions (no React Native, no Expo imports), `ts-jest` with `node` environment works perfectly. `jest-expo` kept in devDependencies for future component testing when needed.
 
+### AsyncStorage → SQLite migration (Session 12)
+All persistent storage moved from `@react-native-async-storage/async-storage` to `expo-sqlite`. Rationale: (1) AsyncStorage serializes entire arrays — a single alarm edit re-serialized every alarm. SQLite updates individual rows. (2) Synchronous reads via `expo-sqlite`'s sync API (`getFirstSync`, `getAllSync`, `runSync`) eliminate `.then()` chains and race conditions from the old async read-modify-write pattern. (3) Every future feature (P4 games, P5 calendar sync, P7 Firebase) builds on storage — migrating now prevents retrofitting a growing service layer later. (4) The old async mutex (`withLock`) on timer storage is replaced by SQLite's built-in transaction support. AsyncStorage kept temporarily in `database.ts` for the one-time migration runner that copies existing user data to SQLite on first launch post-update.
+
 ### MicWidget 1×1 (Session 11)
 Stripped to essentials: red record circle + "Don't Forget Why" footer. 70dp minimum size (was 110dp). A record button doesn't need a header or descriptive text — the red circle is universally understood.
 
