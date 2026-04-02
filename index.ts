@@ -23,7 +23,21 @@ async function rescheduleYearlyReminder(reminderId: string): Promise<void> {
     const reminders = await getReminders();
     const reminder = reminders.find((r) => r.id === reminderId);
     if (!reminder) return;
-    if (!reminder.recurring || !reminder.dueDate || (reminder.days && reminder.days.length > 0)) return;
+    if (!reminder.recurring) return;
+    if (reminder.days && reminder.days.length > 0) return;
+
+    // Determine yearly month/day — from dueDate if set, else from createdAt
+    let mo: number; // 1-indexed month
+    let d: number;
+    if (reminder.dueDate) {
+      [, mo, d] = reminder.dueDate.split('-').map(Number);
+    } else if (reminder.createdAt) {
+      const created = new Date(reminder.createdAt);
+      mo = created.getMonth() + 1;
+      d = created.getDate();
+    } else {
+      return;
+    }
 
     if (reminder.notificationIds?.length) {
       await cancelReminderNotifications(reminder.notificationIds).catch(() => {});
@@ -31,7 +45,6 @@ async function rescheduleYearlyReminder(reminderId: string): Promise<void> {
       await cancelReminderNotification(reminder.notificationId).catch(() => {});
     }
 
-    const [, mo, d] = reminder.dueDate.split('-').map(Number);
     const now = new Date();
     let nextDate = new Date(now.getFullYear(), mo - 1, d);
     if (nextDate.getTime() <= now.getTime()) {
@@ -257,10 +270,11 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
   }
 
   // Yearly reminder auto-reschedule: when a reminder notification
-  // fires (DELIVERED) or is dismissed in the background/killed state,
-  // reschedule yearly recurring reminders for next year.
+  // is dismissed in the background/killed state, reschedule yearly
+  // recurring reminders for next year. NOT on DELIVERED — rescheduling
+  // on delivery bumps the dueDate before the user can complete in-app.
   const reminderId = detail.notification?.data?.reminderId as string | undefined;
-  if (reminderId && (type === EventType.DELIVERED || type === EventType.DISMISSED)) {
+  if (reminderId && type === EventType.DISMISSED) {
     await rescheduleYearlyReminder(reminderId);
   }
 });

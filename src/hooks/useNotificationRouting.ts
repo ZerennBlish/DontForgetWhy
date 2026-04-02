@@ -513,8 +513,6 @@ export function useNotificationRouting() {
       if (type === EventType.DELIVERED) {
         const isAlarmOrTimerCompletion = !!(alarmId || timerId);
         if (!isAlarmOrTimerCompletion) {
-          const rid = detail.notification?.data?.reminderId as string | undefined;
-          if (rid) rescheduleYearlyReminder(rid).catch(() => {});
           return;
         }
         playAlarmSoundForNotification(alarmId, timerId).catch(() => {});

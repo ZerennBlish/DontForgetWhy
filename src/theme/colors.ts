@@ -54,7 +54,7 @@ const dark: ThemeColors = {
   sectionVoice: '#A29BFE',
   sectionTimer: '#FDCB6E',
   sectionGames: '#A8E06C',
-  brandTitle: '#1E3A5F',
+  brandTitle: '#2563EB',
 };
 
 const light: ThemeColors = {
@@ -83,7 +83,7 @@ const light: ThemeColors = {
   sectionVoice: '#8B7FEE',
   sectionTimer: '#E0B830',
   sectionGames: '#78BF3E',
-  brandTitle: '#2563EB',
+  brandTitle: '#1E3A5F',
 };
 
 const highContrast: ThemeColors = {
