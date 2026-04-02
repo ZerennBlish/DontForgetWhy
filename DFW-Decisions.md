@@ -134,8 +134,8 @@ Library was unmaintained, used `jcenter()` (removed in Gradle 9.0) and deprecate
 ### Skia version — Expo recommended over latest (Mar 31)
 Expo SDK 55 recommends `@shopify/react-native-skia` 2.4.x, not latest (2.5.x). Initially installed `@latest` (2.5.5) which caused expo-doctor version mismatch warnings. Downgraded to Expo's recommended 2.4.18 for stability — the minor version gap isn't worth the risk.
 
-### ExpoKeepAwake warnings — deferred (Mar 31)
-Dev-mode only promise rejections from stricter SDK 55 error handling during activity transitions. Not fixed in v1.8.1 — logged as known issue for investigation in a future release. Does not affect production behavior.
+### ExpoKeepAwake — fixed (Session 9)
+Replaced `useKeepAwake()` hook with imperative `activateKeepAwakeAsync()` in try-catch useEffect. Fixes SDK 55 promise rejection during activity transitions.
 
 ### useRef for undo pin state, not useState (Mar 30)
 Voice memo delete captures wasPinned for undo restore. useState caused stale closure because setDeletedVoiceMemoPinned and setVoiceUndoKey happen in same render — the undo handler captures the old false value. useRef updates synchronously. Same pattern that fixed globalSilenced and isSnoozing in P3.
@@ -184,6 +184,21 @@ Pushpin emoji/icon is cartoonish. Small accent dot as pinned indicator + "Pin"/"
 
 ### DayPickerRow "Everyday" button (Session 9)
 Quick-select button that toggles all 7 days on/off. Common use case — saves 7 taps.
+
+### Light mode card tinting, not plain white (Session 9)
+Light mode cards use `sectionColor + '15'` (very light tint) instead of `colors.card` (plain white). Alarm cards are light red, reminder light blue, note light green, voice light purple. Gives each section visual identity in light mode. Timer presets and calendar event cards also tinted per-type.
+
+### Photo overlay always dark, not mode-switched (Session 9)
+Initially switched overlay to white in light mode (`rgba(255,255,255,opacity)`). Reverted — photos look best with a dark dim. Light mode is expressed through cards, text, and UI elements, not by bleaching the user's photo. All 10 screens unified to `rgba(0,0,0,opacity)`.
+
+### Photo-aware alpha values on HomeScreen (Session 9)
+Grid cells, quick capture buttons, today container, and banner all increase opacity when a background photo is set (e.g., grid `90` with photo, `40` without). Nearly solid tint over photo keeps text readable. Lighter tint without photo lets the watermark breathe.
+
+### Brand title as theme token (Session 9)
+HomeScreen "Don't Forget Why" title uses `colors.brandTitle` — a per-theme color. Dark: midnight navy (`#1E3A5F`, subtle/hiding), Light: bold blue (`#2563EB`), HC: cyan (`#00D4FF`), Vivid: pink (`#FF6B9D`). Each theme gives the title its own personality.
+
+### HomeScreen grid: no borders, no icon box (Session 9)
+Removed borderWidth, borderColor, elevation, and shadow from grid cells. Removed iconCircle background. Tinted section-color background is enough — borders on top of tint on top of photo is too many layers. One layer, clean.
 
 ---
 

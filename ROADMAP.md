@@ -558,6 +558,12 @@
 - ~~Yearly reminder reschedule bug~~ — FIXED Session 9
 - ~~Calendar widget daily dots bug~~ — FIXED Session 9
 - ~~ExpoKeepAwake promise rejection~~ — FIXED Session 9
+- ~~Light mode card tinting (section-colored backgrounds)~~ — DONE Session 9
+- ~~Photo overlay dark-only (removed white bleach)~~ — DONE Session 9
+- ~~Photo-aware alpha values on HomeScreen~~ — DONE Session 9
+- ~~brandTitle theme token~~ — DONE Session 9
+- ~~Softer light theme text + brighter section colors~~ — DONE Session 9
+- ~~Grid border/shadow/icon-box removal~~ — DONE Session 9
 
 ---
 
@@ -653,4 +659,4 @@ Batch native deps within phases to minimize dev builds.
 | Mar 30, 2026 | v1.8.0 production build. Voice memos, mic widget, card unification, calendar fixes, 2 full audits. |
 | Mar 31, 2026 | v1.8.1 SDK 55 upgrade. Expo 54→55, React Native 0.81→0.83, React 19.1→19.2. `react-native-notification-sounds` removed (unmaintained, jcenter/Gradle 9.0 incompatible), replaced with native `getSystemAlarmSounds` in AlarmChannelModule. `newArchEnabled` and `edgeToEdgeEnabled` removed from app.json (always-on in SDK 55). Android 15 foreground service warning resolved (expo-audio updated upstream). |
 | Apr 1, 2026 | v1.9.0 Home screen release. HomeScreen (icon grid, Quick Capture, personality banner, Today section), TimerScreen standalone, VoiceMemoListScreen standalone, AlarmListScreen 2-tab, HomeButton on all screens, widget rebranding (Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice), MicWidget header/footer, Forget Log moved to Settings, CalendarWidget current month. Audit 47 complete — both Gemini P1s (widget warm-start nav, notification routing Home base) fixed. |
-| Apr 1, 2026 | Session 9 visual overhaul. Theme consolidation (6→4 + section colors, custom picker removed). Card unification (section-colored borders + elevation). Icon library (29+ View-based icons in Icons.tsx). Light mode overhaul (mode-aware overlays, capsules, watermarks). Pin redesign (dot + text capsule). AlarmListScreen alarms-only (AlarmsTab absorbed), ReminderScreen standalone. NotepadWidget header redesign + size bump. Note editor dropdown consolidation. DayPickerRow "Everyday" button. 5 bugs fixed: Guess Why nickname, yearly reminder reschedule, calendar widget daily dots, no-date recurring yearly, ExpoKeepAwake. |
+| Apr 1, 2026 | Session 9 visual overhaul. Theme consolidation (6→4 + section colors + brandTitle, custom picker removed). Card unification (section-colored borders + elevation + light mode tinting). Icon library (29+ View-based icons in Icons.tsx). Light mode overhaul (softer text colors, brighter section colors, tinted card backgrounds, mode-aware capsules/watermarks). Photo overlay unified to dark dim on all screens. Photo-aware alphas on HomeScreen (grid/buttons/today/banner adapt to bgUri). Pin redesign (dot + text capsule). Grid simplified (no borders/shadows/icon-box). AlarmListScreen alarms-only (AlarmsTab absorbed), ReminderScreen standalone. NotepadWidget header redesign + size bump. Note editor dropdown consolidation. DayPickerRow "Everyday" button. 5 bugs fixed: Guess Why nickname, yearly reminder reschedule, calendar widget daily dots, no-date recurring yearly, ExpoKeepAwake. |

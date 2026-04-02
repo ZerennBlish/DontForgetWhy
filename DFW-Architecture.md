@@ -84,7 +84,7 @@ All prior channel versions deleted on every app startup.
 | Theme | Mode | Background | Card | Accent |
 |-------|------|-----------|------|--------|
 | Dark | dark | #0A0A12 | #1A1A28 | #5B9EE6 |
-| Light | light | #F2F3F8 | #FFFFFF | #2563EB |
+| Light | light | #F2F3F8 | #FFFFFF | #3B82F6 |
 | High Contrast | dark | #000000 | #1A1A1A | #00D4FF |
 | Vivid | dark | #0C0C18 | #1A1A2C | #7C5CFC |
 
@@ -95,7 +95,10 @@ ThemeColors interface includes per-section color tokens: `sectionAlarm`, `sectio
 Feb 11: 8 themes + custom. Mar 10-11: Consolidated to 6 presets. Apr 1 (Session 9): Consolidated to 4 — Dark, Light, High Contrast, Vivid. Custom theme generator (`generateCustomThemeDual`) removed entirely. Personalization via background images, not theme colors — users picking colors that fight their backgrounds was a trap.
 
 ### Mode-Aware Rendering
-Light mode overhaul in Session 9: background overlays branch on `colors.mode` (white overlay in light, black in dark), capsule buttons use mode-aware rgba values, watermark opacity adapts (0.15 dark / 0.06 light), card backgrounds use `colors.card + 'E6'` in dark / `colors.card` in light.
+Light mode overhaul in Session 9: capsule buttons use mode-aware rgba values, watermark opacity adapts (0.15 dark / 0.06 light). Card backgrounds use section-colored tint in light mode (`sectionColor + '15'`) instead of plain white — alarm cards are light red, reminder light blue, etc. Photo overlay always uses dark dim (`rgba(0,0,0,opacity)`) regardless of mode — photos look best dimmed, not bleached. Photo-aware alpha values on HomeScreen: grid cells, quick capture buttons, today container, and banner all increase opacity when a background photo is set (e.g., grid `90` with photo, `40` without).
+
+### Brand Title Token
+`brandTitle` field in ThemeColors: per-theme title color for "Don't Forget Why" on HomeScreen. Dark: `#1E3A5F` (midnight navy, subtle), Light: `#2563EB` (bold blue), High Contrast: `#00D4FF` (cyan), Vivid: `#FF6B9D` (pink).
 
 ### Migration
 All old theme names migrate to new 4: midnight/ember/neon/void→dark, frost/sand→light, custom→dark. Legacy names from pre-6-theme era also mapped. Applied in both ThemeContext.tsx and widget theme loader.

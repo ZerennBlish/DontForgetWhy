@@ -70,8 +70,11 @@
 - 4 themes: Dark, Light, High Contrast, Vivid — each with section-specific color palettes
 - Custom theme picker removed (personalization via background images)
 - ThemeColors includes section color tokens (`sectionAlarm`, `sectionReminder`, etc.) — all hardcoded hex values replaced with theme references
-- Mode-aware rendering: background overlays, capsule buttons, watermark opacity, card backgrounds all branch on `colors.mode`
+- Mode-aware rendering: capsule buttons, watermark opacity branch on `colors.mode`. Photo overlay always dark dim regardless of mode.
+- Light mode card tinting: cards use `sectionColor + '15'` background (light red for alarms, light blue for reminders, etc.) instead of plain white
+- Photo-aware alphas on HomeScreen: grid/quick capture/today/banner increase opacity when background photo is set
 - Card depth: elevation/shadow added to all card types for visual separation
+- Brand title: `colors.brandTitle` — per-theme title color on HomeScreen (navy dark, blue light, cyan HC, pink vivid)
 - Migration from all old theme names (midnight→dark, frost→light, etc.)
 
 ### Icon System (Session 9)

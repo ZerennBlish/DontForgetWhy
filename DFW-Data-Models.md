@@ -109,6 +109,7 @@ interface ThemeColors {
   // Section colors — every theme defines its own palette
   sectionAlarm: string; sectionReminder: string; sectionCalendar: string;
   sectionNotepad: string; sectionVoice: string; sectionTimer: string; sectionGames: string;
+  brandTitle: string;
 }
 ```
 
