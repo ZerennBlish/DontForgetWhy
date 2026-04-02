@@ -324,3 +324,43 @@ export function SortIcon({ color, size = 20 }: IconProps) {
     </View>
   );
 }
+
+export function ShareIcon({ color, size = 20 }: { color: string; size?: number }) {
+  const s = size;
+  return (
+    <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: s * 0.6, height: s * 0.45, borderWidth: 1.5, borderColor: color, borderTopWidth: 0, borderBottomLeftRadius: 2, borderBottomRightRadius: 2, position: 'absolute', bottom: s * 0.1 }} />
+      <View style={{ width: 1.5, height: s * 0.5, backgroundColor: color, position: 'absolute', top: s * 0.08 }} />
+      <View style={{ width: 0, height: 0, borderLeftWidth: s * 0.15, borderRightWidth: s * 0.15, borderBottomWidth: s * 0.15, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: color, position: 'absolute', top: s * 0.02 }} />
+    </View>
+  );
+}
+
+export function HomeIcon({ color, size = 20 }: { color: string; size?: number }) {
+  const s = size;
+  return (
+    <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Roof — pointed triangle outline */}
+      <View style={{
+        width: 0, height: 0,
+        borderLeftWidth: s * 0.45, borderRightWidth: s * 0.45,
+        borderBottomWidth: s * 0.35,
+        borderLeftColor: 'transparent', borderRightColor: 'transparent',
+        borderBottomColor: color,
+        marginBottom: -1,
+      }} />
+      {/* House body — outlined rectangle */}
+      <View style={{
+        width: s * 0.65, height: s * 0.4,
+        borderWidth: 1.5, borderColor: color, borderTopWidth: 0,
+        alignItems: 'center', justifyContent: 'flex-end',
+      }}>
+        {/* Door cutout */}
+        <View style={{
+          width: s * 0.2, height: s * 0.22,
+          backgroundColor: color, borderTopLeftRadius: s * 0.1, borderTopRightRadius: s * 0.1,
+        }} />
+      </View>
+    </View>
+  );
+}

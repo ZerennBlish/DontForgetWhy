@@ -30,7 +30,7 @@ import type { Note } from '../types/note';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import BackButton from './BackButton';
-import { ImageIcon, CameraIcon, PaintBrushIcon, MicIcon } from './Icons';
+import { ImageIcon, CameraIcon, PaintBrushIcon, MicIcon, ShareIcon, TrashIcon } from './Icons';
 import DrawingCanvas from './DrawingCanvas';
 import type { StrokeData } from './DrawingCanvas';
 import ShareNoteModal from './ShareNoteModal';
@@ -554,8 +554,9 @@ export default function NoteEditorModal({
       borderWidth: 1,
       borderColor: colors.red + '40',
     },
-    editorTrashIcon: {
-      fontSize: 18,
+    editorTrashIconWrap: {
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
     },
     editorInputArea: {
       flex: 1,
@@ -790,7 +791,7 @@ export default function NoteEditorModal({
                     onPress={() => { hapticLight(); setIsViewMode(false); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={{ fontSize: 16 }}>{'\u270F\uFE0F'}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Edit</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.editorTopBtn}
@@ -806,7 +807,7 @@ export default function NoteEditorModal({
                     }}
                     activeOpacity={0.7}
                   >
-                    <Text style={{ fontSize: 16 }}>{'\u{1F4E4}'}</Text>
+                    <ShareIcon color={colors.textPrimary} size={18} />
                   </TouchableOpacity>
                   {note && (
                     <TouchableOpacity
@@ -814,7 +815,7 @@ export default function NoteEditorModal({
                       onPress={handleDeleteFromEditor}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.editorTrashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
+                      <TrashIcon color={colors.red} size={18} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -852,7 +853,7 @@ export default function NoteEditorModal({
                       onPress={handleDeleteFromEditor}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.editorTrashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
+                      <TrashIcon color={colors.red} size={18} />
                     </TouchableOpacity>
                   )}
                 </View>

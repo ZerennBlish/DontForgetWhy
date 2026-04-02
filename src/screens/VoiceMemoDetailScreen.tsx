@@ -26,6 +26,7 @@ import {
 import { saveVoiceMemoFile, deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
+import { TrashIcon } from '../components/Icons';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
@@ -400,8 +401,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           borderWidth: 1,
           borderColor: 'rgba(239, 68, 68, 0.4)',
         },
-        trashIcon: {
-          fontSize: 18,
+        trashIconWrap: {
+          alignItems: 'center',
+          justifyContent: 'center',
         },
         content: {
           flex: 1,
@@ -657,7 +659,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               onPress={handleDelete}
               activeOpacity={0.7}
             >
-              <Text style={styles.trashIcon}>{'\u{1F5D1}\uFE0F'}</Text>
+              <TrashIcon color={colors.red} size={18} />
             </TouchableOpacity>
           </View>
         )}

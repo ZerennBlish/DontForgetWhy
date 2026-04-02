@@ -527,7 +527,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         title: {
           fontSize: 28,
           fontWeight: '800',
-          color: '#FFFFFF',
+          color: colors.textPrimary,
         },
         calendarWrap: {
           paddingHorizontal: 8,
@@ -702,15 +702,18 @@ export default function CalendarScreen({ navigation, route }: Props) {
 
   const calendarTheme = useMemo(
     () => ({
-      calendarBackground: colors.background,
+      calendarBackground: 'transparent',
+      textSectionTitleColor: colors.textSecondary,
+      selectedDayBackgroundColor: colors.accent,
+      selectedDayTextColor: '#FFFFFF',
+      todayTextColor: colors.accent,
       dayTextColor: colors.textPrimary,
-      textDisabledColor: colors.textSecondary + '60',
+      textDisabledColor: colors.textTertiary,
       monthTextColor: colors.textPrimary,
       arrowColor: colors.accent,
-      todayTextColor: colors.accent,
-      selectedDayBackgroundColor: colors.accent,
-      selectedDayTextColor: colors.background,
-      textSectionTitleColor: colors.textSecondary,
+      textMonthFontWeight: '700' as const,
+      textDayFontWeight: '500' as const,
+      textDayHeaderFontWeight: '600' as const,
     }),
     [colors],
   );
