@@ -11,26 +11,33 @@ import {
   NativeModules,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import notifee from '@notifee/react-native';
 import * as Device from 'expo-device';
+import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from 'expo-audio';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../theme/ThemeContext';
+import { themes, type ThemeName } from '../theme/colors';
 import { setOnboardingComplete } from '../services/settings';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import { canUseFullScreenIntent, openFullScreenIntentSettings } from '../utils/fullScreenPermission';
+import {
+  BellIcon, AlarmIcon, WarningIcon, FireIcon, GearIcon,
+  MicIcon, CameraIcon, PuzzleIcon, HomeIcon,
+} from '../components/Icons';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTENT_MAX_WIDTH = Math.min(SCREEN_WIDTH * 0.75, 500);
-const EMOJI_SIZE = SCREEN_WIDTH > 600 ? 80 : 64;
 
 interface SlideData {
   id: string;
-  emoji: string;
+  icon?: React.ReactNode;
   title: string;
   body: string;
   buttonLabel: string;
@@ -42,6 +49,7 @@ interface SlideData {
   instructions?: string[];
   secondaryText?: string;
   isFinal?: boolean;
+  skipWarning?: { title: string; message: string };
 }
 
 function useSlides(startSlide: number) {
@@ -50,6 +58,8 @@ function useSlides(startSlide: number) {
   const [batteryOptDisabled, setBatteryOptDisabled] = useState(false);
   const [overlayGranted, setOverlayGranted] = useState(false);
   const [fullScreenGranted, setFullScreenGranted] = useState(false);
+  const [micGranted, setMicGranted] = useState(false);
+  const [cameraPhotosGranted, setCameraPhotosGranted] = useState(false);
   const [isSamsung, setIsSamsung] = useState(false);
   const [permissionsChecked, setPermissionsChecked] = useState(false);
 
@@ -108,6 +118,21 @@ function useSlides(startSlide: number) {
         setFullScreenGranted(false);
       }
 
+      try {
+        const { granted } = await getRecordingPermissionsAsync();
+        setMicGranted(granted);
+      } catch {
+        setMicGranted(false);
+      }
+
+      try {
+        const cam = await ImagePicker.getCameraPermissionsAsync();
+        const lib = await ImagePicker.getMediaLibraryPermissionsAsync();
+        setCameraPhotosGranted(cam.granted && lib.granted);
+      } catch {
+        setCameraPhotosGranted(false);
+      }
+
       setPermissionsChecked(true);
     })();
   }, []);
@@ -138,21 +163,30 @@ function useSlides(startSlide: number) {
       const fsiGranted = await canUseFullScreenIntent();
       setFullScreenGranted(fsiGranted);
     } catch {}
+
+    try {
+      const { granted } = await getRecordingPermissionsAsync();
+      setMicGranted(granted);
+    } catch {}
+
+    try {
+      const cam = await ImagePicker.getCameraPermissionsAsync();
+      const lib = await ImagePicker.getMediaLibraryPermissionsAsync();
+      setCameraPhotosGranted(cam.granted && lib.granted);
+    } catch {}
   }, []);
 
   const introSlides: SlideData[] = startSlide === 0 ? [
     {
       id: 'welcome',
-      emoji: '\u{1F9E0}',
-      title: 'Welcome to Don\'t Forget Why',
-      body: 'This isn\'t just another alarm app. Every alarm, timer, and reminder asks you one simple question \u2014 do you actually remember why you set it?',
+      title: 'Welcome to the app that judges you.',
+      body: 'You set alarms, timers, reminders, and take notes. We make sure you remember why. Also there are brain games, because honestly you need the practice.',
       buttonLabel: 'Next',
     },
     {
       id: 'whats-inside',
-      emoji: '\u23F0\u{1F3AE}\u{1F4DD}',
-      title: 'Alarms. Timers. Reminders. Games.',
-      body: 'Set alarms with notes you\'ll forget. Start timers for everyday tasks. Create reminders for things you need to do. Then play brain games to prove your memory isn\'t as bad as we think it is.',
+      title: "Here's what you're working with.",
+      body: "A home screen that keeps you organized. Voice memos. Drawing. Photo backgrounds. 6 themes. 4 home screen widgets. A sarcastic voice that comes with the alarms. No ads. No accounts. No tracking. Just you and your questionable memory.",
       buttonLabel: 'Next',
     },
   ] : [];
@@ -160,11 +194,11 @@ function useSlides(startSlide: number) {
   const permissionSlides: SlideData[] = [
     {
       id: 'notifications',
-      emoji: '\u{1F514}',
-      title: 'Let Us Bug You',
-      body: 'Without notification access, we literally can\'t remind you of anything. That\'s the whole app. Please say yes.',
+      title: 'Let us bug you.',
+      body: "Without notification access, we literally can't remind you of anything. That's the whole point of this app. Please say yes.",
       buttonLabel: notifGranted ? '\u2705 Notifications enabled' : 'Enable Notifications',
       isPermission: true,
+      skipWarning: { title: 'Really?', message: "So you downloaded a reminder app and don't want to be reminded. Bold strategy." },
       permissionCheck: async () => {
         try {
           const s = await notifee.getNotificationSettings();
@@ -179,12 +213,12 @@ function useSlides(startSlide: number) {
     },
     {
       id: 'exact-alarms',
-      emoji: '\u23F1\uFE0F',
-      title: 'Precision Matters',
-      body: 'Android needs your permission to fire alarms at the exact time you set. Without this, your 7:00 AM alarm might show up at 7:15. Helpful.',
+      title: "Your 7 AM alarm shouldn't show up at 7:15.",
+      body: "Android needs your permission to fire alarms at the exact time you set. Without this, your alarms are more of a suggestion.",
       buttonLabel: exactAlarmGranted ? '\u2705 Exact alarms enabled' : 'Allow Exact Alarms',
       isPermission: true,
-      note: 'Toggle the switch for Don\'t Forget Why, then come back here.',
+      note: "Toggle the switch for Don't Forget Why, then come back here.",
+      skipWarning: { title: 'Approximate alarms it is.', message: "Your 7 AM alarm might show up around 7-ish. Maybe. We'll see how Android feels." },
       permissionCheck: async () => {
         if (Platform.OS === 'android' && Platform.Version >= 31) {
           try {
@@ -213,12 +247,12 @@ function useSlides(startSlide: number) {
     },
     {
       id: 'battery',
-      emoji: '\u{1F50B}',
-      title: 'Don\'t Let Android Kill Us',
-      body: 'This is the most important step. Android puts apps to sleep to save battery. If this app gets put to sleep, your alarms WILL NOT fire when the app is closed. This isn\'t optional if you want reliable alarms.',
+      title: 'Android will kill us if you let it.',
+      body: "This is the most important step. Android puts apps to sleep to save battery. If we get put to sleep, your alarms WILL NOT fire when the app is closed. This one actually matters.",
       buttonLabel: batteryOptDisabled ? '\u2705 Battery optimization disabled' : 'Disable Battery Optimization',
       isPermission: true,
-      note: 'Find Don\'t Forget Why and select \'Don\'t optimize\' or \'Unrestricted\'.',
+      note: "Find Don't Forget Why and select 'Don't optimize' or 'Unrestricted'.",
+      skipWarning: { title: 'This one actually matters.', message: "Without this, your alarms won't go off when the app is closed or your phone is idle. This is the #1 reason alarms fail on Android. Are you really, truly sure?" },
       permissionRequest: async () => {
         try {
           await notifee.openBatteryOptimizationSettings();
@@ -235,45 +269,20 @@ function useSlides(startSlide: number) {
     },
   ];
 
-  // Samsung DND slide — show on Samsung or all devices with a note
-  const samsungSlide: SlideData = {
-    id: 'samsung-dnd',
-    emoji: '\u{1F319}',
-    title: isSamsung ? 'One More Samsung Thing' : 'Do Not Disturb Setup',
-    body: 'Samsung blocks alarm apps during Do Not Disturb by default. Follow these steps so your alarms still work in silent mode:',
-    buttonLabel: 'Open Phone Settings',
-    isPermission: true,
-    instructions: [
-      'Open your phone\'s Settings app (the gear icon)',
-      'Tap Notifications',
-      'Tap Do Not Disturb',
-      'Scroll down and tap App notifications',
-      'Find Don\'t Forget Why and turn it ON',
-    ],
-    secondaryText: 'Can\'t find it? It\'s okay \u2014 your alarms will still work normally. They just won\'t break through Do Not Disturb mode.',
-    permissionRequest: async () => {
-      try {
-        await Linking.sendIntent('android.settings.ZEN_MODE_SETTINGS');
-      } catch {
-        try { await Linking.openSettings(); } catch {}
-      }
-    },
-  };
-
   const fullScreenSlide: SlideData = {
     id: 'full-screen',
-    emoji: '\u{1F6A8}',
-    title: 'Full Screen Alarms',
-    body: 'Your alarms need permission to light up your screen and appear over the lock screen. Without this, the screen stays black when an alarm goes off.',
+    title: 'Let us wake your screen up too.',
+    body: "Your alarms need permission to light up your screen and appear over the lock screen. Without this, the screen stays black when an alarm fires.",
     buttonLabel: fullScreenGranted ? '\u2705 Full screen enabled' : 'Open Settings',
     isPermission: true,
     instructions: [
       'Go to Settings \u203A Apps',
       'Tap Special app access',
       'Tap Full screen notifications',
-      'Find Don\'t Forget Why and turn it ON',
+      "Find Don't Forget Why and turn it ON",
     ],
     secondaryText: 'This lets your alarm wake your screen and show over the lock screen.',
+    skipWarning: { title: 'Enjoy the darkness.', message: "Without this, your alarm fires and your screen just stays black. You'll hear it. You just can't dismiss it. Fun." },
     permissionCheck: async () => {
       try {
         return await canUseFullScreenIntent();
@@ -293,14 +302,39 @@ function useSlides(startSlide: number) {
     },
   };
 
+  // Samsung DND slide — show on Samsung devices
+  const samsungSlide: SlideData = {
+    id: 'samsung-dnd',
+    title: 'Samsung has trust issues.',
+    body: 'Samsung blocks alarm apps during Do Not Disturb by default. Follow these steps so your alarms still work in silent mode:',
+    buttonLabel: 'Open Phone Settings',
+    isPermission: true,
+    instructions: [
+      "Open your phone's Settings app (the gear icon)",
+      'Tap Notifications',
+      'Tap Do Not Disturb',
+      'Scroll down and tap App notifications',
+      "Find Don't Forget Why and turn it ON",
+    ],
+    secondaryText: "Can't find it? It's okay \u2014 your alarms will still work normally. They just won't break through Do Not Disturb mode.",
+    skipWarning: { title: 'Your phone, your rules.', message: "Just don't blame us when Do Not Disturb also means Do Not Alarm." },
+    permissionRequest: async () => {
+      try {
+        await Linking.sendIntent('android.settings.ZEN_MODE_SETTINGS');
+      } catch {
+        try { await Linking.openSettings(); } catch {}
+      }
+    },
+  };
+
   const overlaySlide: SlideData = {
     id: 'overlay',
-    emoji: '\u{1F4F1}',
-    title: 'Wake Up Call',
-    body: 'To show alarms on your lock screen, Android needs permission to display over other apps. Otherwise you\'ll just hear the alarm with no way to dismiss it.',
+    title: 'One more. We promise.',
+    body: "To show alarms on your lock screen, Android needs permission to display over other apps. Otherwise you'll hear ringing with no way to make it stop.",
     buttonLabel: overlayGranted ? '\u2705 Display over apps enabled' : 'Allow Display Over Apps',
     isPermission: true,
-    note: 'Toggle on for Don\'t Forget Why.',
+    note: "Toggle on for Don't Forget Why.",
+    skipWarning: { title: 'Sounds relaxing.', message: "Alarms can't show up over your lock screen. You'll hear ringing with no way to make it stop. Enjoy." },
     permissionRequest: async () => {
       try {
         const pkg = 'package:' + (await NativeModules.AppInfo?.getPackageName?.() || 'com.dontforgetwhy');
@@ -324,12 +358,53 @@ function useSlides(startSlide: number) {
     },
   };
 
+  const microphoneSlide: SlideData = {
+    id: 'microphone',
+    title: 'We need to hear you.',
+    body: "Voice memos let you record thoughts on the fly. The mic widget lets you start recording from your home screen. Without mic access, those features just sit there looking sad.",
+    buttonLabel: micGranted ? '\u2705 Microphone enabled' : 'Allow Microphone',
+    isPermission: true,
+    skipWarning: { title: 'The mic will survive.', message: 'No mic access means no voice memos. The Record button will just sit there doing nothing.' },
+    permissionCheck: async () => {
+      try {
+        const { granted } = await getRecordingPermissionsAsync();
+        return granted;
+      } catch { return false; }
+    },
+    permissionRequest: async () => {
+      try {
+        await requestRecordingPermissionsAsync();
+      } catch {}
+    },
+  };
+
+  const cameraPhotosSlide: SlideData = {
+    id: 'camera-photos',
+    title: 'And see your stuff.',
+    body: "Photo backgrounds, note image attachments, and camera capture all need access to your camera and photo library. Without this, the app works fine \u2014 it just looks the same as everyone else's.",
+    buttonLabel: cameraPhotosGranted ? '\u2705 Camera & photos enabled' : 'Allow Camera & Photos',
+    isPermission: true,
+    skipWarning: { title: 'Plain it is.', message: 'No camera or photo access means no custom backgrounds, no note images, no photo attachments. Functional, but boring.' },
+    permissionCheck: async () => {
+      try {
+        const cam = await ImagePicker.getCameraPermissionsAsync();
+        const lib = await ImagePicker.getMediaLibraryPermissionsAsync();
+        return cam.granted && lib.granted;
+      } catch { return false; }
+    },
+    permissionRequest: async () => {
+      try {
+        await ImagePicker.requestCameraPermissionsAsync();
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      } catch {}
+    },
+  };
+
   const finalSlide: SlideData = {
     id: 'done',
-    emoji: '\u{1F389}',
-    title: 'You\'re All Set',
-    body: 'Now go set an alarm. We dare you to remember why tomorrow.',
-    buttonLabel: 'Let\'s Go',
+    title: 'Now go forget something.',
+    body: "We'll be here when you do.",
+    buttonLabel: "Let's Go",
     isFinal: true,
   };
 
@@ -339,6 +414,8 @@ function useSlides(startSlide: number) {
     ...(Platform.OS === 'android' ? [fullScreenSlide] : []),
     ...(isSamsung ? [samsungSlide] : []),
     overlaySlide,
+    microphoneSlide,
+    cameraPhotosSlide,
     finalSlide,
   ];
 
@@ -351,6 +428,8 @@ function useSlides(startSlide: number) {
     batteryOptDisabled,
     fullScreenGranted,
     overlayGranted,
+    micGranted,
+    cameraPhotosGranted,
   };
 }
 
@@ -373,7 +452,46 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     batteryOptDisabled,
     fullScreenGranted,
     overlayGranted,
+    micGranted,
+    cameraPhotosGranted,
   } = useSlides(startSlide);
+
+  const THEME_ORDER: ThemeName[] = ['dark', 'light', 'highContrast', 'vivid', 'sunset', 'ruby'];
+  const [previewTheme, setPreviewTheme] = useState<ThemeName>('dark');
+  const shouldCycleThemes = startSlide === 0;
+  const displayColors = shouldCycleThemes ? themes[previewTheme] : colors;
+
+  const renderIcon = (slideId: string) => {
+    const iconColor = displayColors.accent;
+    const size = 48;
+    switch (slideId) {
+      case 'welcome': return <PuzzleIcon color={iconColor} size={size} />;
+      case 'whats-inside': return <HomeIcon color={iconColor} size={size} />;
+      case 'notifications': return <BellIcon color={iconColor} size={size} />;
+      case 'exact-alarms': return <AlarmIcon color={iconColor} size={size} />;
+      case 'battery': return <WarningIcon color={iconColor} size={size} />;
+      case 'full-screen': return <FireIcon color={iconColor} size={size} />;
+      case 'samsung-dnd': return <GearIcon color={iconColor} size={size} />;
+      case 'overlay': return <AlarmIcon color={iconColor} size={size} />;
+      case 'microphone': return <MicIcon color={iconColor} size={size} />;
+      case 'camera-photos': return <CameraIcon color={iconColor} size={size} />;
+      case 'done': return <HomeIcon color={iconColor} size={size} />;
+      default: return null;
+    }
+  };
+
+  useEffect(() => {
+    setSkippedPermissions((prev) => prev.filter((id) => {
+      if (id === 'notifications' && notifGranted) return false;
+      if (id === 'exact-alarms' && exactAlarmGranted) return false;
+      if (id === 'battery' && batteryOptDisabled) return false;
+      if (id === 'full-screen' && fullScreenGranted) return false;
+      if (id === 'overlay' && overlayGranted) return false;
+      if (id === 'microphone' && micGranted) return false;
+      if (id === 'camera-photos' && cameraPhotosGranted) return false;
+      return true;
+    }));
+  }, [notifGranted, exactAlarmGranted, batteryOptDisabled, fullScreenGranted, overlayGranted, micGranted, cameraPhotosGranted]);
 
   // Listen for app returning from settings
   useEffect(() => {
@@ -410,8 +528,8 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       } catch {}
     }
 
-    // For notification permission — uses system dialog, doesn't leave app
-    if (slide.id === 'notifications') {
+    // For permissions that use system dialog (don't leave app)
+    if (slide.id === 'notifications' || slide.id === 'microphone' || slide.id === 'camera-photos') {
       if (slide.permissionRequest) {
         await slide.permissionRequest();
       }
@@ -464,21 +582,19 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       return;
     }
 
-    // Battery optimization skip gets a confirmation alert
-    if (currentSlide.id === 'battery') {
+    if (currentSlide.skipWarning) {
       Alert.alert(
-        '\u26A0\uFE0F Are You Sure?',
-        'Without this, your alarms may not go off when the app is closed or your phone is idle. This is the #1 reason alarms fail on Android.',
+        currentSlide.skipWarning.title,
+        currentSlide.skipWarning.message,
         [
-          {
-            text: 'Set It Up',
-            style: 'cancel',
-          },
+          { text: 'Set It Up', style: 'cancel' },
           {
             text: 'Skip Anyway',
-            style: 'destructive',
+            style: currentSlide.id === 'battery' ? 'destructive' : 'default',
             onPress: () => {
-              setSkippedPermissions((prev) => [...prev, currentSlide.id]);
+              setSkippedPermissions((prev) =>
+                prev.includes(currentSlide.id) ? prev : [...prev, currentSlide.id]
+              );
               goToNext();
             },
           },
@@ -487,7 +603,9 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       return;
     }
 
-    setSkippedPermissions((prev) => [...prev, currentSlide.id]);
+    setSkippedPermissions((prev) =>
+      prev.includes(currentSlide.id) ? prev : [...prev, currentSlide.id]
+    );
     goToNext();
   }, [currentIndex, goToNext, slides]);
 
@@ -498,8 +616,10 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     if (slide.id === 'battery' && batteryOptDisabled) return '\u2705 Battery optimization disabled';
     if (slide.id === 'full-screen' && fullScreenGranted) return '\u2705 Full screen enabled';
     if (slide.id === 'overlay' && overlayGranted) return '\u2705 Display over apps enabled';
+    if (slide.id === 'microphone' && micGranted) return '\u2705 Microphone enabled';
+    if (slide.id === 'camera-photos' && cameraPhotosGranted) return '\u2705 Camera & photos enabled';
     return slide.buttonLabel;
-  }, [notifGranted, exactAlarmGranted, batteryOptDisabled, fullScreenGranted, overlayGranted]);
+  }, [notifGranted, exactAlarmGranted, batteryOptDisabled, fullScreenGranted, overlayGranted, micGranted, cameraPhotosGranted]);
 
   const isGranted = useCallback((slide: SlideData) => {
     if (slide.id === 'notifications') return notifGranted;
@@ -507,16 +627,21 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     if (slide.id === 'battery') return batteryOptDisabled;
     if (slide.id === 'full-screen') return fullScreenGranted;
     if (slide.id === 'overlay') return overlayGranted;
+    if (slide.id === 'microphone') return micGranted;
+    if (slide.id === 'camera-photos') return cameraPhotosGranted;
     return false;
-  }, [notifGranted, exactAlarmGranted, batteryOptDisabled, fullScreenGranted, overlayGranted]);
-
-  const batteryNotDone = !batteryOptDisabled;
-  const otherSkippedCount = skippedPermissions.filter((p) => p !== 'battery').length;
+  }, [notifGranted, exactAlarmGranted, batteryOptDisabled, fullScreenGranted, overlayGranted, micGranted, cameraPhotosGranted]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: displayColors.background,
+    },
+    watermark: {
+      ...StyleSheet.absoluteFillObject,
+      width: '100%',
+      height: '100%',
+      opacity: displayColors.mode === 'dark' ? 0.15 : 0.06,
     },
     slide: {
       width: SCREEN_WIDTH,
@@ -526,27 +651,30 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       paddingHorizontal: 32,
       paddingBottom: 100,
     },
-    emoji: {
-      fontSize: EMOJI_SIZE,
+    iconContainer: {
       marginBottom: 24,
+      width: 48,
+      height: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     title: {
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: displayColors.textPrimary,
       textAlign: 'center',
       marginBottom: 16,
     },
     body: {
       fontSize: 16,
-      color: colors.textSecondary,
+      color: displayColors.textSecondary,
       textAlign: 'center',
       lineHeight: 24,
       maxWidth: CONTENT_MAX_WIDTH,
       marginBottom: 32,
     },
     button: {
-      backgroundColor: colors.accent,
+      backgroundColor: displayColors.accent,
       borderRadius: 14,
       paddingVertical: 16,
       paddingHorizontal: 32,
@@ -555,18 +683,18 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       alignItems: 'center',
     },
     buttonGranted: {
-      backgroundColor: colors.card,
+      backgroundColor: displayColors.card,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: displayColors.border,
     },
     buttonText: {
       fontSize: 16,
       fontWeight: '700',
-      color: colors.textPrimary,
+      color: displayColors.textPrimary,
     },
     note: {
       fontSize: 13,
-      color: colors.textTertiary,
+      color: displayColors.textTertiary,
       textAlign: 'center',
       marginTop: 12,
       maxWidth: CONTENT_MAX_WIDTH - 20,
@@ -579,13 +707,13 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     },
     instructionStep: {
       fontSize: 15,
-      color: colors.textSecondary,
+      color: displayColors.textSecondary,
       lineHeight: 22,
       marginBottom: 10,
     },
     secondaryText: {
       fontSize: 13,
-      color: colors.textTertiary,
+      color: displayColors.textTertiary,
       textAlign: 'center',
       marginTop: 16,
       maxWidth: CONTENT_MAX_WIDTH - 20,
@@ -598,7 +726,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     },
     skipText: {
       fontSize: 14,
-      color: colors.textTertiary,
+      color: displayColors.textTertiary,
       textAlign: 'center',
     },
     dotContainer: {
@@ -615,15 +743,15 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       marginHorizontal: 4,
     },
     dotActive: {
-      backgroundColor: colors.accent,
+      backgroundColor: displayColors.accent,
       width: 24,
     },
     dotInactive: {
-      backgroundColor: colors.border,
+      backgroundColor: displayColors.border,
     },
     skippedNote: {
       fontSize: 13,
-      color: colors.orange,
+      color: displayColors.orange,
       textAlign: 'center',
       maxWidth: CONTENT_MAX_WIDTH - 20,
       marginBottom: 16,
@@ -631,14 +759,14 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     },
     batteryWarning: {
       fontSize: 14,
-      color: colors.red,
+      color: displayColors.red,
       textAlign: 'center',
       maxWidth: CONTENT_MAX_WIDTH,
       marginBottom: 16,
       lineHeight: 20,
       fontWeight: '600',
     },
-  }), [colors, insets.bottom]);
+  }), [displayColors, insets.bottom]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: any[] }) => {
     if (viewableItems.length > 0) {
@@ -647,6 +775,9 @@ export default function OnboardingScreen({ navigation, route }: Props) {
         if (newIndex !== prev) hapticLight();
         return newIndex;
       });
+      if (startSlide === 0) {
+        setPreviewTheme(THEME_ORDER[newIndex % THEME_ORDER.length]);
+      }
     }
   }).current;
 
@@ -655,12 +786,33 @@ export default function OnboardingScreen({ navigation, route }: Props) {
   const renderSlide = useCallback(({ item: slide }: { item: SlideData }) => {
     const granted = slide.isPermission && isGranted(slide);
     const label = getButtonLabel(slide);
+    const icon = renderIcon(slide.id);
+
+    let displayTitle = slide.title;
+    let displayBody = slide.body;
+
+    if (slide.isFinal) {
+      const skipCount = skippedPermissions.length;
+      if (skipCount === 0) {
+        displayTitle = 'Now go forget something.';
+        displayBody = "We'll be here when you do.";
+      } else if (skipCount <= 2) {
+        displayTitle = 'Almost ready.';
+        displayBody = "We'll work with what we've got. Settings has a Setup Guide if you change your mind.";
+      } else {
+        displayTitle = 'You skipped half the setup.';
+        displayBody = 'Brave. Settings has a Setup Guide for when reality hits.';
+      }
+    }
+
+    const batteryNotDone = !batteryOptDisabled;
+    const otherSkippedCount = skippedPermissions.filter((p) => p !== 'battery').length;
 
     return (
       <View style={styles.slide}>
-        <Text style={styles.emoji}>{slide.emoji}</Text>
-        <Text style={styles.title}>{slide.title}</Text>
-        <Text style={styles.body}>{slide.body}</Text>
+        {icon && <View style={styles.iconContainer}>{icon}</View>}
+        <Text style={styles.title}>{displayTitle}</Text>
+        <Text style={styles.body}>{displayBody}</Text>
 
         {slide.instructions && (
           <View style={styles.instructions}>
@@ -672,15 +824,15 @@ export default function OnboardingScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {slide.isFinal && batteryNotDone && (
+        {slide.isFinal && batteryNotDone && skippedPermissions.includes('battery') && (
           <Text style={styles.batteryWarning}>
-            {'\u26A0\uFE0F'} Battery optimization was not disabled. Your alarms may not fire reliably. You can fix this anytime in Settings {'>'} Setup Guide.
+            Battery optimization was not disabled. Your alarms may not fire reliably. You can fix this anytime in Settings {'>'} Setup Guide.
           </Text>
         )}
 
         {slide.isFinal && otherSkippedCount > 0 && (
           <Text style={styles.skippedNote}>
-            {batteryNotDone ? 'Other permissions were also skipped.' : 'Some permissions were skipped.'} You can set them up later in Settings.
+            {skippedPermissions.includes('battery') ? 'Other permissions were also skipped.' : 'Some permissions were skipped.'} You can set them up later in Settings.
           </Text>
         )}
 
@@ -707,7 +859,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
         )}
       </View>
     );
-  }, [styles, handleButtonPress, handleSkip, getButtonLabel, isGranted, batteryNotDone, otherSkippedCount]);
+  }, [styles, handleButtonPress, handleSkip, getButtonLabel, isGranted, batteryOptDisabled, skippedPermissions]);
 
   if (!permissionsChecked) {
     return <View style={styles.container} />;
@@ -715,6 +867,11 @@ export default function OnboardingScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.container}>
+      <Image
+        source={require('../../assets/fullscreenicon.png')}
+        style={styles.watermark}
+        resizeMode="cover"
+      />
       <FlatList
         ref={flatListRef}
         data={slides}

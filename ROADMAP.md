@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 13 (April 3, 2026)
+### Source of Truth · Updated: Session 14 (April 3, 2026)
 
 ---
 
@@ -8,12 +8,12 @@
 | | |
 |---|---|
 | **Current Version** | v1.10.1 (versionCode 27) — visual overhaul, 6 themes, detail screen redesign |
-| **Branch** | `dev` (synced with main) |
-| **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | Session 13 complete: light mode visual overhaul, 6 themes, alarm delete fix, VoiceMemoDetail redesign |
+| **Branch** | `dev` |
+| **Production Status** | ✅ v1.10.1 live on Google Play |
+| **Current Focus** | Session 14 complete: onboarding overhaul, store screenshots refreshed |
 | **Blocked By** | Nothing |
-| **Next Action** | Audit → Ship v1.10.1 → P4 |
-| **EAS Credits** | ~13 remaining (reset April 12) |
+| **Next Action** | P4 Chess/Checkers design + implementation |
+| **EAS Credits** | ~37 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
 
@@ -355,6 +355,24 @@
 - [x] `npx tsc --noEmit` — 0 errors
 - [x] Increment version + versionCode
 
+### Session 14 Onboarding Overhaul ✅ COMPLETE
+
+- [x] Full OnboardingScreen rewrite — emoji removed, View-based icons from Icons.tsx
+- [x] Intro slides updated: "Welcome to the app that judges you" + full feature description
+- [x] All permission slides rewritten with sarcastic personality copy
+- [x] Sarcastic skip warnings on every permission (Alert with "Set It Up" / "Skip Anyway")
+- [x] Battery skip keeps destructive style; all others default
+- [x] New microphone permission slide (expo-audio, system dialog)
+- [x] New camera & photos permission slide (expo-image-picker, system dialog)
+- [x] Theme cycling: local preview state cycles all 6 themes on swipe (no persistence, no setTheme calls)
+- [x] Watermark background (fullscreenicon.png, mode-aware opacity)
+- [x] Dynamic final slide text based on skip count (0, 1-2, 3+)
+- [x] Skip deduplication + auto-cleanup when permissions granted (P1 audit fix)
+- [x] Done slide icon added (P2 audit fix)
+- [x] Settings → Setup Guide (startSlide: 2) preserved — no cycling, uses real theme
+- [x] Play Store screenshots refreshed (8 new screenshots captured)
+- [x] Focused audit: Codex P1 fixed (skip inflation), P2 fixed (done icon). Gemini clean.
+
 ---
 
 ## STORAGE MIGRATION — AsyncStorage → SQLite ✅ COMPLETE
@@ -578,7 +596,7 @@
 - ~~Button hierarchy~~ — DONE Sessions 10-11 (shared buttonStyles.ts, 4 types × 2 sizes, applied to create screens, trash items, SettingsScreen, NoteEditorModal, DrawingPickerModal)
 - ~~Widget visual updates~~ — DONE Session 11 (section colors propagated to all 4 widgets, MicWidget resized to 1×1 70dp with red record circle)
 - ~~Jest setup~~ — DONE Session 11 (ts-jest, node environment, 35 tests across 3 suites on testing-setup branch, merged to dev)
-- Remaining emoji cleanup (some game screens still use emoji)
+- ~~Remaining emoji cleanup~~ — DONE Session 12 (game screen headers) + Session 14 (onboarding)
 - Pin toggle inside edit/detail screens (alarms, reminders, notes, voice memos)
 
 ### Features
@@ -613,8 +631,8 @@
 
 ### Store / Marketing
 - Play Store listing update for v1.9.0 (home screen, widget rebranding, voice memo separation)
-- Play Store screenshots refresh (add voice memo screenshot with waveform background)
-- Onboarding screen update (home screen, voice memos not mentioned)
+- ~~Play Store screenshots refresh~~ — DONE Session 14 (8 screenshots: home dark/light, alarm fire, alarms+reminders, notes/drawing, widgets, timers, settings/themes)
+- ~~Onboarding screen update~~ — DONE Session 14 (full overhaul: sarcastic copy, View-based icons, mic/camera permissions, theme cycling preview, watermark, skip warnings)
 - Widget preview screenshots for store listing
 - App size audit (63 voice clips + Skia + voice memo recordings)
 
@@ -661,7 +679,7 @@
 - In-app calendar (day/week/month views)
 - Calendar voice memo dots and list items
 - Voice/All/Notes filter tabs in notepad
-- All 4 themes (Dark, Light, High Contrast, Vivid)
+- All 6 themes (Dark, Light, High Contrast, Vivid, Sunset, Ruby)
 - Guess Why, Memory Match, Trivia (offline), Sudoku, Daily Riddle
 - Memory Score tracking
 - Home screen (icon grid, Quick Capture, personality banner, Today section)
@@ -747,3 +765,4 @@ Batch native deps within phases to minimize dev builds.
 | Mar 31, 2026 | v1.8.1 SDK 55 upgrade. Expo 54→55, React Native 0.81→0.83, React 19.1→19.2. `react-native-notification-sounds` removed (unmaintained, jcenter/Gradle 9.0 incompatible), replaced with native `getSystemAlarmSounds` in AlarmChannelModule. `newArchEnabled` and `edgeToEdgeEnabled` removed from app.json (always-on in SDK 55). Android 15 foreground service warning resolved (expo-audio updated upstream). |
 | Apr 1, 2026 | v1.9.0 Home screen release. HomeScreen (icon grid, Quick Capture, personality banner, Today section), TimerScreen standalone, VoiceMemoListScreen standalone, AlarmListScreen 2-tab, HomeButton on all screens, widget rebranding (Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice), MicWidget header/footer, Forget Log moved to Settings, CalendarWidget current month. Audit 47 complete — both Gemini P1s (widget warm-start nav, notification routing Home base) fixed. |
 | Apr 1, 2026 | Session 9 visual overhaul. Theme consolidation (6→4 + section colors + brandTitle, custom picker removed). Card unification (section-colored borders + elevation + light mode tinting). Icon library (29+ View-based icons in Icons.tsx). Light mode overhaul (softer text colors, brighter section colors, tinted card backgrounds, mode-aware capsules/watermarks). Photo overlay unified to dark dim on all screens. Photo-aware alphas on HomeScreen (grid/buttons/today/banner adapt to bgUri). Pin redesign (dot + text capsule). Grid simplified (no borders/shadows/icon-box). AlarmListScreen alarms-only (AlarmsTab absorbed), ReminderScreen standalone. NotepadWidget header redesign + size bump. Note editor dropdown consolidation. DayPickerRow "Everyday" button. 5 bugs fixed: Guess Why nickname, yearly reminder reschedule, calendar widget daily dots, no-date recurring yearly, ExpoKeepAwake. |
+| Apr 3, 2026 | Session 14: Onboarding overhaul — full rewrite with sarcastic copy, View-based icons (no emoji), mic + camera permission slides, theme cycling preview (6 themes cycle on swipe, local state only), watermark background, skip warnings on all permissions, dynamic final slide. Audit: Codex P1 (skip dedup) + P2 (done icon) fixed. Gemini clean. Play Store screenshots refreshed (8 new). |

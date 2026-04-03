@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 13 (April 3, 2026)
+**Last updated:** Session 14 (April 3, 2026)
 
 ---
 
@@ -43,6 +43,11 @@
 - 60-30-10 accent reduction. Accent only on interactive elements.
 - Note color as full background (not tint) — feels like real sticky note.
 - True base font colors (#FF0000 real red, not off-base). "RED red." (Zerenn)
+
+- Onboarding: no emoji anywhere — View-based icons as accent (48px, accent-colored). Personality carried by sarcastic headlines, not decoration.
+- Onboarding theme cycling: local preview state cycles all 6 themes as user swipes. Does NOT call setTheme() — no persistence, no widget refresh, no side effects. Fresh installs default to 'dark' after onboarding. Settings → Setup Guide uses real theme (no cycling).
+- Onboarding skip warnings: every permission gets a sarcastic Alert on skip. Battery keeps destructive style ("This one actually matters"). Mic/camera get softer warnings (feature permissions, not core). Final slide roasts proportionally based on skip count.
+- skippedPermissions: deduplicated on insert + auto-cleaned via useEffect when permission becomes granted. Prevents count inflation if user skips → goes back → grants.
 
 ### Removed Features (With Reasons)
 - **Alarm sound picker:** 6 channels all used `sound: 'default'`. Indistinguishable.
