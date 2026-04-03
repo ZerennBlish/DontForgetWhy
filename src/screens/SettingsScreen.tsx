@@ -14,6 +14,7 @@ import {
   TextInput,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
@@ -35,6 +36,14 @@ import { saveBackground, loadBackground, clearBackground, getOverlayOpacity, set
 import TimePicker from '../components/TimePicker';
 import { getButtonStyles } from '../theme/buttonStyles';
 import type { RootStackParamList } from '../navigation/types';
+import {
+  shareBackup, importBackup, getLastBackupDate,
+  getAutoBackupSettings, setAutoBackupEnabled as saveAutoEnabled,
+  setAutoBackupFolder, setAutoBackupFrequency as saveAutoFrequency,
+  requestBackupFolder, clearAutoBackupSettings,
+  type BackupFrequency,
+} from '../services/backupRestore';
+import * as DocumentPicker from 'expo-document-picker';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
@@ -54,6 +63,12 @@ export default function SettingsScreen({ navigation }: Props) {
   const [pickerMinutes, setPickerMinutes] = useState(0);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
+  const [lastBackup, setLastBackup] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [autoBackupEnabled, setAutoBackupEnabledState] = useState(false);
+  const [autoBackupFolderName, setAutoBackupFolderName] = useState<string | null>(null);
+  const [autoBackupFrequency, setAutoBackupFrequencyState] = useState<BackupFrequency>('weekly');
 
   const btn = getButtonStyles(colors);
   const styles = useMemo(() => StyleSheet.create({
@@ -252,6 +267,14 @@ export default function SettingsScreen({ navigation }: Props) {
     getVoiceEnabled().then(setVoiceRoastsState).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    setLastBackup(getLastBackupDate());
+    const autoSettings = getAutoBackupSettings();
+    setAutoBackupEnabledState(autoSettings.enabled);
+    setAutoBackupFolderName(autoSettings.folderName);
+    setAutoBackupFrequencyState(autoSettings.frequency);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       loadBackground().then(setBgUri);
@@ -396,6 +419,107 @@ export default function SettingsScreen({ navigation }: Props) {
     } catch {}
     await refreshHapticsSetting();
     if (value) hapticLight();
+  };
+
+  const daysSinceBackup = lastBackup
+    ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24))
+    : Infinity;
+  const showNudge = daysSinceBackup >= 30;
+
+  const handleExport = async () => {
+    hapticMedium();
+    setIsExporting(true);
+    try {
+      await shareBackup();
+      setLastBackup(new Date().toISOString());
+      ToastAndroid.show('Memories exported', ToastAndroid.SHORT);
+    } catch (e) {
+      ToastAndroid.show(e instanceof Error ? e.message : 'Export failed', ToastAndroid.SHORT);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImport = async () => {
+    hapticLight();
+    const result = await DocumentPicker.getDocumentAsync({
+      type: '*/*',
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+
+    const file = result.assets[0];
+    if (!file.name.endsWith('.dfw')) {
+      Alert.alert(
+        'Not a backup file',
+        "That's not a backup file. Please select a .dfw file exported from Don't Forget Why.",
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Replace everything?',
+      'This will replace all your current data \u2014 alarms, reminders, notes, voice memos, photos, everything. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          onPress: () => {
+            Alert.alert(
+              'Are you absolutely sure?',
+              'Your current memories will be permanently deleted and replaced with the backup.',
+              [
+                { text: 'Go Back', style: 'cancel' },
+                {
+                  text: 'Replace Everything',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setIsImporting(true);
+                    try {
+                      await importBackup(file.uri);
+                      ToastAndroid.show('Memories restored', ToastAndroid.SHORT);
+                      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+                    } catch (e) {
+                      Alert.alert('Import Failed', e instanceof Error ? e.message : 'Something went wrong during import.');
+                      setIsImporting(false);
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  };
+
+  const handleAutoBackupToggle = async (value: boolean) => {
+    hapticLight();
+    if (value) {
+      const folder = await requestBackupFolder();
+      if (!folder) return;
+      setAutoBackupFolder(folder.uri, folder.name);
+      saveAutoEnabled(true);
+      setAutoBackupEnabledState(true);
+      setAutoBackupFolderName(folder.name);
+    } else {
+      clearAutoBackupSettings();
+      setAutoBackupEnabledState(false);
+    }
+  };
+
+  const handleChangeFolder = async () => {
+    hapticLight();
+    const folder = await requestBackupFolder();
+    if (!folder) return;
+    setAutoBackupFolder(folder.uri, folder.name);
+    setAutoBackupFolderName(folder.name);
+  };
+
+  const handleFrequencyChange = (freq: BackupFrequency) => {
+    hapticLight();
+    saveAutoFrequency(freq);
+    setAutoBackupFrequencyState(freq);
   };
 
   return (
@@ -715,6 +839,90 @@ export default function SettingsScreen({ navigation }: Props) {
         </Text>
       </View>
 
+      {/* Your Memories — Backup & Restore */}
+      <Text style={{ fontSize: 13, color: colors.textTertiary, fontStyle: 'italic', lineHeight: 18, marginHorizontal: 20, marginTop: 24, marginBottom: 16 }}>
+        Everything stays on your phone. Exports go wherever you send them {'\u2014'} not to us. We don't have servers. We don't want your data.
+      </Text>
+
+      <View style={[styles.card, { marginTop: 0 }]}>
+        <Text style={styles.sectionLabel}>Your Memories</Text>
+
+        <Text style={{ fontSize: 14, color: lastBackup ? colors.textSecondary : colors.textTertiary, marginBottom: showNudge ? 4 : 16 }}>
+          {lastBackup
+            ? `Last export: ${new Date(lastBackup).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`
+            : 'Never exported'}
+        </Text>
+
+        {showNudge && (
+          <Text style={{ fontSize: 13, color: colors.orange, fontStyle: 'italic', marginBottom: 16 }}>
+            It's been a while. Your memories aren't backed up.
+          </Text>
+        )}
+
+        <TouchableOpacity
+          style={[btn.primary, { opacity: isExporting || isImporting ? 0.6 : 1 }]}
+          onPress={handleExport}
+          disabled={isExporting || isImporting}
+          activeOpacity={0.7}
+        >
+          <Text style={btn.primaryText}>
+            {isExporting ? 'Exporting...' : 'Export Memories'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[btn.secondary, { marginTop: 10, opacity: isExporting || isImporting ? 0.6 : 1 }]}
+          onPress={handleImport}
+          disabled={isExporting || isImporting}
+          activeOpacity={0.7}
+        >
+          <Text style={btn.secondaryText}>
+            {isImporting ? 'Importing...' : 'Import Memories'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Auto-Export */}
+        <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 16 }} />
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Auto-Export</Text>
+          <Switch
+            value={autoBackupEnabled}
+            onValueChange={handleAutoBackupToggle}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={autoBackupEnabled ? colors.textPrimary : colors.textTertiary}
+          />
+        </View>
+
+        {autoBackupEnabled && autoBackupFolderName && (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 }}>
+              <Text style={{ fontSize: 13, color: colors.textTertiary, flex: 1 }} numberOfLines={1}>
+                Saving to {autoBackupFolderName}
+              </Text>
+              <TouchableOpacity onPress={handleChangeFolder} activeOpacity={0.7}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accent }}>Change folder</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: 'row', backgroundColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', borderRadius: 12, padding: 2, marginTop: 12 }}>
+              {(['daily', 'weekly', 'monthly'] as BackupFrequency[]).map((freq) => (
+                <TouchableOpacity
+                  key={freq}
+                  style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: autoBackupFrequency === freq ? colors.accent : 'transparent' }}
+                  onPress={() => handleFrequencyChange(freq)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: autoBackupFrequency === freq ? colors.textPrimary : colors.textTertiary }}>
+                    {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+
       {/* Silence duration picker modal */}
       <Modal transparent visible={silencePickerVisible} animationType="slide" onRequestClose={handleSilencePickerCancel}>
         <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
@@ -797,6 +1005,14 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
       </Modal>
     </ScrollView>
+    {isImporting && (
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 999 }}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginTop: 16 }}>
+          Importing memories...
+        </Text>
+      </View>
+    )}
     </View>
     </ImageBackground>
   );

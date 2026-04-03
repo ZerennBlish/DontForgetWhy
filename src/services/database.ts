@@ -16,6 +16,31 @@ export function getDb(): SQLite.SQLiteDatabase {
   return _db;
 }
 
+/**
+ * Close the database connection. Required before replacing the DB file
+ * during backup restore. After calling this, the next getDb() call will
+ * reopen and reinitialize the connection.
+ */
+export function closeDb(): void {
+  if (_db) {
+    try {
+      _db.closeSync();
+    } catch (e) {
+      console.warn('[DB] Error closing database:', e);
+    }
+    _db = null;
+  }
+}
+
+/**
+ * Force reopen the database. Use after replacing the DB file during restore.
+ * Returns the new database instance.
+ */
+export function reopenDb(): SQLite.SQLiteDatabase {
+  closeDb();
+  return getDb();
+}
+
 // ---------------------------------------------------------------------------
 // Schema v1
 // ---------------------------------------------------------------------------

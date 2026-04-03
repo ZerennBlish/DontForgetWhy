@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ToastAndroid,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -23,6 +24,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { hapticLight } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
+import { shouldAutoBackup, autoExportBackup } from '../services/backupRestore';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import {
@@ -210,6 +212,21 @@ export default function HomeScreen({ navigation }: Props) {
       return () => { cancelled = true; };
     }, []),
   );
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (shouldAutoBackup()) {
+          const success = await autoExportBackup();
+          if (success) {
+            ToastAndroid.show('Memories backed up', ToastAndroid.SHORT);
+          }
+        }
+      } catch (e) {
+        console.warn('[autoBackup] Check failed:', e);
+      }
+    })();
+  }, []);
 
   const sections: Section[] = useMemo(() => [
     { key: 'alarms', label: 'Alarms', color: colors.sectionAlarm, getSubtitle: (c: Counts) => `${c.alarms} set` },
