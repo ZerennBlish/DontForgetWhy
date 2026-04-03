@@ -623,7 +623,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             <View style={styles.headerHome}>
               <HomeButton />
             </View>
-            <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
+            <Text style={styles.title}>Memory Match</Text>
           </View>
           <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
             <Text style={[styles.selectSubtitle, { paddingHorizontal: 20 }]}>Find all the matching pairs!</Text>
@@ -676,7 +676,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             <View style={styles.winHeaderHome}>
               <HomeButton />
             </View>
-            <Text style={styles.title}>{'\u{1F9E9}'} Memory Match</Text>
+            <Text style={styles.title}>Memory Match</Text>
           </View>
           <ScrollView
             style={styles.container}

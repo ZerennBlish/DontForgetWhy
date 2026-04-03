@@ -792,7 +792,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         </View>
         {emojiPickerOpen && (
           <View style={styles.quickEmojiRow}>
-            {['\u{1F305}', '\u{23F0}', '\u{1F4BC}', '\u{1F392}', '\u{1F48A}', '\u{1F3CB}\u{FE0F}', '\u{1F4C5}', '\u{1F43E}'].map((emoji) => (
+            {['\u{1F48A}', '\u{1F3E5}', '\u{1F3CB}\u{FE0F}', '\u{1F43E}', '\u{1F4BC}', '\u{1F392}', '\u{2615}', '\u{1F373}', '\u{1F697}', '\u{1F4C5}', '\u{1F6CF}\u{FE0F}', '\u{1F9F9}'].map((emoji) => (
               <TouchableOpacity
                 key={emoji}
                 onPress={() => { hapticLight(); form.setSelectedIcon(form.selectedIcon === emoji ? null : emoji); setEmojiPickerOpen(false); }}

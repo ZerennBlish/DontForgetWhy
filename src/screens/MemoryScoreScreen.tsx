@@ -213,7 +213,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
       <View style={styles.headerHome}>
         <HomeButton />
       </View>
-      <Text style={styles.title}>{'\u{1F3C6}'} Memory Score</Text>
+      <Text style={styles.title}>Memory Score</Text>
     </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 

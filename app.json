@@ -20,7 +20,7 @@
         "backgroundColor": "#121220"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 25,
+      "versionCode": 26,
       "package": "com.zerennblish.DontForgetWhy",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
