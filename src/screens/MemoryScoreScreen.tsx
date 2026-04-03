@@ -314,13 +314,6 @@ export default function MemoryScoreScreen({ navigation }: Props) {
           <Text style={styles.statValue}>{gwTotal}</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.sectionBtn}
-          onPress={() => { hapticLight(); navigation.navigate('ForgetLog'); }}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.sectionBtnText}>{'\u{1F4DC}'} What Did I Forget?</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Section: Daily Riddle */}

@@ -175,7 +175,6 @@ export const ALL_STATS_KEYS = [
   'sudokuBestScores',
   'sudokuCurrentGame',
   'dailyRiddleStats',
-  'forgetLog',
   'triviaStats',
   'triviaSeenQuestions',
 ];

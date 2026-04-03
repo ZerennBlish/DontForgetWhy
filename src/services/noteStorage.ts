@@ -22,6 +22,7 @@ interface NoteRow {
   fontColor: string | null;
   pinned: number;
   images: string | null;
+  voiceMemos: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -36,6 +37,7 @@ function rowToNote(row: NoteRow): Note {
     fontColor: row.fontColor,
     pinned: !!row.pinned,
     images: row.images ? JSON.parse(row.images) : undefined,
+    voiceMemos: row.voiceMemos ? JSON.parse(row.voiceMemos) : undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
@@ -63,10 +65,11 @@ export async function getAllNotes(includeDeleted = false): Promise<Note[]> {
 export async function addNote(note: Note): Promise<Note[]> {
   const db = getDb();
   db.runSync(
-    `INSERT INTO notes (id, text, color, icon, fontColor, pinned, images, createdAt, updatedAt, deletedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO notes (id, text, color, icon, fontColor, pinned, images, voiceMemos, createdAt, updatedAt, deletedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [note.id, note.text, note.color, note.icon || '', note.fontColor ?? null,
      note.pinned ? 1 : 0, note.images ? JSON.stringify(note.images) : null,
+     note.voiceMemos ? JSON.stringify(note.voiceMemos) : null,
      note.createdAt, note.updatedAt || note.createdAt, note.deletedAt ?? null],
   );
   return getNotes();
@@ -75,10 +78,11 @@ export async function addNote(note: Note): Promise<Note[]> {
 export async function updateNote(updated: Note): Promise<Note[]> {
   const db = getDb();
   db.runSync(
-    `UPDATE notes SET text=?, color=?, icon=?, fontColor=?, pinned=?, images=?, updatedAt=?, deletedAt=?
+    `UPDATE notes SET text=?, color=?, icon=?, fontColor=?, pinned=?, images=?, voiceMemos=?, updatedAt=?, deletedAt=?
      WHERE id=?`,
     [updated.text, updated.color, updated.icon || '', updated.fontColor ?? null,
      updated.pinned ? 1 : 0, updated.images ? JSON.stringify(updated.images) : null,
+     updated.voiceMemos ? JSON.stringify(updated.voiceMemos) : null,
      updated.updatedAt, updated.deletedAt ?? null, updated.id],
   );
   return getNotes();

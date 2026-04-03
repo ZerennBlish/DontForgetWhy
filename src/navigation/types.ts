@@ -28,7 +28,6 @@ export type RootStackParamList = {
   Games: undefined;
   Sudoku: undefined;
   DailyRiddle: undefined;
-  ForgetLog: undefined;
   About: undefined;
   Trivia: undefined;
   Notepad: { noteId?: string; newNote?: boolean } | undefined;

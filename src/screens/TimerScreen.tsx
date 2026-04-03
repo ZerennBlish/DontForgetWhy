@@ -232,42 +232,20 @@ export default function TimerScreen({ navigation }: Props) {
       color: colors.textTertiary,
       marginTop: 2,
     },
-    pinIndicator: {
+    cardPinOverlay: {
       position: 'absolute',
-      top: 3,
-      right: 5,
-      fontSize: 10,
-      color: colors.accent,
-    },
-    cardEditBtn: {
-      position: 'absolute',
-      top: 4,
-      left: 4,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: colors.background + '99',
-      alignItems: 'center',
-      justifyContent: 'center',
+      top: 5,
+      left: 3,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 10,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30,30,40,0.7)' : 'rgba(0,0,0,0.12)',
       zIndex: 1,
     },
-    cardEditBtnText: {
-      fontSize: 10,
-    },
-    cardPinBtn: {
-      position: 'absolute',
-      top: 4,
-      right: 4,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: colors.background + '99',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1,
-    },
-    cardPinBtnText: {
-      fontSize: 10,
+    cardPinOverlayText: {
+      fontSize: 8,
+      fontWeight: '600',
+      color: colors.textTertiary,
     },
     hint: {
       fontSize: 11,
@@ -301,17 +279,6 @@ export default function TimerScreen({ navigation }: Props) {
       fontWeight: '700',
       color: colors.textPrimary,
       textAlign: 'center',
-    },
-    modalPinBtn: {
-      width: 34,
-      height: 34,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 17,
-      backgroundColor: colors.background,
-    },
-    modalPinText: {
-      fontSize: 16,
     },
     soundModeIconBtn: {
       width: 34,
@@ -931,22 +898,35 @@ export default function TimerScreen({ navigation }: Props) {
     return handleSaveCustom();
   };
 
-  const renderPresetCard = (preset: TimerPreset, openModal?: boolean) => (
-    <TouchableOpacity
-      key={preset.id}
-      style={styles.presetCard}
-      onPress={() => openModal ? handleLongPress(preset) : handleStartTimer(preset)}
-      activeOpacity={0.7}
-    >
-      <Text style={styles.presetIcon}>{preset.icon}</Text>
-      <Text style={styles.presetLabel}>{preset.label}</Text>
-      <Text style={styles.presetDuration}>
-        {preset.id === 'custom' ? 'Custom' : openModal ? 'Set' : formatDuration(preset.customSeconds || preset.seconds)}
-      </Text>
-    </TouchableOpacity>
-  );
+  const renderPresetCard = (preset: TimerPreset, openModal?: boolean) => {
+    const pinned = isPinned(preset.id, pinnedIds);
+    return (
+      <TouchableOpacity
+        key={preset.id}
+        style={styles.presetCard}
+        onPress={() => openModal ? handleLongPress(preset) : handleStartTimer(preset)}
+        onLongPress={() => { hapticLight(); handlePinToggle(preset); }}
+        activeOpacity={0.7}
+      >
+        <TouchableOpacity
+          onPress={() => { hapticLight(); handlePinToggle(preset); }}
+          style={styles.cardPinOverlay}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.cardPinOverlayText, pinned && { color: colors.accent }]}>
+            {pinned ? 'Pinned' : 'Pin'}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.presetIcon}>{preset.icon}</Text>
+        <Text style={styles.presetLabel}>{preset.label}</Text>
+        <Text style={styles.presetDuration}>
+          {preset.id === 'custom' ? 'Custom' : openModal ? 'Set' : formatDuration(preset.customSeconds || preset.seconds)}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
-  const modalPresetPinned = customModal ? isPinned(customModal.id, pinnedIds) : false;
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -1032,23 +1012,18 @@ export default function TimerScreen({ navigation }: Props) {
                 key={ut.id}
                 style={styles.presetCard}
                 onPress={() => handleStartUserTimer(ut)}
+                onLongPress={() => { hapticLight(); handlePinToggle({ id: ut.id, icon: ut.icon, label: ut.label, seconds: ut.seconds }); }}
                 activeOpacity={0.7}
               >
                 <TouchableOpacity
-                  onPress={() => { hapticLight(); handleUserTimerLongPress(ut); }}
-                  style={styles.cardEditBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  activeOpacity={0.6}
-                >
-                  <Text style={styles.cardEditBtnText}>{'\u270F\uFE0F'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                   onPress={() => { hapticLight(); handlePinToggle({ id: ut.id, icon: ut.icon, label: ut.label, seconds: ut.seconds }); }}
-                  style={styles.cardPinBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  activeOpacity={0.6}
+                  style={styles.cardPinOverlay}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  activeOpacity={0.7}
                 >
-                  <Text style={[styles.cardPinBtnText, !isPinned(ut.id, pinnedIds) && { opacity: 0.3 }]}>{'\u{1F4CC}'}</Text>
+                  <Text style={[styles.cardPinOverlayText, isPinned(ut.id, pinnedIds) && { color: colors.accent }]}>
+                    {isPinned(ut.id, pinnedIds) ? 'Pinned' : 'Pin'}
+                  </Text>
                 </TouchableOpacity>
                 <Text style={styles.presetIcon}>{ut.icon}</Text>
                 <Text style={styles.presetLabel}>{ut.label}</Text>
@@ -1062,23 +1037,16 @@ export default function TimerScreen({ navigation }: Props) {
                 key={p.id}
                 style={styles.presetCard}
                 onPress={() => handleStartTimer(p)}
+                onLongPress={() => { hapticLight(); handlePinToggle(p); }}
                 activeOpacity={0.7}
               >
                 <TouchableOpacity
-                  onPress={() => { hapticLight(); handleLongPress(p); }}
-                  style={styles.cardEditBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  activeOpacity={0.6}
-                >
-                  <Text style={styles.cardEditBtnText}>{'\u270F\uFE0F'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                   onPress={() => { hapticLight(); handlePinToggle(p); }}
-                  style={styles.cardPinBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  activeOpacity={0.6}
+                  style={styles.cardPinOverlay}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.cardPinBtnText}>{'\u{1F4CC}'}</Text>
+                  <Text style={[styles.cardPinOverlayText, { color: colors.accent }]}>Pinned</Text>
                 </TouchableOpacity>
                 <Text style={styles.presetIcon}>{p.icon}</Text>
                 <Text style={styles.presetLabel}>{p.label}</Text>
@@ -1186,25 +1154,7 @@ export default function TimerScreen({ navigation }: Props) {
             ) : (
               <>
                 <View style={styles.modalTitleRow}>
-                  {customModal && customModal.id !== 'custom' ? (
-                    <TouchableOpacity
-                      onPress={() => { hapticLight(); handlePinToggle(customModal); }}
-                      style={[
-                        styles.modalPinBtn,
-                        modalPresetPinned && { backgroundColor: colors.accent },
-                      ]}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[
-                        styles.modalPinText,
-                        { opacity: modalPresetPinned ? 1 : 0.3 },
-                      ]}>
-                        {'\u{1F4CC}'}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={{ width: 34 }} />
-                  )}
+                  <View style={{ width: 34 }} />
                   <Text style={styles.modalTitle}>
                     {(customModal?.icon ?? '') + ' ' + (customModal?.label ?? '')}
                   </Text>

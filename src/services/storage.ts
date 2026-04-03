@@ -27,7 +27,7 @@ interface AlarmRow {
   soundId: string | null;
   soundUri: string | null;
   soundName: string | null;
-  soundID: number | null;
+  nativeSoundId: number | null;
   photoUri: string | null;
   notificationIds: string | null;
   createdAt: string;
@@ -52,7 +52,7 @@ function rowToAlarm(row: AlarmRow): Alarm {
     soundId: row.soundId || 'default',
     soundUri: row.soundUri,
     soundName: row.soundName,
-    soundID: row.soundID,
+    soundID: row.nativeSoundId,
     photoUri: row.photoUri,
     notificationIds: row.notificationIds ? JSON.parse(row.notificationIds) : [],
     createdAt: row.createdAt,
@@ -74,7 +74,7 @@ function alarmToParams(a: Alarm): SQLiteBindValue[] {
 
 const ALARM_INSERT = `INSERT OR REPLACE INTO alarms
   (id, time, note, quote, enabled, mode, days, date, category, icon, nickname,
-   guessWhy, private, soundId, soundUri, soundName, soundID, photoUri, notificationIds,
+   guessWhy, "private", soundId, soundUri, soundName, nativeSoundId, photoUri, notificationIds,
    createdAt, deletedAt)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 

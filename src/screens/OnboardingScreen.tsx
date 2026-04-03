@@ -444,7 +444,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       }
       navigation.reset({
         index: 0,
-        routes: [{ name: 'AlarmList' }],
+        routes: [{ name: 'Home' }],
       });
       return;
     }

@@ -47,7 +47,7 @@ export default function AboutScreen({ navigation }: Props) {
     headerTitle: {
       fontSize: 28,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: colors.textPrimary,
     },
     content: {
       flex: 1,

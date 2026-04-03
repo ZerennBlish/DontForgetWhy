@@ -689,20 +689,6 @@ export default function SettingsScreen({ navigation }: Props) {
 
       <TouchableOpacity
         style={[styles.card, { marginTop: 16 }]}
-        onPress={() => { hapticLight(); navigation.navigate('ForgetLog'); }}
-        activeOpacity={0.7}
-      >
-        <View style={styles.aboutRow}>
-          <Text style={styles.label}>Forget Log</Text>
-          <ChevronRightIcon color={colors.textTertiary} size={16} />
-        </View>
-        <Text style={styles.description}>
-          History of your dismissed alarms and reminders.
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.card, { marginTop: 16 }]}
         onPress={() => { hapticLight(); navigation.navigate('About'); }}
         activeOpacity={0.7}
       >

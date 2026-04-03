@@ -30,7 +30,8 @@ import type { Note } from '../types/note';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import BackButton from './BackButton';
-import { ImageIcon, CameraIcon, PaintBrushIcon, MicIcon, ShareIcon, TrashIcon } from './Icons';
+import { ImageIcon, CameraIcon, PaintBrushIcon, MicIcon, ShareIcon, TrashIcon, HomeIcon } from './Icons';
+import { useNavigation } from '@react-navigation/native';
 import DrawingCanvas from './DrawingCanvas';
 import type { StrokeData } from './DrawingCanvas';
 import ShareNoteModal from './ShareNoteModal';
@@ -48,12 +49,67 @@ function formatDuration(seconds: number): string {
 }
 
 const voiceMemoStyles = StyleSheet.create({
-  recordingBanner: {
+  recordingControls: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  recordingInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
     gap: 6,
+  },
+  recordingBtnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  pauseBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stopBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playTriangle: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderLeftColor: '#FFFFFF',
+    borderTopWidth: 7,
+    borderTopColor: 'transparent',
+    borderBottomWidth: 7,
+    borderBottomColor: 'transparent',
+    marginLeft: 2,
+  },
+  pauseBars: {
+    flexDirection: 'row',
+    gap: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pauseBar: {
+    width: 3,
+    height: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 1,
+  },
+  stopSquare: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
   },
   recordingText: {
     fontSize: 13,
@@ -201,6 +257,7 @@ export default function NoteEditorModal({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const btn = getButtonStyles(colors);
+  const navigation = useNavigation<any>();
 
   const [editorText, setEditorText] = useState('');
   const [editorColor, setEditorColor] = useState(NOTE_COLORS[0]);
@@ -219,6 +276,7 @@ export default function NoteEditorModal({
   const [editingImageUri, setEditingImageUri] = useState<string | null>(null);
   const [editorVoiceMemos, setEditorVoiceMemos] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [activePlayerUri, setActivePlayerUri] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
 
@@ -353,6 +411,34 @@ export default function NoteEditorModal({
     );
   };
 
+  const handleGoHome = () => {
+    if (isRecording) {
+      ToastAndroid.show('Stop recording first', ToastAndroid.SHORT);
+      return;
+    }
+    if (!hasUnsavedChanges()) {
+      onClose();
+      navigation.navigate('Home');
+      return;
+    }
+    Keyboard.dismiss();
+    Alert.alert(
+      'Leaving Already?',
+      "You've got unsaved changes. Walk away and they're gone forever. Just like your memory.",
+      [
+        { text: 'Go Back to Editing', style: 'cancel' },
+        {
+          text: 'Abandon Note',
+          style: 'destructive',
+          onPress: () => {
+            onClose();
+            navigation.navigate('Home');
+          },
+        },
+      ],
+    );
+  };
+
   const handleSave = () => {
     hapticMedium();
     if (isRecording) {
@@ -426,6 +512,7 @@ export default function NoteEditorModal({
     if (isRecording) {
       isRecordingRef.current = false;
       setIsRecording(false);
+      setIsPaused(false);
       try {
         await recorder.stop();
         const status = recorder.getStatus();
@@ -458,6 +545,18 @@ export default function NoteEditorModal({
     } catch (e) {
       console.error('Recording failed:', e);
       ToastAndroid.show('Recording failed', ToastAndroid.SHORT);
+    }
+  };
+
+  const handlePauseToggle = () => {
+    if (!isRecording) return;
+    hapticLight();
+    if (isPaused) {
+      recorder.record();
+      setIsPaused(false);
+    } else {
+      recorder.pause();
+      setIsPaused(true);
     }
   };
 
@@ -753,6 +852,19 @@ export default function NoteEditorModal({
               <>
                 <View style={styles.topBarLeft}>
                   <BackButton onPress={confirmClose} />
+                  <TouchableOpacity
+                    style={{
+                      width: 40, height: 40, borderRadius: 20,
+                      justifyContent: 'center', alignItems: 'center',
+                      borderWidth: 1, marginLeft: 4,
+                      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
+                      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                    }}
+                    onPress={handleGoHome}
+                    activeOpacity={0.7}
+                  >
+                    <HomeIcon color={colors.mode === 'dark' ? '#F0F0F8' : colors.textPrimary} size={18} />
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.topBarCenter} />
                 <View style={styles.topBarRight}>
@@ -794,6 +906,19 @@ export default function NoteEditorModal({
               <>
                 <View style={styles.topBarLeft}>
                   <BackButton onPress={confirmClose} />
+                  <TouchableOpacity
+                    style={{
+                      width: 40, height: 40, borderRadius: 20,
+                      justifyContent: 'center', alignItems: 'center',
+                      borderWidth: 1, marginLeft: 4,
+                      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
+                      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                    }}
+                    onPress={handleGoHome}
+                    activeOpacity={0.7}
+                  >
+                    <HomeIcon color={colors.mode === 'dark' ? '#F0F0F8' : colors.textPrimary} size={18} />
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.topBarCenter}>
                   <TouchableOpacity
@@ -909,11 +1034,28 @@ export default function NoteEditorModal({
           <View style={styles.topBarContentPad} />
 
           {isRecording && (
-            <View style={voiceMemoStyles.recordingBanner}>
-              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF4444' }} />
-              <Text style={voiceMemoStyles.recordingText}>
-                Recording {formatDuration((recorderState.durationMillis ?? 0) / 1000)}
-              </Text>
+            <View style={voiceMemoStyles.recordingControls}>
+              <View style={voiceMemoStyles.recordingInfo}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isPaused ? '#FFA500' : '#FF4444' }} />
+                <Text style={voiceMemoStyles.recordingText}>
+                  {isPaused ? 'Paused' : 'Recording'} {formatDuration((recorderState.durationMillis ?? 0) / 1000)}
+                </Text>
+              </View>
+              <View style={voiceMemoStyles.recordingBtnRow}>
+                <TouchableOpacity onPress={handlePauseToggle} style={voiceMemoStyles.pauseBtn} activeOpacity={0.7}>
+                  {isPaused ? (
+                    <View style={voiceMemoStyles.playTriangle} />
+                  ) : (
+                    <View style={voiceMemoStyles.pauseBars}>
+                      <View style={voiceMemoStyles.pauseBar} />
+                      <View style={voiceMemoStyles.pauseBar} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleMicPress} style={voiceMemoStyles.stopBtn} activeOpacity={0.7}>
+                  <View style={voiceMemoStyles.stopSquare} />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 

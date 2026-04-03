@@ -9,8 +9,9 @@ let _db: SQLite.SQLiteDatabase | null = null;
 
 export function getDb(): SQLite.SQLiteDatabase {
   if (!_db) {
-    _db = SQLite.openDatabaseSync('dfw.db');
-    _initSchema(_db);
+    const db = SQLite.openDatabaseSync('dfw.db');
+    _initSchema(db);
+    _db = db;
   }
   return _db;
 }
@@ -20,8 +21,10 @@ export function getDb(): SQLite.SQLiteDatabase {
 // ---------------------------------------------------------------------------
 
 function _initSchema(db: SQLite.SQLiteDatabase): void {
-  db.execSync(`
-    CREATE TABLE IF NOT EXISTS alarms (
+  console.log('[DB] _initSchema starting...');
+
+  try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS alarms (
       id TEXT PRIMARY KEY,
       time TEXT NOT NULL,
       note TEXT NOT NULL,
@@ -34,25 +37,29 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
       icon TEXT,
       nickname TEXT,
       guessWhy INTEGER NOT NULL DEFAULT 0,
-      private INTEGER NOT NULL DEFAULT 0,
+      "private" INTEGER NOT NULL DEFAULT 0,
       soundId TEXT DEFAULT 'default',
       soundUri TEXT,
       soundName TEXT,
-      soundID INTEGER,
+      nativeSoundId INTEGER,
       photoUri TEXT,
       notificationIds TEXT,
       createdAt TEXT NOT NULL,
       deletedAt TEXT
-    );
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create alarms table:', e);
+  }
 
-    CREATE TABLE IF NOT EXISTS reminders (
+  try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS reminders (
       id TEXT PRIMARY KEY,
       text TEXT NOT NULL,
       icon TEXT NOT NULL,
       nickname TEXT,
       completed INTEGER NOT NULL DEFAULT 0,
       completedAt TEXT,
-      private INTEGER NOT NULL DEFAULT 0,
+      "private" INTEGER NOT NULL DEFAULT 0,
       recurring INTEGER NOT NULL DEFAULT 0,
       dueDate TEXT,
       dueTime TEXT,
@@ -64,9 +71,13 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
       completionHistory TEXT,
       createdAt TEXT NOT NULL,
       deletedAt TEXT
-    );
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create reminders table:', e);
+  }
 
-    CREATE TABLE IF NOT EXISTS notes (
+  try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS notes (
       id TEXT PRIMARY KEY,
       text TEXT NOT NULL,
       color TEXT NOT NULL DEFAULT '#FFFFFF',
@@ -74,12 +85,17 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
       fontColor TEXT,
       pinned INTEGER NOT NULL DEFAULT 0,
       images TEXT,
+      voiceMemos TEXT,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
       deletedAt TEXT
-    );
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create notes table:', e);
+  }
 
-    CREATE TABLE IF NOT EXISTS voice_memos (
+  try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS voice_memos (
       id TEXT PRIMARY KEY,
       uri TEXT NOT NULL,
       title TEXT NOT NULL,
@@ -89,9 +105,13 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
       deletedAt TEXT
-    );
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create voice_memos table:', e);
+  }
 
-    CREATE TABLE IF NOT EXISTS active_timers (
+  try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS active_timers (
       id TEXT PRIMARY KEY,
       presetId TEXT NOT NULL,
       label TEXT NOT NULL,
@@ -102,32 +122,34 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
       isRunning INTEGER NOT NULL DEFAULT 1,
       notificationId TEXT,
       soundId TEXT
-    );
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create active_timers table:', e);
+  }
 
-    CREATE TABLE IF NOT EXISTS user_timers (
+  try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS user_timers (
       id TEXT PRIMARY KEY,
       icon TEXT NOT NULL,
       label TEXT NOT NULL,
       seconds INTEGER NOT NULL,
       soundId TEXT,
       createdAt TEXT NOT NULL
-    );
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create user_timers table:', e);
+  }
 
-    CREATE TABLE IF NOT EXISTS forget_log (
-      id TEXT PRIMARY KEY,
-      alarmNote TEXT NOT NULL,
-      alarmNickname TEXT,
-      alarmIcon TEXT,
-      alarmCategory TEXT NOT NULL,
-      result TEXT NOT NULL,
-      timestamp TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS kv_store (
+  try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS kv_store (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
-    );
-  `);
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create kv_store table:', e);
+  }
+
+  console.log('[DB] _initSchema complete');
 }
 
 // ---------------------------------------------------------------------------
@@ -167,14 +189,16 @@ const KV_KEYS = [
   'defaultTimerSound',
   'silenceAllAlarms',
   'hapticsEnabled',
-  'voiceEnabled',
-  'introPlayed',
+  'voiceRoastsEnabled',
+  'voiceIntroPlayed',
   'bg_main',
   'bg_overlay_opacity',
   'timerPresets',
   'recentPresets',
-  'notepad_customBgColor',
-  'notepad_customFontColor',
+  'note_custom_bg_color',
+  'note_custom_font_color',
+  'noteCustomBgColor',
+  'noteCustomFontColor',
   'notepadOnboarded',
   'guessWhyStats',
   'memoryMatchScores',
@@ -207,7 +231,6 @@ const ENTITY_KEYS = [
   'voiceMemos',
   'activeTimers',
   'userTimers',
-  'forgetLog',
 ] as const;
 
 /** Convert a JS value to 0/1 for SQLite INTEGER columns. */
@@ -228,7 +251,7 @@ function _insertAlarms(db: SQLite.SQLiteDatabase, items: any[]): void {
     db.runSync(
       `INSERT OR IGNORE INTO alarms
         (id, time, note, quote, enabled, mode, days, date, category, icon,
-         nickname, guessWhy, private, soundId, soundUri, soundName, soundID,
+         nickname, guessWhy, "private", soundId, soundUri, soundName, nativeSoundId,
          photoUri, notificationIds, createdAt, deletedAt)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
@@ -262,7 +285,7 @@ function _insertReminders(db: SQLite.SQLiteDatabase, items: any[]): void {
   for (const r of items) {
     db.runSync(
       `INSERT OR IGNORE INTO reminders
-        (id, text, icon, nickname, completed, completedAt, private, recurring,
+        (id, text, icon, nickname, completed, completedAt, "private", recurring,
          dueDate, dueTime, days, soundId, pinned, notificationId,
          notificationIds, completionHistory, createdAt, deletedAt)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -294,9 +317,9 @@ function _insertNotes(db: SQLite.SQLiteDatabase, items: any[]): void {
   for (const n of items) {
     db.runSync(
       `INSERT OR IGNORE INTO notes
-        (id, text, color, icon, fontColor, pinned, images,
+        (id, text, color, icon, fontColor, pinned, images, voiceMemos,
          createdAt, updatedAt, deletedAt)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [
         n.id,
         n.text,
@@ -305,6 +328,7 @@ function _insertNotes(db: SQLite.SQLiteDatabase, items: any[]): void {
         n.fontColor ?? null,
         boolInt(n.pinned),
         jsonOrNull(n.images),
+        jsonOrNull(n.voiceMemos),
         n.createdAt,
         n.updatedAt,
         n.deletedAt ?? null,
@@ -376,25 +400,6 @@ function _insertUserTimers(db: SQLite.SQLiteDatabase, items: any[]): void {
   }
 }
 
-function _insertForgetLog(db: SQLite.SQLiteDatabase, items: any[]): void {
-  for (const f of items) {
-    db.runSync(
-      `INSERT OR IGNORE INTO forget_log
-        (id, alarmNote, alarmNickname, alarmIcon, alarmCategory, result, timestamp)
-       VALUES (?,?,?,?,?,?,?)`,
-      [
-        f.id,
-        f.alarmNote,
-        f.alarmNickname ?? null,
-        f.alarmIcon ?? null,
-        f.alarmCategory,
-        f.result,
-        f.timestamp,
-      ],
-    );
-  }
-}
-
 // ---- Entity inserter dispatch --------------------------------------------
 
 const ENTITY_INSERTERS: Record<
@@ -407,7 +412,6 @@ const ENTITY_INSERTERS: Record<
   voiceMemos: _insertVoiceMemos,
   activeTimers: _insertActiveTimers,
   userTimers: _insertUserTimers,
-  forgetLog: _insertForgetLog,
 };
 
 // ---- Public migration entry point ----------------------------------------

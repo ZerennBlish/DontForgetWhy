@@ -394,7 +394,7 @@ export default function VoiceRecordScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton />
         </View>
-        <Text style={styles.title}>{'\u{1F3A4}'} Record</Text>
+        <Text style={styles.title}>Record</Text>
       </View>
 
       {/* Content */}

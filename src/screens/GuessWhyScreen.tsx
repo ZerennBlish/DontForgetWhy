@@ -19,7 +19,6 @@ import {
   getRandomSkipMessage,
 } from '../data/guessWhyMessages';
 import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
-import { addForgetEntry } from '../services/forgetLog';
 import { useTheme } from '../theme/ThemeContext';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
@@ -303,18 +302,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     ]).start();
   };
 
-  const logForget = async (resultType: 'loss' | 'skip') => {
-    try {
-      await addForgetEntry({
-        alarmNote: alarm.note,
-        alarmNickname: alarm.nickname,
-        alarmIcon: alarm.icon,
-        alarmCategory: alarm.category,
-        result: resultType,
-      });
-    } catch {}
-  };
-
   const handleIconGuess = async (iconId: string, iconEmoji: string) => {
     if (result || resolvedRef.current) return;
     hapticMedium();
@@ -332,7 +319,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
         setResult({ type: 'lose', message: getRandomLoseMessage() });
         playRandomClip('guess_wrong');
         try { await recordLoss(); } catch {}
-        logForget('loss');
       } else {
         triggerShake();
       }
@@ -359,7 +345,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
         setResult({ type: 'lose', message: getRandomLoseMessage() });
         playRandomClip('guess_wrong');
         try { await recordLoss(); } catch {}
-        logForget('loss');
       } else {
         triggerShake();
       }
@@ -373,7 +358,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     setResult({ type: 'skip', message: getRandomSkipMessage() });
     playRandomClip('guess_wrong');
     try { await recordSkip(); } catch {}
-    logForget('skip');
   };
 
   const handleContinue = () => {

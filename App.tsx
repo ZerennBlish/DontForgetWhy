@@ -1,5 +1,6 @@
 import 'react-native-get-random-values';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,7 +10,6 @@ import AlarmFireScreen from './src/screens/AlarmFireScreen';
 import GuessWhyScreen from './src/screens/GuessWhyScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import MemoryScoreScreen from './src/screens/MemoryScoreScreen';
-import ForgetLogScreen from './src/screens/ForgetLogScreen';
 import MemoryMatchScreen from './src/screens/MemoryMatchScreen';
 import GamesScreen from './src/screens/GamesScreen';
 import SudokuScreen from './src/screens/SudokuScreen';
@@ -214,11 +214,6 @@ function AppNavigator() {
             options={{ animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
-            name="ForgetLog"
-            component={ForgetLogScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
             name="Trivia"
             component={TriviaScreen}
             options={{ animation: 'slide_from_right' }}
@@ -261,15 +256,49 @@ function AppNavigator() {
 
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
+  const [migrationFailed, setMigrationFailed] = useState(false);
+
+  const attemptMigration = useCallback(async () => {
+    setMigrationFailed(false);
+    try {
+      await migrateFromAsyncStorage();
+      setDbReady(true);
+    } catch (e) {
+      console.error('[App] DB migration failed:', e);
+      try {
+        const { kvGet } = require('./src/services/database');
+        const migrated = kvGet('_migrated');
+        if (migrated) {
+          setDbReady(true);
+          return;
+        }
+      } catch { /* can't even read kv_store */ }
+      setMigrationFailed(true);
+    }
+  }, []);
 
   useEffect(() => {
-    migrateFromAsyncStorage()
-      .then(() => setDbReady(true))
-      .catch((e) => {
-        console.error('[App] DB migration failed:', e);
-        setDbReady(true); // still render — AsyncStorage code is still in place
-      });
-  }, []);
+    attemptMigration();
+  }, [attemptMigration]);
+
+  if (migrationFailed) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A0A12', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700', marginBottom: 12, textAlign: 'center' }}>
+          Something went wrong
+        </Text>
+        <Text style={{ color: '#AAAAAA', fontSize: 14, textAlign: 'center', marginBottom: 24 }}>
+          Your data couldn't be loaded. Tap below to try again.
+        </Text>
+        <TouchableOpacity
+          onPress={attemptMigration}
+          style={{ backgroundColor: '#5B9EE6', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!dbReady) return null;
 
