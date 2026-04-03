@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 2, 2026
+**Last updated:** Session 12 (April 2, 2026)
 
 ---
 
@@ -13,7 +13,7 @@ interface Alarm {
   date: string | null; category: AlarmCategory; icon?: string;
   private: boolean; guessWhy?: boolean; createdAt: string;
   notificationIds: string[]; soundId?: string; soundUri?: string | null;
-  soundName?: string | null; soundID?: number | null;
+  soundName?: string | null; soundID?: number | null;  // maps to `nativeSoundId` column in SQLite (renamed from soundID due to case-insensitive collision with soundId)
   photoUri?: string | null;  // per-alarm wake-up photo (P2 2.4)
   deletedAt?: string | null;
 }
@@ -43,11 +43,14 @@ interface Reminder {
 ```typescript
 interface Note {
   id: string; text: string; icon: string; color: string;
-  fontColor: string; pinned: boolean; createdAt: string;
-  updatedAt: string; deletedAt: string | null;
+  fontColor?: string | null; pinned: boolean; createdAt: string;
+  updatedAt: string; deletedAt?: string | null;
   images?: string[];  // file:// URIs to locally stored images (max 3)
+  voiceMemos?: string[];  // file:// URIs to note-attached voice memos (max 3 shared with images)
 }
 ```
+
+**Voice memo column:** `voiceMemos TEXT` in SQLite (JSON array). Shares the 3-attachment limit with images. Managed by `noteVoiceMemoStorage.ts`.
 
 **Image storage:** Images stored on filesystem at `${FileSystem.documentDirectory}note-images/`. Photos: `${noteId}_${timestamp}_${uuid8}.jpg`. Drawings: `${noteId}_${timestamp}_${uuid8}.png` + companion `.json` (stroke data for re-editing). Service: `src/services/noteImageStorage.ts` — `saveNoteImage` detects .png/.jpg extension, copies companion .json alongside PNGs. `deleteNoteImage` also deletes companion .json. `loadDrawingData` reads companion .json (early-returns null for .jpg). `getDrawingJsonUri` derives .json path from .png path. All use directory-based File constructors (`new File(dir, filename)`) for reliability. `noteStorage.ts` auto-cleans images on permanent delete and 30-day purge.
 
@@ -85,16 +88,16 @@ interface VoiceMemo {
 }
 ```
 
-- **Storage:** AsyncStorage key `'voiceMemos'`, JSON array. Service: `src/services/voiceMemoStorage.ts`
+- **Storage:** SQLite `voice_memos` table. Service: `src/services/voiceMemoStorage.ts`
 - **Soft-delete:** same 30-day pattern as Notes/Alarms — `deletedAt` set on delete, cleared on restore, filtered out by `getVoiceMemos()`, included by `getAllVoiceMemos()`
 - **Error handling:** all mutator functions re-throw after `console.error` (unlike other storage services that swallow errors) — lets callers show error UI instead of false success
 - **File storage:** `.m4a` files stored at `${Paths.document}voice-memos/`. Filename format: `{memoId}_{timestamp}.m4a`. Service: `src/services/voiceMemoFileStorage.ts` — `saveVoiceMemoFile` (copies from cache to permanent, cleans source), `deleteVoiceMemoFile`, `deleteAllVoiceMemoFiles`. Same pattern as `noteImageStorage` but simpler (no companion JSON files)
 
 ---
 
-## 6. Key AsyncStorage Keys
+## 6. SQLite Storage
 
-`'alarms'`, `'reminders'`, `'activeTimers'`, `'notes'`, `'userTimers'`, `'appSettings'`, `'silenceAllAlarms'`, `'appTheme'`, `'hapticsEnabled'`, `'onboardingComplete'`, `'defaultTimerSound'`, `'bg_main'` (background photo URI), `'bg_overlay_opacity'` (background overlay 0.3-0.8), plus game stats (guessWhyStats, forgetLog, memoryMatchScores, sudokuBestScores, dailyRiddleStats, triviaStats), widget pins (widgetPinnedPresets, widgetPinnedAlarms, widgetPinnedReminders, widgetPinnedNotes, widgetPinnedVoiceMemos), per-alarm (`snoozeCount_{alarmId}`, `snoozing_{alarmId}`), pending actions (pendingAlarmListAction, pendingReminderListAction, pendingAlarmAction, pendingReminderAction, pendingNoteAction), notification dedupe (`_handledNotifs` in-memory + `handled_notifs` persistent in AsyncStorage), `'voiceMemos'` (JSON array of VoiceMemo objects — standalone voice recordings), `'pendingVoiceAction'` (JSON object with type ('record'|'detail'), optional memoId, timestamp — set by widget click handler, consumed by useNotificationRouting)
+All data stored in `dfw.db` via `expo-sqlite`. Entity tables: `alarms`, `reminders`, `notes`, `voice_memos`, `active_timers`, `user_timers`. KV store (`kv_store` table) for settings, game stats, widget pins, pending actions, and ephemeral flags. See DFW-Architecture.md Section 8 for full table and key listing.
 
 ### ThemeColors Interface (Session 9)
 
@@ -113,7 +116,7 @@ interface ThemeColors {
 }
 ```
 
-**ThemeName:** `'dark' | 'light' | 'highContrast' | 'vivid'` — custom theme removed. `customTheme` AsyncStorage key cleaned up on migration.
+**ThemeName:** `'dark' | 'light' | 'highContrast' | 'vivid'` — custom theme removed. `customTheme` kv_store key cleaned up on migration.
 
 ### WidgetTheme Interface (Session 11)
 

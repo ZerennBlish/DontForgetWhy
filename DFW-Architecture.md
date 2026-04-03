@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 2, 2026
+**Last updated:** Session 12 (April 2, 2026)
 
 ---
 
@@ -345,20 +345,21 @@ All persistent storage migrated from `@react-native-async-storage/async-storage`
 ### Database file
 `dfw.db` — singleton via `getDb()` in `src/services/database.ts`. Schema initialized on every launch via `CREATE TABLE IF NOT EXISTS`.
 
-### Tables (8 total)
+### Tables (7 total)
 | Table | Purpose |
 |-------|---------|
-| `alarms` | Alarm entities (individual rows, not serialized array) |
+| `alarms` | Alarm entities — `nativeSoundId` INTEGER column (renamed from `soundID` due to SQLite case-insensitive collision with `soundId` TEXT) |
 | `reminders` | Reminder entities |
-| `notes` | Note entities (soft-delete via `deletedAt`) |
+| `notes` | Note entities (soft-delete via `deletedAt`). Includes `voiceMemos TEXT` column (JSON array of file URIs) |
 | `voice_memos` | Voice memo metadata |
 | `active_timers` | Currently running timers |
 | `user_timers` | User-created custom timer presets |
-| `forget_log` | Guess Why loss/skip history |
 | `kv_store` | Key-value pairs for settings, game stats, widget pins, pending actions, flags |
 
+Note: `forget_log` table removed in Session 12 (ForgetLog feature deleted).
+
 ### KV store keys (partial list)
-Settings: `appSettings`, `appTheme`, `onboardingComplete`, `hapticsEnabled`, `voiceRoastsEnabled`, `silenceAllAlarms`, `defaultTimerSound`, `bg_main`, `bg_overlay_opacity`
+Settings: `appSettings`, `appTheme`, `onboardingComplete`, `hapticsEnabled`, `voiceRoastsEnabled`, `voiceIntroPlayed`, `silenceAllAlarms`, `defaultTimerSound`, `bg_main`, `bg_overlay_opacity`, `note_custom_bg_color`, `note_custom_font_color`
 Game stats: `guessWhyStats`, `memoryMatchScores`, `sudokuBestScores`, `sudokuCurrentGame`, `dailyRiddleStats`, `triviaStats`, `triviaSeenQuestions`
 Widget pins: `widgetPinnedPresets`, `widgetPinnedAlarms`, `widgetPinnedReminders`, `widgetPinnedNotes`, `widgetPinnedVoiceMemos`
 Pending actions: `pendingNoteAction`, `pendingAlarmAction`, `pendingReminderAction`, `pendingTimerAction`, `pendingCalendarAction`, `pendingVoiceAction`, `pendingAlarmListAction`, `pendingReminderListAction`
@@ -367,7 +368,13 @@ Ephemeral: `snoozing_{alarmId}`, `snoozeCount_{alarmId}`, `handledNotifIds`
 ### Key API
 - `kvGet(key)` / `kvSet(key, value)` / `kvRemove(key)` — synchronous KV helpers
 - `getDb()` — returns singleton `SQLiteDatabase`, initializes schema on first call
-- `migrateFromAsyncStorage()` — async one-time migration, called in App.tsx before render
+- `migrateFromAsyncStorage()` — async one-time migration, called in App.tsx before render. On failure, logs error but doesn't set `_migrated` flag — retries on next launch. App still renders (AsyncStorage code was in place during migration period)
+
+### Schema bugs found during migration
+- `execSync` multi-statement DDL only executes the first statement — split into individual `execSync` calls per table
+- `soundId` (TEXT) and `soundID` (INTEGER) column collision — SQLite column names are case-insensitive. Renamed INTEGER column to `nativeSoundId`
+- `voiceMemos` column missing from notes schema — caused data loss for note-attached voice memos. Added `voiceMemos TEXT` column
+- `private` is a SQLite reserved word — must be quoted as `"private"` in DDL and DML
 
 ### Pattern change
 Old: load entire JSON array → mutate in memory → serialize entire array back.
@@ -382,7 +389,7 @@ New: individual SQL `INSERT`/`UPDATE`/`DELETE` per entity. `SELECT` queries repl
 - **Test location:** `__tests__/` at project root
 - **Run:** `npm test` or `npx jest`
 - **Config:** in `package.json` `"jest"` section — `moduleNameMapper` maps `../utils/*`, `../types/*`, etc. to `<rootDir>/src/` paths
-- **Scope:** Pure utility functions only (no React Native, no AsyncStorage, no native modules)
+- **Scope:** Pure utility functions only (no React Native, no SQLite, no native modules)
 - **jest-expo** stays in devDependencies for future component testing
 
 ### Test Suites (35 tests)

@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 2, 2026
+**Last updated:** Session 12 (April 2, 2026)
 
 ---
 
@@ -231,7 +231,22 @@ AsyncStorage → SQLite migration scheduled before Chess/Checkers (P4). Rational
 `jest-expo` preset crashes parsing expo-modules-core TypeScript files. Since we're only testing pure utility functions (no React Native, no Expo imports), `ts-jest` with `node` environment works perfectly. `jest-expo` kept in devDependencies for future component testing when needed.
 
 ### AsyncStorage → SQLite migration (Session 12)
-All persistent storage moved from `@react-native-async-storage/async-storage` to `expo-sqlite`. Rationale: (1) AsyncStorage serializes entire arrays — a single alarm edit re-serialized every alarm. SQLite updates individual rows. (2) Synchronous reads via `expo-sqlite`'s sync API (`getFirstSync`, `getAllSync`, `runSync`) eliminate `.then()` chains and race conditions from the old async read-modify-write pattern. (3) Every future feature (P4 games, P5 calendar sync, P7 Firebase) builds on storage — migrating now prevents retrofitting a growing service layer later. (4) The old async mutex (`withLock`) on timer storage is replaced by SQLite's built-in transaction support. AsyncStorage kept temporarily in `database.ts` for the one-time migration runner that copies existing user data to SQLite on first launch post-update.
+All persistent storage moved from `@react-native-async-storage/async-storage` to `expo-sqlite`. 7 entity tables + kv_store. Proper tables for entities (row-level CRUD), kv_store for settings/stats/pins/flags. Rationale: (1) AsyncStorage serializes entire arrays — a single alarm edit re-serialized every alarm. SQLite updates individual rows. (2) Synchronous reads via `expo-sqlite`'s sync API (`getFirstSync`, `getAllSync`, `runSync`) eliminate `.then()` chains and race conditions from the old async read-modify-write pattern. (3) Every future feature (P4 games, P5 calendar sync, P7 Firebase) builds on storage — migrating now prevents retrofitting a growing service layer later. (4) The old async mutex (`withLock`) on timer storage is replaced by SQLite's built-in transaction support. Migration runs once on first launch, all services read SQLite only. AsyncStorage kept temporarily in `database.ts` for the migration runner.
+
+### ForgetLog removed (Session 12)
+Dead feature — not appreciated by users. ForgetLogScreen, forgetLog.ts service, forget_log database table, navigation route, and all references deleted. Removed from Settings screen, MemoryScoreScreen, and Home screen feature text.
+
+### Timer pin redesign (Session 12)
+Pushpin emoji removed from timer preset cards. Replaced with small "Pin"/"Pinned" text capsule overlay in upper-left corner of all preset cards (`cardPinOverlay` style). Modal pin button removed — pin directly from the card. Consistent with alarm/reminder/note pin pattern (capsule, not emoji).
+
+### NoteEditorModal recording controls (Session 12)
+Proper pause (green) + stop (red) button row replaces the old tap-to-stop banner during in-note voice recording. Prevents accidental recording loss from careless taps. Home button added to modal with unsaved changes guard.
+
+### Migration failure handling (Session 12, audit fix)
+App shows retry/renders null instead of rendering with empty data when migration fails. Checks `_migrated` kv_store flag before allowing render. If migration fails, flag is not set — retries on next launch. App still renders on failure since AsyncStorage code was in place during initial migration period.
+
+### nativeSoundId rename (Session 12)
+SQLite column names are case-insensitive. `soundId` (TEXT) and `soundID` (INTEGER) on the Alarm type collided when mapped to SQLite columns. INTEGER column renamed to `nativeSoundId` in schema, migration runner, and all row converters. TypeScript `Alarm.soundID` property kept for compatibility; mapped via `rowToAlarm`.
 
 ### MicWidget 1×1 (Session 11)
 Stripped to essentials: red record circle + "Don't Forget Why" footer. 70dp minimum size (was 110dp). A record button doesn't need a header or descriptive text — the red circle is universally understood.

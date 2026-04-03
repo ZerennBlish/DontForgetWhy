@@ -1,19 +1,19 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 2, 2026
+**Last updated:** Session 12 (v1.10.0)
 
 ---
 
 ## 1. App Features — Current State
 
 ### Core Utility
-- **Home Screen** — app entry point (v1.9.0). 2×3 icon grid: Alarms (sectionAlarm), Reminders (sectionReminder), Calendar (sectionCalendar), Notepad (sectionNotepad), Voice (sectionVoice), Games (sectionGames). Section colors defined per theme. Quick Capture row: New Note, Record Memo, Set Timer (one-tap actions). Personality banner: 63 rotating color-coded sarcastic quotes across 7 sections (homeBannerQuotes.ts). Today section: scrollable container showing today's alarms and reminders. Settings gear in title bar. Forget Log accessible from Settings.
+- **Home Screen** — app entry point (v1.9.0). 2×3 icon grid: Alarms (sectionAlarm), Reminders (sectionReminder), Calendar (sectionCalendar), Notepad (sectionNotepad), Voice (sectionVoice), Games (sectionGames). Section colors defined per theme. Quick Capture row: New Note, Record Memo, Set Timer (one-tap actions). Personality banner: 63 rotating color-coded sarcastic quotes across 7 sections (homeBannerQuotes.ts). Today section: scrollable container showing today's alarms and reminders. Settings gear in title bar.
 - **Alarms** — standalone AlarmListScreen (AlarmsTab deleted and absorbed, Session 9). Reason field ("why"), 7 sound presets + custom system sounds (listed via native `AlarmChannelModule.getSystemAlarmSounds` using `RingtoneManager.TYPE_ALARM` — replaced third-party `react-native-notification-sounds` in v1.8.1), snooze (1/3/5/10/15 min), recurring (daily/weekly/monthly/yearly) + one-time, emoji icon from keyboard, per-alarm Guess Why toggle, private mode (completely blank card)
   - Notification action buttons: "Snooze" and "Dismiss" buttons on alarm notification banners for in-app dismissal without opening fire screen
 - **Reminders** — standalone ReminderScreen with own route (`Reminders`), header, background, nav (Session 9). Due dates, 5 recurring patterns (daily/weekly/monthly/yearly/one-time), 6-hour completion window, date-only mode, completion history, sound mode (sound/vibrate/silent), emoji icon
-- **Timers** — standalone TimerScreen (extracted from AlarmListScreen in v1.9.0). 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule
+- **Timers** — standalone TimerScreen (extracted from AlarmListScreen in v1.9.0). 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule. Pin redesign (Session 12): small "Pin"/"Pinned" capsule overlay on upper-left of all preset cards — no emoji pins, no modal pin button.
   - Notification action buttons: "Dismiss" button on timer completion notification
-- **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7). Notes-only (voice memos have own screen since v1.9.0). Card style with green section-colored border. Note icon circle uses the note's own color. Text capsule pin/delete buttons. Note editor dropdown: consolidated draw/photo/record/color into single "+" dropdown menu with labeled rows and View-based icons. Added "Take Photo" option (camera) alongside "Photo Library" (Session 9). "Edit" text button in view mode (replaced pencil emoji). Share button uses ShareIcon, trash uses TrashIcon.
+- **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7). Notes-only (voice memos have own screen since v1.9.0). Card style with green section-colored border. Note icon circle uses the note's own color. Text capsule pin/delete buttons. Note editor dropdown: consolidated draw/photo/record/color into single "+" dropdown menu with labeled rows and View-based icons. Added "Take Photo" option (camera) alongside "Photo Library" (Session 9). "Edit" text button in view mode (replaced pencil emoji). Share button uses ShareIcon, trash uses TrashIcon. NoteEditorModal recording controls (Session 12): proper pause (green) + stop (red) button row replaces tap-to-stop banner. Home button in modal with unsaved changes guard. Voice memos stored as `voiceMemos TEXT` column in notes table (JSON array).
 - **Voice Memos** — standalone VoiceMemoListScreen (separated from Notepad in v1.9.0). VoiceRecordScreen (tap-to-record/stop, pause/resume), VoiceMemoDetailScreen (dual-mode: new via tempUri, existing via memoId, seekable playback, explicit Save), VoiceMemoCard (View-based play/pause icons, inline progress, capsule pin/delete). Pinning (max 4), soft delete with undo, dark bar card style with purple left border accent (#A29BFE). Calendar shows voice memos as purple dots. Note-attached voice memos share a 3-attachment limit with images.
 - **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing). Week view locked to current week (always shows Sunday–Saturday containing today). Tapping a date outside current week while in week view auto-switches to day view. Supports initialDate route param for deep-linking from widget or other screens.
   - **Calendar fixes (dev):** Tappable event cards — alarm cards navigate to CreateAlarm, reminder cards to CreateReminder, note cards to Notepad. Annual/date-specific recurring reminders now correctly show only on matching month/day (previously showed on every day due to missing dueDate check).
@@ -54,10 +54,10 @@
 ### Mini-Games
 - **Guess Why** (per-alarm, icon + type modes, 3 attempts)
 - **Trivia** (912+ questions, 10 categories incl. Kids/Music/Movies&TV, difficulty filter, speed selector, online mode placeholder)
-- **Memory Match** (3 difficulties, card flip animation, star rating)
+- **Memory Match** (3 difficulties, card flip animation, star rating). Header text-only (emoji stripped Session 12).
 - **Sudoku** (pure JS generator, difficulty = assistance level, no lose condition, pencil notes, save/resume)
 - **Daily Riddle** (146 riddles, deterministic daily, streak tracking, browse all)
-- **Memory Score** (5 games × 20 pts = 100. Ranks from "Who Are You Again? 🐟" to "The One Who Remembers 👑")
+- **Memory Score** (5 games × 20 pts = 100. Ranks from "Who Are You Again?" to "The One Who Remembers"). Header text-only (emoji stripped Session 12).
 
 ### Home Screen Widgets (4)
 - **Memory's Timeline (DetailedWidget):** Header "Memory's Timeline", two-column timers/alarms, reminder bars, nav capsules colored per section (sectionAlarm/sectionTimer/sectionReminder), footer "Don't Forget Why". Themed with section colors (Session 11).
@@ -84,12 +84,13 @@
 - Delete buttons removed from cards — swipe replaces them, Pin stays as capsule button
 - GestureHandlerRootView wraps App.tsx for gesture support
 
-### Emoji Picker Modal (Session 10)
-- EmojiPickerModal: bottom sheet modal with flat grid of ~128 curated emoji from emojiData.ts
+### Emoji Picker Modal (Sessions 10, 12)
+- EmojiPickerModal: bottom sheet modal with flat grid of ~133 curated emoji from emojiData.ts
 - Replaces fragile TextInput keyboard emoji hack (broke 3 times during filter attempts)
-- Quick emoji row on create screens: 8 preset emoji + clear button (✕, red border) + "+" for full modal
-- Emoji clear button on both CreateAlarmScreen and CreateReminderScreen
+- Quick emoji row on create screens: 12 practical preset emoji (💊🏥🏋️🐾💼🎒☕🍳🚗📅🛏️🧹) + clear button (✕, red border) + "+" for full modal. Covers: meds, appointment, workout, pet, work, school, coffee, cooking, commute, event, bedtime, chores.
+- Same quick row on both CreateAlarmScreen and CreateReminderScreen (unified Session 12)
 - AlarmCard emoji made optional: no default fallback emoji, shows AlarmIcon when none selected
+- emojiData.ts curated (Session 12): butterfly → service dog, puzzle → walking, added store/bank/toothbrush/skincare/water/trash/laundry
 
 ### Button Hierarchy (Sessions 10-11 — COMPLETE)
 - Shared `buttonStyles.ts` with `getButtonStyles(colors)` returning 4 types × 2 sizes:
@@ -287,16 +288,16 @@ Reusable list card component (`React.memo` wrapped, theme-aware via `useTheme`).
 Standalone voice memo list screen (separated from NotepadScreen). Accessed via Home screen Voice icon or widget deep links. Dark bar cards with purple accent borders (#A29BFE). Voice memo pinning: max 4 via `widgetPins.ts` functions, pin state preserved on undo delete via `deletedVoiceMemoPinnedRef` (useRef, not useState — fixes stale closure from same-render key increment). Voice memo undo toast with random personality messages. NotepadScreen is now notes-only.
 
 ### Storage
-- `voiceMemoStorage.ts`: AsyncStorage CRUD with soft-delete. All mutator functions re-throw after console.error (audit 44 finding)
+- `voiceMemoStorage.ts`: SQLite `voice_memos` table CRUD with soft-delete. All mutator functions re-throw after console.error (audit 44 finding)
 - `voiceMemoFileStorage.ts`: expo-file-system new API (File, Directory, Paths). Files at `${Paths.document}voice-memos/{memoId}_{timestamp}.m4a`
 - `noteVoiceMemoStorage.ts`: separate service for note-attached voice memos (different from standalone)
-- `widgetPins.ts`: voice memo pin functions (get/toggle/unpin/prune/isPinned) using `'widgetPinnedVoiceMemos'` AsyncStorage key, max 4 pins
+- `widgetPins.ts`: voice memo pin functions (get/toggle/unpin/prune/isPinned) using `'widgetPinnedVoiceMemos'` kv_store key, max 4 pins
 
 ### Permission
 `android.permission.RECORD_AUDIO` added to app.json android.permissions array.
 
 ### Widget
-NotepadWidget renders mixed notes + voice memos with pinned-first sort (`isPinned` field), sliced to 4. `VoiceMemoCell` uses `theme.cellBg` and `theme.text`. MicWidget: standalone 110dp widget for quick recording. Click actions route through `pendingVoiceAction` in AsyncStorage.
+NotepadWidget renders mixed notes + voice memos with pinned-first sort (`isPinned` field), sliced to 4. `VoiceMemoCell` uses `theme.cellBg` and `theme.text`. MicWidget: standalone 110dp widget for quick recording. Click actions route through `pendingVoiceAction` in kv_store.
 
 ### Audits
 - Audit 44 (Mar 30): 8 findings fixed (race conditions, stale closures, seek validation, widget sort, error swallowing)

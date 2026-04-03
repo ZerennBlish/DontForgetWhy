@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 2, 2026
+**Last updated:** Session 12 (April 2, 2026)
 
 ---
 
@@ -140,7 +140,7 @@ DontForgetWhy/
     │   ├── CreateAlarmScreen.tsx
     │   ├── CreateReminderScreen.tsx
     │   ├── DailyRiddleScreen.tsx
-    │   ├── ForgetLogScreen.tsx
+    │   ├── ForgetLogScreen.tsx        # DELETED Session 12 — ForgetLog feature removed
     │   ├── GamesScreen.tsx
     │   ├── GuessWhyScreen.tsx
     │   ├── HomeScreen.tsx              # Home screen — icon grid, Quick Capture, personality banner
@@ -160,7 +160,7 @@ DontForgetWhy/
     │   ├── alarmPhotoStorage.ts    # per-alarm photo save/delete/exists
     │   ├── alarmSound.ts
     │   ├── backgroundStorage.ts    # shared screen background photo
-    │   ├── forgetLog.ts
+    │   ├── forgetLog.ts                # DELETED Session 12 — ForgetLog feature removed
     │   ├── guessWhyStats.ts
     │   ├── memoryScore.ts
     │   ├── noteImageStorage.ts      # note image save/delete/drawing data
@@ -298,8 +298,8 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.9.0 (versionCode 24) — Home screen release |
-| Production status | v1.9.0 build pending |
+| Current version | v1.10.0 (versionCode 26) — SQLite migration + visual polish |
+| Production status | v1.10.0 build pending |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
@@ -309,6 +309,10 @@ DontForgetWhy/
 | Jest tests | 35 passing (3 suites: time, noteColors, soundModeUtils) — ts-jest, node env |
 | EAS build credits | ~13 remaining (reset April 12) |
 
+### Packages Added (Session 12)
+- `expo-sqlite` — synchronous SQLite database (replaced AsyncStorage for all persistent storage)
+- Note: `@react-native-async-storage/async-storage` kept temporarily — only used in `database.ts` for one-time migration runner
+
 ### Packages Removed (Session 10)
 - `react-native-tab-view` — tabs replaced by standalone screens (Session 9 separation)
 - `react-native-pager-view` — was only a dependency of tab-view
@@ -316,6 +320,9 @@ DontForgetWhy/
 
 ### App.tsx Changes (Session 10)
 - `GestureHandlerRootView` wraps the entire app — required for SwipeableRow gesture handling
+
+### App.tsx Changes (Session 12)
+- `migrateFromAsyncStorage()` gate: migration runs before any screens render, App returns null until `dbReady` is true
 
 ### Jest Setup (Session 11)
 - **Preset:** `ts-jest` with `node` test environment

@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** April 2, 2026
+**Last updated:** Session 12 (April 2, 2026)
 
 ---
 
@@ -380,5 +380,42 @@
 - Found: Session 10
 - Cause: Restore and Forever Delete buttons rendered in column layout instead of side-by-side
 - Fix: Changed to row layout with proper spacing
+
+### Session 12 Bug Fixes (April 2, 2026) — SQLite Migration
+
+**Bug: `execSync` multi-statement DDL only executes first statement**
+- Found: Session 12 during migration testing
+- Cause: `db.execSync()` with a single string containing multiple `CREATE TABLE` statements only executed the first one. All subsequent tables were never created.
+- Fix: Split into individual `db.execSync()` calls per table, each wrapped in try/catch with error logging.
+
+**Bug: `soundId` / `soundID` SQLite case-insensitive column collision**
+- Found: Session 12 by Codex audit
+- Cause: Alarm type has `soundId: string` (TEXT) and `soundID: number` (INTEGER). SQLite treats column names as case-insensitive, so both mapped to the same column.
+- Fix: Renamed INTEGER column to `nativeSoundId` in schema, migration, and all row converters. TypeScript type kept as `soundID` for backward compatibility; `rowToAlarm` maps `nativeSoundId → soundID`.
+
+**Bug: Migration failure renders empty app**
+- Found: Session 12 during testing
+- Cause: If `migrateFromAsyncStorage()` failed, `dbReady` was set to true anyway, rendering the app with empty SQLite tables and no data.
+- Fix: App.tsx checks `_migrated` flag. Migration retry on failure (flag not set = retries next launch).
+
+**Bug: `voiceMemos` column missing from notes schema**
+- Found: Session 12 by Codex audit
+- Cause: Original schema prompt omitted `voiceMemos TEXT` column from the `notes` table. Note type has `voiceMemos?: string[]` field. Without the column, note-attached voice memos were silently lost on migration.
+- Fix: Added `voiceMemos TEXT` column to notes table schema. Updated `_insertNotes`, `NoteRow`, `rowToNote`, `addNote`, `updateNote` to include the column.
+
+**Bug: Voice roast migration key mismatch**
+- Found: Session 12 by Codex audit
+- Cause: Migration KV keys list had `voiceEnabled` and `introPlayed` but actual AsyncStorage keys used by `voicePlayback.ts` were `voiceRoastsEnabled` and `voiceIntroPlayed`.
+- Fix: Updated KV_KEYS in database.ts to use correct key names.
+
+**Bug: Custom note color migration key mismatch**
+- Found: Session 12 by Codex audit
+- Cause: Migration KV keys had `notepad_customBgColor` / `notepad_customFontColor` but actual keys used in NotepadScreen were `note_custom_bg_color` / `note_custom_font_color` (from `CUSTOM_BG_COLOR_KEY` / `CUSTOM_FONT_COLOR_KEY` constants). Also needed legacy keys `noteCustomBgColor` / `noteCustomFontColor` for the old→new migration path.
+- Fix: Updated KV_KEYS to include all 4 key variants (current + legacy).
+
+**Bug: `private` is a SQLite reserved word**
+- Found: Session 12 during testing
+- Cause: `private` column in alarms and reminders tables failed DDL when unquoted. SQLite treats `private` as a reserved keyword.
+- Fix: Quoted as `"private"` in all DDL and DML statements.
 
 **45 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.

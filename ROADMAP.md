@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: April 2, 2026
+### Source of Truth · Updated: Session 12 (April 2, 2026)
 
 ---
 
@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.10.0 (versionCode 25) — Visual overhaul + Jest |
+| **Current Version** | v1.10.0 (versionCode 26) — SQLite migration + visual polish |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | Session 12: Storage migration (AsyncStorage → SQLite) |
+| **Current Focus** | Session 12 complete: SQLite migration, ForgetLog removed, timer pin redesign, emoji cleanup |
 | **Blocked By** | Nothing |
-| **Next Action** | Audit storage migration → Ship → P4 |
+| **Next Action** | Audit → Ship v1.10.0 → P4 |
 | **EAS Credits** | ~13 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -28,6 +28,7 @@
 | 3 | Voice Roasts | ✅ Done | dev | Dev + Prod |
 | 3.5 | Voice Memos | ✅ Done | dev | Dev + Prod |
 | — | v1.9.0 Home Screen | ✅ Done | dev | Prod only |
+| — | Storage Migration (SQLite) | ✅ Done | dev | Dev + Prod |
 | 4 | Chess + Checkers | ⬜ Waiting | dev | Prod only |
 | 5 | Google Calendar Sync | ⬜ Waiting | dev | Dev + Prod |
 | 6 | Memory Score Expansion | ⬜ Waiting | dev | Prod only |
@@ -335,12 +336,18 @@
 
 ### Completed
 - [x] Chose `expo-sqlite` (Expo-managed, synchronous API, no extra native deps)
-- [x] Created `src/services/database.ts` — singleton, schema (8 tables + kv_store), KV helpers, migration runner
+- [x] Created `src/services/database.ts` — singleton, schema (7 tables + kv_store), KV helpers, migration runner
 - [x] Migrated KV services (settings, theme, haptics, voice, background, game stats) — 15 files
-- [x] Migrated entity services (notes, voice memos, forget log, timers, alarms, reminders) — 6 files
+- [x] Migrated entity services (notes, voice memos, timers, alarms, reminders) — 5 files
 - [x] Migrated widget pins, pending actions, snooze flags, notification routing — 6 files
 - [x] One-time `migrateFromAsyncStorage()` copies all existing data to SQLite on first launch
 - [x] AsyncStorage import removed from all files except `database.ts` (migration runner)
+- [x] ForgetLog feature removed (screen, service, nav route, database table all deleted)
+- [x] `nativeSoundId` column rename (SQLite case-insensitive collision with `soundId`)
+- [x] `voiceMemos` column added to notes table (data loss fix caught by audit)
+- [x] Migration failure handling: retry screen in App.tsx
+- [x] Emoji cleanup: game screen headers stripped of emoji, quick row expanded to 12
+- [x] Timer pin redesign: capsule overlay on cards, modal pin removed
 - [x] `npx tsc --noEmit` — 0 errors
 
 ### Audit Gate
@@ -552,6 +559,11 @@
 - Voice memos attachable to alarms (hear your own voice when alarm fires — "viral-worthy UX")
 - More voice roast clips throughout app (navigation, actions, idle moments)
 - Female voice character (alarm guy's girlfriend) — future user-selectable option
+- Expanded alarm icon picker (curated categories beyond emoji)
+- Voice content expansion (jokes, roasts, non-time humor)
+- Guess Why Personal Edition (custom brain training)
+- Trivia/riddle wake-up mode
+- More voice clips in more places
 - P4: Chess/Checkers (pure JS, no build needed)
 - P5: Google Calendar sync
 - P6: Memory Score expansion
@@ -566,7 +578,7 @@
 - Full code audit (fresh eyes on entire codebase post-restructure)
 - R8 deobfuscation mapping file upload for Play Console crash reports
 - ~~Theme consolidation~~ — DONE Session 9 (6 → 4 themes + section colors + custom picker removed)
-- ~~AsyncStorage → SQLite migration~~ — DONE Session 12 (expo-sqlite, 8 tables + kv_store, all services migrated)
+- ~~AsyncStorage → SQLite migration~~ — DONE Session 12 (expo-sqlite, 7 tables + kv_store, all services migrated)
 - NotepadScreen further decomposition (~1240 lines — getting unwieldy)
 
 ### Store / Marketing
