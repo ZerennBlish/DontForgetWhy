@@ -866,15 +866,16 @@ export default function NoteEditorModal({
                     <HomeIcon color={colors.mode === 'dark' ? '#F0F0F8' : colors.textPrimary} size={18} />
                   </TouchableOpacity>
                 </View>
-                <View style={styles.topBarCenter} />
-                <View style={styles.topBarRight}>
+                <View style={styles.topBarCenter}>
                   <TouchableOpacity
-                    style={styles.editorTopBtn}
+                    style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
                     onPress={() => { hapticLight(); setIsViewMode(false); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Edit</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Edit</Text>
                   </TouchableOpacity>
+                </View>
+                <View style={styles.topBarRight}>
                   <TouchableOpacity
                     style={styles.editorTopBtn}
                     onPress={() => {
@@ -921,13 +922,15 @@ export default function NoteEditorModal({
                   </TouchableOpacity>
                 </View>
                 <View style={styles.topBarCenter}>
-                  <TouchableOpacity
-                    style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
-                    onPress={handleSave}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Save</Text>
-                  </TouchableOpacity>
+                  {hasUnsavedChanges() ? (
+                    <TouchableOpacity
+                      style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+                      onPress={handleSave}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Save</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
                 <View style={styles.topBarRight}>
                   <TouchableOpacity

@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 12 (April 2, 2026)
+**Last updated:** Session 13 (April 3, 2026)
 
 ---
 
@@ -80,30 +80,40 @@ All prior channel versions deleted on every app startup.
 
 ## 3. Theme System
 
-### 4 Themes (Session 9 consolidation, Session 10 Vivid overhaul)
+### 6 Themes (Session 13: 3 dark + 3 light)
 | Theme | Mode | Background | Card | Accent |
 |-------|------|-----------|------|--------|
 | Dark | dark | #0A0A12 | #1A1A28 | #5B9EE6 |
-| Light | light | #F2F3F8 | #FFFFFF | #3B82F6 |
+| Light (Ocean) | light | #EFF4FB | #FFFFFF | #2563EB |
 | High Contrast | dark | #000000 | #1A1A1A | #00D4FF |
-| Vivid | dark | #0A0F0A | #0F1A0F | #39FF14 |
+| Vivid | dark | #080D08 | #0E1A0E | #00FF88 |
+| Sunset | light | #FFF8F0 | #FFFFFF | #E8690A |
+| Ruby | light | #FDF2F4 | #FFFFFF | #E11D48 |
 
-Vivid overhauled in Session 10: cyberpunk terminal aesthetic — green-tinted blacks, neon green accent (#39FF14). All 3 dark themes now visually distinct.
+Session 13: Original light theme replaced with blue-tinted Ocean palette. Added Sunset (orange/amber) and Ruby (red/rose). 3 dark + 3 light covers blue, green, cyan, orange, red, black.
 
 ### Section Colors in Theme
 ThemeColors interface includes per-section color tokens: `sectionAlarm`, `sectionReminder`, `sectionCalendar`, `sectionNotepad`, `sectionVoice`, `sectionTimer`, `sectionGames`. Each theme defines its own palette (e.g., Vivid uses completely different section colors than Dark). All hardcoded section hex values throughout the app replaced with `colors.section*` references.
 
 ### Evolution
-Feb 11: 8 themes + custom. Mar 10-11: Consolidated to 6 presets. Apr 1 (Session 9): Consolidated to 4 — Dark, Light, High Contrast, Vivid. Custom theme generator (`generateCustomThemeDual`) removed entirely. Personalization via background images, not theme colors — users picking colors that fight their backgrounds was a trap.
+Feb 11: 8 themes + custom. Mar 10-11: Consolidated to 6 presets. Apr 1 (Session 9): Consolidated to 4 — Dark, Light, High Contrast, Vivid. Custom theme generator removed. Apr 3 (Session 13): Expanded to 6 — replaced Light with Ocean, added Sunset and Ruby. 3 dark + 3 light covers top favorite colors.
 
 ### Mode-Aware Rendering
 Light mode overhaul in Session 9: capsule buttons use mode-aware rgba values, watermark opacity adapts (0.15 dark / 0.06 light). Card backgrounds use section-colored tint in both modes — dark mode uses `sectionColor + '20'`, light mode uses `sectionColor + '15'` (Session 10). Photo overlay always uses dark dim (`rgba(0,0,0,opacity)`) regardless of mode — photos look best dimmed, not bleached. Photo-aware alpha values on HomeScreen: grid cells, quick capture buttons, today container, and banner all increase opacity when a background photo is set (e.g., grid `90` with photo, `40` without).
 
+### Overlay Text Strategy (Session 13)
+Two patterns for text on dark overlays:
+- **Permanent overlays** (game sub-screens, GamesScreen, SettingsScreen): use `colors.overlayText` and hardcoded light rgba (`'rgba(255,255,255,0.7)'`, `'rgba(255,255,255,0.5)'`) directly in styles. BackButton/HomeButton use unconditional `forceDark`.
+- **Conditional overlays** (8 user-photo screens): base styles use theme tokens (`colors.textPrimary` etc.), JSX overrides add `bgUri && { color: colors.overlayText }` for when photo overlay is active. BackButton/HomeButton use `forceDark={!!bgUri}`.
+
+### View/Edit Mode Pattern (Session 13)
+VoiceMemoDetailScreen and NoteEditorModal both use `isViewMode` state for existing items. View mode: read-only Text, centered "Edit" accent pill in header. Edit mode: TextInput fields, centered "Save" accent pill (only when `hasUnsavedChanges`). Header layout: headerLeft (Back + Home), headerCenter (Edit/Save pill), headerRight (Trash/Share). New items go straight to edit mode.
+
 ### Brand Title Token
-`brandTitle` field in ThemeColors: per-theme title color for "Don't Forget Why" on HomeScreen. Dark: `#1E3A5F` (midnight navy, subtle), Light: `#2563EB` (bold blue), High Contrast: `#00D4FF` (cyan), Vivid: `#FF6B9D` (pink).
+`brandTitle` field in ThemeColors: per-theme title color for "Don't Forget Why" on HomeScreen. Dark: `#2563EB` (blue), Light: `#1E3A8A` (navy), High Contrast: `#00D4FF` (cyan), Vivid: `#00FF88` (green), Sunset: `#9A3412` (brown), Ruby: `#9F1239` (deep red).
 
 ### Migration
-All old theme names migrate to new 4: midnight/ember/neon/void→dark, frost/sand→light, custom→dark. Legacy names from pre-6-theme era also mapped. Applied in both ThemeContext.tsx and widget theme loader.
+All old theme names migrate to current 6: midnight/ember/neon/void→dark, frost/sand→light, custom→dark. Legacy names from pre-6-theme era also mapped. Applied in both ThemeContext.tsx and widget theme loader.
 
 ---
 
@@ -269,11 +279,15 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 - VoiceRecordScreen has NO post-recording UI — after `stopRecording` completes, immediately calls `navigation.replace('VoiceMemoDetail', { tempUri, duration })`. Screen only shows idle state and recording state
 - `beforeRemove` navigation listener intercepts hardware back, gesture back, and custom back button. During recording: stops, discards temp file, dispatches original action. Uses `navigatedRef` to allow programmatic `replace` navigation through
 
-### VoiceMemoDetailScreen — Dual Mode
+### VoiceMemoDetailScreen — View/Edit Mode (Session 13 redesign)
 - Accepts `{ tempUri: string; duration: number }` for new recordings OR `{ memoId: string }` for existing memos. Mode detected via `'tempUri' in params`
-- **New recordings:** Save/Discard buttons at bottom. Save: transactional — `saveVoiceMemoFile` copies temp to permanent, then `addVoiceMemo` writes metadata. If metadata fails, permanent copy deleted, temp file preserved for retry. On success, temp file deleted (best-effort). `savingRef` blocks exit during save
-- **Existing memos:** explicit Save capsule in header (only visible when title/note differ from `initialTitleRef`/`initialNoteRef`). `handleSaveExisting` returns `Promise<boolean>` — false on failure prevents "Save & Exit" from navigating away
-- `beforeRemove` navigation listener: blocks during save (`savingRef`), new recordings get "Discard recording?" alert, existing with unsaved changes get "Unsaved changes" alert with Cancel/Discard/Save & Exit. `exitingRef` prevents re-triggering on intentional exits. Alert callbacks use `navigation.dispatch(e.data.action)` to proceed
+- `isViewMode` state: defaults true for existing memos, false for new recordings
+- **View mode:** read-only Text for title/note, centered "Edit" accent pill in headerCenter. Tap Edit → enters edit mode
+- **Edit mode:** TextInput fields with bgUri-aware placeholder colors, centered "Save" accent pill (only when `hasUnsavedChanges`). Save returns to view mode
+- Header: headerLeft (Back + Home), headerCenter (Edit/Save pill), headerRight (Trash). No title text — redundant
+- **New recordings:** always edit mode, Save/Discard buttons at bottom. Save: transactional — `saveVoiceMemoFile` copies temp to permanent, then `addVoiceMemo` writes metadata. If metadata fails, permanent copy deleted, temp file preserved for retry. `savingRef` blocks exit during save
+- `handleSaveExisting` returns `Promise<boolean>` — false on failure prevents "Save & Exit" from navigating away
+- `beforeRemove` navigation listener: blocks during save (`savingRef`), new recordings get "Discard recording?" alert, existing with unsaved changes get "Unsaved changes" alert with Cancel/Discard/Save & Exit. `exitingRef` prevents re-triggering on intentional exits
 
 ### Playback
 - **VoiceMemoDetailScreen:** seekable progress bar (44px touch target, 6px visual bar), back/forward 5s, `useFocusEffect` cleanup pauses on screen blur. `Number.isFinite` validation on all seek values with try/catch on `seekTo`. View-based play/pause icons (CSS border triangle for play, dual bars for pause). Play button color: #4CAF50 (Material Design green)

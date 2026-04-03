@@ -302,7 +302,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         dateText: {
           fontSize: 15,
-          color: colors.textTertiary,
+          color: 'rgba(255,255,255,0.5)',
           marginTop: 4,
           textAlign: 'center',
         },
@@ -324,7 +324,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         statText: {
           fontSize: 13,
-          color: colors.textTertiary,
+          color: 'rgba(255,255,255,0.5)',
         },
 
         // Daily riddle area (no card box — question floats over background)
@@ -379,7 +379,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         hintBtnText: {
           fontSize: 14,
-          color: colors.textTertiary,
+          color: 'rgba(255,255,255,0.5)',
           fontWeight: '500',
         },
         hintText: {
@@ -410,7 +410,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         didYouGetIt: {
           fontSize: 15,
-          color: colors.textTertiary,
+          color: 'rgba(255,255,255,0.5)',
           marginTop: 16,
           marginBottom: 12,
         },
@@ -445,7 +445,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         resultText: {
           fontSize: 15,
-          color: colors.textSecondary,
+          color: 'rgba(255,255,255,0.7)',
           fontStyle: 'italic',
           textAlign: 'center',
           marginTop: 16,
@@ -464,7 +464,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         revealBtnText: {
           fontSize: 18,
           fontWeight: '700',
-          color: colors.textPrimary,
+          color: colors.overlayText,
         },
 
         // Browse button
@@ -1106,10 +1106,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.header}>
       <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton onPress={() => navigation.goBack()} forceDark />
       </View>
       <View style={styles.headerHome}>
-        <HomeButton />
+        <HomeButton forceDark />
       </View>
       <Text style={styles.title}>{'\u{1F4A1}'} Daily Riddle</Text>
     </View>

@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 12 (April 2, 2026)
+### Source of Truth · Updated: Session 13 (April 3, 2026)
 
 ---
 
@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.10.0 (versionCode 26) — SQLite migration + visual polish |
+| **Current Version** | v1.10.1 (versionCode 27) — visual overhaul, 6 themes, detail screen redesign |
 | **Branch** | `dev` (synced with main) |
 | **Production Status** | ✅ Live on Google Play |
-| **Current Focus** | Session 12 complete: SQLite migration, ForgetLog removed, timer pin redesign, emoji cleanup |
+| **Current Focus** | Session 13 complete: light mode visual overhaul, 6 themes, alarm delete fix, VoiceMemoDetail redesign |
 | **Blocked By** | Nothing |
-| **Next Action** | Audit → Ship v1.10.0 → P4 |
+| **Next Action** | Audit → Ship v1.10.1 → P4 |
 | **EAS Credits** | ~13 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — voice asset generation ready |
@@ -29,6 +29,7 @@
 | 3.5 | Voice Memos | ✅ Done | dev | Dev + Prod |
 | — | v1.9.0 Home Screen | ✅ Done | dev | Prod only |
 | — | Storage Migration (SQLite) | ✅ Done | dev | Dev + Prod |
+| — | Visual Overhaul (Session 13) | ✅ Done | dev | Prod only |
 | 4 | Chess + Checkers | ⬜ Waiting | dev | Prod only |
 | 5 | Google Calendar Sync | ⬜ Waiting | dev | Dev + Prod |
 | 6 | Memory Score Expansion | ⬜ Waiting | dev | Prod only |
@@ -308,6 +309,35 @@
 - ~~Guess Why showing answer immediately~~ — FIXED Session 9
 - ~~Yearly recurring reminder rescheduling without firing~~ — FIXED Session 9
 - ~~ExpoKeepAwake promise rejections in dev mode (SDK 55)~~ — FIXED Session 9
+
+### Session 13 Visual Overhaul (v1.10.1) ✅ COMPLETE
+
+- [x] GamesScreen + SettingsScreen: hardcoded dark-only colors replaced with mode-aware theme tokens
+- [x] 5 game sub-screens: `forceDark` on BackButton/HomeButton, overlay-safe text colors
+- [x] 8 user-photo screens: `forceDark={!!bgUri}`, bgUri-aware JSX overrides on header/overlay text
+- [x] HomeScreen: bgUri overrides on title, gear icon, banner, quick capture, grid, today header
+- [x] VoiceRecordScreen: fixed hardcoded `#FFFFFF` title, paused timer bgUri fix
+- [x] 6 themes (3 dark + 3 light): Dark, Light (Ocean), High Contrast, Vivid, Sunset, Ruby
+- [x] SettingsScreen theme grid: 3×2 layout for 6 themes
+- [x] VoiceMemoDetailScreen: view/edit mode redesign with centered Edit/Save accent pills
+- [x] NoteEditorModal: Edit button moved to centered accent pill, Save conditional on changes
+- [x] homeBannerQuotes: dead `color` field removed from interface and all ~60 quotes
+- [x] AlarmListScreen: delete/restore handlers use `loadAlarms(true)` (trash visibility fix)
+- [x] TriviaScreen: Online toggle moved to header right
+- [x] Old theme names (ocean, warm) cleaned from migration maps
+
+| Theme | Mode | Accent | Vibe |
+|-------|------|--------|------|
+| Dark | dark | #5B9EE6 | Blue daily driver |
+| Light | light | #2563EB | Blue-tinted ocean |
+| High Contrast | dark | #00D4FF | Cyan accessibility |
+| Vivid | dark | #00FF88 | Cyberpunk terminal |
+| Sunset | light | #E8690A | Orange/amber warmth |
+| Ruby | light | #E11D48 | Red/rose bold |
+
+### Deferred Findings
+- NoteEditorModal `voiceMemoStyles` (lines 51-173): hardcoded dark rgba for recording controls and memo cards. Renders against arbitrary user-selected note backgrounds, not theme backgrounds. Needs own design conversation.
+- DrawingCanvas dark rgba values: works on both modes after review — low priority.
 
 ### Session 10 P2 Audit Findings (All 7 CLEARED)
 - Yearly label bug: no-date recurring reminders showed "Daily", now "Yearly"

@@ -430,11 +430,11 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         title: {
           fontSize: 28,
           fontWeight: '800',
-          color: '#FFFFFF',
+          color: colors.overlayText,
         },
         selectSubtitle: {
           fontSize: 15,
-          color: colors.textTertiary,
+          color: 'rgba(255,255,255,0.5)',
           marginTop: 6,
         },
         difficultyBtn: {
@@ -450,12 +450,12 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         difficultyLabel: {
           fontSize: 20,
           fontWeight: '700',
-          color: colors.textPrimary,
+          color: colors.overlayText,
           textAlign: 'center',
         },
         difficultyInfo: {
           fontSize: 14,
-          color: colors.textTertiary,
+          color: 'rgba(255,255,255,0.5)',
           marginTop: 4,
           textAlign: 'center',
         },
@@ -480,7 +480,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         gameDifficulty: {
           fontSize: 16,
           fontWeight: '700',
-          color: colors.textPrimary,
+          color: colors.overlayText,
         },
         statsRow: {
           flexDirection: 'row',
@@ -491,7 +491,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         statText: {
           fontSize: 16,
           fontWeight: '600',
-          color: colors.textSecondary,
+          color: 'rgba(255,255,255,0.7)',
         },
         gridContainer: {
           flex: 1,
@@ -534,7 +534,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         winTitle: {
           fontSize: 28,
           fontWeight: '800',
-          color: colors.textPrimary,
+          color: colors.overlayText,
           marginBottom: 12,
         },
         starsText: {
@@ -572,7 +572,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         },
         winMessage: {
           fontSize: 15,
-          color: colors.textSecondary,
+          color: 'rgba(255,255,255,0.7)',
           fontStyle: 'italic',
           textAlign: 'center',
           marginBottom: 28,
@@ -591,7 +591,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         playAgainText: {
           fontSize: 16,
           fontWeight: '700',
-          color: colors.textPrimary,
+          color: colors.overlayText,
         },
         changeDifficultyBtn: {
           backgroundColor: colors.card,
@@ -618,10 +618,10 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <View style={styles.header}>
             <View style={styles.headerBack}>
-              <BackButton onPress={() => navigation.goBack()} />
+              <BackButton onPress={() => navigation.goBack()} forceDark />
             </View>
             <View style={styles.headerHome}>
-              <HomeButton />
+              <HomeButton forceDark />
             </View>
             <Text style={styles.title}>Memory Match</Text>
           </View>
@@ -647,7 +647,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
                       {'\u{1F3C6}'} Best: {best.bestMoves} moves ({formatTime(best.bestTime)})
                     </Text>
                   ) : (
-                    <Text style={[styles.bestScoreText, { color: colors.textTertiary }]}>
+                    <Text style={[styles.bestScoreText, { color: 'rgba(255,255,255,0.5)' }]}>
                       No games played yet
                     </Text>
                   )}
@@ -671,10 +671,10 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <View style={styles.winHeader}>
             <View style={styles.winHeaderBack}>
-              <BackButton onPress={() => navigation.goBack()} />
+              <BackButton onPress={() => navigation.goBack()} forceDark />
             </View>
             <View style={styles.winHeaderHome}>
-              <HomeButton />
+              <HomeButton forceDark />
             </View>
             <Text style={styles.title}>Memory Match</Text>
           </View>
@@ -752,8 +752,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           <View style={styles.gameHeader}>
             <View style={styles.gameHeaderRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <BackButton onPress={handleBackFromGame} />
-                <HomeButton />
+                <BackButton onPress={handleBackFromGame} forceDark />
+                <HomeButton forceDark />
               </View>
               <Text style={styles.gameDifficulty}>{config.label}</Text>
             </View>

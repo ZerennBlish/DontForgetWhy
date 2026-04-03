@@ -32,7 +32,6 @@ const MIGRATION: Record<string, ThemeName> = {
   royal: 'dark',
   bubblegum: 'light',
   sunshine: 'light',
-  ocean: 'light',
   mint: 'light',
   charcoal: 'dark',
   amoled: 'dark',

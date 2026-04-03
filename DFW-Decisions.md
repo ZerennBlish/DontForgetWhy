@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 12 (April 2, 2026)
+**Last updated:** Session 13 (April 3, 2026)
 
 ---
 
@@ -253,6 +253,24 @@ Stripped to essentials: red record circle + "Don't Forget Why" footer. 70dp mini
 
 ### WidgetTheme expanded with red property (Session 11)
 Added `red: string` to WidgetTheme interface so widgets can use theme-aware red (e.g., MicWidget record circle, destructive actions) instead of hardcoded hex values.
+
+### Overlay text strategy (Session 13)
+Permanent dark overlay screens (game sub-screens, GamesScreen, SettingsScreen) use hardcoded overlay-safe colors (`colors.overlayText`, `rgba(255,255,255,0.7)`, `rgba(255,255,255,0.5)`) directly in styles. Conditional photo screens (8 user-photo screens) use `bgUri && { color: colors.overlayText }` JSX overrides so base theme colors work without a photo. Two distinct patterns — never mixed on the same screen.
+
+### forceDark split (Session 13)
+`forceDark` (unconditional) for BackButton/HomeButton on permanent dark overlays. `forceDark={!!bgUri}` (conditional) for user-photo screens where the overlay only exists when a photo is set. Never both on the same screen.
+
+### View/edit mode for detail screens (Session 13)
+VoiceMemoDetailScreen and NoteEditorModal both default to view mode for existing items. Centered accent pill toggles: "Edit" in view mode, "Save" in edit mode (only when changes exist). Header layout: headerLeft (Back + Home), headerCenter (Edit/Save pill), headerRight (Trash/Share). New items go straight to edit mode. Prevents accidental edits and gives a cleaner read-only experience.
+
+### 6 themes — 3 dark + 3 light (Session 13)
+Replaced original light theme with blue-tinted Ocean. Added Sunset (orange) and Ruby (red). Covers top favorite colors: blue (Dark/Light), green (Vivid), cyan (HC), orange (Sunset), red (Ruby), black (HC). Each theme in a different hue family — no two themes look similar.
+
+### `light` theme is Ocean (Session 13)
+Rather than adding Ocean as a 7th theme, replaced the original Light theme entirely. Ocean has better contrast (darker slate text vs gray), more distinctive personality (blue-tinted background vs neutral gray), and stronger section colors. The old Light was generic — Ocean has character.
+
+### homeBannerQuotes color field removed (Session 13)
+Dead field. HomeScreen resolves section colors via `bannerColorMap` from theme tokens. Hardcoded hex on each quote object was never used when the map had a match (which was always — all 7 sections mapped). Removed `color` from `BannerQuote` interface and all ~60 quote objects.
 
 ---
 

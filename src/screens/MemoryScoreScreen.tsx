@@ -208,10 +208,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.header}>
       <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton onPress={() => navigation.goBack()} forceDark />
       </View>
       <View style={styles.headerHome}>
-        <HomeButton />
+        <HomeButton forceDark />
       </View>
       <Text style={styles.title}>Memory Score</Text>
     </View>
@@ -547,7 +547,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
     title: {
       fontSize: 28,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: colors.overlayText,
     },
 
     // Overall summary
@@ -572,7 +572,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
     summaryRank: {
       fontSize: 18,
       fontWeight: '700',
-      color: colors.textPrimary,
+      color: colors.overlayText,
       lineHeight: 24,
     },
     summaryScore: {
@@ -595,7 +595,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
     sectionTitle: {
       fontSize: 18,
       fontWeight: '700',
-      color: colors.textPrimary,
+      color: colors.overlayText,
       marginBottom: 16,
       textAlign: 'center',
     },
@@ -627,11 +627,11 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
     bigValue: {
       fontSize: 40,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: colors.overlayText,
     },
     rankLabel: {
       fontSize: 14,
-      color: colors.textTertiary,
+      color: 'rgba(255,255,255,0.5)',
       marginTop: 2,
     },
 
@@ -644,12 +644,12 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
     },
     statLabel: {
       fontSize: 15,
-      color: colors.textSecondary,
+      color: 'rgba(255,255,255,0.7)',
     },
     statValue: {
       fontSize: 15,
       fontWeight: '700',
-      color: colors.textPrimary,
+      color: colors.overlayText,
     },
     divider: {
       height: 1,
@@ -669,7 +669,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
     // Not played
     notPlayed: {
       fontSize: 14,
-      color: colors.textTertiary,
+      color: 'rgba(255,255,255,0.5)',
       fontStyle: 'italic',
       paddingVertical: 6,
     },

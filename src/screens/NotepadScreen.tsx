@@ -770,16 +770,16 @@ export default function NotepadScreen({ navigation, route }: Props) {
       return (
         <View style={styles.empty}>
           <View style={{ marginBottom: 12 }}><TrashIcon color={colors.textTertiary} size={40} /></View>
-          <Text style={styles.emptyTitle}>Nothing in the trash</Text>
-          <Text style={styles.emptyText}>How responsible of you.</Text>
+          <Text style={[styles.emptyTitle, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Nothing in the trash</Text>
+          <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>How responsible of you.</Text>
         </View>
       );
     }
     return (
       <View style={styles.empty}>
         <View style={{ marginBottom: 12 }}><DocIcon color={colors.textTertiary} size={40} /></View>
-        <Text style={styles.emptyTitle}>No notes yet</Text>
-        <Text style={styles.emptyText}>
+        <Text style={[styles.emptyTitle, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>No notes yet</Text>
+        <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
           Tap the notepad to create one.
         </Text>
       </View>
@@ -806,12 +806,12 @@ export default function NotepadScreen({ navigation, route }: Props) {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerBack}>
-            <BackButton onPress={() => navigation.goBack()} />
+            <BackButton onPress={() => navigation.goBack()} forceDark={!!bgUri} />
           </View>
           <View style={styles.headerHome}>
-            <HomeButton />
+            <HomeButton forceDark={!!bgUri} />
           </View>
-          <Text style={styles.title}>Notes</Text>
+          <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Notes</Text>
         </View>
 
         <View style={styles.filterToggleRow}>
@@ -827,7 +827,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
             activeOpacity={0.7}
           >
             {filter !== 'active' && <View style={styles.filterDot} />}
-            <Text style={styles.filterToggleText}>
+            <Text style={[styles.filterToggleText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
               Filter {showFilter ? '\u25B4' : '\u25BE'}
             </Text>
           </TouchableOpacity>

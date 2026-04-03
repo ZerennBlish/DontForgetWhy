@@ -373,24 +373,22 @@ export default function TriviaScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
       <View style={styles.header}>
         <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton onPress={() => navigation.goBack()} forceDark />
         </View>
         <View style={styles.headerHome}>
-          <HomeButton />
+          <HomeButton forceDark />
         </View>
         <Text style={styles.title}>Trivia Time</Text>
-      </View>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        {/* Online/Offline toggle (disabled) */}
         <TouchableOpacity
-          style={[styles.modeToggle, { opacity: 0.4 }]}
+          style={{ position: 'absolute', right: 20, top: insets.top + 14, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: 0.4 }}
           onPress={() => { hapticLight(); Alert.alert('Online Mode', 'Online mode coming in a future update'); }}
           activeOpacity={0.6}
         >
-          <Text style={styles.modeIcon}>{'\u{1F310}'}</Text>
-          <Text style={[styles.modeText, { color: colors.textTertiary }]}>Online</Text>
+          <Text style={{ fontSize: 14 }}>{'\u{1F310}'}</Text>
+          <Text style={{ fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.5)' }}>Online</Text>
         </TouchableOpacity>
-
+      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {allSeenMessage && (
           <Text style={styles.seenNote}>{allSeenMessage}</Text>
         )}
@@ -467,10 +465,10 @@ export default function TriviaScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
       <View style={styles.header}>
         <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton onPress={() => navigation.goBack()} forceDark />
         </View>
         <View style={styles.headerHome}>
-          <HomeButton />
+          <HomeButton forceDark />
         </View>
         <Text style={styles.title}>Trivia Time</Text>
       </View>
@@ -545,8 +543,8 @@ export default function TriviaScreen({ navigation }: Props) {
       {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
-          <BackButton onPress={handleBackFromGame} />
-          <HomeButton />
+          <BackButton onPress={handleBackFromGame} forceDark />
+          <HomeButton forceDark />
         </View>
         <View style={styles.topBarRight}>
           <Text style={styles.topBarCounter}>{currentIndex + 1}/{questions.length}</Text>
@@ -659,7 +657,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
     title: {
       fontSize: 28,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: colors.overlayText,
     },
 
     // Mode toggle
@@ -700,6 +698,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       justifyContent: 'center',
       paddingHorizontal: 12,
       gap: 12,
+      marginTop: 12,
     },
     categoryCard: {
       width: '46%',
@@ -717,7 +716,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
     categoryLabel: {
       fontSize: 14,
       fontWeight: '600',
-      color: colors.textPrimary,
+      color: colors.overlayText,
       textAlign: 'center',
     },
     categoryCardActive: {
@@ -816,7 +815,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
     topBarCounter: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#EAEAFF',
+      color: colors.overlayText,
     },
     topBarStreak: {
       fontSize: 15,

@@ -62,6 +62,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const [saving, setSaving] = useState(false);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
+  const [isViewMode, setIsViewMode] = useState(true);
 
   const initialTitleRef = useRef('');
   const initialNoteRef = useRef('');
@@ -102,6 +103,10 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         }
         setLoading(false);
       }
+      // New recordings go straight to edit mode
+      if (isNewRecording) {
+        setIsViewMode(false);
+      }
     })();
   }, []);
 
@@ -136,6 +141,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       });
       initialTitleRef.current = title;
       initialNoteRef.current = note;
+      setIsViewMode(true);
       refreshWidgets();
       ToastAndroid.show(
         SAVE_TOASTS[Math.floor(Math.random() * SAVE_TOASTS.length)],
@@ -348,48 +354,24 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
           paddingBottom: 2,
         },
-        headerBack: {
-          position: 'absolute',
-          left: 20,
-          top: insets.top + 10,
+        headerLeft: {
+          flexDirection: 'row',
+          alignItems: 'center',
         },
-        headerHome: {
-          position: 'absolute',
-          left: 64,
-          top: insets.top + 10,
-        },
-        headerSave: {
-          position: 'absolute',
-          left: 64,
-          top: insets.top + 14,
-        },
-        headerSaveBtn: {
-          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-          borderWidth: 1,
-          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-          borderRadius: 20,
-          paddingHorizontal: 14,
-          paddingVertical: 6,
-        },
-        headerSaveBtnText: {
-          fontSize: 12,
-          fontWeight: '700',
-          color: '#FFFFFF',
+        headerCenter: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 44,
         },
         headerRight: {
-          position: 'absolute',
-          right: 20,
-          top: insets.top + 10,
-        },
-        headerTitle: {
-          fontSize: 28,
-          fontWeight: '800',
-          color: '#FFFFFF',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
         },
         trashBtn: {
           width: 40,
@@ -408,7 +390,20 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         content: {
           flex: 1,
           paddingHorizontal: 20,
-          paddingTop: 24,
+          paddingTop: 40,
+        },
+        titleText: {
+          fontSize: 20,
+          fontWeight: '700',
+          color: colors.textPrimary,
+          paddingVertical: 8,
+        },
+        noteText: {
+          fontSize: 16,
+          color: colors.textSecondary,
+          paddingVertical: 8,
+          marginTop: 8,
+          lineHeight: 22,
         },
         titleInput: {
           fontSize: 20,
@@ -417,7 +412,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           paddingVertical: 8,
           paddingHorizontal: 0,
           borderBottomWidth: 1,
-          borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+          borderBottomColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
         },
         noteInput: {
           fontSize: 16,
@@ -440,7 +435,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         progressTrack: {
           height: 6,
           borderRadius: 3,
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
           overflow: 'hidden',
         },
         progressFill: {
@@ -455,7 +450,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         },
         timeText: {
           fontSize: 13,
-          color: 'rgba(255, 255, 255, 0.5)',
+          color: colors.textTertiary,
           fontWeight: '500',
           fontVariant: ['tabular-nums'],
         },
@@ -479,7 +474,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         skipText: {
           fontSize: 14,
           fontWeight: '700',
-          color: 'rgba(255, 255, 255, 0.7)',
+          color: colors.textSecondary,
         },
         playPauseBtn: {
           width: 64,
@@ -548,12 +543,12 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           paddingVertical: 14,
           alignItems: 'center',
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.15)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
         },
         discardBtnText: {
           fontSize: 15,
           fontWeight: '600',
-          color: '#FFFFFF',
+          color: colors.textPrimary,
         },
       }),
     [colors, insets],
@@ -589,16 +584,17 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           )}
         </View>
         <View style={styles.header}>
-          <View style={styles.headerBack}>
-            <BackButton onPress={() => navigation.goBack()} />
+          <View style={styles.headerLeft}>
+            <BackButton onPress={() => navigation.goBack()} forceDark={!!bgUri} />
+            <View style={{ marginLeft: 4 }}>
+              <HomeButton forceDark={!!bgUri} />
+            </View>
           </View>
-          <View style={styles.headerHome}>
-            <HomeButton />
-          </View>
-          <Text style={styles.headerTitle}>Voice Memo</Text>
+          <View style={styles.headerCenter} />
+          <View style={styles.headerRight} />
         </View>
         <View style={styles.notFound}>
-          <Text style={styles.notFoundText}>Memo not found</Text>
+          <Text style={[styles.notFoundText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Memo not found</Text>
         </View>
       </View>
     );
@@ -633,26 +629,44 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       </View>
 
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerBack}>
-          <BackButton onPress={handleBack} />
-        </View>
-        <View style={styles.headerHome}>
-          <HomeButton />
-        </View>
-        {!isNewRecording && hasUnsavedChanges && (
-          <View style={styles.headerSave}>
-            <TouchableOpacity
-              style={styles.headerSaveBtn}
-              onPress={handleSaveExisting}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.headerSaveBtnText}>Save</Text>
-            </TouchableOpacity>
+      {isNewRecording ? (
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <BackButton onPress={handleBack} forceDark={!!bgUri} />
+            <View style={{ marginLeft: 4 }}>
+              <HomeButton forceDark={!!bgUri} />
+            </View>
           </View>
-        )}
-        <Text style={styles.headerTitle}>{isNewRecording ? 'New Recording' : 'Voice Memo'}</Text>
-        {!isNewRecording && (
+          <View style={styles.headerCenter} />
+          <View style={styles.headerRight} />
+        </View>
+      ) : (
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <BackButton onPress={handleBack} forceDark={!!bgUri} />
+            <View style={{ marginLeft: 4 }}>
+              <HomeButton forceDark={!!bgUri} />
+            </View>
+          </View>
+          <View style={styles.headerCenter}>
+            {isViewMode ? (
+              <TouchableOpacity
+                style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+                onPress={() => { hapticLight(); setIsViewMode(false); }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.overlayText }}>Edit</Text>
+              </TouchableOpacity>
+            ) : hasUnsavedChanges ? (
+              <TouchableOpacity
+                style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+                onPress={handleSaveExisting}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.overlayText }}>Save</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
           <View style={styles.headerRight}>
             <TouchableOpacity
               style={styles.trashBtn}
@@ -662,35 +676,46 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               <TrashIcon color={colors.red} size={18} />
             </TouchableOpacity>
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Title */}
-        <TextInput
-          style={styles.titleInput}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Add a title..."
-          placeholderTextColor={colors.textTertiary}
-          maxLength={100}
-          returnKeyType="next"
-          onSubmitEditing={() => Keyboard.dismiss()}
-        />
-
-        {/* Note */}
-        <TextInput
-          style={styles.noteInput}
-          value={note}
-          onChangeText={setNote}
-          placeholder="Add a note..."
-          placeholderTextColor={colors.textTertiary}
-          maxLength={200}
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
-        />
+        {/* Title & Note */}
+        {isViewMode && !isNewRecording ? (
+          <>
+            {title ? (
+              <Text style={[styles.titleText, bgUri && { color: colors.overlayText }]}>{title}</Text>
+            ) : null}
+            {note ? (
+              <Text style={[styles.noteText, bgUri && { color: 'rgba(255,255,255,0.7)' }]}>{note}</Text>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <TextInput
+              style={[styles.titleInput, bgUri && { color: colors.overlayText }]}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Add a title..."
+              placeholderTextColor={bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary}
+              maxLength={100}
+              returnKeyType="next"
+              onSubmitEditing={() => Keyboard.dismiss()}
+            />
+            <TextInput
+              style={[styles.noteInput, bgUri && { color: 'rgba(255,255,255,0.7)' }]}
+              value={note}
+              onChangeText={setNote}
+              placeholder="Add a note..."
+              placeholderTextColor={bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary}
+              maxLength={200}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </>
+        )}
 
         {/* Playback section */}
         <View style={[styles.playbackSection, isNewRecording && { paddingBottom: 16 }]}>
@@ -717,10 +742,10 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
 
           {/* Time display */}
           <View style={styles.timeRow}>
-            <Text style={styles.timeText}>
+            <Text style={[styles.timeText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
               {formatTime(playerStatus.currentTime)}
             </Text>
-            <Text style={styles.timeText}>{formatTime(displayDuration)}</Text>
+            <Text style={[styles.timeText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>{formatTime(displayDuration)}</Text>
           </View>
 
           {/* Controls */}
@@ -730,7 +755,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               onPress={skipBack}
               activeOpacity={0.7}
             >
-              <Text style={styles.skipText}>-5</Text>
+              <Text style={[styles.skipText, bgUri && { color: 'rgba(255,255,255,0.7)' }]}>-5</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -753,7 +778,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               onPress={skipForward}
               activeOpacity={0.7}
             >
-              <Text style={styles.skipText}>+5</Text>
+              <Text style={[styles.skipText, bgUri && { color: 'rgba(255,255,255,0.7)' }]}>+5</Text>
             </TouchableOpacity>
           </View>
         </View>

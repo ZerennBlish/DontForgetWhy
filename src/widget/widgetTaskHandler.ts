@@ -404,7 +404,7 @@ export async function getWidgetTheme(): Promise<WidgetTheme> {
       midnight: 'dark', ember: 'dark', neon: 'dark', void: 'dark',
       frost: 'light', sand: 'light', custom: 'dark',
       obsidian: 'dark', forest: 'dark', royal: 'dark',
-      bubblegum: 'light', sunshine: 'light', ocean: 'light',
+      bubblegum: 'light', sunshine: 'light',
       mint: 'light', charcoal: 'dark', amoled: 'dark',
       slate: 'dark', paper: 'light', cream: 'light', arctic: 'light',
     };

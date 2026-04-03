@@ -124,8 +124,8 @@ export default function AlarmListScreen({ navigation }: Props) {
     setDeletedAlarm(alarm);
     setDeletedAlarmPinned(wasPinned);
     await unpinAlarm(id);
-    const updated = await deleteAlarm(id);
-    setAlarms(updated);
+    await deleteAlarm(id);
+    setAlarms(await loadAlarms(true));
     setPinnedAlarmIds((prev) => prev.filter((pid) => pid !== id));
     refreshWidgets();
     setUndoKey((k) => k + 1);
@@ -135,8 +135,8 @@ export default function AlarmListScreen({ navigation }: Props) {
   const handleUndoDelete = async () => {
     setShowUndo(false);
     if (!deletedAlarm) return;
-    const updated = await restoreAlarm(deletedAlarm.id);
-    setAlarms(updated);
+    await restoreAlarm(deletedAlarm.id);
+    setAlarms(await loadAlarms(true));
     if (deletedAlarmPinned) {
       const pins = await togglePinAlarm(deletedAlarm.id);
       setPinnedAlarmIds(pins);
@@ -151,14 +151,14 @@ export default function AlarmListScreen({ navigation }: Props) {
   };
 
   const handleRestore = async (id: string) => {
-    const updated = await restoreAlarm(id);
-    setAlarms(updated);
+    await restoreAlarm(id);
+    setAlarms(await loadAlarms(true));
     refreshWidgets();
   };
 
   const handlePermanentDelete = async (id: string) => {
-    const updated = await permanentlyDeleteAlarm(id);
-    setAlarms(updated);
+    await permanentlyDeleteAlarm(id);
+    setAlarms(await loadAlarms(true));
   };
 
   const handleEdit = (alarm: Alarm) => {
@@ -392,15 +392,15 @@ export default function AlarmListScreen({ navigation }: Props) {
       </View>
       <View style={styles.header}>
         <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton onPress={() => navigation.goBack()} forceDark={!!bgUri} />
         </View>
         <View style={styles.headerHome}>
-          <HomeButton />
+          <HomeButton forceDark={!!bgUri} />
         </View>
-        <Text style={styles.screenTitle}>Alarms</Text>
+        <Text style={[styles.screenTitle, bgUri && { color: colors.overlayText }]}>Alarms</Text>
       </View>
       <View style={{ paddingHorizontal: 20 }}>
-        <Text style={styles.subtitleText}>
+        <Text style={[styles.subtitleText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
           {(() => { const c = alarms.filter(a => a.enabled && !a.deletedAt).length; return `${c} alarm${c !== 1 ? 's' : ''}`; })()}
         </Text>
 
@@ -411,7 +411,7 @@ export default function AlarmListScreen({ navigation }: Props) {
               {`${stats.streak} in a row`}
             </Text>
             {stats.bestStreak > 0 && (
-              <Text style={styles.bestStreakText}>Best: {stats.bestStreak}</Text>
+              <Text style={[styles.bestStreakText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Best: {stats.bestStreak}</Text>
             )}
           </View>
         )}
@@ -430,7 +430,7 @@ export default function AlarmListScreen({ navigation }: Props) {
           activeOpacity={0.7}
         >
           {hasNonDefaultSortFilter && <View style={styles.sortFilterDot} />}
-          <Text style={styles.sortFilterToggleText}>
+          <Text style={[styles.sortFilterToggleText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
             Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
           </Text>
         </TouchableOpacity>
@@ -438,7 +438,7 @@ export default function AlarmListScreen({ navigation }: Props) {
 
       {showSortFilter && (
         <>
-          <Text style={styles.sortFilterLabel}>Sort</Text>
+          <Text style={[styles.sortFilterLabel, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Sort</Text>
           <View style={styles.sortFilterRow}>
             {(['time', 'created', 'name'] as const).map((s) => (
               <TouchableOpacity
@@ -454,7 +454,7 @@ export default function AlarmListScreen({ navigation }: Props) {
             ))}
           </View>
 
-          <Text style={styles.sortFilterLabel}>Filter</Text>
+          <Text style={[styles.sortFilterLabel, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Filter</Text>
           <View style={styles.sortFilterRow}>
             {(['all', 'active', 'one-time', 'recurring', 'deleted'] as const).map((f) => (
               <TouchableOpacity
@@ -475,14 +475,14 @@ export default function AlarmListScreen({ navigation }: Props) {
       {filteredAlarms.length === 0 ? (
         <View style={styles.empty}>
           {nonDeletedAlarmCount === 0 && (
-            <Text style={styles.quoteText} numberOfLines={2}>
+            <Text style={[styles.quoteText, bgUri && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={2}>
               {appQuote}
             </Text>
           )}
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
             {nonDeletedAlarmCount === 0 ? 'No alarms yet' : 'No matches'}
           </Text>
-          <Text style={styles.emptySubtext}>
+          <Text style={[styles.emptySubtext, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
             {nonDeletedAlarmCount === 0
               ? 'Tap + to set one and immediately forget why.' : 'Try a different filter.'}
           </Text>

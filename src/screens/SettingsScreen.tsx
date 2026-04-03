@@ -85,7 +85,7 @@ export default function SettingsScreen({ navigation }: Props) {
     title: {
       fontSize: 28,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: colors.overlayText,
     },
     permissionBanner: {
       marginHorizontal: 16,
@@ -116,7 +116,7 @@ export default function SettingsScreen({ navigation }: Props) {
     },
     card: {
       marginHorizontal: 16,
-      backgroundColor: 'rgba(26, 26, 40, 0.9)',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card + 'F0',
       borderRadius: 16,
       padding: 20,
       borderWidth: 1,
@@ -136,31 +136,31 @@ export default function SettingsScreen({ navigation }: Props) {
     label: {
       fontSize: 16,
       fontWeight: '600',
-      color: '#FFFFFF',
+      color: colors.textPrimary,
       flex: 1,
       marginRight: 12,
     },
     description: {
       fontSize: 14,
-      color: 'rgba(255,255,255,0.7)',
+      color: colors.textSecondary,
       marginTop: 12,
       lineHeight: 20,
     },
     sectionLabel: {
       fontSize: 16,
       fontWeight: '600',
-      color: '#FFFFFF',
+      color: colors.textPrimary,
       marginBottom: 16,
     },
     themeGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 16,
-      justifyContent: 'space-between',
+      justifyContent: 'center',
     },
     themeItem: {
       alignItems: 'center',
-      width: '22%',
+      width: '28%',
     },
     themeCircleOuter: {
       width: 52,
@@ -185,7 +185,7 @@ export default function SettingsScreen({ navigation }: Props) {
     themeName: {
       fontSize: 11,
       fontWeight: '500',
-      color: 'rgba(255,255,255,0.7)',
+      color: colors.textSecondary,
       marginTop: 6,
       textAlign: 'center',
     },
@@ -222,7 +222,7 @@ export default function SettingsScreen({ navigation }: Props) {
     },
     setupGuideDesc: {
       fontSize: 14,
-      color: 'rgba(255,255,255,0.7)',
+      color: colors.textSecondary,
       marginTop: 12,
       lineHeight: 20,
     },
@@ -233,7 +233,7 @@ export default function SettingsScreen({ navigation }: Props) {
     },
     aboutChevron: {
       fontSize: 18,
-      color: 'rgba(255,255,255,0.5)',
+      color: colors.textTertiary,
     },
   }), [colors, insets.bottom]);
 
@@ -445,12 +445,12 @@ export default function SettingsScreen({ navigation }: Props) {
           <Switch
             value={silenceAll}
             onValueChange={handleSilenceToggle}
-            trackColor={{ false: colors.border, true: '#FFA500' }}
+            trackColor={{ false: colors.border, true: colors.orange }}
             thumbColor={silenceAll ? '#FFFFFF' : colors.textTertiary}
           />
         </View>
         {silenceAll && (
-          <Text style={{ fontSize: 14, color: '#FFA500', fontWeight: '600', marginTop: 10 }}>
+          <Text style={{ fontSize: 14, color: colors.orange, fontWeight: '600', marginTop: 10 }}>
             {silenceRemaining || 'Silenced until you turn it off'}
           </Text>
         )}
@@ -461,7 +461,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
       <View style={[styles.card, { marginTop: 16 }]}>
         <Text style={styles.label}>Time Input Style</Text>
-        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 2, marginTop: 8 }}>
+        <View style={{ flexDirection: 'row', backgroundColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', borderRadius: 12, padding: 2, marginTop: 8 }}>
           <TouchableOpacity
             style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: timeInputMode === 'scroll' ? colors.accent : 'transparent' }}
             onPress={() => handleTimeInputModeChange('scroll')}
@@ -488,7 +488,7 @@ export default function SettingsScreen({ navigation }: Props) {
           {(Object.keys(themes) as ThemeName[]).map((name) => {
             const t = themes[name];
             const isActive = name === themeName;
-            const displayName = name === 'highContrast' ? 'High Contrast' : name === 'vivid' ? 'Vivid' : name.charAt(0).toUpperCase() + name.slice(1);
+            const displayName = name === 'highContrast' ? 'High Contrast' : name === 'sunset' ? 'Sunset' : name === 'ruby' ? 'Ruby' : name === 'vivid' ? 'Vivid' : name.charAt(0).toUpperCase() + name.slice(1);
             return (
               <TouchableOpacity
                 key={name}
@@ -545,9 +545,9 @@ export default function SettingsScreen({ navigation }: Props) {
             {bgUri ? (
               <Image source={{ uri: bgUri }} style={{ width: 80, height: 80, borderRadius: 8 }} resizeMode="cover" />
             ) : (
-              <View style={{ width: 80, height: 80, borderRadius: 8, borderWidth: 2, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center' }}>
-                <CameraIcon color="rgba(255,255,255,0.7)" size={24} />
-                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>Tap to set</Text>
+              <View style={{ width: 80, height: 80, borderRadius: 8, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+                <CameraIcon color={colors.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.4)'} size={24} />
+                <Text style={{ fontSize: 10, color: colors.mode === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)', marginTop: 4 }}>Tap to set</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -607,9 +607,9 @@ export default function SettingsScreen({ navigation }: Props) {
                     paddingHorizontal: 12,
                     paddingVertical: 8,
                     borderRadius: 12,
-                    backgroundColor: bgOpacity === val ? colors.activeBackground : 'rgba(0,0,0,0.4)',
+                    backgroundColor: bgOpacity === val ? colors.activeBackground : (colors.mode === 'dark' ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.15)'),
                     borderWidth: 1,
-                    borderColor: bgOpacity === val ? colors.accent : 'rgba(255,255,255,0.2)',
+                    borderColor: bgOpacity === val ? colors.accent : (colors.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)'),
                   }}
                   onPress={async () => {
                     hapticLight();
@@ -618,7 +618,7 @@ export default function SettingsScreen({ navigation }: Props) {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#FFFFFF' }}>{Math.round(val * 100)}%</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textPrimary }}>{Math.round(val * 100)}%</Text>
                 </TouchableOpacity>
               ))}
             </View>

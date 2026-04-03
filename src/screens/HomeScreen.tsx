@@ -464,26 +464,26 @@ export default function HomeScreen({ navigation }: Props) {
         {/* A. Title bar */}
         <View style={styles.headerRow}>
           <View style={styles.gearSpacer} />
-          <Text style={styles.title}>Don't Forget Why</Text>
+          <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Don't Forget Why</Text>
           <TouchableOpacity
             onPress={() => { hapticLight(); navigation.navigate('Settings'); }}
             activeOpacity={0.7}
             style={styles.gearBtn}
           >
             <View style={styles.gearCircle}>
-              <GearIcon color={colors.textSecondary} />
+              <GearIcon color={bgUri ? 'rgba(255,255,255,0.7)' : colors.textSecondary} />
             </View>
           </TouchableOpacity>
         </View>
 
         {/* B. Personality banner */}
-        <View style={[styles.banner, { borderLeftColor: bannerColorMap[bannerQuote.section] || bannerQuote.color, backgroundColor: colors.mode === 'dark' ? hexToRgba(bannerColorMap[bannerQuote.section] || bannerQuote.color, bgUri ? 0.35 : 0.12) : hexToRgba(bannerColorMap[bannerQuote.section] || bannerQuote.color, bgUri ? 0.25 : 0.08) }]}>
-          <Text style={[styles.bannerHeader, { color: bannerColorMap[bannerQuote.section] || bannerQuote.color }]}>ALARM GUY SAYS</Text>
-          <Text style={styles.bannerQuote}>{bannerQuote.text}</Text>
+        <View style={[styles.banner, { borderLeftColor: bannerColorMap[bannerQuote.section] || colors.accent, backgroundColor: colors.mode === 'dark' ? hexToRgba(bannerColorMap[bannerQuote.section] || colors.accent, bgUri ? 0.35 : 0.12) : hexToRgba(bannerColorMap[bannerQuote.section] || colors.accent, bgUri ? 0.25 : 0.08) }]}>
+          <Text style={[styles.bannerHeader, { color: bannerColorMap[bannerQuote.section] || colors.accent }]}>ALARM GUY SAYS</Text>
+          <Text style={[styles.bannerQuote, bgUri && { color: 'rgba(255,255,255,0.7)' }]}>{bannerQuote.text}</Text>
         </View>
 
         {/* C. Quick Capture */}
-        <Text style={styles.quickCaptureHeader}>QUICK CAPTURE</Text>
+        <Text style={[styles.quickCaptureHeader, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>QUICK CAPTURE</Text>
         <View style={styles.quickCaptureRow}>
           <TouchableOpacity
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionNotepad + (bgUri ? '90' : '45') }]}
@@ -493,7 +493,7 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={{ transform: [{ scale: 0.8 }] }}>
               <DocIcon color={colors.sectionNotepad} />
             </View>
-            <Text style={styles.quickCaptureLabel}>New Note</Text>
+            <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>New Note</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionVoice + (bgUri ? '90' : '45') }]}
@@ -503,7 +503,7 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={{ transform: [{ scale: 0.8 }] }}>
               <MicIcon color={colors.sectionVoice} />
             </View>
-            <Text style={styles.quickCaptureLabel}>Record Memo</Text>
+            <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>Record Memo</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionTimer + (bgUri ? '90' : '45') }]}
@@ -513,7 +513,7 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={{ transform: [{ scale: 0.8 }] }}>
               <TimerIcon color={colors.sectionTimer} />
             </View>
-            <Text style={styles.quickCaptureLabel}>Set Timer</Text>
+            <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>Set Timer</Text>
           </TouchableOpacity>
         </View>
 
@@ -542,15 +542,15 @@ export default function HomeScreen({ navigation }: Props) {
                     <IconComp color={section.color} />
                   </View>
                 </View>
-                <Text style={[styles.gridLabel, { color: colors.mode === 'dark' ? '#FFFFFF' : '#1F2937' }]}>{section.label}</Text>
-                {subtitle !== '' && <Text style={styles.gridSubtitle}>{subtitle}</Text>}
+                <Text style={[styles.gridLabel, { color: (colors.mode === 'dark' || bgUri) ? '#FFFFFF' : '#1F2937' }]}>{section.label}</Text>
+                {subtitle !== '' && <Text style={[styles.gridSubtitle, { color: bgUri ? 'rgba(255,255,255,0.55)' : (colors.mode === 'dark' ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)') }]}>{subtitle}</Text>}
               </TouchableOpacity>
             );
           })}
         </View>
 
         {/* D. Today section */}
-        <Text style={styles.todayHeader}>TODAY {'\u2014'} {monthName} {dayNum}</Text>
+        <Text style={[styles.todayHeader, bgUri && { color: colors.mode === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.6)' }]}>TODAY {'\u2014'} {monthName} {dayNum}</Text>
 
         <View style={[styles.todayContainer, { backgroundColor: bgUri ? (colors.mode === 'dark' ? 'rgba(10, 10, 18, 0.88)' : 'rgba(242, 243, 248, 0.92)') : undefined }]}>
           {todayEvents.length === 0 ? (

@@ -1,20 +1,20 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 12 (v1.10.0)
+**Last updated:** Session 13 (v1.10.1)
 
 ---
 
 ## 1. App Features — Current State
 
 ### Core Utility
-- **Home Screen** — app entry point (v1.9.0). 2×3 icon grid: Alarms (sectionAlarm), Reminders (sectionReminder), Calendar (sectionCalendar), Notepad (sectionNotepad), Voice (sectionVoice), Games (sectionGames). Section colors defined per theme. Quick Capture row: New Note, Record Memo, Set Timer (one-tap actions). Personality banner: 63 rotating color-coded sarcastic quotes across 7 sections (homeBannerQuotes.ts). Today section: scrollable container showing today's alarms and reminders. Settings gear in title bar.
+- **Home Screen** — app entry point (v1.9.0). 2×3 icon grid: Alarms (sectionAlarm), Reminders (sectionReminder), Calendar (sectionCalendar), Notepad (sectionNotepad), Voice (sectionVoice), Games (sectionGames). Section colors defined per theme. Quick Capture row: New Note, Record Memo, Set Timer (one-tap actions). Personality banner: 63 rotating sarcastic quotes across 7 sections (homeBannerQuotes.ts, section colors resolved via `bannerColorMap` from theme tokens). Today section: scrollable container showing today's alarms and reminders. Settings gear in title bar. All overlay text bgUri-aware (Session 13).
 - **Alarms** — standalone AlarmListScreen (AlarmsTab deleted and absorbed, Session 9). Reason field ("why"), 7 sound presets + custom system sounds (listed via native `AlarmChannelModule.getSystemAlarmSounds` using `RingtoneManager.TYPE_ALARM` — replaced third-party `react-native-notification-sounds` in v1.8.1), snooze (1/3/5/10/15 min), recurring (daily/weekly/monthly/yearly) + one-time, emoji icon from keyboard, per-alarm Guess Why toggle, private mode (completely blank card)
   - Notification action buttons: "Snooze" and "Dismiss" buttons on alarm notification banners for in-app dismissal without opening fire screen
 - **Reminders** — standalone ReminderScreen with own route (`Reminders`), header, background, nav (Session 9). Due dates, 5 recurring patterns (daily/weekly/monthly/yearly/one-time), 6-hour completion window, date-only mode, completion history, sound mode (sound/vibrate/silent), emoji icon
 - **Timers** — standalone TimerScreen (extracted from AlarmListScreen in v1.9.0). 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule. Pin redesign (Session 12): small "Pin"/"Pinned" capsule overlay on upper-left of all preset cards — no emoji pins, no modal pin button.
   - Notification action buttons: "Dismiss" button on timer completion notification
-- **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7). Notes-only (voice memos have own screen since v1.9.0). Card style with green section-colored border. Note icon circle uses the note's own color. Text capsule pin/delete buttons. Note editor dropdown: consolidated draw/photo/record/color into single "+" dropdown menu with labeled rows and View-based icons. Added "Take Photo" option (camera) alongside "Photo Library" (Session 9). "Edit" text button in view mode (replaced pencil emoji). Share button uses ShareIcon, trash uses TrashIcon. NoteEditorModal recording controls (Session 12): proper pause (green) + stop (red) button row replaces tap-to-stop banner. Home button in modal with unsaved changes guard. Voice memos stored as `voiceMemos TEXT` column in notes table (JSON array).
-- **Voice Memos** — standalone VoiceMemoListScreen (separated from Notepad in v1.9.0). VoiceRecordScreen (tap-to-record/stop, pause/resume), VoiceMemoDetailScreen (dual-mode: new via tempUri, existing via memoId, seekable playback, explicit Save), VoiceMemoCard (View-based play/pause icons, inline progress, capsule pin/delete). Pinning (max 4), soft delete with undo, dark bar card style with purple left border accent (#A29BFE). Calendar shows voice memos as purple dots. Note-attached voice memos share a 3-attachment limit with images.
+- **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7). Notes-only (voice memos have own screen since v1.9.0). Card style with green section-colored border. Note icon circle uses the note's own color. Text capsule pin/delete buttons. Note editor dropdown: consolidated draw/photo/record/color into single "+" dropdown menu with labeled rows and View-based icons. NoteEditorModal: view/edit mode with centered accent pills — "Edit" in view mode (moved from topBarRight to topBarCenter, Session 13), "Save" only when `hasUnsavedChanges()`. Recording controls (Session 12): proper pause (green) + stop (red) button row. Home button in modal with unsaved changes guard. Voice memos stored as `voiceMemos TEXT` column in notes table (JSON array).
+- **Voice Memos** — standalone VoiceMemoListScreen (separated from Notepad in v1.9.0). VoiceRecordScreen (tap-to-record/stop, pause/resume), VoiceMemoDetailScreen (view/edit mode: existing memos open read-only with centered "Edit" pill, tap to enter edit mode with "Save" pill on changes — matches NoteEditorModal pattern), VoiceMemoCard (View-based play/pause icons, inline progress, capsule pin/delete). Pinning (max 4), soft delete with undo, dark bar card style with purple left border accent (#A29BFE). Calendar shows voice memos as purple dots. Note-attached voice memos share a 3-attachment limit with images.
 - **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing). Week view locked to current week (always shows Sunday–Saturday containing today). Tapping a date outside current week while in week view auto-switches to day view. Supports initialDate route param for deep-linking from widget or other screens.
   - **Calendar fixes (dev):** Tappable event cards — alarm cards navigate to CreateAlarm, reminder cards to CreateReminder, note cards to Notepad. Annual/date-specific recurring reminders now correctly show only on matching month/day (previously showed on every day due to missing dueDate check).
 - **Calendar Widget** — Home screen widget showing current month as a mini grid. Colored dots per day: red=alarms, blue=reminders, green=notes. Tap any day → opens CalendarScreen focused on that date. Today highlighted with accent background. Past days dimmed. Adjacent month days shown in secondary color. Registered as third widget in app.json (minWidth 250dp, minHeight 280dp).
@@ -53,7 +53,7 @@
 
 ### Mini-Games
 - **Guess Why** (per-alarm, icon + type modes, 3 attempts)
-- **Trivia** (912+ questions, 10 categories incl. Kids/Music/Movies&TV, difficulty filter, speed selector, online mode placeholder)
+- **Trivia** (912+ questions, 10 categories incl. Kids/Music/Movies&TV, difficulty filter, speed selector, online mode toggle in header — disabled, coming soon)
 - **Memory Match** (3 difficulties, card flip animation, star rating). Header text-only (emoji stripped Session 12).
 - **Sudoku** (pure JS generator, difficulty = assistance level, no lose condition, pencil notes, save/resume)
 - **Daily Riddle** (146 riddles, deterministic daily, streak tracking, browse all)
@@ -67,15 +67,22 @@
 - All: resizable, deep-link to app sections, privacy guards on private alarms
 - **WidgetTheme** expanded with `red` property for theme-aware red across widgets (Session 11)
 
-### Theme System (Session 9 overhaul)
-- 4 themes: Dark, Light, High Contrast, Vivid — each with section-specific color palettes
+### Theme System (Session 9 overhaul, Session 13 expansion)
+- 6 themes (3 dark + 3 light): Dark, Light (Ocean), High Contrast, Vivid, Sunset, Ruby
+  - **Dark:** Blue accent (#5B9EE6), midnight background — daily driver
+  - **Light (Ocean):** Blue accent (#2563EB), blue-gray background — clean and modern
+  - **High Contrast:** Cyan accent (#00D4FF), pure black — accessibility
+  - **Vivid:** Neon green accent (#00FF88), green-tinted blacks — cyberpunk terminal
+  - **Sunset:** Orange accent (#E8690A), warm cream background — earthy warmth
+  - **Ruby:** Rose accent (#E11D48), pink-tinted background — bold and feminine
 - Custom theme picker removed (personalization via background images)
 - ThemeColors includes section color tokens (`sectionAlarm`, `sectionReminder`, etc.) — all hardcoded hex values replaced with theme references
 - Mode-aware rendering: capsule buttons, watermark opacity branch on `colors.mode`. Photo overlay always dark dim regardless of mode.
-- Light mode card tinting: cards use `sectionColor + '15'` background (light red for alarms, light blue for reminders, etc.) instead of plain white
+- Light mode card tinting: cards use `sectionColor + '15'` background
 - Photo-aware alphas on HomeScreen: grid/quick capture/today/banner increase opacity when background photo is set
-- Card depth: elevation/shadow added to all card types for visual separation
-- Brand title: `colors.brandTitle` — per-theme title color on HomeScreen (navy dark, blue light, cyan HC, pink vivid)
+- Card depth: elevation/shadow added to all card types
+- Brand title: `colors.brandTitle` — per-theme title color on HomeScreen
+- SettingsScreen theme grid: 3×2 layout with centered justification
 - Migration from all old theme names (midnight→dark, frost→light, etc.)
 
 ### Swipe-to-Delete (Session 10)

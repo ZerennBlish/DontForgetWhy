@@ -65,18 +65,18 @@ export default function GamesScreen({ navigation }: Props) {
         title: {
           fontSize: 28,
           fontWeight: '800',
-          color: '#FFFFFF',
+          color: colors.overlayText,
         },
         subtitle: {
           fontSize: 15,
-          color: 'rgba(255,255,255,0.7)',
+          color: 'rgba(255,255,255,0.75)',
           marginTop: 6,
           fontStyle: 'italic',
         },
         gameCard: {
           marginHorizontal: 16,
           marginTop: 12,
-          backgroundColor: 'rgba(26, 26, 40, 0.9)',
+          backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card + 'F0',
           borderRadius: 16,
           padding: 20,
           borderWidth: 1,
@@ -97,12 +97,12 @@ export default function GamesScreen({ navigation }: Props) {
         gameName: {
           fontSize: 18,
           fontWeight: '700',
-          color: '#FFFFFF',
+          color: colors.textPrimary,
           textAlign: 'center',
         },
         gameDesc: {
           fontSize: 14,
-          color: 'rgba(255,255,255,0.7)',
+          color: colors.textSecondary,
           marginTop: 4,
           lineHeight: 20,
           textAlign: 'center',

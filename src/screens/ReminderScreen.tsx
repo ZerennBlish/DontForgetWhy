@@ -823,15 +823,15 @@ export default function ReminderScreen({ navigation }: Props) {
       </View>
       <View style={styles.header}>
         <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton onPress={() => navigation.goBack()} forceDark={!!bgUri} />
         </View>
         <View style={styles.headerHome}>
-          <HomeButton />
+          <HomeButton forceDark={!!bgUri} />
         </View>
-        <Text style={styles.screenTitle}>Reminders</Text>
+        <Text style={[styles.screenTitle, bgUri && { color: colors.overlayText }]}>Reminders</Text>
       </View>
       <View style={{ paddingHorizontal: 20 }}>
-        <Text style={styles.subtitleText}>
+        <Text style={[styles.subtitleText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
           {(() => { const c = reminders.filter(r => !r.completed && !r.deletedAt).length; return `${c} reminder${c !== 1 ? 's' : ''}`; })()}
         </Text>
       </View>
@@ -848,7 +848,7 @@ export default function ReminderScreen({ navigation }: Props) {
           activeOpacity={0.7}
         >
           {(reminderSort !== 'due' || reminderFilter !== 'active') && <View style={styles.sortFilterDot} />}
-          <Text style={styles.sortFilterToggleText}>
+          <Text style={[styles.sortFilterToggleText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
             Sort & Filter {showSortFilter ? '\u25B4' : '\u25BE'}
           </Text>
         </TouchableOpacity>
@@ -856,7 +856,7 @@ export default function ReminderScreen({ navigation }: Props) {
 
       {showSortFilter && (
         <>
-          <Text style={styles.sortFilterLabel}>Sort</Text>
+          <Text style={[styles.sortFilterLabel, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Sort</Text>
           <View style={styles.sortFilterRow}>
             {(['due', 'created', 'name'] as const).map((s) => (
               <TouchableOpacity
@@ -872,7 +872,7 @@ export default function ReminderScreen({ navigation }: Props) {
             ))}
           </View>
 
-          <Text style={styles.sortFilterLabel}>Filter</Text>
+          <Text style={[styles.sortFilterLabel, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Filter</Text>
           <View style={styles.sortFilterRow}>
             {(['active', 'completed', 'has-date', 'deleted'] as const).map((f) => (
               <TouchableOpacity
@@ -893,15 +893,15 @@ export default function ReminderScreen({ navigation }: Props) {
       {sorted.length === 0 ? (
         <View style={styles.empty}>
           {nonDeletedReminderCount === 0 && (
-            <Text style={styles.quoteText} numberOfLines={2}>
+            <Text style={[styles.quoteText, bgUri && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={2}>
               {appQuote}
             </Text>
           )}
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
             {nonDeletedReminderCount === 0
               ? 'Nothing to remember' : 'No matches'}
           </Text>
-          <Text style={styles.emptySubtext}>
+          <Text style={[styles.emptySubtext, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
             {nonDeletedReminderCount === 0
               ? 'Must be nice. Tap + to ruin that.' : 'Try a different filter.'}
           </Text>

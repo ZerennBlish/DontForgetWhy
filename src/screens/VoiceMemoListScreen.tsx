@@ -468,14 +468,14 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       return (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>{'\u{1F5D1}\uFE0F'}</Text>
-          <Text style={styles.emptyText}>Nothing in the trash. How responsible of you.</Text>
+          <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Nothing in the trash. How responsible of you.</Text>
         </View>
       );
     }
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyIcon}>{'\u{1F399}\uFE0F'}</Text>
-        <Text style={styles.emptyText}>{emptyMsg}</Text>
+        <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>{emptyMsg}</Text>
       </View>
     );
   };
@@ -500,12 +500,12 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerBack}>
-            <BackButton onPress={() => navigation.goBack()} />
+            <BackButton onPress={() => navigation.goBack()} forceDark={!!bgUri} />
           </View>
           <View style={styles.headerHome}>
-            <HomeButton />
+            <HomeButton forceDark={!!bgUri} />
           </View>
-          <Text style={styles.title}>Voice Memos</Text>
+          <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Voice Memos</Text>
         </View>
 
         <View style={styles.filterToggleRow}>
@@ -521,7 +521,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
             activeOpacity={0.7}
           >
             {filter !== 'active' && <View style={styles.filterDot} />}
-            <Text style={styles.filterToggleText}>
+            <Text style={[styles.filterToggleText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
               Filter {showFilter ? '\u25B4' : '\u25BE'}
             </Text>
           </TouchableOpacity>

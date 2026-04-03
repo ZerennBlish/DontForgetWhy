@@ -539,10 +539,10 @@ export default function SudokuScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <View style={styles.header}>
         <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton onPress={() => navigation.goBack()} forceDark />
         </View>
         <View style={styles.headerHome}>
-          <HomeButton />
+          <HomeButton forceDark />
         </View>
         <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
       </View>
@@ -590,7 +590,7 @@ export default function SudokuScreen({ navigation }: Props) {
                   {best.gamesPlayed} game{best.gamesPlayed !== 1 ? 's' : ''} played
                 </Text>
               ) : (
-                <Text style={[styles.difficultyInfo, { color: colors.textTertiary }]}>
+                <Text style={[styles.difficultyInfo]}>
                   No games played
                 </Text>
               )}
@@ -639,10 +639,10 @@ export default function SudokuScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <View style={styles.winHeader}>
         <View style={styles.winHeaderBack}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton onPress={() => navigation.goBack()} forceDark />
         </View>
         <View style={styles.winHeaderHome}>
-          <HomeButton />
+          <HomeButton forceDark />
         </View>
         <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
       </View>
@@ -721,8 +721,8 @@ export default function SudokuScreen({ navigation }: Props) {
       <View style={styles.gameHeader}>
         <View style={styles.gameHeaderRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <BackButton onPress={handleBackFromGame} />
-            <HomeButton />
+            <BackButton onPress={handleBackFromGame} forceDark />
+            <HomeButton forceDark />
           </View>
           <Text style={styles.gameDifficulty}>{DIFFICULTY_CONFIG[difficulty].label}</Text>
         </View>
@@ -909,11 +909,11 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     title: {
       fontSize: 28,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: colors.overlayText,
     },
     selectSubtitle: {
       fontSize: 15,
-      color: colors.textTertiary,
+      color: 'rgba(255,255,255,0.5)',
       marginTop: 6,
     },
     difficultyBtn: {
@@ -929,12 +929,12 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     difficultyLabel: {
       fontSize: 20,
       fontWeight: '700',
-      color: colors.textPrimary,
+      color: colors.overlayText,
       textAlign: 'center',
     },
     difficultyInfo: {
       fontSize: 14,
-      color: colors.textTertiary,
+      color: 'rgba(255,255,255,0.5)',
       marginTop: 4,
       textAlign: 'center',
     },
@@ -955,12 +955,12 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     pauseTitle: {
       fontSize: 28,
       fontWeight: '800',
-      color: colors.textPrimary,
+      color: colors.overlayText,
       marginBottom: 8,
     },
     pauseSubtitle: {
       fontSize: 18,
-      color: colors.textSecondary,
+      color: 'rgba(255,255,255,0.7)',
       marginBottom: 32,
     },
     resumeBtn: {

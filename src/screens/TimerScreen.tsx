@@ -945,10 +945,10 @@ export default function TimerScreen({ navigation }: Props) {
       </View>
       <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 8 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <BackButton onPress={() => navigation.goBack()} />
-          <HomeButton />
+          <BackButton onPress={() => navigation.goBack()} forceDark={!!bgUri} />
+          <HomeButton forceDark={!!bgUri} />
         </View>
-        <Text style={{ fontSize: 22, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>Timers</Text>
+        <Text style={{ fontSize: 22, fontWeight: '700', color: bgUri ? colors.overlayText : colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>Timers</Text>
       </View>
       <ScrollView
         style={styles.container}
@@ -958,7 +958,7 @@ export default function TimerScreen({ navigation }: Props) {
       {/* Active Timers */}
       {activeTimers.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Active Timers</Text>
+          <Text style={[styles.sectionLabel, bgUri && { color: colors.overlayText }]}>Active Timers</Text>
           {activeTimers.map((timer) => (
             <View key={timer.id} style={styles.activeCard}>
               <View style={styles.activeLeft}>
@@ -1005,7 +1005,7 @@ export default function TimerScreen({ navigation }: Props) {
       {/* My Timers */}
       {(userTimers.length > 0 || pinnedPresets.length > 0) && (
         <View style={styles.section}>
-          <Text style={styles.subsectionLabel}>My Timers</Text>
+          <Text style={[styles.subsectionLabel, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>My Timers</Text>
           <View style={styles.presetGrid}>
             {userTimers.map((ut) => (
               <TouchableOpacity
@@ -1062,7 +1062,7 @@ export default function TimerScreen({ navigation }: Props) {
       {/* Recent Presets */}
       {recentPresets.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.subsectionLabel}>Recent</Text>
+          <Text style={[styles.subsectionLabel, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Recent</Text>
           <View style={styles.presetGrid}>
             {recentPresets.map((p) => renderPresetCard(p))}
           </View>
@@ -1071,7 +1071,7 @@ export default function TimerScreen({ navigation }: Props) {
 
       {/* All Timers */}
       <View style={styles.section}>
-        <Text style={styles.subsectionLabel}>
+        <Text style={[styles.subsectionLabel, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
           {recentPresets.length > 0 ? 'All Timers' : 'Quick Start'}
         </Text>
         <View style={styles.presetGrid}>

@@ -1093,12 +1093,12 @@ export default function CalendarScreen({ navigation, route }: Props) {
       </View>
       <View style={styles.header}>
         <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton onPress={() => navigation.goBack()} forceDark={!!bgUri} />
         </View>
         <View style={styles.headerHome}>
-          <HomeButton />
+          <HomeButton forceDark={!!bgUri} />
         </View>
-        <Text style={styles.title}>{'\uD83D\uDCC5'} Calendar</Text>
+        <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>{'\uD83D\uDCC5'} Calendar</Text>
       </View>
       <FlatList
         data={listData}

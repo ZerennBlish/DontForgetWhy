@@ -261,7 +261,7 @@ export default function VoiceRecordScreen({ navigation }: Props) {
         title: {
           fontSize: 28,
           fontWeight: '800',
-          color: '#FFFFFF',
+          color: colors.textPrimary,
         },
         content: {
           flex: 1,
@@ -389,17 +389,17 @@ export default function VoiceRecordScreen({ navigation }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerBack}>
-          <BackButton onPress={handleBack} />
+          <BackButton onPress={handleBack} forceDark={!!bgUri} />
         </View>
         <View style={styles.headerHome}>
-          <HomeButton />
+          <HomeButton forceDark={!!bgUri} />
         </View>
-        <Text style={styles.title}>Record</Text>
+        <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Record</Text>
       </View>
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={[styles.timer, isPaused && { color: colors.textTertiary }]}>
+        <Text style={[styles.timer, isPaused ? { color: bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary } : bgUri ? { color: colors.overlayText } : undefined]}>
           {formatTime(elapsedSeconds)}
         </Text>
 

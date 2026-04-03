@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 12 (April 2, 2026)
+**Last updated:** Session 13 (April 3, 2026)
 
 ---
 
@@ -417,5 +417,27 @@
 - Found: Session 12 during testing
 - Cause: `private` column in alarms and reminders tables failed DDL when unquoted. SQLite treats `private` as a reserved keyword.
 - Fix: Quoted as `"private"` in all DDL and DML statements.
+
+### Session 13 Bug Fixes (April 3, 2026) — v1.10.1
+
+**Bug: Alarm delete/restore UI — deleted alarms disappear from trash**
+- Found: Session 13
+- Cause: `handleDelete`, `handleUndoDelete`, `handleRestore`, `handlePermanentDelete` in AlarmListScreen used return values from CRUD functions (`deleteAlarm`, `restoreAlarm`, `permanentlyDeleteAlarm`) which called `loadAlarms()` without `includeDeleted`. Soft-deleted alarms vanished from UI state after any operation.
+- Fix: All 4 handlers now call `setAlarms(await loadAlarms(true))` to reload the full list including soft-deleted alarms.
+
+**Bug: Light mode visibility across 15+ screens**
+- Found: Session 13 visual audit
+- Cause: GamesScreen, SettingsScreen, 5 game sub-screens, 8 photo screens all had hardcoded dark-only colors (`#FFFFFF`, `rgba(255,255,255,...)`) or missing `bgUri` overrides. In light mode, text was invisible on light backgrounds or on dark photo overlays.
+- Fix: Systematic overhaul — mode-aware card backgrounds (`colors.card + 'E6'/'F0'`), overlay-safe text (`colors.overlayText`, light rgba), conditional `forceDark` on buttons, `bgUri &&` JSX overrides on photo screens.
+
+**Bug: VoiceRecordScreen title invisible in light mode without photo**
+- Found: Session 13
+- Cause: Title style hardcoded `color: '#FFFFFF'` — white on light background = invisible.
+- Fix: Changed base to `colors.textPrimary` with `bgUri && { color: colors.overlayText }` JSX override.
+
+**Bug: VoiceMemoDetailScreen Save/Home overlap**
+- Found: Session 13
+- Cause: Both `headerHome` and old `headerSave` positioned at `left: 64`. Save pill covered HomeButton when unsaved changes existed.
+- Fix: Full header redesign to headerLeft/headerCenter/headerRight flex layout with centered Edit/Save accent pills. Old absolute-positioned headerSave removed.
 
 **45 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
