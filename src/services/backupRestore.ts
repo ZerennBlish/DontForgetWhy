@@ -1,4 +1,10 @@
 import { File, Directory, Paths } from 'expo-file-system';
+import {
+  StorageAccessFramework,
+  readAsStringAsync,
+  writeAsStringAsync,
+  EncodingType,
+} from 'expo-file-system/legacy';
 import { zip, unzip } from 'react-native-zip-archive';
 import * as Sharing from 'expo-sharing';
 import Constants from 'expo-constants';
@@ -20,8 +26,8 @@ const LAST_BACKUP_KEY = 'lastBackupDate';
 const AUTO_BACKUP_ENABLED_KEY = 'autoBackupEnabled';
 const AUTO_BACKUP_FREQUENCY_KEY = 'autoBackupFrequency';
 const LAST_AUTO_BACKUP_KEY = 'lastAutoBackupDate';
-const AUTO_BACKUP_DIR = 'backups';
-const MAX_AUTO_BACKUPS = 5;
+const AUTO_BACKUP_FOLDER_URI_KEY = 'autoBackupFolderUri';
+const AUTO_BACKUP_FOLDER_NAME_KEY = 'autoBackupFolderName';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,7 +37,13 @@ interface BackupMeta {
   appVersion: string;
   backupVersion: number;
   createdAt: string;
-  mediaFolders: string[];
+  contents: {
+    database: boolean;
+    voiceMemos: number;
+    noteImages: number;
+    alarmPhotos: number;
+    backgrounds: number;
+  };
 }
 
 export type BackupFrequency = 'daily' | 'weekly' | 'monthly';
@@ -48,6 +60,17 @@ function uriToPath(uri: string): string {
 /** Get the directory where expo-sqlite stores the database files. */
 function getDbDirectory(): Directory {
   return new Directory(`file://${defaultDatabaseDirectory}`);
+}
+
+/** Count files in a document-relative directory (returns 0 if dir doesn't exist). */
+function countFilesInDir(folderName: string): number {
+  try {
+    const dir = new Directory(Paths.document, folderName);
+    if (!dir.exists) return 0;
+    return dir.list().length;
+  } catch {
+    return 0;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -92,12 +115,18 @@ export async function exportBackup(): Promise<string> {
       }
     }
 
-    // 4. Write backup metadata
+    // 4. Write backup metadata with content counts
     const meta: BackupMeta = {
       appVersion,
       backupVersion: BACKUP_VERSION,
       createdAt: new Date().toISOString(),
-      mediaFolders: includedFolders,
+      contents: {
+        database: true,
+        voiceMemos: countFilesInDir('voice-memos'),
+        noteImages: countFilesInDir('note-images'),
+        alarmPhotos: countFilesInDir('alarm-photos'),
+        backgrounds: countFilesInDir('backgrounds'),
+      },
     };
     const metaFile = new File(stagingDir, META_FILENAME);
     metaFile.write(JSON.stringify(meta, null, 2));
@@ -155,10 +184,26 @@ export async function validateBackup(fileUri: string): Promise<BackupMeta> {
       throw new Error('Invalid backup: corrupted metadata');
     }
 
-    if (typeof meta.backupVersion !== 'number' || meta.backupVersion > BACKUP_VERSION) {
+    // Strict version check — must be exactly BACKUP_VERSION
+    if (meta.backupVersion !== BACKUP_VERSION) {
       throw new Error(
-        `Unsupported backup version: ${meta.backupVersion}. Please update the app.`,
+        `Unsupported backup version: ${meta.backupVersion}. This app supports version ${BACKUP_VERSION}.`,
       );
+    }
+
+    // Must have the contents field
+    if (!meta.contents || typeof meta.contents.database !== 'boolean') {
+      throw new Error('Backup manifest is malformed \u2014 missing contents field.');
+    }
+
+    if (
+      typeof meta.contents.database !== 'boolean' ||
+      typeof meta.contents.voiceMemos !== 'number' ||
+      typeof meta.contents.noteImages !== 'number' ||
+      typeof meta.contents.alarmPhotos !== 'number' ||
+      typeof meta.contents.backgrounds !== 'number'
+    ) {
+      throw new Error('Backup manifest has malformed contents \u2014 expected counts for all media types.');
     }
 
     // Check database file
@@ -177,6 +222,8 @@ export async function validateBackup(fileUri: string): Promise<BackupMeta> {
 
 /**
  * Import/restore from a .dfw backup file. Replaces all app data.
+ * Uses a rollback pattern: live data is never deleted until the backup
+ * is fully extracted and verified.
  */
 export async function importBackup(fileUri: string): Promise<void> {
   const meta = await validateBackup(fileUri);
@@ -185,50 +232,103 @@ export async function importBackup(fileUri: string): Promise<void> {
   await cancelAllAlarms();
   closeDb();
 
-  const restoreDir = new Directory(Paths.cache, 'backup-restore');
+  const tempDir = new Directory(Paths.cache, 'backup-restore-temp');
+  const rollbackDir = new Directory(Paths.cache, 'backup-rollback');
+
+  // Clean any leftover dirs from previous failed attempts
+  try { if (tempDir.exists) tempDir.delete(); } catch {}
+  try { if (rollbackDir.exists) rollbackDir.delete(); } catch {}
+
+  let liveDataMoved = false;
 
   try {
-    // Unzip backup to a temp directory
-    if (restoreDir.exists) restoreDir.delete();
-    restoreDir.create();
-    await unzip(uriToPath(fileUri), uriToPath(restoreDir.uri));
+    // Step 1: Unzip backup to temp
+    tempDir.create();
+    await unzip(uriToPath(fileUri), uriToPath(tempDir.uri));
 
-    // Delete existing database files (including WAL/SHM)
+    // Step 2: Verify temp has dfw.db
+    const tempDb = new File(tempDir, DB_FILENAME);
+    if (!tempDb.exists) {
+      throw new Error('Backup is missing database file');
+    }
+
+    // Step 3: Move current live data to rollback
+    rollbackDir.create();
+
     const dbDir = getDbDirectory();
     for (const name of [DB_FILENAME, `${DB_FILENAME}-wal`, `${DB_FILENAME}-shm`]) {
       const f = new File(dbDir, name);
-      if (f.exists) f.delete();
+      if (f.exists) f.move(rollbackDir);
     }
-
-    // Delete existing media folders
     for (const folder of MEDIA_FOLDERS) {
       const dir = new Directory(Paths.document, folder);
-      if (dir.exists) dir.delete();
+      if (dir.exists) dir.move(rollbackDir);
     }
+    liveDataMoved = true;
 
-    // Copy restored database to the correct SQLite directory
-    const restoredDb = new File(restoreDir, DB_FILENAME);
+    // Step 4: Move restored data from temp to document
+    const restoredDb = new File(tempDir, DB_FILENAME);
     if (!dbDir.exists) dbDir.create({ intermediates: true });
-    restoredDb.copy(dbDir);
+    restoredDb.move(dbDir);
 
-    // Copy restored media folders to Paths.document
     for (const folder of MEDIA_FOLDERS) {
-      const restoredFolder = new Directory(restoreDir, folder);
+      const restoredFolder = new Directory(tempDir, folder);
       if (restoredFolder.exists) {
-        restoredFolder.copy(Paths.document);
+        restoredFolder.move(Paths.document);
       }
     }
-  } finally {
-    // Always reopen the database, even if restore partially failed
-    reopenDb();
-    try {
-      if (restoreDir.exists) restoreDir.delete();
-    } catch { /* best-effort cleanup */ }
-  }
 
-  // Reschedule all notifications (old IDs from backup are stale)
-  await rescheduleAllNotifications();
-  kvSet(LAST_BACKUP_KEY, meta.createdAt);
+    // Remove backup-meta.json if it landed in Paths.document
+    try {
+      const strayMeta = new File(Paths.document, META_FILENAME);
+      if (strayMeta.exists) strayMeta.delete();
+    } catch {}
+
+    // Step 5: Reopen DB and reschedule
+    reopenDb();
+    await rescheduleAllNotifications();
+
+    // Step 6: Update last backup date
+    kvSet(LAST_BACKUP_KEY, meta.createdAt);
+
+  } catch (e) {
+    // ROLLBACK: if we moved live data away, put it back
+    if (liveDataMoved) {
+      try {
+        // Delete any partially-restored files in Paths.document
+        const dbDir = getDbDirectory();
+        for (const name of [DB_FILENAME, `${DB_FILENAME}-wal`, `${DB_FILENAME}-shm`]) {
+          const f = new File(dbDir, name);
+          if (f.exists) f.delete();
+        }
+        for (const folder of MEDIA_FOLDERS) {
+          const dir = new Directory(Paths.document, folder);
+          if (dir.exists) dir.delete();
+        }
+
+        // Move rollback data back
+        for (const entry of rollbackDir.list()) {
+          if (entry instanceof Directory) {
+            entry.move(Paths.document);
+          } else {
+            // DB files go back to the sqlite directory
+            entry.move(dbDir);
+          }
+        }
+      } catch (rollbackError) {
+        console.error('[restore] Rollback also failed:', rollbackError);
+      }
+    }
+
+    // Always try to reopen DB (might be the original or the rollback)
+    try { reopenDb(); } catch {}
+
+    throw e;
+  } finally {
+    // Clean up temp and rollback dirs
+    try { if (tempDir.exists) tempDir.delete(); } catch {}
+    try { if (rollbackDir.exists) rollbackDir.delete(); } catch {}
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -266,20 +366,51 @@ async function rescheduleAllNotifications(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-Export — saves to local app storage (Paths.document/backups/).
-// SAF persistent permissions are unreliable across app restarts on many
-// Android devices, so auto-export avoids SAF entirely. Users can still
-// share backups anywhere via the manual "Export Memories" button.
+// SAF Folder Picker
+// ---------------------------------------------------------------------------
+
+/**
+ * Open SAF directory picker. Returns folder URI + display name, or null if cancelled.
+ * The permission is automatically persisted by Android.
+ */
+export async function requestBackupFolder(): Promise<{ uri: string; name: string } | null> {
+  const result = await StorageAccessFramework.requestDirectoryPermissionsAsync();
+  if (!result.granted) return null;
+
+  // Extract readable folder name from URI
+  const segments = decodeURIComponent(result.directoryUri).split('/');
+  const name = segments[segments.length - 1] || 'Selected folder';
+
+  return { uri: result.directoryUri, name };
+}
+
+/** Save SAF folder settings to KV store. */
+export function saveBackupFolder(uri: string, name: string): void {
+  kvSet(AUTO_BACKUP_FOLDER_URI_KEY, uri);
+  kvSet(AUTO_BACKUP_FOLDER_NAME_KEY, name);
+}
+
+/** Get saved SAF folder name for display. */
+export function getBackupFolderName(): string | null {
+  return kvGet(AUTO_BACKUP_FOLDER_NAME_KEY);
+}
+
+// ---------------------------------------------------------------------------
+// Auto-Export — writes to SAF folder (Google Drive, Downloads, etc.)
 // ---------------------------------------------------------------------------
 
 export function getAutoBackupSettings(): {
   enabled: boolean;
   frequency: BackupFrequency;
+  folderUri: string | null;
+  folderName: string | null;
   lastAutoBackup: string | null;
 } {
   return {
     enabled: kvGet(AUTO_BACKUP_ENABLED_KEY) === 'true',
     frequency: (kvGet(AUTO_BACKUP_FREQUENCY_KEY) as BackupFrequency) || 'weekly',
+    folderUri: kvGet(AUTO_BACKUP_FOLDER_URI_KEY),
+    folderName: kvGet(AUTO_BACKUP_FOLDER_NAME_KEY),
     lastAutoBackup: kvGet(LAST_AUTO_BACKUP_KEY),
   };
 }
@@ -293,40 +424,48 @@ export function setAutoBackupFrequency(frequency: BackupFrequency): void {
 }
 
 /**
- * Run auto-export: create backup zip in cache, then copy it to the local
- * backups/ directory with a dated filename. Cleans up old backups.
+ * Run auto-export: create backup zip in cache, then write it to the SAF
+ * folder via base64 read/write (SAF doesn't support direct file copy).
  */
 export async function autoExportBackup(): Promise<boolean> {
   const settings = getAutoBackupSettings();
-  if (!settings.enabled) return false;
+  if (!settings.enabled || !settings.folderUri) return false;
 
   try {
     // 1. Create the backup zip in cache (reuse exportBackup)
     const zipUri = await exportBackup();
+    const zipPath = uriToPath(zipUri);
 
-    // 2. Ensure local backups directory exists
-    const backupDir = new Directory(Paths.document, AUTO_BACKUP_DIR);
-    if (!backupDir.exists) backupDir.create();
-
-    // 3. Copy zip to backups/ with dated filename
+    // 2. Generate dated filename
     const dateStr = new Date().toISOString().split('T')[0];
     const fileName = `DFW-Backup-${dateStr}.dfw`;
-    const destFile = new File(backupDir, fileName);
-    if (destFile.exists) destFile.delete();
 
-    const zipFile = new File(zipUri);
-    zipFile.copy(destFile);
+    // 3. Create file in SAF directory
+    const safFileUri = await StorageAccessFramework.createFileAsync(
+      settings.folderUri,
+      fileName,
+      'application/octet-stream',
+    );
 
-    // 4. Clean up cache zip
-    try {
-      if (zipFile.exists) zipFile.delete();
-    } catch { /* best-effort */ }
+    // 4. Read zip as base64, write to SAF file
+    const base64Content = await readAsStringAsync(
+      zipUri,
+      { encoding: EncodingType.Base64 },
+    );
+    await writeAsStringAsync(
+      safFileUri,
+      base64Content,
+      { encoding: EncodingType.Base64 },
+    );
 
     // 5. Update last auto backup date
     kvSet(LAST_AUTO_BACKUP_KEY, new Date().toISOString());
 
-    // 6. Prune old backups beyond MAX_AUTO_BACKUPS
-    cleanupOldBackups();
+    // 6. Cleanup cache zip
+    try {
+      const cacheFile = new File(zipPath);
+      if (cacheFile.exists) cacheFile.delete();
+    } catch {}
 
     return true;
   } catch (e) {
@@ -337,7 +476,7 @@ export async function autoExportBackup(): Promise<boolean> {
 
 export function shouldAutoBackup(): boolean {
   const settings = getAutoBackupSettings();
-  if (!settings.enabled) return false;
+  if (!settings.enabled || !settings.folderUri) return false;
 
   const last = settings.lastAutoBackup;
   if (!last) return true;
@@ -354,20 +493,4 @@ export function shouldAutoBackup(): boolean {
 
 export function clearAutoBackupSettings(): void {
   kvSet(AUTO_BACKUP_ENABLED_KEY, 'false');
-}
-
-/** Remove old auto-backups, keeping only the most recent MAX_AUTO_BACKUPS. */
-function cleanupOldBackups(): void {
-  try {
-    const backupDir = new Directory(Paths.document, AUTO_BACKUP_DIR);
-    if (!backupDir.exists) return;
-
-    const entries = backupDir.list()
-      .filter((e) => e.name.endsWith('.dfw'))
-      .sort((a, b) => (b.name > a.name ? 1 : b.name < a.name ? -1 : 0));
-
-    for (let i = MAX_AUTO_BACKUPS; i < entries.length; i++) {
-      try { new File(backupDir, entries[i].name).delete(); } catch { /* best-effort */ }
-    }
-  } catch { /* best-effort */ }
 }

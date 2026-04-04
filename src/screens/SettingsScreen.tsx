@@ -41,6 +41,7 @@ import {
   getAutoBackupSettings, setAutoBackupEnabled as saveAutoEnabled,
   setAutoBackupFrequency as saveAutoFrequency,
   clearAutoBackupSettings, autoExportBackup,
+  requestBackupFolder, saveBackupFolder,
   type BackupFrequency,
 } from '../services/backupRestore';
 import * as DocumentPicker from 'expo-document-picker';
@@ -68,6 +69,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [isImporting, setIsImporting] = useState(false);
   const [autoBackupEnabled, setAutoBackupEnabledState] = useState(false);
   const [autoBackupFrequency, setAutoBackupFrequencyState] = useState<BackupFrequency>('weekly');
+  const [autoBackupFolderName, setAutoBackupFolderName] = useState<string | null>(null);
 
   const btn = getButtonStyles(colors);
   const styles = useMemo(() => StyleSheet.create({
@@ -271,6 +273,7 @@ export default function SettingsScreen({ navigation }: Props) {
     const autoSettings = getAutoBackupSettings();
     setAutoBackupEnabledState(autoSettings.enabled);
     setAutoBackupFrequencyState(autoSettings.frequency);
+    setAutoBackupFolderName(autoSettings.folderName);
   }, []);
 
   useFocusEffect(
@@ -422,7 +425,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const daysSinceBackup = lastBackup
     ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24))
     : Infinity;
-  const showNudge = daysSinceBackup >= 30;
+  const showNudge = lastBackup !== null && daysSinceBackup >= 30;
 
   const handleExport = async () => {
     hapticMedium();
@@ -491,32 +494,54 @@ export default function SettingsScreen({ navigation }: Props) {
     );
   };
 
-  const handleAutoBackupToggle = (value: boolean) => {
+  const handleAutoBackupToggle = async (value: boolean) => {
     hapticLight();
     if (value) {
-      saveAutoEnabled(true);
-      setAutoBackupEnabledState(true);
-      Alert.alert(
-        'Back up now?',
-        'Want to create your first automatic backup right now?',
-        [
-          { text: 'Later', style: 'cancel' },
-          {
-            text: 'Back Up Now',
-            onPress: async () => {
-              try {
-                const success = await autoExportBackup();
-                if (success) {
-                  ToastAndroid.show('Memories backed up', ToastAndroid.SHORT);
-                }
-              } catch { /* silent */ }
+      try {
+        const folder = await requestBackupFolder();
+        if (!folder) return; // user cancelled — toggle stays off
+        saveBackupFolder(folder.uri, folder.name);
+        saveAutoEnabled(true);
+        setAutoBackupEnabledState(true);
+        setAutoBackupFolderName(folder.name);
+        Alert.alert(
+          'Back up now?',
+          'Want to create your first automatic backup right now?',
+          [
+            { text: 'Later', style: 'cancel' },
+            {
+              text: 'Back Up Now',
+              onPress: async () => {
+                try {
+                  const success = await autoExportBackup();
+                  if (success) {
+                    ToastAndroid.show('Memories backed up', ToastAndroid.SHORT);
+                  }
+                } catch { /* silent */ }
+              },
             },
-          },
-        ],
-      );
+          ],
+        );
+      } catch {
+        ToastAndroid.show('Could not open folder picker', ToastAndroid.SHORT);
+      }
     } else {
       clearAutoBackupSettings();
       setAutoBackupEnabledState(false);
+      setAutoBackupFolderName(null);
+    }
+  };
+
+  const handleChangeFolder = async () => {
+    hapticLight();
+    try {
+      const folder = await requestBackupFolder();
+      if (!folder) return;
+      saveBackupFolder(folder.uri, folder.name);
+      setAutoBackupFolderName(folder.name);
+      ToastAndroid.show('Backup folder updated', ToastAndroid.SHORT);
+    } catch {
+      ToastAndroid.show('Could not open folder picker', ToastAndroid.SHORT);
     }
   };
 
@@ -900,9 +925,15 @@ export default function SettingsScreen({ navigation }: Props) {
 
         {autoBackupEnabled && (
           <>
-            <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 8 }}>
-              Saves automatically to app storage. Use Export Memories to share a copy elsewhere.
-            </Text>
+            {autoBackupFolderName && (
+              <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 8 }}>
+                Saving to {autoBackupFolderName}
+              </Text>
+            )}
+
+            <TouchableOpacity onPress={handleChangeFolder} activeOpacity={0.7} style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 13, color: colors.accent }}>Change folder</Text>
+            </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', backgroundColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', borderRadius: 12, padding: 2, marginTop: 12 }}>
               {(['daily', 'weekly', 'monthly'] as BackupFrequency[]).map((freq) => (
