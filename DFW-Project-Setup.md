@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 12 (April 2, 2026)
+**Last updated:** Session 14 (April 4, 2026)
 
 ---
 
@@ -312,6 +312,10 @@ DontForgetWhy/
 ### Packages Added (Session 12)
 - `expo-sqlite` — synchronous SQLite database (replaced AsyncStorage for all persistent storage)
 - Note: `@react-native-async-storage/async-storage` kept temporarily — only used in `database.ts` for one-time migration runner
+
+### Packages Added (Session 14)
+- `react-native-zip-archive` — native ZIP/unzip for backup files. Installed via npm, requires dev build.
+- `expo-document-picker` — file picker for .dfw import. Added to app.json plugins.
 
 ### Packages Removed (Session 10)
 - `react-native-tab-view` — tabs replaced by standalone screens (Session 9 separation)

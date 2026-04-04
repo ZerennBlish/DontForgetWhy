@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 14 (April 3, 2026)
+**Last updated:** Session 14 (April 4, 2026)
 
 ---
 
@@ -270,6 +270,18 @@ VoiceMemoDetailScreen and NoteEditorModal both default to view mode for existing
 
 ### 6 themes — 3 dark + 3 light (Session 13)
 Replaced original light theme with blue-tinted Ocean. Added Sunset (orange) and Ruby (red). Covers top favorite colors: blue (Dark/Light), green (Vivid), cyan (HC), orange (Sunset), red (Ruby), black (HC). Each theme in a different hue family — no two themes look similar.
+
+### Backup & Restore
+- .dfw format: ZIP containing dfw.db + media folders + backup-meta.json
+- Manifest-first: every backup includes schema version from day one. Future migrations check version.
+- Transactional restore: live data moved to rollback dir, not deleted. Swap in restored data. Rollback on failure.
+- SAF for auto-export: user picks destination via Android folder picker. Could be Google Drive, Downloads, anywhere. We never touch their data — OS handles sync.
+- No encryption at launch: passphrase problem (forgotten = backup permanently gone). Clean ZIP first, optional encryption later if requested.
+- Privacy messaging: "Everything stays on your phone. We don't have servers. We don't want your data."
+- Branding: "Export Memories" / "Import Memories" instead of "Backup / Restore"
+- 30-day nudge: only shows when lastBackup exists AND is 30+ days old. Never-exported = no nudge.
+- Auto-export frequency: daily/weekly/monthly. Check runs on HomeScreen mount, silent unless successful.
+- Base64 SAF writes: known memory limitation for very large backups (100MB+). Acceptable for v1.
 
 ### `light` theme is Ocean (Session 13)
 Rather than adding Ocean as a 7th theme, replaced the original Light theme entirely. Ocean has better contrast (darker slate text vs gray), more distinctive personality (blue-tinted background vs neutral gray), and stronger section colors. The old Light was generic — Ocean has character.

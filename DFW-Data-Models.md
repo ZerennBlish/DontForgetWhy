@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 12 (April 2, 2026)
+**Last updated:** Session 14 (April 4, 2026)
 
 ---
 
@@ -117,6 +117,35 @@ interface ThemeColors {
 ```
 
 **ThemeName:** `'dark' | 'light' | 'highContrast' | 'vivid'` — custom theme removed. `customTheme` kv_store key cleaned up on migration.
+
+---
+
+## 7. Backup Manifest (backup-meta.json)
+Included in every .dfw backup file.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| appVersion | string | App version at export time (e.g. "1.11.0") |
+| backupVersion | number | Schema version. Currently 1. Must match exactly on import. |
+| createdAt | string | ISO timestamp of export |
+| contents.database | boolean | Whether dfw.db is included |
+| contents.voiceMemos | number | Count of voice memo files |
+| contents.noteImages | number | Count of note image files |
+| contents.alarmPhotos | number | Count of alarm photo files |
+| contents.backgrounds | number | Count of background image files |
+
+---
+
+## 8. Backup-Related kv_store Keys
+
+| Key | Type | Description |
+|-----|------|-------------|
+| lastBackupDate | string | ISO string, updated on manual export |
+| lastAutoBackupDate | string | ISO string, updated on auto-export |
+| autoBackupEnabled | string | 'true'/'false' |
+| autoBackupFolderUri | string | SAF directory URI |
+| autoBackupFolderName | string | Human-readable folder name |
+| autoBackupFrequency | string | 'daily'/'weekly'/'monthly' |
 
 ### WidgetTheme Interface (Session 11)
 

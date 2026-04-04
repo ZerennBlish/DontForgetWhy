@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 14 (April 3, 2026)
+### Source of Truth · Updated: Session 14 (April 4, 2026)
 
 ---
 
@@ -7,431 +7,111 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.10.1 (versionCode 27) — visual overhaul, 6 themes, detail screen redesign |
+| **Current Version** | v1.11.0 (versionCode 28) — Backup & Restore |
 | **Branch** | `dev` |
-| **Production Status** | ✅ v1.10.1 live on Google Play |
-| **Current Focus** | Session 14 complete: onboarding overhaul, store screenshots refreshed |
+| **Production Status** | ✅ v1.11.0 submitted to Google Play |
+| **Current Focus** | Session 14 complete: onboarding overhaul, backup & restore, store screenshots |
 | **Blocked By** | Nothing |
-| **Next Action** | P4 Chess/Checkers design + implementation |
-| **EAS Credits** | ~37 remaining (reset April 12) |
-| **Firebase Credits** | $300 available — NOT activated yet (90-day clock starts on activation) |
-| **ElevenLabs** | Subscription active — voice asset generation ready |
+| **Next Action** | P4.5 Stability Sprint or P6 Chess/Checkers |
+| **EAS Credits** | ~35 remaining (reset April 12) |
+| **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
+| **ElevenLabs** | Subscription active — 68 clips shipped |
 
 ---
 
 ## PHASE STATUS
 
-| Phase | Name | Status | Branch | Build Type |
-|-------|------|--------|--------|------------|
-| 1 | Housekeeping | ✅ Done | main | — |
-| 2 | Photos + Drawing + Backgrounds | ✅ Done | dev | Dev + Prod |
-| 3 | Voice Roasts | ✅ Done | dev | Dev + Prod |
-| 3.5 | Voice Memos | ✅ Done | dev | Dev + Prod |
-| — | v1.9.0 Home Screen | ✅ Done | dev | Prod only |
-| — | Storage Migration (SQLite) | ✅ Done | dev | Dev + Prod |
-| — | Visual Overhaul (Session 13) | ✅ Done | dev | Prod only |
-| 4 | Chess + Checkers | ⬜ Waiting | dev | Prod only |
-| 5 | Google Calendar Sync | ⬜ Waiting | dev | Dev + Prod |
-| 6 | Memory Score Expansion | ⬜ Waiting | dev | Prod only |
-| 7 | Online + Social (Firebase) | ⬜ Waiting | dev | Prod |
-| 8 | Pro Tier + Platform | ⬜ Waiting | dev | Multiple |
+| Phase | Name | Status | Build Type |
+|-------|------|--------|------------|
+| 1 | Housekeeping | ✅ Done | — |
+| 2 | Photos + Drawing + Backgrounds | ✅ Done | Dev + Prod |
+| 3 | Voice Roasts | ✅ Done | Dev + Prod |
+| 3.5 | Voice Memos | ✅ Done | Dev + Prod |
+| — | v1.9.0 Home Screen | ✅ Done | Prod only |
+| — | Storage Migration (SQLite) | ✅ Done | Dev + Prod |
+| — | Visual Overhaul (6 themes) | ✅ Done | Prod only |
+| — | Session 14 Onboarding Overhaul | ✅ Done | Prod only |
+| 4 | The Vault (Backup & Restore) | ✅ Done | Dev + Prod |
+| 4.5 | Stability Sprint | ⬜ Waiting | Prod only |
+| 5 | Google Calendar Sync | ⬜ Waiting | Dev + Prod |
+| 5.5 | Premium Foundation | ⬜ Waiting | Prod only |
+| 6 | Chess + Checkers + Blunder Roast | ⬜ Waiting | Prod only |
+| 6.5 | Voice Content Expansion | ⬜ Waiting | Prod only |
+| 7 | Pro Tier + Billing | ⬜ Waiting | Multiple |
+| 8 | Firebase Online + Social | ⬜ Waiting | Prod |
 
 ---
 
-## PRODUCTION LAUNCH SEQUENCE
+## COMPLETED PHASES (SUMMARY)
 
-**Status: ✅ COMPLETE**
-
-- [x] Closed testing published (v1.3.0 through v1.3.5)
-- [x] 48 installs confirmed (12 minimum required)
-- [x] 14-day testing window started
-- [x] 14-day testing window ends (~March 20, 6:39 PM)
-- [x] Apply for production in Play Console
-- [x] Answer Google's review questions
-- [x] Wait for Google review (~7 days) — **DO NOT touch store listing**
-- [x] Production approved
-- [x] Update Play Store screenshots (8 professional graphics uploaded)
-- [x] Update feature graphic if needed
-- [x] Review/update app description and what's-new text
-- [x] Announce to testers that app is live
-- [x] Merge `main` into `dev` branch
-- [x] Begin Phase 2
-- [x] v1.4.0 hotfix shipped (timer dismiss race condition)
-- [x] v1.5.0 in progress on dev (calendar, refactors, polish)
+- **P1 · Housekeeping** — Shipped v1.3.4. Utility extraction, test reconciliation, timer mutex.
+- **P2 · Photos + Drawing + Backgrounds** — Shipped v1.6.1. Note image attachments, Skia drawing canvas, S Pen pressure, draw-on-photos, custom photo backgrounds, per-alarm fire photos.
+- **P3 · Voice Roasts** — Shipped v1.7.0. 68 ElevenLabs clips, native ALARM stream playback, snooze shame escalation, timer roasts, dismiss voice toggle.
+- **P3.5 · Voice Memos** — Shipped v1.8.0. VoiceRecordScreen, VoiceMemoDetailScreen, NotepadScreen integration, MicWidget, CalendarScreen dots, card unification.
+- **v1.9.0 · Home Screen** — Shipped v1.9.0. Entry point with icon grid, Quick Capture, personality banner, Today section. TimerScreen + VoiceMemoListScreen extracted as standalone screens.
+- **SQLite Migration** — Shipped v1.10.0. expo-sqlite, 7 entity tables + kv_store, full AsyncStorage removal, ForgetLog removed.
+- **Visual Overhaul** — Shipped v1.10.1. 6 themes (Dark, Light, High Contrast, Vivid, Sunset, Ruby), GamesScreen + SettingsScreen fully themed, bgUri-aware overrides on 8 screens, VoiceMemoDetailScreen + NoteEditorModal redesign.
+- **Session 14 · Onboarding** — Shipped v1.10.1. Full rewrite with sarcastic copy, View-based icons, mic/camera permission slides, theme cycling preview, watermark, skip warnings, dynamic final slide.
+- **P4 · The Vault** — Shipped v1.11.0. Export/Import Memories (.dfw backup), auto-export via SAF to Google Drive/external folders, transactional restore with rollback, manifest-first architecture, strict validation, notification rescheduling, Jest tests.
 
 ---
 
-## PHASE 1 — HOUSEKEEPING ✅ COMPLETE
+## PHASE 4 — THE VAULT (Backup & Restore) ✅ COMPLETE
 
-**Shipped in:** v1.3.4 (versionCode 11)
-**Audited:** Audit 28 — Codex clean, Gemini clean
-
-- [x] 1.1 Extract shared utility functions → `soundModeUtils.ts`, `useCalendar.ts`, `useDaySelection.ts`
-- [x] 1.2 Reconcile `testing-setup` branch with `main` → 222/222 tests passing
-- [x] 1.3 Rename `refreshTimerWidget` → `refreshWidgets` → 14 files updated
-- [x] 1.4 Timer storage async mutex → `withLock` on write operations
-
----
-
-## PHASE 2 — PHOTOS + DRAWING + BACKGROUNDS ✅ COMPLETE
-
-**Shipped in:** v1.6.1 (production) — v1.6.0 initial ship, v1.6.1 added draw-on-photos
+**Shipped in:** v1.11.0 (versionCode 28)
 **Branch:** `dev`
-**New deps:** `expo-image-picker`, `@shopify/react-native-skia`, `expo-file-system`
-**Existing dep:** `reanimated-color-picker` (already installed)
-
-### Free Features
-
-- [x] **2.0 In-app Calendar** (CalendarScreen.tsx — DONE in v1.5.0)
-  - Full month/week/day views with react-native-calendars (JS-only, no native dep)
-  - Colored dot indicators: red=alarms, blue=reminders, green=notes
-  - Filter capsules, create buttons with initialDate prefill
-  - Accessible via nav card on AlarmListScreen
-- [x] **2.0a AlarmListScreen refactor** — extracted AlarmsTab.tsx (DONE)
-- [x] **2.0b NotepadScreen refactor** — extracted NoteEditorModal.tsx (DONE)
-- [x] **2.0c UI polish** — dark capsule BackButton, floating headers on Settings/DailyRiddle/NoteEditorModal (DONE)
-- [x] **2.0d Audit 33** — all findings resolved (DONE)
-- [x] **2.6 Calendar widget** — CalendarWidget with dot indicators (DONE in v1.5.0)
-- [x] **2.7 Tablet responsive pass** — Onboarding, Sudoku, MemoryMatch, MemoryScore (DONE in v1.5.0)
-
-### Pro Features
-
-- [x] **2.1 Note image attachments** ✅ COMPLETE (March 26, 2026)
-  - Photo attachments via gallery (expo-image-picker, max 3 per note, JPEG quality 0.7)
-  - Image-only notes supported (no text required)
-  - Thumbnail display in editor (edit + view mode) with lightbox viewer
-  - Share: text-only or photos via Sharing.shareAsync
-  - Print: base64 data URIs via buildNoteHtml helper, white background for ink efficiency
-  - Transactional save with rollback on failure
-  - Image files managed by noteImageStorage service (expo-file-system v19)
-  - Note cards show camera count indicator
-  - Emoji picker removed from NoteEditorModal (keyboard emoji sufficient)
-  - Audit 36: all findings resolved (transaction order, duplicate keys, print base64, resizeMethod)
-
-- [x] **2.2 Notepad drawing/sketch mode** ✅ COMPLETE (March 26, 2026)
-  - Full-screen Skia canvas (DrawingCanvas.tsx) with PanResponder touch handling
-  - Strokes stored as serializable StrokeData (SVG path strings) — memoized SkPaths for 60fps performance
-  - Tools: pen, eraser (draws in BG color), undo, clear (with confirmation), cancel (with discard prompt)
-  - 4 stroke widths: XS(1), S(3), M(6), L(12) — default S
-  - 8-color palette + custom color picker + custom canvas background color picker
-  - S Pen pressure: sampled on touch start, modulates stroke width
-  - Drawings save as PNG + companion JSON (stroke data for re-editing)
-  - Edit flow: thumbnail tap offers View/Edit for drawings, new filename on edit (cache bust), old files deleted
-  - saveNoteImage detects .png, copies companion .json through save pipeline
-  - loadDrawingData early-returns null for .jpg (no reading photos as text)
-  - Share modal: custom dark modal (replaced Alert.alert). Options: Share Text, Share Photos, Share as PDF, Print, Cancel
-  - Share as PDF: buildNoteHtml → Print.printToFileAsync → Sharing.shareAsync
-  - buildNoteHtml detects .png/.jpg for correct MIME type in base64 data URIs
-  - Empty canvas save blocked, cancel prompts when strokes exist
-  - Audit 37: 3 HIGH, 2 MEDIUM, 2 LOW — all resolved
-
-- [x] **2.3 Custom photo background underlay** ✅ COMPLETE (March 27, 2026)
-  - One user-selected photo shared across AlarmListScreen, NotepadScreen, CalendarScreen
-  - backgroundStorage.ts: atomic save (copy first, persist key, delete old), ${Paths.document}backgrounds/
-  - Settings: "Screen Background" section with photo picker, thumbnail preview, clear, opacity presets (30-80%)
-  - Screens: conditional render — photo + dark overlay when set, fullscreenicon.png watermark when not
-  - onError fallback: setBgUri(null) if image fails to load
-
-- [x] **2.4 Per-alarm photo on fire screen** ✅ COMPLETE (March 27, 2026)
-  - Optional photoUri field on Alarm type
-  - alarmPhotoStorage.ts: saves to ${Paths.document}alarm-photos/, cleanup on purge/permanentDelete
-  - Deferred save pattern: photo stays in ImagePicker cache until alarm save succeeds
-  - CreateAlarmScreen: "Wake-up Photo" section with placeholder/thumbnail/clear
-  - AlarmFireScreen: conditional ImageBackground — alarm.photoUri if set, lightbulb.png fallback, onError recovery
-  - Timers always use lightbulb.png (no photo support)
-
-- [x] **2.8 Draw on photos** ✅ COMPLETE (March 28, 2026)
-  - Tap any photo attachment in notepad to annotate with full drawing tools
-  - DrawingCanvas: backgroundImageUri prop, Skia SkImage rendering behind strokes
-  - Source photo copied to durable storage for re-editing
-  - Eraser disabled on photo backgrounds (undo covers use case)
-  - Done button gated on canvas readiness (layout + image loaded)
-  - loadDrawingData derives JSON path from URI (works in any directory)
-  - Calendar tap-to-navigate on event cards, week view shows next 7 days
-
-### Removed from Phase 2
-
-- ~~2.5 App text color picker~~ — REMOVED. Dark capsule pattern solved readability without user configuration. Dark overlays with auto-contrast text selection on photo backgrounds. Zero-config, visually consistent.
-
-### Notes
-- Tablet responsive pass deferred to standalone task for remaining screens (not part of P2 scope)
-- No new native dependencies in 2.3/2.4 (expo-image-picker and expo-file-system already installed from 2.1/2.2)
-- `useCalendar` hook accepts `initialDate` and `onSelectDate` callback
-- `reanimated-color-picker` still used in NoteEditorModal and DrawingCanvas (custom theme picker removed from SettingsScreen)
-
-### Audit Gate
-- [x] Full dual audit (Codex + Gemini) before production build
-- [x] `npx tsc --noEmit` — 0 errors
-- [x] Increment `expo.version` and `expo.android.versionCode` in `app.json`
-
----
-
-## PHASE 3 — VOICE ROASTS ✅ COMPLETE
-
-**Status:** ✅ Complete
-**Branch:** `dev`
-**New deps:** `expo-audio` (replaced `expo-av`)
-**External tool:** ElevenLabs (subscription active)
-**Build cost:** 1 dev build + 1 production build (or share dev build with Phase 2)
-
-### Pre-Work (No Code — Asset Generation)
-- [x] Generate alarm fire voice clips in ElevenLabs
-- [x] Generate snooze shame voice clips (4 tiers matching existing text tiers)
-- [x] Generate wake-up greeting clips ("Hey you" variants)
-- [x] Export and organize clips as bundled assets
-
-### Tasks
-
-- [x] **3.1 Alarm fire voice lines**
-  - Pre-recorded clips bundled in app assets
-  - Played via native AlarmChannelModule when alarm fires
-
-- [x] **3.2 Snooze shame voice escalation**
-  - Tier-matched to existing `snoozeTiers` in `snoozeMessages.ts`
-  - Escalating sass per snooze count (4 tiers)
-
-- [x] **3.3 Timer voice lines**
-  - Voice clips play when timer fires
-
-- [x] **3.4 Guess Why voice lines (before/correct/wrong)**
-  - Voice clips for guess why flow stages
-
-- [x] **3.5 Intro line (first alarm only, one-time)**
-  - One-time intro clip on first alarm fire, tracked via AsyncStorage
-
-- [x] **3.6 Settings toggle (voice on/off + dismiss voice on/off)**
-  - Main voice roasts toggle in Settings
-  - Dismiss voice sub-toggle (conditional on main toggle)
-  - Dismiss voice off = instant exit, no clip
-
-- [x] **3.7 Native ALARM stream playback (AlarmChannelModule)**
-  - Voice clips play on ALARM audio stream via native MediaPlayer
-  - Audible regardless of media volume / ringer mode
-  - URI scheme handling: HTTP (dev), file:///android_asset/, file://, content://, bare path fallback
-
-### Voice Character
-- Male, early 30s, American accent
-- Personality: tired, sarcastic, self-aware app with his own life (coworkers, dates, opinions)
-- Not mean — just over it. Competent but would rather be anywhere else
-- Clean language — no profanity (competitive advantage, keeps E rating)
-- Designed and generated in ElevenLabs v3 with audio tags
-- Female character (girlfriend) planned as future user-selectable voice
-
-### Clip Counts
-- Intro: 1
-- Alarm fire: 17
-- Snooze tier 1: 4
-- Snooze tier 2: 6
-- Snooze tier 3: 4
-- Snooze tier 4: 6
-- Guess Why before: 5
-- Guess Why correct: 4
-- Guess Why wrong: 4
-- Dismiss: 10
-- Timer: 11
-- Total: 68 clips (was 62 — removed 1 snooze3 clip too long, added 5 timer clips, timer category added)
-
-### Blockers
-- None anticipated
-
-### Notes
-- All clips are pre-recorded and bundled — NO runtime API calls to ElevenLabs
-- Voice features are Pro-tier only (Phase 8 gates this)
-- Build with `--clear` flag when new audio assets are added
-- `expo-av` removed, replaced with `expo-audio` for UI chirp (soundFeedback.ts)
-- Voice clips play via native AlarmChannelModule, NOT expo-audio (ALARM stream requirement)
-- Silent alarm guard: voice clips still play for silent alarms, but alarm tone doesn't resume after
-
-### Audit Gate
-- [ ] Full dual audit (Codex + Gemini) before production build
-- [ ] `npx tsc --noEmit` — 0 errors
-- [ ] Increment version + versionCode
-
----
-
-## PHASE 3.5 — VOICE MEMOS ✅ COMPLETE
-
-**Status:** ✅ Complete
-**Shipped in:** v1.8.0 (versionCode 22)
-**Branch:** `dev`
-**New deps:** None (expo-audio already installed from P3)
-**Native changes:** RECORD_AUDIO permission, MicWidget registration in app.json
-
-### Features
-
-- [x] **VoiceRecordScreen** — dedicated recording screen, tap-to-record/tap-to-stop, pause/resume, unlimited duration, random personality idle hints, recording indicator text
-- [x] **VoiceMemoDetailScreen** — dual mode (new recording via tempUri OR existing memo via memoId), title + note editing, seekable playback with back/forward 5s, explicit Save button with unsaved changes warning, transactional save (temp file preserved until metadata succeeds), soft delete with confirmation
-- [x] **VoiceMemoCard** — reusable card component, View-based play/pause icons, inline playback with progress bar, theme-aware colors, capsule pin/delete buttons matching alarm/reminder pattern
-- [x] **NotepadScreen integration** — content filter tabs (Voice / All / Notes), combined FlatList with union type ListItem, inline playback via single audio player ref, focus cleanup, pinned items float to top in All view, stale progress reset on memo switch
-- [x] **Voice memo pinning** — widgetPins.ts functions (get/toggle/unpin/prune/isPinned), max 4 pins, pin state preserved on undo delete (useRef pattern for stale closure fix), pinned sort in both list and widget
-- [x] **MicWidget** — standalone home screen widget, mic icon + "Record" text, tap opens VoiceRecordScreen, registered in app.json (110dp min)
-- [x] **NotepadWidget updated** — shows voice memos mixed with notes, pinned-first sort before slice to 4, mic button (left) + notepad button (right) in header, VoiceMemoCell with theme colors
-- [x] **CalendarScreen** — voice memos show as purple dots + tappable list items, DOT_VOICE #A29BFE, filter support
-- [x] **Card unification** — notes and voice memos use same dark bar style, green left border accent for notes, purple for voice memos, note icon circle uses note's own color
-- [x] **Navigation guards** — beforeRemove listeners on VoiceRecordScreen and VoiceMemoDetailScreen, hardware back/gesture back intercepted, save blocking during save operations
-- [x] **Storage** — voiceMemoStorage.ts (AsyncStorage CRUD, re-throws on error), voiceMemoFileStorage.ts (.m4a files at ${Paths.document}voice-memos/)
-- [x] **Personality** — random idle hints on record screen, random save toasts, random empty state messages, sarcastic delete confirmation
-
-### Audits
-- [x] Audit 44: 8 findings fixed (race conditions, stale closures, seek validation, widget sort, error swallowing)
-- [x] Audit 45: 10 findings fixed (nav guards, transactional save, pin ordering, pause race, undo pin restore, theme colors, stale progress)
-
-### Audit Gate
-- [x] `npx tsc --noEmit` — 0 errors
-- [x] Increment version + versionCode
-
----
-
-## v1.9.0 — HOME SCREEN RELEASE ✅ COMPLETE
-
-**Status:** ✅ Complete
-**Shipped in:** v1.9.0 (versionCode 24)
-**Branch:** `dev`
-**New deps:** None
-**Native changes:** None
-
-### Completed
-
-- [x] Home screen created — new app entry point with icon grid, Quick Capture row, personality banner, scrollable Today section
-- [x] TimerScreen extracted as standalone screen (no longer a tab inside AlarmListScreen)
-- [x] Voice memos separated from Notepad into VoiceMemoListScreen
-- [x] AlarmListScreen stripped to Alarms + Reminders (2 tabs)
-- [x] Personality banner system: 63 color-coded sarcastic quotes across 7 sections (homeBannerQuotes.ts)
-- [x] Widget rebranding: Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice
-- [x] MicWidget got proper header/footer
-- [x] HomeButton component added to all screens
-- [x] Forget Log moved from home grid into Settings
-- [x] CalendarWidget displays current month
-
-### Known Bugs (Pre-Existing)
-
-- ~~Recurring reminder with empty days array matches every day on calendar widget~~ — FIXED Session 9
-- ~~Guess Why showing answer immediately~~ — FIXED Session 9
-- ~~Yearly recurring reminder rescheduling without firing~~ — FIXED Session 9
-- ~~ExpoKeepAwake promise rejections in dev mode (SDK 55)~~ — FIXED Session 9
-
-### Session 13 Visual Overhaul (v1.10.1) ✅ COMPLETE
-
-- [x] GamesScreen + SettingsScreen: hardcoded dark-only colors replaced with mode-aware theme tokens
-- [x] 5 game sub-screens: `forceDark` on BackButton/HomeButton, overlay-safe text colors
-- [x] 8 user-photo screens: `forceDark={!!bgUri}`, bgUri-aware JSX overrides on header/overlay text
-- [x] HomeScreen: bgUri overrides on title, gear icon, banner, quick capture, grid, today header
-- [x] VoiceRecordScreen: fixed hardcoded `#FFFFFF` title, paused timer bgUri fix
-- [x] 6 themes (3 dark + 3 light): Dark, Light (Ocean), High Contrast, Vivid, Sunset, Ruby
-- [x] SettingsScreen theme grid: 3×2 layout for 6 themes
-- [x] VoiceMemoDetailScreen: view/edit mode redesign with centered Edit/Save accent pills
-- [x] NoteEditorModal: Edit button moved to centered accent pill, Save conditional on changes
-- [x] homeBannerQuotes: dead `color` field removed from interface and all ~60 quotes
-- [x] AlarmListScreen: delete/restore handlers use `loadAlarms(true)` (trash visibility fix)
-- [x] TriviaScreen: Online toggle moved to header right
-- [x] Old theme names (ocean, warm) cleaned from migration maps
-
-| Theme | Mode | Accent | Vibe |
-|-------|------|--------|------|
-| Dark | dark | #5B9EE6 | Blue daily driver |
-| Light | light | #2563EB | Blue-tinted ocean |
-| High Contrast | dark | #00D4FF | Cyan accessibility |
-| Vivid | dark | #00FF88 | Cyberpunk terminal |
-| Sunset | light | #E8690A | Orange/amber warmth |
-| Ruby | light | #E11D48 | Red/rose bold |
-
-### Deferred Findings
-- NoteEditorModal `voiceMemoStyles` (lines 51-173): hardcoded dark rgba for recording controls and memo cards. Renders against arbitrary user-selected note backgrounds, not theme backgrounds. Needs own design conversation.
-- DrawingCanvas dark rgba values: works on both modes after review — low priority.
-
-### Session 10 P2 Audit Findings (All 7 CLEARED)
-- Yearly label bug: no-date recurring reminders showed "Daily", now "Yearly"
-- CreateReminderScreen back stack: fell back to AlarmList, now Reminders
-- Emoji TextInput hack: broke 3 times during attempted filter, rebuilt as modal
-- VoiceMemoListScreen SyntaxError: broken StyleSheet from button style removal
-- AlarmListScreen deleted cards: Restore/Forever stacked vertically, fixed to side-by-side
-- DrawingCanvas: extracted modals, fully themed
-- Button hierarchy: COMPLETE — shared buttonStyles.ts, 4 types × 2 sizes, all screens converted
-
-### Audits
-- [x] Audit 47: Codex — 0 P0, 2 P1 (pre-existing timer/note behaviors), 3 P2. Gemini — 0 P0, 2 P1 (widget warm-start nav, notification routing missing Home base), 3 P2 (dead appQuote code, quote count, duplicate reminder reads). Both P1s from Gemini fixed before build.
-
-### Audit Gate
-- [x] `npx tsc --noEmit` — 0 errors
-- [x] Increment version + versionCode
-
-### Session 14 Onboarding Overhaul ✅ COMPLETE
-
-- [x] Full OnboardingScreen rewrite — emoji removed, View-based icons from Icons.tsx
-- [x] Intro slides updated: "Welcome to the app that judges you" + full feature description
-- [x] All permission slides rewritten with sarcastic personality copy
-- [x] Sarcastic skip warnings on every permission (Alert with "Set It Up" / "Skip Anyway")
-- [x] Battery skip keeps destructive style; all others default
-- [x] New microphone permission slide (expo-audio, system dialog)
-- [x] New camera & photos permission slide (expo-image-picker, system dialog)
-- [x] Theme cycling: local preview state cycles all 6 themes on swipe (no persistence, no setTheme calls)
-- [x] Watermark background (fullscreenicon.png, mode-aware opacity)
-- [x] Dynamic final slide text based on skip count (0, 1-2, 3+)
-- [x] Skip deduplication + auto-cleanup when permissions granted (P1 audit fix)
-- [x] Done slide icon added (P2 audit fix)
-- [x] Settings → Setup Guide (startSlide: 2) preserved — no cycling, uses real theme
-- [x] Play Store screenshots refreshed (8 new screenshots captured)
-- [x] Focused audit: Codex P1 fixed (skip inflation), P2 fixed (done icon). Gemini clean.
-
----
-
-## STORAGE MIGRATION — AsyncStorage → SQLite ✅ COMPLETE
-
-**Status:** ✅ Complete (Session 12)
-**Branch:** `dev`
-**New deps:** `expo-sqlite`
+**New deps:** `react-native-zip-archive`, `expo-document-picker`
 **Build cost:** 1 dev build + 1 production build
 
 ### Completed
-- [x] Chose `expo-sqlite` (Expo-managed, synchronous API, no extra native deps)
-- [x] Created `src/services/database.ts` — singleton, schema (7 tables + kv_store), KV helpers, migration runner
-- [x] Migrated KV services (settings, theme, haptics, voice, background, game stats) — 15 files
-- [x] Migrated entity services (notes, voice memos, timers, alarms, reminders) — 5 files
-- [x] Migrated widget pins, pending actions, snooze flags, notification routing — 6 files
-- [x] One-time `migrateFromAsyncStorage()` copies all existing data to SQLite on first launch
-- [x] AsyncStorage import removed from all files except `database.ts` (migration runner)
-- [x] ForgetLog feature removed (screen, service, nav route, database table all deleted)
-- [x] `nativeSoundId` column rename (SQLite case-insensitive collision with `soundId`)
-- [x] `voiceMemos` column added to notes table (data loss fix caught by audit)
-- [x] Migration failure handling: retry screen in App.tsx
-- [x] Emoji cleanup: game screen headers stripped of emoji, quick row expanded to 12
-- [x] Timer pin redesign: capsule overlay on cards, modal pin removed
-- [x] `npx tsc --noEmit` — 0 errors
+
+- [x] Export Memories — zip dfw.db + voice-memos/ + note-images/ + backgrounds/ + alarm-photos/ into .dfw file, share via system sheet
+- [x] Import Memories — file picker, dry-run validation, two-step overwrite warning, transactional restore with rollback
+- [x] Auto-export via SAF — user picks folder (Google Drive, Downloads, etc.), silently backs up on app open based on frequency (daily/weekly/monthly)
+- [x] Manifest-first architecture — backup-meta.json with appVersion, backupVersion, createdAt, content counts
+- [x] Strict validation — rejects unknown versions, malformed manifests, missing DB
+- [x] Transactional restore — live data moved to rollback dir, swap in restored data, rollback on failure
+- [x] Notification rescheduling — cancel all, reload alarms/reminders, reschedule with new IDs
+- [x] "Your Memories" Settings section — privacy text, export/import buttons, last backup date, 30-day nudge
+- [x] "Back up now?" prompt on initial SAF folder selection
+- [x] Jest tests for backup logic (shouldAutoBackup, getAutoBackupSettings, manifest validation)
+- [x] Play Store screenshots refreshed (8 new screenshots)
+
+### Design Decisions
+
+- No encryption at launch — passphrase problem (forgotten = backup gone). Ship clean ZIP first.
+- Manifest-first from day one — every .dfw includes backup-meta.json with schema version
+- Transactional restore with rollback — never delete live data until replacement is verified
+- SAF for auto-export — user controls where backups go, not us
+- Privacy messaging: "We don't have servers. We don't want your data."
 
 ### Audit Gate
-- [ ] Full dual audit (Codex + Gemini) before production build
-- [ ] `npx tsc --noEmit` — 0 errors
-- [ ] `npx jest` — all tests pass
-- [ ] Increment version + versionCode
+- [x] Dual audit (Codex + Gemini) — 2 rounds
+- [x] Round 1: P0 (non-transactional restore), P1 (SAF not implemented, weak validation), P2 (nudge, missing tests) — all fixed
+- [x] Round 2: P1 (manifest field validation, test coverage gaps) — fixed
+- [x] `npx tsc --noEmit` — 0 errors
+- [x] `npx jest` — 4 suites, 56+ tests passing
 
 ---
 
-## PHASE 4 — NEW GAMES
+## PHASE 4.5 — STABILITY SPRINT
 
-**Status:** ⬜ Not started
+**Version Target:** v1.11.1 or bundled with v1.12.0 if clean
 **Branch:** `dev`
-**New deps:** `chess.js` (JS only — no native modules)
-**Build cost:** 1 production build only (no dev build needed)
+**New deps:** None
+**Build cost:** 1 production build only
+**Why now:** NotepadScreen is 1,240 lines. AlarmListScreen is ~600. P5 adds Firebase complexity. P6 adds two new game screens. Clean house before both.
 
 ### Tasks
 
-- [ ] **4.1 Chess vs CPU**
-  - `chess.js` for move validation and game state
-  - AI opponent (difficulty TBD)
-  - Integration with Memory Score system
-
-- [ ] **4.2 Checkers vs CPU**
-  - Pure JS implementation (no library needed)
-  - AI opponent (difficulty TBD)
-  - Integration with Memory Score system
-
-### Blockers
-- None anticipated — pure JS, no native deps
-
-### Notes
-- These are Pro-tier features (Phase 8 gates this)
-- Need to design difficulty levels during planning phase
-- Background images needed (same pattern as existing game screens)
+- [ ] **4.5.1 NotepadScreen decomposition** — ~1,240 lines, split into focused components/hooks
+- [ ] **4.5.2 AlarmListScreen decomposition** — ~600 lines, extract card interactions, sort/filter
+- [ ] **4.5.3 Accessibility pass** — screen reader labels on View-based icons, test with TalkBack
+- [ ] **4.5.4 App size + storage audit** — measure APK, identify largest contributors
+- [ ] **4.5.5 OOM prevention** — FlatList windowSize/removeClippedSubviews on image-heavy lists
+- [ ] **4.5.6 Jest resurrection** — update tests for SQLite services, add backup/restore coverage
+- [ ] **4.5.7 R8 deobfuscation mapping** — upload to Play Console for crash reports
+- [ ] **4.5.8 Full abandoned package audit** — scan for unused dependencies
 
 ### Audit Gate
 - [ ] Full dual audit (Codex + Gemini) before production build
@@ -442,233 +122,140 @@
 
 ## PHASE 5 — GOOGLE CALENDAR SYNC
 
-**Status:** ⬜ Not started
+**Version Target:** v1.12.0
 **Branch:** `dev`
-**New deps:** `expo-auth-session` + related auth deps
-**Build cost:** 1 dev build + 1 production build minimum
+**New deps:** `expo-auth-session` + Firebase Auth
+**Build cost:** 1 dev build + 1 production build
+**Firebase:** Activate Firebase here. Auth only — do NOT activate Firestore yet.
 
 ### Tasks
 
-- [ ] Google OAuth via Firebase Auth
-- [ ] Calendar sync implementation (direction TBD — push alarms/reminders to calendar, pull events, or both)
-- [ ] Sync settings UI in Settings screen
-
-### Blockers
-- Firebase Auth must be set up first (may overlap with Phase 7 backend work)
-
-### Notes
-- Pro-tier feature (Phase 8 gates this)
-- Requires Firebase Auth — consider whether to activate Firebase earlier to align with this phase
-- Scope needs full design discussion before prompts are written
+- [ ] Firebase project setup (Auth only)
+- [ ] Google OAuth via expo-auth-session
+- [ ] Pull Google Calendar events into Today section + CalendarScreen dots
+- [ ] Sync settings UI in SettingsScreen
+- [ ] Optional: push DFW alarms/reminders to Google Calendar
 
 ### Audit Gate
-- [ ] Full dual audit (Codex + Gemini) before production build
+- [ ] Full dual audit before production build
 - [ ] `npx tsc --noEmit` — 0 errors
 - [ ] Increment version + versionCode
 
 ---
 
-## PHASE 6 — MEMORY SCORE EXPANSION
+## PHASE 5.5 — PREMIUM FOUNDATION
 
-**Status:** ⬜ Not started
+**Version Target:** v1.13.0
 **Branch:** `dev`
 **New deps:** None
 **Build cost:** 1 production build only
 
 ### Tasks
 
-- [ ] Update Memory Score system to track all 7 games
-  - Currently tracks: Memory Match, Trivia, Sudoku, Daily Riddle, Guess Why
-  - Adding: Chess, Checkers
-- [ ] Scoring criteria design for Chess and Checkers
+- [ ] **5.5.1 Entitlement storage** — local entitlement in kv_store with tier, date, reason
+- [ ] **5.5.2 Grandfather / founder logic** — detect existing users, grant named tier
+- [ ] **5.5.3 Backup entitlement flag** — export/import entitlement with .dfw backup
+- [ ] **5.5.4 Billing plumbing (hidden)** — Google Play Billing built but not user-facing
+- [ ] **5.5.5 Pro feature gate scaffold** — useEntitlement() hook, apply gates
 
-### Blockers
-- Phase 4 must be complete (Chess + Checkers need to exist first)
-
-### Notes
-- Depends on Phase 4 — cannot start until games are built
-- Scoring design needs discussion before implementation
+### Founding Tiers
+- **Founding Tester** — closed testing participants
+- **Founding User** — first 90 days of production
+- **Early Supporter** — first year of production
 
 ### Audit Gate
-- [ ] Full dual audit (Codex + Gemini) before production build
+- [ ] Full dual audit before production build
 - [ ] `npx tsc --noEmit` — 0 errors
 - [ ] Increment version + versionCode
 
 ---
 
-## PHASE 7 — ONLINE + SOCIAL (FIREBASE)
+## PHASE 6 — CHESS + CHECKERS + BLUNDER ROAST
 
-**Status:** ⬜ Not started
+**Version Target:** v1.14.0
 **Branch:** `dev`
-**Backend:** Firebase — Firestore + Cloud Functions + Auth
-**Credits:** $300 Firebase credit available (90-day clock starts on activation)
-**Build cost:** 1+ production builds
+**New deps:** `chess.js` (JS only)
+**Build cost:** 1 production build only
 
 ### Tasks
 
-- [ ] Firebase project setup
-  - Firestore database
-  - Cloud Functions
-  - Firebase Auth (may already exist from Phase 5)
-- [ ] Online trivia — unlimited questions for Pro users
-- [ ] Online riddles — unlimited riddles for Pro users
-- [ ] Leaderboards
+- [ ] **6.1 Chess vs CPU** — chess.js, 2+ difficulty levels, Memory Score integration
+- [ ] **6.2 Blunder Roast** — detect blunders, trigger sarcastic voice/text roasts
+- [ ] **6.3 Checkers vs CPU** — pure JS, 2+ difficulty levels, Memory Score integration
+- [ ] **6.4 Memory Score Expansion** — add Chess + Checkers scoring to 5-game system
+
+### Audit Gate
+- [ ] Full dual audit before production build
+- [ ] `npx tsc --noEmit` — 0 errors
+- [ ] Increment version + versionCode
+
+---
+
+## PHASE 6.5 — VOICE CONTENT EXPANSION
+
+**Version Target:** v1.15.0
+**Build cost:** 1 production build (--clear flag for new audio assets)
+
+### Tasks
+
+- [ ] **6.5.1 Onboarding voice intro** — Alarm Guy clip on first launch
+- [ ] **6.5.2 Voice memos attachable to alarms** — hear your own voice when alarm fires
+- [ ] **6.5.3 More in-app roast moments** — navigation, idle, trivia/riddle
+- [ ] **6.5.4 Female voice character design pass** — concept only, not shipping yet
+
+---
+
+## PHASE 7 — PRO TIER + BILLING
+
+**Version Target:** v2.0.0
+
+### Tasks
+
+- [ ] **7.1 Pro tier** — ~$1.99 one-time, expose billing UI from P5.5
+- [ ] **7.2 Pro gates (enforce)** — voice, photos, drawing, backup, calendar, chess, checkers, online content
+- [ ] **7.3 Founding user display** — named badge in Settings
+- [ ] **7.4 Android compliance** — edge-to-edge (15), orientation (16)
+- [ ] **7.5 Reminder fire → Guess Why** — reminders through AlarmFireScreen
+
+---
+
+## PHASE 8 — FIREBASE ONLINE + SOCIAL
+
+**Version Target:** v2.1.0+
+**Backend:** Firestore + Cloud Functions (Auth already active from P5)
+
+### Tasks
+
+- [ ] Activate Firestore
+- [ ] Online trivia + riddles (unlimited for Pro)
+- [ ] Global leaderboards (anonymous)
 - [ ] Multiplayer (scope TBD)
-
-### Blockers
-- Firebase credit 90-day timer — need to time activation strategically
-- If Phase 5 activates Firebase Auth first, coordinate to avoid wasted setup
-
-### Notes
-- Solves the finite offline question pool problem for trivia and riddles
-- All online features are Pro-tier (Phase 8 gates this)
-- $300 Firebase credit + $200 Azure credit held as backup
-- Full design discussion needed before implementation
-
-### Audit Gate
-- [ ] Full dual audit (Codex + Gemini) before every production build
-- [ ] `npx tsc --noEmit` — 0 errors
-- [ ] Increment version + versionCode
-
----
-
-## PHASE 8 — MONETIZATION + PLATFORM
-
-**Status:** ⬜ Not started
-**Branch:** `dev`
-**Build cost:** Multiple builds across sub-tasks
-
-### Tasks
-
-- [ ] **8.1 Pro tier (~$1 one-time unlock)**
-  - Google Play Billing integration
-  - Pro gate on: voice, photos, drawing, online content, calendar sync, Chess, Checkers
-  - **Free tier keeps ALL current features permanently**
-  - Philosophy: "Pay to add premium stuff" — NOT "pay to remove annoyances"
-
-- [ ] **8.2 Edge-to-edge layout (Android 15)**
-  - Required for Android 15 compliance
-
-- [ ] **8.3 Orientation restrictions (Android 16)**
-  - Required for Android 16 compliance
-
-- [ ] **8.4 iOS port**
-  - Scope TBD — full design discussion needed
-
-- [ ] **8.5 Reminder-fire flow with Guess Why support**
-  - Deferred from earlier development — reminders don't currently fire through AlarmFireScreen
-
-### Blockers
-- 8.1 should come after most Pro features are built (Phases 2–7)
-- 8.2 and 8.3 depend on Android release timelines
-- 8.4 requires Apple Developer account + significant scoping
-
-### Notes
-- Pro tier pricing: ~$1 one-time purchase
-- 8.5 was specifically deferred — reminders use a different notification flow than alarms
-
-### Audit Gate
-- [ ] Full dual audit (Codex + Gemini) before every production build
-- [ ] `npx tsc --noEmit` — 0 errors
-- [ ] Increment version + versionCode
 
 ---
 
 ## BACKLOG (Not Scheduled)
 
-### Bugs (Fix Before New Features)
-- ~~Guess Why game: shows answer immediately~~ — FIXED Session 9 (removed hasNickname from canPlayGuessWhy)
-- ~~Yearly recurring reminder: reschedules without firing~~ — FIXED Session 9 (always advance from dueDate year + 1)
-- ~~Recurring reminder with empty days matches every day~~ — FIXED Session 9 (dueDate vs daily distinction + yearly from createdAt)
-- ~~ExpoKeepAwake promise rejections~~ — FIXED Session 9 (imperative activateKeepAwakeAsync in try-catch)
-- Home screen title centering — verify applied
-
-### UI Unification
-- ~~Swipe to delete on cards~~ — DONE Session 10 (SwipeableRow component, both directions, all 4 list screens)
-- ~~Separate alarms and reminders into their own screens~~ — DONE Session 9
-- ~~Alarm and reminder cards restyle to match dark bar style~~ — DONE Session 9 (card unification with section-colored borders + elevation)
-- ~~All cards app-wide use unified dark bar pattern~~ — DONE Session 9
-- ~~All buttons match capsule pattern~~ — DONE Session 9 (text capsules, mode-aware backgrounds)
-- ~~All icons checked for consistency~~ — DONE Session 9 (29+ View-based icons in Icons.tsx)
-- ~~Emoji picker modal~~ — DONE Session 10 (replaces TextInput hack, flat grid of ~128 curated emoji, bottom sheet)
-- ~~Package cleanup~~ — DONE Session 10 (removed react-native-tab-view, react-native-pager-view, date-fns)
-- ~~Visual overhaul~~ — DONE Session 10 (themes, icons, cards, light mode tinted cards, section tinting, DrawingCanvas refactor, forceDark prop on BackButton/HomeButton)
-- ~~Button hierarchy~~ — DONE Sessions 10-11 (shared buttonStyles.ts, 4 types × 2 sizes, applied to create screens, trash items, SettingsScreen, NoteEditorModal, DrawingPickerModal)
-- ~~Widget visual updates~~ — DONE Session 11 (section colors propagated to all 4 widgets, MicWidget resized to 1×1 70dp with red record circle)
-- ~~Jest setup~~ — DONE Session 11 (ts-jest, node environment, 35 tests across 3 suites on testing-setup branch, merged to dev)
-- ~~Remaining emoji cleanup~~ — DONE Session 12 (game screen headers) + Session 14 (onboarding)
-- Pin toggle inside edit/detail screens (alarms, reminders, notes, voice memos)
-
 ### Features
-- Timer notification buttons: "Go Away" (dismiss) + "Start me?" (restart same timer)
+- Timer notification buttons: "Go Away" + "Start me?"
 - Add holidays to calendar
-- Onboarding voice intro — Alarm Guy audio clip on first launch explaining the app
-- Theme-responsive icon colors — home screen grid adapts to light/dark/high contrast themes
-- Voice memos attachable to alarms (hear your own voice when alarm fires — "viral-worthy UX")
-- More voice roast clips throughout app (navigation, actions, idle moments)
-- Female voice character (alarm guy's girlfriend) — future user-selectable option
-- Expanded alarm icon picker (curated categories beyond emoji)
-- Voice content expansion (jokes, roasts, non-time humor)
-- Guess Why Personal Edition (custom brain training)
+- Theme-responsive icon colors
+- Expanded alarm icon picker
+- Guess Why Personal Edition
 - Trivia/riddle wake-up mode
-- More voice clips in more places
-- P4: Chess/Checkers (pure JS, no build needed)
-- P5: Google Calendar sync
-- P6: Memory Score expansion
-- P7: Firebase online content + leaderboards
-- P8: Pro tier ($1.99 one-time, free features stay free)
-- Cloud backup / export (.dfw backup file — no accounts, zip dfw.db + voice-memos/ + note-images/)
-
-### Infrastructure
-- ~~Jest suite~~ — DONE Session 11 (ts-jest, node environment, 35 tests across 3 suites, testing-setup merged to dev)
-- Storage audit — voice memo disk usage, SQLite database size at scale
-- Full abandoned package audit (find and remove unused dependencies)
-- Full code audit (fresh eyes on entire codebase post-restructure)
-- R8 deobfuscation mapping file upload for Play Console crash reports
-- ~~Theme consolidation~~ — DONE Session 9 (6 → 4 themes + section colors + custom picker removed)
-- ~~AsyncStorage → SQLite migration~~ — DONE Session 12 (expo-sqlite, 7 tables + kv_store, all services migrated)
-- NotepadScreen further decomposition (~1240 lines — getting unwieldy)
+- Pin toggle inside edit/detail screens
+- iOS port (P9+)
+- Optional AES-256 backup encryption
+- NoteEditorModal voiceMemoStyles theming
+- DrawingCanvas dark rgba values
 
 ### Store / Marketing
-- Play Store listing update for v1.9.0 (home screen, widget rebranding, voice memo separation)
-- ~~Play Store screenshots refresh~~ — DONE Session 14 (8 screenshots: home dark/light, alarm fire, alarms+reminders, notes/drawing, widgets, timers, settings/themes)
-- ~~Onboarding screen update~~ — DONE Session 14 (full overhaul: sarcastic copy, View-based icons, mic/camera permissions, theme cycling preview, watermark, skip warnings)
-- Widget preview screenshots for store listing
-- App size audit (63 voice clips + Skia + voice memo recordings)
+- Play Store listing update for home screen, voice memos, backup
+- Widget preview screenshots
+- App size audit
 
-### Recurring / Existing
-- Recurring reminder UX: annual set for today when time passed should auto-schedule next year
+### Recurring
+- Home screen title centering — verify applied
 - Daily Riddle scoring design review
-- AlarmListScreen further decomposition (~600 lines)
-- Accessibility pass (screen reader labels on View-based icons)
-- OOM prevention: FlatList windowSize/removeClippedSubviews for image-heavy note lists
-
-### Completed (Backlog Items Shipped)
-- ~~Home screen (main menu)~~ — DONE in v1.9.0
-- ~~Swipe-to-delete~~ — DONE Session 10 (SwipeableRow, both directions, all 4 list screens)
-- ~~Emoji picker modal~~ — DONE Session 10 (replaces TextInput hack)
-- ~~Package cleanup~~ — DONE Session 10 (removed tab-view, pager-view, date-fns)
-- ~~Visual overhaul~~ — DONE Session 10 (themes, icons, cards, light mode, section tinting)
-- ~~Button hierarchy~~ — DONE Sessions 10-11 (all screens converted)
-- ~~Widget visual updates~~ — DONE Session 11 (section colors in all 4 widgets, MicWidget 1×1)
-- ~~Jest setup~~ — DONE Session 11 (ts-jest, 35 tests, testing-setup merged to dev)
-- ~~Expo SDK 55 upgrade~~ — DONE in v1.8.1
-- ~~Theme consolidation (6 → 4 + section colors)~~ — DONE Session 9
-- ~~Card unification (all cards use dark bar + section-colored borders)~~ — DONE Session 9
-- ~~Alarm/reminder separation into own screens~~ — DONE Session 9
-- ~~Icon library (29+ View-based icons)~~ — DONE Session 9
-- ~~Light mode overhaul (mode-aware overlays, capsules, watermarks)~~ — DONE Session 9
-- ~~Pin redesign (dot indicator + text capsule)~~ — DONE Session 9
-- ~~Guess Why nickname bug~~ — FIXED Session 9
-- ~~Yearly reminder reschedule bug~~ — FIXED Session 9
-- ~~Calendar widget daily dots bug~~ — FIXED Session 9
-- ~~ExpoKeepAwake promise rejection~~ — FIXED Session 9
-- ~~Light mode card tinting (section-colored backgrounds)~~ — DONE Session 9
-- ~~Photo overlay dark-only (removed white bleach)~~ — DONE Session 9
-- ~~Photo-aware alpha values on HomeScreen~~ — DONE Session 9
-- ~~brandTitle theme token~~ — DONE Session 9
-- ~~Softer light theme text + brighter section colors~~ — DONE Session 9
-- ~~Grid border/shadow/icon-box removal~~ — DONE Session 9
 
 ---
 
@@ -677,66 +264,72 @@
 ### Free Tier — Keeps Everything Current, Forever
 - All alarms, reminders, timers, notepad
 - In-app calendar (day/week/month views)
-- Calendar voice memo dots and list items
-- Voice/All/Notes filter tabs in notepad
 - All 6 themes (Dark, Light, High Contrast, Vivid, Sunset, Ruby)
-- Guess Why, Memory Match, Trivia (offline), Sudoku, Daily Riddle
+- All 5 games (Guess Why, Memory Match, Trivia offline, Sudoku, Daily Riddle)
 - Memory Score tracking
-- Home screen (icon grid, Quick Capture, personality banner, Today section)
-- Home screen widgets (4 widget types)
-- All personality content (sarcastic text — quotes, roasts, snooze messages, placeholders)
+- Home screen + 4 widgets
+- All personality content (text quotes, roasts, snooze messages, placeholders)
 - Sound picker + custom alarm sounds
 - Privacy mode, Silence All mode
 
-### Pro Tier — ~$1 One-Time Unlock
-- Voice memos (recording, playback, detail editing, pinning)
-- Mic home screen widget
-- Voice roasts (alarm fire + snooze escalation + wake-up greeting)
-- Custom photo backgrounds (main screens + per-alarm fire screen)
-- Note image attachments
-- Notepad drawing/sketch (Skia + S Pen)
+### Pro Tier — ~$1.99 One-Time Unlock
+- Voice roasts + voice memos + voice on alarms
+- Custom photo backgrounds + note images + drawing
+- Backup & Restore (.dfw export/import + auto-export)
 - Google Calendar sync
-- Chess vs CPU
-- Checkers vs CPU
-- Online trivia (unlimited via Firebase)
-- Online riddles (unlimited via Firebase)
+- Chess + Checkers + Blunder Roast
+- Online trivia + riddles (unlimited)
 - Leaderboards
+
+### Founding Tiers — Automatic, Named, Permanent
+- Founding Tester / Founding User / Early Supporter
+- All Pro features forever, no charge
+- Named badge in Settings
+- Survives backup/restore
 
 ---
 
-## BUILD CREDIT BUDGET
+## CREDIT BUDGET
 
 | Phase | Dev Builds | Prod Builds | Est. Credits |
 |-------|-----------|-------------|-------------|
-| 2 | 1 | 1 | ~2 |
-| 3 | 1 (or shared w/ P2) | 1 | ~1–2 |
-| 3.5 | 2 | 1 | ~3 |
-| 4 | 0 | 1 | ~1 |
-| 5 | 1 | 1 | ~2 |
-| 6 | 0 | 1 | ~1 |
-| 7 | 0 | 1+ | ~1+ |
-| 8 | 1+ | 2+ | ~3+ |
-| **Total** | **5–6** | **9+** | **~14–17** |
-
-Credits reset on the **12th of each month** (~30 credits/month on Starter plan).
-Batch native deps within phases to minimize dev builds.
-**Optimization:** Install Phase 2 + Phase 3 native deps in one dev build → saves 1 credit.
+| P4.5 Stability | 0 | 1 | ~1 |
+| P5 Calendar | 1 | 1 | ~2 |
+| P5.5 Premium | 0 | 1 | ~1 |
+| P6 Games | 0 | 1 | ~1 |
+| P6.5 Voice | 0 | 1 | ~1 |
+| P7 Pro Tier | 0 | 2 | ~2 |
+| P8 Firebase | 0 | 1+ | ~1+ |
+| **Total** | **1** | **8+** | **~9–11** |
 
 ---
 
 ## STANDING RULES
 
-- `react-native-worklets` at `0.7.2` — managed by Expo, no manual pinning needed
+- `react-native-worklets` managed by Expo — no manual pinning
 - `npm install` from PowerShell after every WSL package install
-- `npx tsc --noEmit` before every production build — must be 0 errors
-- Increment `expo.version` + `expo.android.versionCode` before every production build
-- Audit before every ship — no exceptions
-- Don't ship dead features — if it does nothing, remove it
-- Build with `--clear` flag when new assets are added
-- Merge `main` into `dev` before starting post-launch work (never reverse)
-- `testing-setup` branch: merge `main` into it periodically, never reverse
+- `npx tsc --noEmit` before every production build — 0 errors
+- `npx jest` before every production build — all tests pass
+- Increment version + versionCode before every production build
+- Dual audit (Codex + Gemini) before every ship
+- Don't ship dead features
+- Build with `--clear` when new assets added
+- Always include Jest tests for new services/features
 - Four backups: desktop + laptop + GitHub + USB
 - Never put repos in OneDrive
+
+---
+
+## 6 THEMES
+
+| Theme | Mode | Accent | Vibe |
+|-------|------|--------|------|
+| Dark | dark | #5B9EE6 | Blue daily driver |
+| Light | light | #2563EB | Blue-tinted ocean |
+| High Contrast | dark | #00D4FF | Cyan accessibility |
+| Vivid | dark | #00FF88 | Cyberpunk terminal |
+| Sunset | light | #E8690A | Orange/amber warmth |
+| Ruby | light | #E11D48 | Red/rose bold |
 
 ---
 
@@ -744,25 +337,18 @@ Batch native deps within phases to minimize dev builds.
 
 | Date | Change |
 |------|--------|
-| Mar 19, 2026 | Document created. Phase 1 complete. Production launch sequence in progress. |
-| Mar 20, 2026 | Production approved. App live on Google Play. |
-| Mar 22, 2026 | v1.4.0 shipped — timer dismiss race condition hotfix. Store screenshots updated. |
-| Mar 25, 2026 | v1.5.0 on dev — Calendar feature, AlarmListScreen/NotepadScreen refactors, UI polish, Audit 33 complete. |
-| Mar 25, 2026 | Removed 2.5 (text color picker) from roadmap. Readability solved by dark capsule pattern + auto-contrast overlays. |
-| Mar 26, 2026 | P2 2.1 (Note image attachments) complete. Deps installed: expo-image-picker, @shopify/react-native-skia, expo-file-system. Emoji picker removed. Audit 36 all resolved. |
-| Mar 26, 2026 | P2 2.2 (Drawing canvas) complete. Skia canvas, pen/eraser/undo, custom colors, S Pen pressure, PNG+JSON save, share modal with PDF. Audit 37 all resolved. |
-| Mar 27, 2026 | P2 2.3 (Custom photo backgrounds) complete. backgroundStorage.ts, Settings photo picker, opacity presets, 3 screens updated. |
-| Mar 27, 2026 | P2 2.4 (Per-alarm photo) complete. alarmPhotoStorage.ts, deferred save pattern, CreateAlarmScreen photo picker, AlarmFireScreen conditional background. |
-| Mar 27, 2026 | P2 fully COMPLETE. File splits (ShareNoteModal, ImageLightbox, DayPickerRow, useAlarmForm, useReminderForm, useNotificationRouting), header consistency, toggleAlarm past-date fix, audit cleanup. |
-| Mar 27, 2026 | v1.6.0 production build. Merged dev → main. Full P2 shipped: image attachments, drawing/Skia, photo backgrounds, per-alarm photos, file splits, header consistency, dismiss fix. |
-| Mar 28, 2026 | v1.6.0 shipped to Play Store. Full P2: image attachments, drawing/Skia, photo backgrounds, per-alarm photos, file splits, header consistency, dismiss fix. Audit 38 fixes: deferred drawing/photo saves, rollback on failure. Store listing updated with 8 new screenshots and full description rewrite. |
-| Mar 28, 2026 | v1.6.1 shipped. Draw on photos (annotate photo attachments with drawing tools), calendar tap-to-navigate, week view next 7 days. Audit 39 fixes: durable source photo, eraser disabled on photos, canvas readiness gate, loadDrawingData path fix. |
-| Mar 28, 2026 | P3 voice roasts pre-work complete. Custom ElevenLabs v3 voice designed. 62 voice clips generated across all categories: fire, snooze (4 tiers), guess why (before/correct/wrong), dismiss, intro. |
-| Mar 29, 2026 | P3 Voice Roasts complete. 63 voice clips across 10 categories (fire, snooze 1-4, timer, guess before/correct/wrong, dismiss, intro). Native ALARM stream playback via AlarmChannelModule. expo-av removed, replaced with expo-audio for UI chirp. Dismiss voice toggle for faster exits. Double-tap dismiss/snooze to skip voice clips. Silent alarm guard. Production URI handling via expo-asset. |
-| Mar 30, 2026 | Calendar fixes: annual recurring reminders showing daily (month/day match), calendar event cards now tappable (navigate to edit screens). AlarmFireScreen merge conflict markers resolved. |
-| Mar 30, 2026 | Voice memos complete (Phase 3.5). VoiceRecordScreen, VoiceMemoDetailScreen, VoiceMemoCard, NotepadScreen integration (filter tabs, inline playback, pinning), MicWidget, NotepadWidget voice memo support, CalendarScreen voice memo dots. Card unification: dark bar style with accent borders. Capsule pin/delete buttons. View-based play/pause icons. Navigation guards (beforeRemove). Transactional save. Audits 44-45 complete, all findings resolved. |
-| Mar 30, 2026 | v1.8.0 production build. Voice memos, mic widget, card unification, calendar fixes, 2 full audits. |
-| Mar 31, 2026 | v1.8.1 SDK 55 upgrade. Expo 54→55, React Native 0.81→0.83, React 19.1→19.2. `react-native-notification-sounds` removed (unmaintained, jcenter/Gradle 9.0 incompatible), replaced with native `getSystemAlarmSounds` in AlarmChannelModule. `newArchEnabled` and `edgeToEdgeEnabled` removed from app.json (always-on in SDK 55). Android 15 foreground service warning resolved (expo-audio updated upstream). |
-| Apr 1, 2026 | v1.9.0 Home screen release. HomeScreen (icon grid, Quick Capture, personality banner, Today section), TimerScreen standalone, VoiceMemoListScreen standalone, AlarmListScreen 2-tab, HomeButton on all screens, widget rebranding (Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice), MicWidget header/footer, Forget Log moved to Settings, CalendarWidget current month. Audit 47 complete — both Gemini P1s (widget warm-start nav, notification routing Home base) fixed. |
-| Apr 1, 2026 | Session 9 visual overhaul. Theme consolidation (6→4 + section colors + brandTitle, custom picker removed). Card unification (section-colored borders + elevation + light mode tinting). Icon library (29+ View-based icons in Icons.tsx). Light mode overhaul (softer text colors, brighter section colors, tinted card backgrounds, mode-aware capsules/watermarks). Photo overlay unified to dark dim on all screens. Photo-aware alphas on HomeScreen (grid/buttons/today/banner adapt to bgUri). Pin redesign (dot + text capsule). Grid simplified (no borders/shadows/icon-box). AlarmListScreen alarms-only (AlarmsTab absorbed), ReminderScreen standalone. NotepadWidget header redesign + size bump. Note editor dropdown consolidation. DayPickerRow "Everyday" button. 5 bugs fixed: Guess Why nickname, yearly reminder reschedule, calendar widget daily dots, no-date recurring yearly, ExpoKeepAwake. |
-| Apr 3, 2026 | Session 14: Onboarding overhaul — full rewrite with sarcastic copy, View-based icons (no emoji), mic + camera permission slides, theme cycling preview (6 themes cycle on swipe, local state only), watermark background, skip warnings on all permissions, dynamic final slide. Audit: Codex P1 (skip dedup) + P2 (done icon) fixed. Gemini clean. Play Store screenshots refreshed (8 new). |
+| Mar 19 | Document created. P1 complete. |
+| Mar 20 | Production approved. App live. |
+| Mar 22 | v1.4.0 — timer dismiss hotfix. |
+| Mar 25 | v1.5.0 — calendar, refactors, polish. |
+| Mar 26 | P2 complete — images, drawing, Skia. |
+| Mar 27 | P2 complete — backgrounds, per-alarm photo. |
+| Mar 28 | v1.6.0 + v1.6.1 shipped. P3 voice roasts pre-work. |
+| Mar 29 | P3 complete — 68 clips, ALARM stream. |
+| Mar 30 | P3.5 complete — voice memos, MicWidget. v1.8.0 shipped. |
+| Mar 31 | v1.8.1 SDK 55 upgrade. |
+| Apr 1 | v1.9.0 Home screen. Session 9 visual overhaul. |
+| Apr 3 | Session 13 visual overhaul shipped as v1.10.1. 6 themes, 15+ screens themed. |
+| Apr 3 | Session 14 onboarding overhaul. Theme cycling, mic/camera permissions, sarcastic skip warnings. |
+| Apr 4 | Session 14 P4 Vault complete. Export/Import Memories, SAF auto-export, transactional restore, manifest validation. 2 audit rounds, all findings fixed. |
+| Apr 4 | Roadmap restructured. P4.5 Stability Sprint, P5.5 Premium Foundation, P6.5 Voice Expansion added. Named founding tiers. Blunder Roast. |

@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 13 (v1.10.1)
+**Last updated:** Session 14 (April 4, 2026)
 
 ---
 
@@ -309,3 +309,27 @@ NotepadWidget renders mixed notes + voice memos with pinned-first sort (`isPinne
 ### Audits
 - Audit 44 (Mar 30): 8 findings fixed (race conditions, stale closures, seek validation, widget sort, error swallowing)
 - Audit 45 (Mar 30): 10 findings fixed (nav guards, transactional save, pin ordering, pause race, undo pin restore, theme colors, stale progress)
+
+---
+
+## 4. Backup & Restore (v1.11.0)
+
+### Backup & Restore
+- Export Memories: .dfw file containing dfw.db + all media folders + manifest
+- Import Memories: file picker, manifest validation, two-step confirmation, transactional restore with rollback
+- Auto-export: SAF folder picker, daily/weekly/monthly frequency, silent export on app open
+- Settings section: "Your Memories" with privacy messaging, export/import buttons, auto-export toggle, 30-day nudge
+- Privacy: "We don't have servers. We don't want your data."
+
+---
+
+## 5. Onboarding Overhaul (v1.10.1, Session 14)
+
+### Onboarding Overhaul
+- Full rewrite with sarcastic personality copy
+- View-based icons (no emoji)
+- Mic + camera permission slides
+- Theme cycling preview (all 6 themes cycle on swipe, local state only)
+- Watermark background (fullscreenicon.png)
+- Sarcastic skip warnings on every permission
+- Dynamic final slide based on skip count

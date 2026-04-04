@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 13 (April 3, 2026)
+**Last updated:** Session 14 (April 4, 2026)
 
 ---
 
@@ -415,3 +415,17 @@ New: individual SQL `INSERT`/`UPDATE`/`DELETE` per entity. `SELECT` queries repl
 
 ### Branch
 - `testing-setup` branch used for Jest work, merged into `dev`
+
+---
+
+## 10. Backup & Restore System
+
+### backupRestore.ts
+- Export Memories: close DB → copy dfw.db + 4 media folders to staging → generate backup-meta.json with content counts → zip to .dfw → share via system sheet
+- Import Memories: validate manifest → cancel notifications → close DB → unzip to temp → move live data to rollback → move restored data to document → reopen DB → reschedule notifications → rollback on failure
+- Auto-export: SAF folder picker → persist URI → check frequency on app open → create file in SAF dir via base64
+- Transactional restore: rollback pattern with liveDataMoved flag, always reopens DB in finally
+
+### Dependencies (P4)
+- `react-native-zip-archive` — native zip/unzip for backup files
+- `expo-document-picker` — file picker for .dfw import

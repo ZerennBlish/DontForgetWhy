@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 13 (April 3, 2026)
+**Last updated:** Session 14 (April 4, 2026)
 
 ---
 
@@ -439,5 +439,21 @@
 - Found: Session 13
 - Cause: Both `headerHome` and old `headerSave` positioned at `left: 64`. Save pill covered HomeButton when unsaved changes existed.
 - Fix: Full header redesign to headerLeft/headerCenter/headerRight flex layout with centered Edit/Save accent pills. Old absolute-positioned headerSave removed.
+
+### Session 14 — Backup & Restore Audit Findings
+**Audit round 1 (Codex + Gemini):**
+- P0: Non-transactional restore — live DB deleted before backup verified. Fixed with rollback pattern.
+- P1: SAF auto-export not implemented — Claude Code fell back to internal storage. Reimplemented with SAF.
+- P1: Weak manifest validation — accepted backupVersion 0, no content counts. Strict validation added.
+- P2: 30-day nudge on first launch — showed "It's been a while" when never exported. Fixed condition.
+- P2: Missing Jest tests — test file not created. Written and passing.
+
+**Audit round 2 (Codex + Gemini):**
+- P1: Manifest contents fields not fully validated. Added type checks for all 5 fields.
+- P2: validateBackup tests missing from test suite. Added.
+
+### Session 14 — Onboarding Audit Findings
+- P1: skippedPermissions append-only, not deduplicated. Fixed with dedup + auto-cleanup useEffect.
+- P2: No icon on final "done" slide. Added HomeIcon.
 
 **45 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
