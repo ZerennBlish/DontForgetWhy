@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 14 (April 4, 2026)
+**Last updated:** Session 15 (April 4, 2026)
 
 ---
 
@@ -456,4 +456,13 @@
 - P1: skippedPermissions append-only, not deduplicated. Fixed with dedup + auto-cleanup useEffect.
 - P2: No icon on final "done" slide. Added HomeIcon.
 
-**45 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+### Session 15 — P4.5 Stability Sprint Audit Findings
+**Decomposition + accessibility audit (Codex + Gemini):**
+- P1: `onError={() => setBgUri(null)}` fallback dropped during NotepadScreen + AlarmListScreen decomposition. A corrupted/deleted user background photo never self-recovered. Fixed by exposing `setBgUri` from `useNotepad` and `useAlarmList` hooks and re-adding `onError` on the background `<Image>` in both screens.
+- P1: NoteCard center touchable missing `accessibilityRole` and `accessibilityLabel`. TalkBack had no meaningful name for the main note tap target. Fixed by adding `accessibilityRole="button"` and `accessibilityLabel={truncated}` (the same first-line text used visually).
+- P1: ReminderScreen had incomplete accessibility — 6 interactive elements (checkbox, edit target, pin button, clear history, restore, forever delete) had no labels. Fixed with dynamic labels (e.g., "Mark incomplete" / "Mark complete" depending on state).
+- P1: OnboardingScreen theme cycling broken — `previewTheme` state updated but visible FlatList slides didn't re-render because `extraData` was missing. Fixed by adding `extraData={previewTheme}` to the FlatList.
+- P2: AlarmListScreen still imports `isAlarmPinned` directly from widgetPins instead of going through the hook. Accepted — not worth the churn, matches how NotepadScreen imports `isNotePinned`.
+- P2: Timer preset pin (`togglePinPreset`, `getPinnedPresets`, `unpinPreset`) tests not added in widgetPins.test.ts. Deferred — timer preset pins less critical than the 4 covered categories.
+
+**46 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.

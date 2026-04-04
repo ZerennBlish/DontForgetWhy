@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -55,6 +55,13 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [emojiModalVisible, setEmojiModalVisible] = useState(false);
   const [systemSoundPickerVisible, setSystemSoundPickerVisible] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   const cardBg = colors.card + 'BF';
 
@@ -504,7 +511,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <Image
-          source={require('../../assets/fullscreenicon.png')}
+          source={require('../../assets/fullscreenicon.webp')}
           style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
           resizeMode="cover"
         />
@@ -566,13 +573,15 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 </View>
               )}
             </View>
-            <TouchableOpacity
-              onPress={() => { hapticLight(); Keyboard.dismiss(); }}
-              activeOpacity={0.7}
-              style={[btn.primarySmall, { alignSelf: 'stretch', marginHorizontal: 40, marginTop: 10 }]}
-            >
-              <Text style={btn.primarySmallText}>Done</Text>
-            </TouchableOpacity>
+            {keyboardVisible && (
+              <TouchableOpacity
+                onPress={() => { hapticLight(); Keyboard.dismiss(); }}
+                activeOpacity={0.7}
+                style={[btn.primarySmall, { alignSelf: 'stretch', marginHorizontal: 40, marginTop: 10 }]}
+              >
+                <Text style={btn.primarySmallText}>Done</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <TouchableOpacity

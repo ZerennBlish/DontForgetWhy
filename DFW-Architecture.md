@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 14 (April 4, 2026)
+**Last updated:** Session 15 (April 4, 2026)
 
 ---
 
@@ -429,3 +429,54 @@ New: individual SQL `INSERT`/`UPDATE`/`DELETE` per entity. `SELECT` queries repl
 ### Dependencies (P4)
 - `react-native-zip-archive` — native zip/unzip for backup files
 - `expo-document-picker` — file picker for .dfw import
+
+---
+
+## 11. Screen Decomposition Pattern (Session 15)
+
+### Thin shell + hook + card components
+Large list screens are split into three layers:
+1. **Screen (thin render shell)** — layout only: background, header, filters, FlatList, FAB, toast/modal. Reads state from hook, delegates rendering to card components.
+2. **Custom hook (`src/hooks/useX.ts`)** — all state, effects, callbacks, memos. No UI imports (no `useTheme`, no safe-area-context, no components).
+3. **Card components** — reusable, `React.memo`-wrapped, own their styles, own their haptics. Get data + handlers via props.
+
+### Decomposed screens
+
+**NotepadScreen** (Session 15): 896 → 232 lines
+- `src/hooks/useNotepad.ts` — all state + handlers + effects (editor visibility, undo toast, pin logic, custom bg/font color migration, welcome note creation, route params + widget pending-action routing, AppState foreground refresh)
+- `src/components/NoteCard.tsx` — active note card (swipe-to-delete, clipboard long-press, pin toggle, relative time)
+- `src/components/DeletedNoteCard.tsx` — deleted note card (restore + forever buttons)
+
+**AlarmListScreen** (Session 15): 556 → 278 lines
+- `src/hooks/useAlarmList.ts` — all state + handlers + sort/filter memoization (time/created/name sort, all/active/one-time/recurring/deleted filter, undo toast with pin restoration)
+- `src/components/DeletedAlarmCard.tsx` — deleted alarm card
+- Uses existing `AlarmCard.tsx` for active alarms
+
+### Shared utilities
+`src/utils/time.ts` added `getRelativeTime()` and `formatDeletedAgo()` — eliminated duplicate `formatDeletedAgo` that existed in both NotepadScreen and AlarmListScreen.
+
+### Decomposition rules
+- Hook must NOT import React Native UI modules, theme context, safe-area-context, or any `src/components/*`
+- Hook exposes state setters only when the screen genuinely needs them (e.g., `setBgUri` exposed so screen's `<Image onError>` can null it)
+- Cards own their own `useMemo(StyleSheet.create)` — not forwarded from parent
+- Cards wrapped with `React.memo` for FlatList performance
+
+---
+
+## 12. FlatList OOM Prevention (Session 15)
+
+All main list screens use these props to prevent out-of-memory kills on budget devices:
+
+```tsx
+removeClippedSubviews={true}
+windowSize={5}
+maxToRenderPerBatch={8}
+initialNumToRender={8}
+```
+
+Applied to: NotepadScreen, AlarmListScreen, ReminderScreen, VoiceMemoListScreen, CalendarScreen.
+
+- `removeClippedSubviews` — detaches off-screen views from native hierarchy
+- `windowSize={5}` — 2 screens above + current + 2 below rendered (default is 21)
+- `maxToRenderPerBatch={8}` — limits items rendered per JS frame
+- `initialNumToRender={8}` — only 8 items on first mount

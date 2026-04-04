@@ -614,7 +614,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
   if (gamePhase === 'select') {
     return (
-      <ImageBackground source={require('../../assets/oakbackground.png')} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={require('../../assets/oakbackground.webp')} style={{ flex: 1 }} resizeMode="cover">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <View style={styles.header}>
             <View style={styles.headerBack}>
@@ -667,7 +667,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     const stars = finalMoves < par ? 3 : finalMoves === par ? 2 : 1;
 
     return (
-      <ImageBackground source={require('../../assets/oakbackground.png')} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={require('../../assets/oakbackground.webp')} style={{ flex: 1 }} resizeMode="cover">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <View style={styles.winHeader}>
             <View style={styles.winHeaderBack}>
@@ -746,7 +746,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
   const gridWidth = config.cols * cardSize + (config.cols - 1) * CARD_GAP;
 
   return (
-    <ImageBackground source={require('../../assets/oakbackground.png')} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={require('../../assets/oakbackground.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
         <View style={styles.container}>
           <View style={styles.gameHeader}>

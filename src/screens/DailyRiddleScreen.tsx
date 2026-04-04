@@ -1102,7 +1102,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   // ─── Main Render ───────────────────────────────────────────────────────
 
   return (
-    <ImageBackground source={require('../../assets/door.png')} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={require('../../assets/door.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.header}>
       <View style={styles.headerBack}>

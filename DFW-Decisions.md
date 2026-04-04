@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 14 (April 4, 2026)
+**Last updated:** Session 15 (April 4, 2026)
 
 ---
 
@@ -282,6 +282,24 @@ Replaced original light theme with blue-tinted Ocean. Added Sunset (orange) and 
 - 30-day nudge: only shows when lastBackup exists AND is 30+ days old. Never-exported = no nudge.
 - Auto-export frequency: daily/weekly/monthly. Check runs on HomeScreen mount, silent unless successful.
 - Base64 SAF writes: known memory limitation for very large backups (100MB+). Acceptable for v1.
+
+### Screen decomposition: thin shell + hook + cards (Session 15)
+Pattern for large list screens (>500 lines): extract all state + effects + handlers into a custom hook in `src/hooks/`, extract card rendering into reusable `React.memo`-wrapped components in `src/components/`, leave the screen as a thin render shell holding only layout styles + background + header + FlatList + FAB. Hook must NOT import UI modules (no `useTheme`, no safe-area-context, no components) — hook is state/logic only. Each card owns its own `useMemo(StyleSheet.create)` and haptics. Applied first to NotepadScreen (896 → 232 lines) and AlarmListScreen (556 → 278 lines) with `useNotepad`/`useAlarmList` hooks and `NoteCard`/`DeletedNoteCard`/`DeletedAlarmCard` components. `AlarmCard` already existed and was reused.
+
+### WebP over PNG for background images (Session 15)
+All 10 backgrounds (oakbackground, questionmark, newspaper, lightbulb, brain, door, fullscreenicon, gear, library, gameclock) converted to WebP. Resized to 1440px max dimension (1080px for watermark), quality 80 (70 for watermark). Total reduction 31.8 MB → 1.5 MB (95.4%). Dramatic APK size improvement at zero visual cost for fullscreen backgrounds with heavy overlays. Protected: icon.png, adaptive-icon.png, splash-icon.png, favicon.png — store/platform requirements. Used `sharp` temporarily, removed after conversion.
+
+### FlatList OOM prevention on all list screens (Session 15)
+All 5 main list screens (NotepadScreen, AlarmListScreen, ReminderScreen, VoiceMemoListScreen, CalendarScreen) use `removeClippedSubviews={true}`, `windowSize={5}`, `maxToRenderPerBatch={8}`, `initialNumToRender={8}`. Default `windowSize` is 21 — way too memory-hungry for image-attached notes or long alarm lists on budget devices. `windowSize=5` keeps 2 screens above + current + 2 below, massive memory reduction. Chose 8 for `maxToRenderPerBatch` and `initialNumToRender` as a balance between perceived speed and memory.
+
+### Icons decorative by default, labeled on demand (Session 15)
+`IconProps` has optional `accessibilityLabel`. When present: `accessible={true}`, `importantForAccessibility="yes"`. When absent: `importantForAccessibility="no-hide-descendants"` (TalkBack skips entirely). Rationale: icons wrapped inside a labeled TouchableOpacity are decorative and should be invisible to screen readers; standalone icons used as the only label for an interactive element (e.g., a FAB) need their own label. Pattern avoids TalkBack announcing "view" for every decorative icon.
+
+### Accessibility labels reflect what user sees, not internal state (Session 15)
+Card labels describe visual state (e.g., AlarmCard reads "7:00 AM alarm, Wake up, disabled" — time + nickname + visible state). Cards don't include all possible state — just what's on screen. Hint used for secondary actions ("Long press to copy", "Tap to edit"). Toggle labels are contextual ("Pin to widget" when unpinned, "Unpin from widget" when pinned).
+
+### Keyboard-visible Done button (Session 15)
+CreateAlarmScreen + CreateReminderScreen's small "Done" button under type-in TextInputs only renders when `Keyboard` listeners report the soft keyboard visible. When keyboard dismisses via scroll/tap-elsewhere, the Done button disappears too. Bottom time-modal Done button (paired with Cancel) is unaffected — it's the modal's own confirm action. Prevents orphaned UI.
 
 ### `light` theme is Ocean (Session 13)
 Rather than adding Ocean as a 7th theme, replaced the original Light theme entirely. Ocean has better contrast (darker slate text vs gray), more distinctive personality (blue-tinted background vs neutral gray), and stronger section colors. The old Light was generic — Ocean has character.

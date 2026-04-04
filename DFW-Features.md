@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 14 (April 4, 2026)
+**Last updated:** Session 15 (April 4, 2026)
 
 ---
 
@@ -330,6 +330,52 @@ NotepadWidget renders mixed notes + voice memos with pinned-first sort (`isPinne
 - View-based icons (no emoji)
 - Mic + camera permission slides
 - Theme cycling preview (all 6 themes cycle on swipe, local state only)
-- Watermark background (fullscreenicon.png)
+- Watermark background (fullscreenicon.webp)
 - Sarcastic skip warnings on every permission
 - Dynamic final slide based on skip count
+
+---
+
+## 6. Accessibility (v1.12.0, Session 15)
+
+### Accessibility Pass
+- All interactive elements across HomeScreen, NotepadScreen, AlarmListScreen, ReminderScreen, GamesScreen, AlarmCard, NoteCard, DeletedNoteCard, DeletedAlarmCard have `accessibilityLabel`, `accessibilityRole`, `accessibilityState` (for pills), and `accessibilityHint` (where clarifying)
+- Filter/sort pills use `accessibilityState={{ selected }}` so TalkBack announces selection
+- Cards get descriptive labels: alarm card reads time + nickname + enabled state; note card reads truncated first line
+- Edit targets include "Tap to edit" hint; note cards include "Long press to copy" hint
+- Switches get dynamic labels ("Enable alarm" / "Disable alarm")
+- Pin buttons get contextual labels ("Pin to widget" / "Unpin from widget")
+- Restore/Forever buttons explicitly labeled ("Restore alarm" / "Permanently delete note")
+
+### Icon Accessibility
+- `IconProps` interface now has optional `accessibilityLabel`
+- Icons default to `importantForAccessibility="no-hide-descendants"` when no label (TalkBack skips decorative icons)
+- When `accessibilityLabel` provided, becomes focusable with `accessible={true}` and `importantForAccessibility="yes"`
+- Pattern: icons wrapped inside labeled TouchableOpacity stay decorative; standalone icons get labels
+
+---
+
+## 7. Asset Formats (v1.12.0, Session 15)
+
+### WebP Backgrounds
+- All 10 PNG game/screen backgrounds converted to WebP: oakbackground, questionmark, newspaper, lightbulb, brain, door, fullscreenicon, gear, library, gameclock
+- Resized to 1440px max dimension (1080px for fullscreenicon watermark), quality 80 (quality 70 for watermark)
+- Total size: 31.8 MB → 1.5 MB (95.4% reduction)
+- All 28 `require()` references updated across 21 source files
+
+### Protected PNGs
+- `assets/icon.png` (app icon), `assets/adaptive-icon.png` (Android adaptive icon), `assets/splash-icon.png`, `assets/favicon.png` — unchanged (dimensions required by stores/platforms)
+
+---
+
+## 8. Keyboard-Aware Done Button (v1.12.0, Session 15)
+
+### CreateAlarmScreen + CreateReminderScreen
+When user is in "type" time-input mode, the small "Done" button under the TextInputs (which calls `Keyboard.dismiss()`) only renders when the soft keyboard is visible.
+
+Both screens:
+- Add `keyboardVisible` state with `Keyboard.addListener('keyboardDidShow'/'keyboardDidHide')`
+- Wrap the Done button in `{keyboardVisible && (...)}`
+- Bottom time-modal Done button (paired with Cancel) is NOT affected
+
+Prevents an orphaned "Done" button from lingering after keyboard dismissal via elsewhere-tap.

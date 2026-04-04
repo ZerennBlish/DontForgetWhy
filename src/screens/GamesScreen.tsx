@@ -117,7 +117,7 @@ export default function GamesScreen({ navigation }: Props) {
   );
 
   return (
-    <ImageBackground source={require('../../assets/brain.png')} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={require('../../assets/brain.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.header}>
       <View style={styles.headerBack}>
@@ -136,6 +136,8 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); navigation.navigate('DailyRiddle'); }}
         activeOpacity={0.7}
+        accessibilityLabel="Daily Riddle"
+        accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
           <LightbulbIcon color={colors.accent} size={28} />
@@ -162,6 +164,8 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); navigation.navigate('Trivia'); }}
         activeOpacity={0.7}
+        accessibilityLabel="Trivia"
+        accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
           <BrainIcon color={colors.accent} size={28} />
@@ -182,6 +186,8 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); navigation.navigate('Sudoku'); }}
         activeOpacity={0.7}
+        accessibilityLabel="Sudoku"
+        accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
           <NumbersIcon color={colors.accent} size={28} />
@@ -200,6 +206,8 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); navigation.navigate('MemoryMatch'); }}
         activeOpacity={0.7}
+        accessibilityLabel="Memory Match"
+        accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
           <PuzzleIcon color={colors.accent} size={28} />
@@ -218,6 +226,8 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); navigation.navigate('MemoryScore'); }}
         activeOpacity={0.7}
+        accessibilityLabel="Trophies"
+        accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
           <TrophyIcon color={colors.accent} size={28} />

@@ -490,7 +490,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           </>
         ) : (
           <Image
-            source={require('../../assets/fullscreenicon.png')}
+            source={require('../../assets/fullscreenicon.webp')}
             style={styles.watermark}
             resizeMode="cover"
           />
@@ -553,6 +553,10 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
             renderItem={renderItem}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            removeClippedSubviews={true}
+            windowSize={5}
+            maxToRenderPerBatch={8}
+            initialNumToRender={8}
           />
         )}
 

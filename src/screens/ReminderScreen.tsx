@@ -672,10 +672,10 @@ export default function ReminderScreen({ navigation }: Props) {
           </View>
           <View style={styles.right}>
             <View style={styles.btnRow}>
-              <TouchableOpacity onPress={() => handleRestore(item.id)} style={btn.ghostSmall} activeOpacity={0.7}>
+              <TouchableOpacity onPress={() => handleRestore(item.id)} style={btn.ghostSmall} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Restore reminder">
                 <Text style={btn.ghostSmallText}>Restore</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={btn.destructiveSmall} activeOpacity={0.7}>
+              <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={btn.destructiveSmall} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Permanently delete reminder">
                 <Text style={btn.destructiveSmallText}>Forever</Text>
               </TouchableOpacity>
             </View>
@@ -720,6 +720,8 @@ export default function ReminderScreen({ navigation }: Props) {
             style={[styles.checkbox, (item.completed || (item.recurring && hasCompletedToday(item))) && styles.checkboxDone]}
             onPress={() => handleToggleComplete(item.id)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={(item.completed || (item.recurring && hasCompletedToday(item))) ? 'Mark incomplete' : 'Mark complete'}
           >
             {(item.completed || (item.recurring && hasCompletedToday(item))) && <Text style={styles.checkmark}>{'\u2713'}</Text>}
           </TouchableOpacity>
@@ -728,6 +730,9 @@ export default function ReminderScreen({ navigation }: Props) {
             style={styles.middle}
             onPress={() => { hapticLight(); navigation.navigate('CreateReminder', { reminderId: item.id }); }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={displayPrimary}
+            accessibilityHint="Tap to edit"
           >
             <Text
               style={[
@@ -782,6 +787,8 @@ export default function ReminderScreen({ navigation }: Props) {
                 onPress={() => handleTogglePin(item.id)}
                 style={[styles.pinBtn, pinned && styles.pinBtnActive]}
                 activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={pinned ? 'Unpin from widget' : 'Pin to widget'}
               >
                 <Text style={[styles.pinBtnText, pinned && { color: colors.accent }]}>
                   {pinned ? 'Pinned' : 'Pin'}
@@ -792,6 +799,8 @@ export default function ReminderScreen({ navigation }: Props) {
                   onPress={handleDeletePress}
                   style={styles.clearBtn}
                   activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear completion history"
                 >
                   <Text style={styles.clearHistoryText}>Clear</Text>
                 </TouchableOpacity>
@@ -815,7 +824,7 @@ export default function ReminderScreen({ navigation }: Props) {
           </>
         ) : (
           <Image
-            source={require('../../assets/fullscreenicon.png')}
+            source={require('../../assets/fullscreenicon.webp')}
             style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />
@@ -846,6 +855,8 @@ export default function ReminderScreen({ navigation }: Props) {
             });
           }}
           activeOpacity={0.7}
+          accessibilityLabel={`Sort and Filter${showSortFilter ? ', expanded' : ''}`}
+          accessibilityRole="button"
         >
           {(reminderSort !== 'due' || reminderFilter !== 'active') && <View style={styles.sortFilterDot} />}
           <Text style={[styles.sortFilterToggleText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
@@ -864,6 +875,8 @@ export default function ReminderScreen({ navigation }: Props) {
                 style={[styles.pill, reminderSort === s && styles.pillActive]}
                 onPress={() => { hapticLight(); setReminderSort(s); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected: reminderSort === s }}
               >
                 <Text style={[styles.pillText, reminderSort === s && styles.pillTextActive]}>
                   {s === 'due' ? 'Due Date' : s === 'created' ? 'Created' : 'Name'}
@@ -880,6 +893,8 @@ export default function ReminderScreen({ navigation }: Props) {
                 style={[styles.pill, reminderFilter === f && styles.pillActive]}
                 onPress={() => { hapticLight(); setReminderFilter(f); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected: reminderFilter === f }}
               >
                 <Text style={[styles.pillText, reminderFilter === f && styles.pillTextActive]}>
                   {f === 'active' ? 'Active' : f === 'completed' ? 'Completed' : f === 'has-date' ? 'Has Date' : 'Deleted'}
@@ -913,6 +928,10 @@ export default function ReminderScreen({ navigation }: Props) {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          windowSize={5}
+          maxToRenderPerBatch={8}
+          initialNumToRender={8}
         />
       )}
 
@@ -920,6 +939,8 @@ export default function ReminderScreen({ navigation }: Props) {
         style={styles.fab}
         onPress={() => { hapticLight(); navigation.navigate('CreateReminder'); }}
         activeOpacity={0.8}
+        accessibilityLabel="Create new reminder"
+        accessibilityRole="button"
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>

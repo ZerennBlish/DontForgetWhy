@@ -470,7 +470,7 @@ export default function HomeScreen({ navigation }: Props) {
           </>
         ) : (
           <Image
-            source={require('../../assets/fullscreenicon.png')}
+            source={require('../../assets/fullscreenicon.webp')}
             style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />
@@ -486,6 +486,8 @@ export default function HomeScreen({ navigation }: Props) {
             onPress={() => { hapticLight(); navigation.navigate('Settings'); }}
             activeOpacity={0.7}
             style={styles.gearBtn}
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
           >
             <View style={styles.gearCircle}>
               <GearIcon color={bgUri ? 'rgba(255,255,255,0.7)' : colors.textSecondary} />
@@ -506,6 +508,8 @@ export default function HomeScreen({ navigation }: Props) {
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionNotepad + (bgUri ? '90' : '45') }]}
             onPress={() => { hapticLight(); navigation.navigate('Notepad', { newNote: true }); }}
             activeOpacity={0.7}
+            accessibilityLabel="New Note"
+            accessibilityRole="button"
           >
             <View style={{ transform: [{ scale: 0.8 }] }}>
               <DocIcon color={colors.sectionNotepad} />
@@ -516,6 +520,8 @@ export default function HomeScreen({ navigation }: Props) {
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionVoice + (bgUri ? '90' : '45') }]}
             onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
             activeOpacity={0.7}
+            accessibilityLabel="Record Memo"
+            accessibilityRole="button"
           >
             <View style={{ transform: [{ scale: 0.8 }] }}>
               <MicIcon color={colors.sectionVoice} />
@@ -526,6 +532,8 @@ export default function HomeScreen({ navigation }: Props) {
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionTimer + (bgUri ? '90' : '45') }]}
             onPress={() => { hapticLight(); navigation.navigate('Timers'); }}
             activeOpacity={0.7}
+            accessibilityLabel="Set Timer"
+            accessibilityRole="button"
           >
             <View style={{ transform: [{ scale: 0.8 }] }}>
               <TimerIcon color={colors.sectionTimer} />
@@ -544,6 +552,8 @@ export default function HomeScreen({ navigation }: Props) {
                 key={section.key}
                 onPress={() => handleSectionPress(section.key)}
                 activeOpacity={0.7}
+                accessibilityLabel={`${section.label}${subtitle ? `, ${subtitle}` : ''}`}
+                accessibilityRole="button"
                 style={[
                   styles.gridCell,
                   {
@@ -580,6 +590,8 @@ export default function HomeScreen({ navigation }: Props) {
                   onPress={() => handleEventPress(event)}
                   activeOpacity={0.7}
                   style={styles.eventRow}
+                  accessibilityLabel={`${event.title}, ${event.type === 'alarm' ? 'Alarm' : 'Reminder'}${event.time ? `, ${formatTime(event.time, timeFormat)}` : ''}`}
+                  accessibilityRole="button"
                 >
                   <View
                     style={[

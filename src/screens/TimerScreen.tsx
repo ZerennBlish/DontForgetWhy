@@ -937,7 +937,7 @@ export default function TimerScreen({ navigation }: Props) {
           </>
         ) : (
           <Image
-            source={require('../../assets/fullscreenicon.png')}
+            source={require('../../assets/fullscreenicon.webp')}
             style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />

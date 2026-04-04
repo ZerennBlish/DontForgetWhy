@@ -535,7 +535,7 @@ export default function SudokuScreen({ navigation }: Props) {
 
   if (gamePhase === 'select') {
     return (
-      <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={require('../../assets/newspaper.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <View style={styles.header}>
         <View style={styles.headerBack}>
@@ -607,7 +607,7 @@ export default function SudokuScreen({ navigation }: Props) {
 
   if (gamePhase === 'paused') {
     return (
-      <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={require('../../assets/newspaper.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <View style={[styles.container, styles.centeredContent]}>
         <Text style={styles.pauseEmoji}>{'\u23F8\uFE0F'}</Text>
@@ -635,7 +635,7 @@ export default function SudokuScreen({ navigation }: Props) {
     const stars = getStars(finalMistakes, finalHints);
     const isHard = difficulty === 'hard';
     return (
-      <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={require('../../assets/newspaper.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <View style={styles.winHeader}>
         <View style={styles.winHeaderBack}>
@@ -714,7 +714,7 @@ export default function SudokuScreen({ navigation }: Props) {
   // ---------- Render: Game Board ----------
 
   return (
-    <ImageBackground source={require('../../assets/newspaper.png')} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={require('../../assets/newspaper.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
     <View style={styles.container}>
       {/* Header */}

@@ -159,12 +159,16 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
       style={[styles.card, !alarm.enabled && styles.cardDisabled]}
       onPress={() => onEdit(alarm)}
       activeOpacity={0.7}
+      accessibilityLabel={`${formatTime(alarm.time, timeFormat)} alarm${alarm.nickname ? `, ${alarm.nickname}` : ''}${alarm.enabled ? '' : ', disabled'}`}
+      accessibilityRole="button"
+      accessibilityHint="Tap to edit"
     >
       <Switch
         value={alarm.enabled}
         onValueChange={() => onToggle(alarm.id)}
         trackColor={{ false: colors.border, true: colors.sectionAlarm }}
         thumbColor={alarm.enabled ? colors.textPrimary : colors.textTertiary}
+        accessibilityLabel={`${alarm.enabled ? 'Disable' : 'Enable'} alarm`}
       />
       <View style={styles.left}>
         <View style={styles.timeRow}>
@@ -191,6 +195,8 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
             onPress={() => onTogglePin(alarm.id)}
             style={[styles.pinBtn, isPinned && styles.pinBtnActive]}
             activeOpacity={0.6}
+            accessibilityLabel={isPinned ? 'Unpin from widget' : 'Pin to widget'}
+            accessibilityRole="button"
           >
             <Text style={[styles.pinBtnText, isPinned && { color: colors.accent }]}>
               {isPinned ? 'Pinned' : 'Pin'}

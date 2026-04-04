@@ -637,7 +637,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   const hasAlarmPhoto = !isTimer && !!alarm?.photoUri && !photoFailed;
   const bgSource = hasAlarmPhoto
     ? { uri: alarm!.photoUri! }
-    : require('../../assets/lightbulb.png');
+    : require('../../assets/lightbulb.webp');
 
   // Dismiss overlay
   if (dismissMessage) {

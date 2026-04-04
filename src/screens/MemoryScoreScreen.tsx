@@ -204,7 +204,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   );
 
   return (
-    <ImageBackground source={require('../../assets/library.png')} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={require('../../assets/library.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.header}>
       <View style={styles.headerBack}>

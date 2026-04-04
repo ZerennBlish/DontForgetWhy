@@ -868,7 +868,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../../assets/fullscreenicon.png')}
+        source={require('../../assets/fullscreenicon.webp')}
         style={styles.watermark}
         resizeMode="cover"
       />
@@ -876,6 +876,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
         ref={flatListRef}
         data={slides}
         renderItem={renderSlide}
+        extraData={previewTheme}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled

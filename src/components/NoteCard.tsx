@@ -1,0 +1,146 @@
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ToastAndroid } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { useTheme } from '../theme/ThemeContext';
+import { hapticLight, hapticMedium } from '../utils/haptics';
+import { getRelativeTime } from '../utils/time';
+import SwipeableRow from './SwipeableRow';
+import type { Note } from '../types/note';
+
+interface NoteCardProps {
+  note: Note;
+  isPinned: boolean;
+  onPress: () => void;
+  onDelete: () => void;
+  onTogglePin: () => void;
+}
+
+function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardProps) {
+  const { colors } = useTheme();
+
+  const firstLine = note.text.split('\n')[0];
+  const truncated = firstLine.length > 50 ? firstLine.slice(0, 50) + '\u2026' : firstLine;
+
+  const styles = useMemo(() => StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.mode === 'dark' ? colors.sectionNotepad + '20' : colors.sectionNotepad + '15',
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.sectionNotepad,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.sectionNotepad,
+      marginBottom: 8,
+      elevation: 2,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+    },
+    iconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    iconCircleText: {
+      fontSize: 16,
+    },
+    cardCenter: {
+      flex: 1,
+      marginHorizontal: 12,
+    },
+    cardTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    cardSubtitle: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    cardActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    pinBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+      borderWidth: 1,
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+    },
+    pinBtnActive: {
+      borderColor: colors.accent,
+    },
+    pinBtnText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    pinnedDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.sectionNotepad,
+      marginLeft: 4,
+    },
+  }), [colors]);
+
+  return (
+    <SwipeableRow onDelete={onDelete}>
+      <View style={styles.card}>
+        <View style={[styles.iconCircle, { backgroundColor: note.color }]}>
+          <Text style={styles.iconCircleText}>{note.icon || '\u{1F4DD}'}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.cardCenter}
+          onPress={() => { hapticLight(); onPress(); }}
+          accessibilityRole="button"
+          accessibilityLabel={truncated}
+          accessibilityHint="Long press to copy"
+          onLongPress={async () => {
+            hapticMedium();
+            try {
+              await Clipboard.setStringAsync(note.text);
+              ToastAndroid.show('Copied to clipboard', ToastAndroid.SHORT);
+            } catch {
+              ToastAndroid.show("Couldn't copy", ToastAndroid.SHORT);
+            }
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.cardTitle} numberOfLines={1}>{truncated}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={styles.cardSubtitle} numberOfLines={1}>
+              {getRelativeTime(note.updatedAt)}
+              {(note.images?.length ?? 0) > 0 ? ` \u00B7 \u{1F4F7} ${note.images!.length}` : ''}
+            </Text>
+            {isPinned && <View style={styles.pinnedDot} />}
+          </View>
+        </TouchableOpacity>
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            onPress={onTogglePin}
+            style={[styles.pinBtn, isPinned && styles.pinBtnActive]}
+            activeOpacity={0.6}
+            accessibilityLabel={isPinned ? 'Unpin from widget' : 'Pin to widget'}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.pinBtnText, isPinned && { color: colors.accent }]}>
+              {isPinned ? 'Pinned' : 'Pin'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SwipeableRow>
+  );
+}
+
+export default React.memo(NoteCard);

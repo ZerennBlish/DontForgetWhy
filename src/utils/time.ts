@@ -40,3 +40,28 @@ export function getCurrentTime(): string {
   const now = new Date();
   return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 }
+
+export function getRelativeTime(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  const date = new Date(isoDate);
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${monthNames[date.getMonth()]} ${date.getDate()}`;
+}
+
+export function formatDeletedAgo(deletedAt: string): string {
+  const ms = Date.now() - new Date(deletedAt).getTime();
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  if (hours < 24) return 'Deleted today';
+  const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+  if (days === 1) return 'Deleted yesterday';
+  if (days < 30) return `Deleted ${days} days ago`;
+  return `Deleted ${Math.floor(days / 30)}mo ago`;
+}

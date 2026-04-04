@@ -384,7 +384,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   const displayEmoji = alarm.icon || categoryEmoji[alarm.category] || '\u{1F514}';
 
   return (
-    <ImageBackground source={require('../../assets/gameclock.png')} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={require('../../assets/gameclock.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.container}>
       {/* Top section */}

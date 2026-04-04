@@ -1085,7 +1085,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
           </>
         ) : (
           <Image
-            source={require('../../assets/fullscreenicon.png')}
+            source={require('../../assets/fullscreenicon.webp')}
             style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
             resizeMode="cover"
           />
@@ -1106,6 +1106,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
         keyExtractor={rowKeyExtractor}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={listEmpty}
+        removeClippedSubviews={true}
+        windowSize={5}
+        maxToRenderPerBatch={8}
+        initialNumToRender={8}
         contentContainerStyle={styles.listContent}
       />
     </View>

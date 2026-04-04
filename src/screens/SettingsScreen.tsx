@@ -552,7 +552,7 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <ImageBackground source={require('../../assets/gear.png')} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={require('../../assets/gear.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
     <View style={styles.header}>
       <View style={styles.headerBack}>

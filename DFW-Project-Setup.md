@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 14 (April 4, 2026)
+**Last updated:** Session 15 (April 4, 2026)
 
 ---
 
@@ -95,12 +95,15 @@ DontForgetWhy/
     │   ├── BackButton.tsx
     │   ├── DayPickerRow.tsx
     │   ├── DrawingCanvas.tsx
+    │   ├── DeletedAlarmCard.tsx        # Extracted from AlarmListScreen (Session 15)
+    │   ├── DeletedNoteCard.tsx         # Extracted from NotepadScreen (Session 15)
     │   ├── DrawingPickerModal.tsx       # Extracted drawing tool modals (Session 10)
     │   ├── EmojiPickerModal.tsx         # Bottom sheet emoji picker (~128 curated emoji, Session 10)
     │   ├── ErrorBoundary.tsx
     │   ├── HomeButton.tsx              # Home navigation button for all screens
-    │   ├── Icons.tsx                  # 29+ View-based icons (Session 9)
+    │   ├── Icons.tsx                  # 29+ View-based icons, a11y labels optional (Session 9/15)
     │   ├── ImageLightbox.tsx
+    │   ├── NoteCard.tsx               # Extracted from NotepadScreen (Session 15)
     │   ├── NoteEditorModal.tsx
     │   ├── ShareNoteModal.tsx
     │   ├── SoundPickerModal.tsx
@@ -125,8 +128,10 @@ DontForgetWhy/
     │   └── triviaQuestions.ts
     ├── hooks/
     │   ├── useAlarmForm.ts         # alarm create/edit form state + deferred photo save
+    │   ├── useAlarmList.ts         # AlarmListScreen state + sort/filter + handlers (Session 15)
     │   ├── useCalendar.ts          # accepts initialDate + onSelectDate callback
     │   ├── useDaySelection.ts
+    │   ├── useNotepad.ts           # NotepadScreen state + effects + handlers (Session 15)
     │   ├── useNotificationRouting.ts # notification event handlers extracted from App.tsx
     │   └── useReminderForm.ts      # reminder create/edit form state
     ├── navigation/
@@ -281,15 +286,16 @@ DontForgetWhy/
 
 | File | Screen | Source |
 |------|--------|--------|
-| `lightbulb.png` | AlarmFireScreen | AI-generated |
-| `oakbackground.png` | MemoryMatchScreen | Gemini AI |
-| `questionmark.png` | TriviaScreen | Gemini AI |
-| `newspaper.png` | SudokuScreen | Gemini AI |
-| `door.png` | DailyRiddleScreen | ChatGPT DALL-E |
-| `gameclock.png` | GuessWhyScreen | ChatGPT DALL-E |
-| `brain.png` | GamesScreen | ChatGPT DALL-E |
-| `gear.png` | SettingsScreen | AI-generated |
-| `fullscreenicon.png` | AlarmListScreen watermark | Custom |
+| `lightbulb.webp` | AlarmFireScreen | AI-generated |
+| `oakbackground.webp` | MemoryMatchScreen | Gemini AI |
+| `questionmark.webp` | TriviaScreen | Gemini AI |
+| `newspaper.webp` | SudokuScreen | Gemini AI |
+| `door.webp` | DailyRiddleScreen | ChatGPT DALL-E |
+| `gameclock.webp` | GuessWhyScreen | ChatGPT DALL-E |
+| `brain.webp` | GamesScreen | ChatGPT DALL-E |
+| `gear.webp` | SettingsScreen | AI-generated (floating cogs, Session 15) |
+| `library.webp` | MemoryScoreScreen | AI-generated |
+| `fullscreenicon.webp` | Watermark (all main screens) | Custom |
 | `chirp.mp3` | Sound feedback (3KB, 150ms) | Python numpy |
 
 ---
@@ -298,16 +304,18 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.10.0 (versionCode 26) — SQLite migration + visual polish |
-| Production status | v1.10.0 build pending |
+| Current version | v1.12.0 (versionCode 29) — P4.5 Stability Sprint |
+| Production status | v1.12.0 submitted to Google Play |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
 | Phase 3 (Voice Roasts) | COMPLETE |
 | Phase 3.5 (Voice Memos) | COMPLETE |
-| Audit status | Audits 44-45 complete, all findings resolved |
-| Jest tests | 35 passing (3 suites: time, noteColors, soundModeUtils) — ts-jest, node env |
-| EAS build credits | ~13 remaining (reset April 12) |
+| Phase 4 (The Vault) | COMPLETE |
+| Phase 4.5 (Stability Sprint) | COMPLETE |
+| Audit status | Session 15 audit complete, all P1 findings resolved |
+| Jest tests | 162 passing (7 suites: time, timeUtils, noteColors, soundModeUtils, backupRestore, widgetPins, settings) — ts-jest, node env |
+| EAS build credits | ~35 remaining (reset April 12) |
 
 ### Packages Added (Session 12)
 - `expo-sqlite` — synchronous SQLite database (replaced AsyncStorage for all persistent storage)
@@ -316,6 +324,15 @@ DontForgetWhy/
 ### Packages Added (Session 14)
 - `react-native-zip-archive` — native ZIP/unzip for backup files. Installed via npm, requires dev build.
 - `expo-document-picker` — file picker for .dfw import. Added to app.json plugins.
+
+### Package Audit (Session 15)
+- Ran `depcheck` — no abandoned packages. Flagged as "unused" but actually required implicitly: `expo-dev-client`, `expo-notifications`, `react-native-screens`, `react-native-worklets`.
+- `sharp` temporarily installed then removed during WebP conversion (one-time asset operation).
+
+### Asset Format Changes (Session 15)
+- All 10 background images converted from PNG → WebP: `oakbackground.webp`, `questionmark.webp`, `newspaper.webp`, `lightbulb.webp`, `brain.webp`, `door.webp`, `fullscreenicon.webp`, `gear.webp`, `library.webp`, `gameclock.webp`
+- Size: 31.8 MB → 1.5 MB (95.4% reduction)
+- Protected PNGs (unchanged): `icon.png`, `adaptive-icon.png`, `splash-icon.png`, `favicon.png`
 
 ### Packages Removed (Session 10)
 - `react-native-tab-view` — tabs replaced by standalone screens (Session 9 separation)
@@ -328,12 +345,20 @@ DontForgetWhy/
 ### App.tsx Changes (Session 12)
 - `migrateFromAsyncStorage()` gate: migration runs before any screens render, App returns null until `dbReady` is true
 
-### Jest Setup (Session 11)
+### Jest Setup (Session 11, expanded Session 15)
 - **Preset:** `ts-jest` with `node` test environment
-- **Tests:** `__tests__/` at project root — `time.test.ts`, `noteColors.test.ts`, `soundModeUtils.test.ts`
+- **Tests:** `__tests__/` at project root — 7 suites, 162 tests total:
+  - `time.test.ts` — formatTime (12h/24h)
+  - `timeUtils.test.ts` — getRelativeTime, formatDeletedAgo (with fake timers)
+  - `noteColors.test.ts` — getTextColor contrast
+  - `soundModeUtils.test.ts` — 5 pure sound mode functions
+  - `backupRestore.test.ts` — backup validation, auto-backup settings
+  - `widgetPins.test.ts` — all 4 pin categories (alarm, note, reminder, voice memo) with in-memory kv mock
+  - `settings.test.ts` — settings CRUD, onboarding, silence-all, timer sound (with fake timers)
 - **Run:** `npm test` or `npx jest`
 - **Config:** `package.json` `"jest"` section with `moduleNameMapper` for `src/` paths
-- **Scope:** Pure utility functions only — no native modules, no storage mocking
+- **Scope:** Pure utility functions AND pure service files (those whose only side-effect is `kvGet`/`kvSet`/`kvRemove`, mocked with in-memory Map). No React Native, no SQLite, no native modules.
+- **Mock pattern:** `jest.mock('../src/services/database', () => ({ kvGet, kvSet, kvRemove }))` backed by `new Map<string, string>()` cleared in `beforeEach`
 - `jest-expo` in devDependencies for future component testing (not used as preset — crashes on expo-modules-core)
 
 ### Git Branches

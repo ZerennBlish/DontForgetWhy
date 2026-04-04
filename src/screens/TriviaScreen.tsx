@@ -369,7 +369,7 @@ export default function TriviaScreen({ navigation }: Props) {
   // ─── Category Select ───
   if (phase === 'category') {
     return (
-      <ImageBackground source={require('../../assets/questionmark.png')} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={require('../../assets/questionmark.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
       <View style={styles.header}>
         <View style={styles.headerBack}>
@@ -461,7 +461,7 @@ export default function TriviaScreen({ navigation }: Props) {
   if (phase === 'results') {
     const catInfo = TRIVIA_CATEGORIES.find((c) => c.id === selectedCategory);
     return (
-      <ImageBackground source={require('../../assets/questionmark.png')} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={require('../../assets/questionmark.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
       <View style={styles.header}>
         <View style={styles.headerBack}>
@@ -537,7 +537,7 @@ export default function TriviaScreen({ navigation }: Props) {
   const timerColor = timeLeft <= 5 ? colors.red : colors.accent;
 
   return (
-    <ImageBackground source={require('../../assets/questionmark.png')} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={require('../../assets/questionmark.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.container}>
       {/* Top bar */}
