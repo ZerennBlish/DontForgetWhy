@@ -1,73 +1,174 @@
+export interface EmojiItem {
+  emoji: string;
+  label: string;
+}
+
 export interface EmojiCategory {
   label: string;
   icon: string;
-  emojis: string[];
+  items: EmojiItem[];
 }
 
 export const emojiCategories: EmojiCategory[] = [
   {
-    label: 'Smileys',
-    icon: '😊',
-    emojis: [
-      '😊', '😂', '🥰', '😎', '🤔', '😴', '🥳', '😤',
-      '😭', '🤗', '😇', '🫡', '🤩', '😬', '🫠', '🙄',
+    label: 'Health',
+    icon: '💊',
+    items: [
+      { emoji: '💊', label: 'meds' },
+      { emoji: '🩺', label: 'doctor' },
+      { emoji: '🏥', label: 'appointment' },
+      { emoji: '💉', label: 'shot' },
+      { emoji: '🩹', label: 'injury' },
+      { emoji: '🌡️', label: 'sick' },
+      { emoji: '🦷', label: 'dentist' },
+      { emoji: '💧', label: 'water' },
     ],
   },
   {
-    label: 'People',
-    icon: '👤',
-    emojis: [
-      '👶', '👦', '👧', '👨', '👩', '👴', '👵', '🤝',
-      '👪', '💑', '👫', '🧑‍💻', '💇', '🤰', '🧑‍🍳', '👷',
-    ],
-  },
-  {
-    label: 'Animals',
-    icon: '🐾',
-    emojis: [
-      '🐶', '🐱', '🐟', '🐦', '🐸', '🐢', '🐍', '🐕‍🦺',
-      '🐝', '🐞', '🐰', '🐻', '🦊', '🐴', '🐔', '🐾',
+    label: 'Routine',
+    icon: '☕',
+    items: [
+      { emoji: '☕', label: 'coffee' },
+      { emoji: '🍳', label: 'meal' },
+      { emoji: '🚿', label: 'shower' },
+      { emoji: '🧼', label: 'hygiene' },
+      { emoji: '🪥', label: 'toothbrush' },
+      { emoji: '👓', label: 'glasses' },
+      { emoji: '🛏️', label: 'sleep' },
+      { emoji: '🌅', label: 'sunrise' },
     ],
   },
   {
     label: 'Food',
-    icon: '🍕',
-    emojis: [
-      '🍕', '🍔', '🍎', '🥗', '☕', '🍺', '🎂', '🍳',
-      '🥤', '🍿', '🌮', '🍩', '🧁', '🍷', '🥛', '🍱',
+    icon: '🍔',
+    items: [
+      { emoji: '🍎', label: 'healthy' },
+      { emoji: '🥗', label: 'lunch' },
+      { emoji: '🍔', label: 'food' },
+      { emoji: '🍕', label: 'takeout' },
+      { emoji: '🥣', label: 'breakfast' },
+      { emoji: '🍌', label: 'snack' },
+      { emoji: '🥤', label: 'drink' },
+      { emoji: '🍵', label: 'tea' },
     ],
   },
   {
-    label: 'Activities',
-    icon: '⚽',
-    emojis: [
-      '⚽', '🏀', '🎮', '🎸', '🏋️', '🧘', '🚴', '🏊',
-      '🎯', '🎲', '🎵', '📚', '✍️', '🎬', '🎨', '🚶',
+    label: 'Fitness',
+    icon: '🏃',
+    items: [
+      { emoji: '🏋️', label: 'workout' },
+      { emoji: '🚶', label: 'walk' },
+      { emoji: '🏃', label: 'run' },
+      { emoji: '🚴', label: 'exercise' },
+      { emoji: '🧘', label: 'stretch' },
+    ],
+  },
+  {
+    label: 'Home',
+    icon: '🏠',
+    items: [
+      { emoji: '🏠', label: 'home' },
+      { emoji: '🧹', label: 'chores' },
+      { emoji: '🧺', label: 'laundry' },
+      { emoji: '🧽', label: 'clean' },
+      { emoji: '🗑️', label: 'trash' },
+      { emoji: '🪴', label: 'plants' },
+      { emoji: '🛠️', label: 'repair' },
+      { emoji: '🛒', label: 'shopping' },
+      { emoji: '🚪', label: 'leave' },
+    ],
+  },
+  {
+    label: 'Work/Finance',
+    icon: '💼',
+    items: [
+      { emoji: '💼', label: 'work' },
+      { emoji: '🎒', label: 'school' },
+      { emoji: '📅', label: 'event' },
+      { emoji: '📝', label: 'note' },
+      { emoji: '💻', label: 'computer' },
+      { emoji: '📚', label: 'study' },
+      { emoji: '🏫', label: 'class' },
+      { emoji: '📊', label: 'report' },
+      { emoji: '✏️', label: 'writing' },
+      { emoji: '⌨️', label: 'typing' },
+      { emoji: '🖥️', label: 'desktop' },
+      { emoji: '📁', label: 'files' },
+      { emoji: '🧾', label: 'bill' },
+      { emoji: '💳', label: 'payment' },
+      { emoji: '💸', label: 'spend' },
+      { emoji: '💰', label: 'money' },
+    ],
+  },
+  {
+    label: 'People',
+    icon: '❤️',
+    items: [
+      { emoji: '📱', label: 'phone' },
+      { emoji: '📞', label: 'call' },
+      { emoji: '📧', label: 'email' },
+      { emoji: '🤝', label: 'meeting' },
+      { emoji: '👶', label: 'baby' },
+      { emoji: '🍼', label: 'feeding' },
+      { emoji: '🧒', label: 'kid' },
+      { emoji: '👵', label: 'family' },
+      { emoji: '👴', label: 'family' },
+      { emoji: '❤️', label: 'partner' },
+      { emoji: '🎂', label: 'birthday' },
+      { emoji: '🎁', label: 'gift' },
+      { emoji: '💍', label: 'anniversary' },
+      { emoji: '⛪', label: 'church' },
     ],
   },
   {
     label: 'Travel',
     icon: '✈️',
-    emojis: [
-      '✈️', '🚗', '🏠', '🏖️', '⛰️', '🏥', '🏫', '🏢',
-      '🏪', '🏦', '🚌', '🚂', '🛳️', '🏕️', '🌅', '🌃',
+    items: [
+      { emoji: '🚗', label: 'drive' },
+      { emoji: '🚲', label: 'bike' },
+      { emoji: '🚌', label: 'bus' },
+      { emoji: '🚆', label: 'train' },
+      { emoji: '✈️', label: 'travel' },
+      { emoji: '📍', label: 'location' },
+      { emoji: '🗺️', label: 'trip' },
+      { emoji: '⛽', label: 'gas' },
+      { emoji: '🧳', label: 'pack' },
     ],
   },
   {
-    label: 'Objects',
-    icon: '💡',
-    emojis: [
-      '💊', '💉', '🔑', '💡', '📱', '💻', '📷', '📦',
-      '✉️', '📅', '⏰', '💰', '🛒', '🧹', '🔧', '📝',
-      '🪥', '🧴', '💧', '🗑️', '🧺',
+    label: 'Pets',
+    icon: '🐾',
+    items: [
+      { emoji: '🐾', label: 'pet' },
+      { emoji: '🐕', label: 'dog' },
+      { emoji: '🐈', label: 'cat' },
+      { emoji: '🐇', label: 'rabbit' },
+      { emoji: '🐦', label: 'bird' },
+      { emoji: '🐠', label: 'fish' },
+      { emoji: '🐢', label: 'turtle' },
+      { emoji: '🦴', label: 'pet care' },
+      { emoji: '🥫', label: 'pet food' },
     ],
   },
   {
-    label: 'Symbols',
-    icon: '❤️',
-    emojis: [
-      '❤️', '⭐', '🎉', '🎊', '🔥', '✅', '❌', '⚠️',
-      '🚫', '💤', '💪', '🙏', '👍', '👎', '🎁', '🏆',
+    label: 'More',
+    icon: '✨',
+    items: [
+      { emoji: '🎙️', label: 'voice memo' },
+      { emoji: '🎧', label: 'audio' },
+      { emoji: '📷', label: 'photo' },
+      { emoji: '🎨', label: 'drawing' },
+      { emoji: '🖋️', label: 'journal' },
+      { emoji: '⏰', label: 'time' },
+      { emoji: '🔑', label: 'keys' },
+      { emoji: '🔒', label: 'secure' },
+      { emoji: '📦', label: 'package' },
+      { emoji: '🔋', label: 'battery' },
+      { emoji: '🔌', label: 'charger' },
+      { emoji: '🧠', label: 'remember' },
+      { emoji: '🧩', label: 'puzzle' },
+      { emoji: '🏆', label: 'goal' },
+      { emoji: '🙄', label: 'attitude' },
     ],
   },
 ];
