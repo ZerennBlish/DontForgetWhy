@@ -7,7 +7,6 @@ import { closeDb, reopenDb, kvGet, kvSet } from './database';
 import { loadAlarms, updateSingleAlarm } from './storage';
 import { getReminders, updateReminder } from './reminderStorage';
 import { scheduleAlarm, scheduleReminderNotification, cancelAllAlarms } from './notifications';
-import { StorageAccessFramework, EncodingType } from 'expo-file-system/legacy';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -19,10 +18,10 @@ const DB_FILENAME = 'dfw.db';
 const META_FILENAME = 'backup-meta.json';
 const LAST_BACKUP_KEY = 'lastBackupDate';
 const AUTO_BACKUP_ENABLED_KEY = 'autoBackupEnabled';
-const AUTO_BACKUP_FOLDER_URI_KEY = 'autoBackupFolderUri';
-const AUTO_BACKUP_FOLDER_NAME_KEY = 'autoBackupFolderName';
 const AUTO_BACKUP_FREQUENCY_KEY = 'autoBackupFrequency';
 const LAST_AUTO_BACKUP_KEY = 'lastAutoBackupDate';
+const AUTO_BACKUP_DIR = 'backups';
+const MAX_AUTO_BACKUPS = 5;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -267,20 +266,19 @@ async function rescheduleAllNotifications(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-Export
+// Auto-Export — saves to local app storage (Paths.document/backups/).
+// SAF persistent permissions are unreliable across app restarts on many
+// Android devices, so auto-export avoids SAF entirely. Users can still
+// share backups anywhere via the manual "Export Memories" button.
 // ---------------------------------------------------------------------------
 
 export function getAutoBackupSettings(): {
   enabled: boolean;
-  folderUri: string | null;
-  folderName: string | null;
   frequency: BackupFrequency;
   lastAutoBackup: string | null;
 } {
   return {
     enabled: kvGet(AUTO_BACKUP_ENABLED_KEY) === 'true',
-    folderUri: kvGet(AUTO_BACKUP_FOLDER_URI_KEY),
-    folderName: kvGet(AUTO_BACKUP_FOLDER_NAME_KEY),
     frequency: (kvGet(AUTO_BACKUP_FREQUENCY_KEY) as BackupFrequency) || 'weekly',
     lastAutoBackup: kvGet(LAST_AUTO_BACKUP_KEY),
   };
@@ -290,62 +288,45 @@ export function setAutoBackupEnabled(enabled: boolean): void {
   kvSet(AUTO_BACKUP_ENABLED_KEY, enabled ? 'true' : 'false');
 }
 
-export function setAutoBackupFolder(uri: string, name: string): void {
-  kvSet(AUTO_BACKUP_FOLDER_URI_KEY, uri);
-  kvSet(AUTO_BACKUP_FOLDER_NAME_KEY, name);
-}
-
 export function setAutoBackupFrequency(frequency: BackupFrequency): void {
   kvSet(AUTO_BACKUP_FREQUENCY_KEY, frequency);
 }
 
-export async function requestBackupFolder(): Promise<{ uri: string; name: string } | null> {
-  const permission = await StorageAccessFramework.requestDirectoryPermissionsAsync();
-  if (!permission.granted) return null;
-
-  return {
-    uri: permission.directoryUri,
-    name: decodeURIComponent(permission.directoryUri.split('%2F').pop() || 'Selected folder'),
-  };
-}
-
 /**
- * Run auto-export: create backup zip, then write it to the SAF folder.
- * Uses base64 bridge between new File API and legacy SAF writer.
+ * Run auto-export: create backup zip in cache, then copy it to the local
+ * backups/ directory with a dated filename. Cleans up old backups.
  */
 export async function autoExportBackup(): Promise<boolean> {
   const settings = getAutoBackupSettings();
-  if (!settings.enabled || !settings.folderUri) return false;
+  if (!settings.enabled) return false;
 
   try {
     // 1. Create the backup zip in cache (reuse exportBackup)
     const zipUri = await exportBackup();
 
-    // 2. Generate filename with date
+    // 2. Ensure local backups directory exists
+    const backupDir = new Directory(Paths.document, AUTO_BACKUP_DIR);
+    if (!backupDir.exists) backupDir.create();
+
+    // 3. Copy zip to backups/ with dated filename
     const dateStr = new Date().toISOString().split('T')[0];
     const fileName = `DFW-Backup-${dateStr}.dfw`;
+    const destFile = new File(backupDir, fileName);
+    if (destFile.exists) destFile.delete();
 
-    // 3. Create file in SAF folder
-    const safFileUri = await StorageAccessFramework.createFileAsync(
-      settings.folderUri,
-      fileName,
-      'application/octet-stream',
-    );
-
-    // 4. Read zip as base64 via new File API, write to SAF via legacy API
     const zipFile = new File(zipUri);
-    const base64 = await zipFile.base64();
-    await StorageAccessFramework.writeAsStringAsync(safFileUri, base64, {
-      encoding: EncodingType.Base64,
-    });
+    zipFile.copy(destFile);
+
+    // 4. Clean up cache zip
+    try {
+      if (zipFile.exists) zipFile.delete();
+    } catch { /* best-effort */ }
 
     // 5. Update last auto backup date
     kvSet(LAST_AUTO_BACKUP_KEY, new Date().toISOString());
 
-    // 6. Clean up cache zip
-    try {
-      if (zipFile.exists) zipFile.delete();
-    } catch { /* best-effort */ }
+    // 6. Prune old backups beyond MAX_AUTO_BACKUPS
+    cleanupOldBackups();
 
     return true;
   } catch (e) {
@@ -356,7 +337,7 @@ export async function autoExportBackup(): Promise<boolean> {
 
 export function shouldAutoBackup(): boolean {
   const settings = getAutoBackupSettings();
-  if (!settings.enabled || !settings.folderUri) return false;
+  if (!settings.enabled) return false;
 
   const last = settings.lastAutoBackup;
   if (!last) return true;
@@ -373,4 +354,20 @@ export function shouldAutoBackup(): boolean {
 
 export function clearAutoBackupSettings(): void {
   kvSet(AUTO_BACKUP_ENABLED_KEY, 'false');
+}
+
+/** Remove old auto-backups, keeping only the most recent MAX_AUTO_BACKUPS. */
+function cleanupOldBackups(): void {
+  try {
+    const backupDir = new Directory(Paths.document, AUTO_BACKUP_DIR);
+    if (!backupDir.exists) return;
+
+    const entries = backupDir.list()
+      .filter((e) => e.name.endsWith('.dfw'))
+      .sort((a, b) => (b.name > a.name ? 1 : b.name < a.name ? -1 : 0));
+
+    for (let i = MAX_AUTO_BACKUPS; i < entries.length; i++) {
+      try { new File(backupDir, entries[i].name).delete(); } catch { /* best-effort */ }
+    }
+  } catch { /* best-effort */ }
 }
