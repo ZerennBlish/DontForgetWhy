@@ -46,7 +46,7 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       paddingBottom: insets.bottom + 16,
-      height: '55%',
+      height: '45%',
       borderWidth: 1,
       borderBottomWidth: 0,
       borderColor: colors.border,
@@ -78,6 +78,8 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
       fontWeight: '600',
     },
     tabBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
       paddingHorizontal: 12,
       paddingVertical: 8,
     },
@@ -97,8 +99,8 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
       borderColor: colors.accent,
     },
     tabIcon: {
-      fontSize: 16,
-      marginRight: 6,
+      fontSize: 14,
+      marginRight: 4,
     },
     tabLabel: {
       fontSize: 11,
@@ -113,17 +115,18 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
       paddingTop: 4,
     },
     emojiBtn: {
-      width: '25%',
-      aspectRatio: 0.85,
+      width: '20%',
+      aspectRatio: 1,
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: 8,
+      paddingVertical: 4,
     },
     emojiText: {
-      fontSize: 24,
+      fontSize: 22,
     },
     emojiLabel: {
-      fontSize: 10,
+      fontSize: 9,
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -163,6 +166,7 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={{ flexGrow: 0 }}
             contentContainerStyle={styles.tabBar}
           >
             {emojiCategories.map((category, index) => {
@@ -189,7 +193,7 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
             style={{ flex: 1 }}
             data={items}
             keyExtractor={(item) => `${item.emoji}-${item.label}`}
-            numColumns={4}
+            numColumns={5}
             contentContainerStyle={styles.grid}
             renderItem={renderEmojiItem}
             removeClippedSubviews={true}

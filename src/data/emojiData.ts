@@ -74,12 +74,11 @@ export const emojiCategories: EmojiCategory[] = [
       { emoji: '🗑️', label: 'trash' },
       { emoji: '🪴', label: 'plants' },
       { emoji: '🛠️', label: 'repair' },
-      { emoji: '🛒', label: 'shopping' },
       { emoji: '🚪', label: 'leave' },
     ],
   },
   {
-    label: 'Work/Finance',
+    label: 'Work/School',
     icon: '💼',
     items: [
       { emoji: '💼', label: 'work' },
@@ -94,10 +93,21 @@ export const emojiCategories: EmojiCategory[] = [
       { emoji: '⌨️', label: 'typing' },
       { emoji: '🖥️', label: 'desktop' },
       { emoji: '📁', label: 'files' },
+    ],
+  },
+  {
+    label: 'Finance',
+    icon: '💰',
+    items: [
       { emoji: '🧾', label: 'bill' },
       { emoji: '💳', label: 'payment' },
       { emoji: '💸', label: 'spend' },
       { emoji: '💰', label: 'money' },
+      { emoji: '🛒', label: 'shopping' },
+      { emoji: '🏦', label: 'bank' },
+      { emoji: '🧮', label: 'budget' },
+      { emoji: '💵', label: 'cash' },
+      { emoji: '🏧', label: 'ATM' },
     ],
   },
   {
