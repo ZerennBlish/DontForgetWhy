@@ -348,7 +348,7 @@ export const DIFFICULTY_LEVELS: DifficultyLevel[] = [
 // ── AI move with difficulty-based randomness ──────────────────────────────
 // Time budget per difficulty (ms). Iterative deepening uses whatever search
 // depth it can fit within this budget, up to level.depth.
-export const TIME_LIMITS_MS = [300, 500, 1000, 2000, 5000];
+export const TIME_LIMITS_MS = [300, 500, 1000, 2000, 10000];
 
 export function getAIMove(game: Chess, level: DifficultyLevel): string | null {
   if (game.isGameOver()) return null;
