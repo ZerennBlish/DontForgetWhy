@@ -6,7 +6,7 @@ import {
   getAIMove,
   analyzeMove,
   DIFFICULTY_LEVELS,
-  TIME_LIMITS_MS,
+  clearTranspositionTable,
 } from '../services/chessAI';
 import {
   saveChessGame,
@@ -210,7 +210,7 @@ export function useChess(): UseChessReturn {
       }
       const level =
         DIFFICULTY_LEVELS[difficultyRef.current] ?? DIFFICULTY_LEVELS[1];
-      const budget = TIME_LIMITS_MS[difficultyRef.current] ?? 1500;
+      const budget = level.timeLimitMs;
 
       // Publish the budget/start so the UI can start its progress bar
       // animation BEFORE getAIMove blocks the JS thread. The setTimeout(0)
@@ -473,6 +473,9 @@ export function useChess(): UseChessReturn {
         startedAt: now,
         updatedAt: now,
       });
+
+      // Drop stale TT entries from the previous game before the AI thinks.
+      clearTranspositionTable();
 
       // If player is black, the AI (white) moves first.
       if (color === 'b') {

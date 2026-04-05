@@ -58,7 +58,9 @@
       "Bash(2)",
       "Bash(sudo apt-get:*)",
       "Bash(grep -rn \"''midnight''\\\\|''ember''\\\\|''neon''\\\\|''void''\\\\|''frost''\\\\|''sand''\" src/ --include=\"*.ts\" --include=\"*.tsx\")",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(npx ts-node -e ':*)"
     ]
   }
 }
