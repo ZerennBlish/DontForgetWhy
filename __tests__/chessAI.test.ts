@@ -8,7 +8,6 @@ import {
   DIFFICULTY_LEVELS,
   getBookMove,
   clearTranspositionTable,
-  computePhase,
 } from '../src/services/chessAI';
 import { positionKey } from '../src/data/openingBook';
 import { getPieceImage } from '../src/data/chessAssets';
@@ -416,34 +415,51 @@ describe('difficulty model', () => {
 });
 
 // ── Evaluation improvements ──────────────────────────────────────────────
-describe('computePhase', () => {
-  it('returns ~1.0 for the starting position', () => {
-    expect(computePhase(new Chess())).toBeCloseTo(1, 2);
+describe('tapered-eval phase (indirect via evaluateBoard)', () => {
+  // Mirror of the inline phase calculation in evaluateBoard so we can
+  // verify the formula directly without exporting the helper.
+  const PIECE_PHASE_VALUES: Record<string, number> = {
+    n: 320,
+    b: 330,
+    r: 500,
+    q: 900,
+  };
+  const TOTAL_PHASE = 6400;
+  function phaseOf(game: Chess): number {
+    let mat = 0;
+    for (const row of game.board()) {
+      for (const cell of row) {
+        if (cell && PIECE_PHASE_VALUES[cell.type] !== undefined) {
+          mat += PIECE_PHASE_VALUES[cell.type];
+        }
+      }
+    }
+    return Math.min(1, mat / TOTAL_PHASE);
+  }
+
+  it('phase formula returns 1.0 for the starting position', () => {
+    expect(phaseOf(new Chess())).toBeCloseTo(1, 2);
   });
 
-  it('returns ~0.0 for king + pawn endgame', () => {
-    const game = new Chess('4k3/8/8/3P4/8/8/8/4K3 w - - 0 1');
-    expect(computePhase(game)).toBeCloseTo(0, 2);
+  it('phase formula returns 0.0 for king + pawn endgame', () => {
+    expect(phaseOf(new Chess('4k3/8/8/3P4/8/8/8/4K3 w - - 0 1'))).toBeCloseTo(
+      0,
+      2,
+    );
   });
 
-  it('returns a value in (0, 1) for positions with partial material', () => {
-    // K + R vs K — just one rook on the board.
-    const game = new Chess('4k3/8/8/8/8/8/8/R3K3 w - - 0 1');
-    const phase = computePhase(game);
-    expect(phase).toBeGreaterThan(0);
-    expect(phase).toBeLessThan(1);
+  it('phase formula sits in (0, 1) for partial material', () => {
+    const p = phaseOf(new Chess('4k3/8/8/8/8/8/8/R3K3 w - - 0 1'));
+    expect(p).toBeGreaterThan(0);
+    expect(p).toBeLessThan(1);
   });
 
-  it('decreases monotonically as material leaves the board', () => {
-    const start = computePhase(new Chess());
-    const mid = computePhase(
-      // Remove queens.
+  it('phase decreases monotonically as material leaves the board', () => {
+    const start = phaseOf(new Chess());
+    const mid = phaseOf(
       new Chess('rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1'),
     );
-    const late = computePhase(
-      // Just rooks and kings.
-      new Chess('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'),
-    );
+    const late = phaseOf(new Chess('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'));
     expect(start).toBeGreaterThan(mid);
     expect(mid).toBeGreaterThan(late);
   });

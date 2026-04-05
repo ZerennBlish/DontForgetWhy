@@ -60,7 +60,8 @@
       "Bash(grep -rn \"''midnight''\\\\|''ember''\\\\|''neon''\\\\|''void''\\\\|''frost''\\\\|''sand''\" src/ --include=\"*.ts\" --include=\"*.tsx\")",
       "Bash(npx jest:*)",
       "Bash(echo \"Exit code: $?\")",
-      "Bash(npx ts-node -e ':*)"
+      "Bash(npx ts-node -e ':*)",
+      "Bash(echo \"Exit: $?\")"
     ]
   }
 }

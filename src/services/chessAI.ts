@@ -132,20 +132,9 @@ export function isEndgame(game: Chess): boolean {
 // blend middlegame and endgame evaluations instead of flipping hard at an
 // arbitrary threshold. 1.0 = full opening material, 0.0 = bare kings.
 // Starting non-pawn/non-king material: 2N(320) + 2B(330) + 2R(500) + Q(900)
-// = 3200 per side × 2 = 6400 total.
+// = 3200 per side × 2 = 6400 total. Computed inline in evaluateBoard so we
+// don't iterate the board twice per eval.
 const TOTAL_PHASE = 6400;
-
-export function computePhase(game: Chess): number {
-  const board = game.board();
-  let material = 0;
-  for (const row of board) {
-    for (const cell of row) {
-      if (!cell || cell.type === 'p' || cell.type === 'k') continue;
-      material += PIECE_VALUES[cell.type];
-    }
-  }
-  return Math.min(1, material / TOTAL_PHASE);
-}
 
 // Passed-pawn bonus by rank from the pawn's own side (0 = 1st rank,
 // 7 = promotion square). Bonus grows steeply as the pawn nears promotion
@@ -163,7 +152,6 @@ export function evaluateBoard(game: Chess): number {
     return 0;
   }
 
-  const phase = computePhase(game);
   const board = game.board();
   let score = 0;
 
@@ -174,8 +162,12 @@ export function evaluateBoard(game: Chess): number {
   const blackPawnFiles: number[] = [];
   let whiteKingRow = 0;
   let whiteKingCol = 0;
+  let whiteKingIdx = 0;
   let blackKingRow = 0;
   let blackKingCol = 0;
+  let blackKingIdx = 0;
+  // Accumulate non-pawn/non-king material for the tapered-eval phase.
+  let nonPawnMaterial = 0;
 
   // chess.js board()[0] = rank 8, board()[7] = rank 1.
   // Our PSQTs are indexed a1..h8 (index 0 = a1).
@@ -190,25 +182,25 @@ export function evaluateBoard(game: Chess): number {
       const whiteIdx = (7 - row) * 8 + col;
       const blackIdx = row * 8 + col;
 
-      let positional: number;
       if (piece.type === 'k') {
-        // Tapered king eval: blend MG (stay castled) and EG (march up) PSTs
-        // by the current material phase.
-        const idx = piece.color === 'w' ? whiteIdx : blackIdx;
-        positional = Math.round(
-          KING_MG_TABLE[idx] * phase + KING_EG_TABLE[idx] * (1 - phase),
-        );
+        // King PST is tapered — defer until phase is known. King material
+        // cancels between colours (+20000/-20000), so skip adding it.
         if (piece.color === 'w') {
           whiteKingRow = row;
           whiteKingCol = col;
+          whiteKingIdx = whiteIdx;
         } else {
           blackKingRow = row;
           blackKingCol = col;
+          blackKingIdx = blackIdx;
         }
-      } else {
-        const table = PIECE_SQUARE_TABLES[piece.type];
-        positional = table[piece.color === 'w' ? whiteIdx : blackIdx];
+        continue;
       }
+
+      const positional =
+        PIECE_SQUARE_TABLES[piece.type][
+          piece.color === 'w' ? whiteIdx : blackIdx
+        ];
 
       if (piece.type === 'b') {
         if (piece.color === 'w') whiteBishops++;
@@ -217,6 +209,9 @@ export function evaluateBoard(game: Chess): number {
       if (piece.type === 'p') {
         if (piece.color === 'w') whitePawnFiles.push(col);
         else blackPawnFiles.push(col);
+      } else {
+        // Non-pawn (and non-king, guarded above) → contributes to phase.
+        nonPawnMaterial += material;
       }
 
       if (piece.color === 'w') {
@@ -226,6 +221,19 @@ export function evaluateBoard(game: Chess): number {
       }
     }
   }
+
+  // Tapered-eval phase now that we've scanned the whole board once.
+  const phase = Math.min(1, nonPawnMaterial / TOTAL_PHASE);
+
+  // Tapered king PST (deferred from the main loop).
+  score += Math.round(
+    KING_MG_TABLE[whiteKingIdx] * phase +
+      KING_EG_TABLE[whiteKingIdx] * (1 - phase),
+  );
+  score -= Math.round(
+    KING_MG_TABLE[blackKingIdx] * phase +
+      KING_EG_TABLE[blackKingIdx] * (1 - phase),
+  );
 
   // Bishop pair bonus (~50 cp in open positions)
   if (whiteBishops >= 2) score += 50;
@@ -373,7 +381,9 @@ function scoreMoveForOrdering(
   if (ttMove && move.san === ttMove) return 100_000;
 
   let score = 0;
-  const isCapture = move.flags.includes('c');
+  // chess.js sets `captured` for any capture (including en passant, which
+  // uses flag 'e' rather than 'c'). Use the field directly.
+  const isCapture = !!move.captured;
   if (isCapture) {
     const victim = move.captured ? PIECE_VALUES[move.captured] || 0 : 0;
     const attacker = PIECE_VALUES[move.piece] || 0;
@@ -383,10 +393,12 @@ function scoreMoveForOrdering(
     score += 50;
   }
   // Killer moves (quiet moves that caused a beta cutoff at this ply).
+  // Scored above quiet moves (0) but below the MVV-LVA of equal or
+  // winning captures so real material gains are still searched first.
   if (!isCapture && ply >= 0 && ply < MAX_PLY) {
     const slot = killerMoves[ply];
-    if (slot[0] === move.san) score += 900;
-    else if (slot[1] === move.san) score += 800;
+    if (slot[0] === move.san) score += 90;
+    else if (slot[1] === move.san) score += 80;
   }
   return score;
 }
@@ -408,9 +420,18 @@ function orderMoves<T extends OrderableMove>(
 // minimax polls `isTimeUp()` and bails out with the current static eval if
 // the deadline has passed. Callers that use minimax outside of findBestMove
 // (e.g. analyzeMove's scoring) must reset `searchDeadline` themselves.
+// `searchMinDepthActive` relaxes the normal time check while the IDS loop
+// is at or below minDepth so we reach the competence floor. `searchSafetyDeadline`
+// is a hard ceiling (3× budget) that fires even in that mode — so a
+// branch-heavy position can't spiral into a 30s search.
 let searchDeadline = 0;
+let searchSafetyDeadline = 0;
+let searchMinDepthActive = false;
 
 function isTimeUp(): boolean {
+  if (searchMinDepthActive) {
+    return Date.now() >= searchSafetyDeadline;
+  }
   return Date.now() >= searchDeadline;
 }
 
@@ -437,7 +458,10 @@ const TT_MAX_SIZE = 100_000;
 const transpositionTable = new Map<string, TTEntry>();
 
 function ttKey(game: Chess): string {
-  return game.fen().split(' ').slice(0, 4).join(' ');
+  // Include the halfmove clock (field 5) so positions with different
+  // 50-move-rule runway don't collide: a value proven safe with 50
+  // halfmoves of runway isn't necessarily safe with 5.
+  return game.fen().split(' ').slice(0, 5).join(' ');
 }
 
 function ttLookup(game: Chess): TTEntry | undefined {
@@ -468,6 +492,22 @@ function ttStore(
  * clears at the start of each search. */
 export function clearTranspositionTable(): void {
   transpositionTable.clear();
+}
+
+// ── Mate-score ply adjustment ────────────────────────────────────────────
+// Mate scores are stored relative to the current node (not root) so that
+// a TT entry captured at ply 5 can be meaningfully compared to a fresh
+// search at ply 2. ±90000 is the threshold for "this is a mate score".
+function adjustMateScoreForTT(score: number, ply: number): number {
+  if (score > 90000) return score + ply;
+  if (score < -90000) return score - ply;
+  return score;
+}
+
+function adjustMateScoreFromTT(score: number, ply: number): number {
+  if (score > 90000) return score - ply;
+  if (score < -90000) return score + ply;
+  return score;
 }
 
 // ── Killer move heuristic ────────────────────────────────────────────────
@@ -602,12 +642,12 @@ function minimax(
   // ── Transposition table lookup ──
   const ttEntry = ttLookup(game);
   if (ttEntry && ttEntry.depth >= depth) {
-    if (ttEntry.flag === TTFlag.EXACT) return ttEntry.score;
-    if (ttEntry.flag === TTFlag.LOWERBOUND && ttEntry.score > alpha)
-      alpha = ttEntry.score;
-    else if (ttEntry.flag === TTFlag.UPPERBOUND && ttEntry.score < beta)
-      beta = ttEntry.score;
-    if (alpha >= beta) return ttEntry.score;
+    const ttScore = adjustMateScoreFromTT(ttEntry.score, ply);
+    if (ttEntry.flag === TTFlag.EXACT) return ttScore;
+    if (ttEntry.flag === TTFlag.LOWERBOUND && ttScore > alpha) alpha = ttScore;
+    else if (ttEntry.flag === TTFlag.UPPERBOUND && ttScore < beta)
+      beta = ttScore;
+    if (alpha >= beta) return ttScore;
   }
   const ttBestMove = ttEntry?.bestMove ?? null;
 
@@ -670,7 +710,7 @@ function minimax(
       if (best > alpha) alpha = best;
       if (beta <= alpha) {
         // Beta cutoff: remember quiet moves that cause cutoffs.
-        if (!move.flags.includes('c')) storeKiller(ply, move.san);
+        if (!move.captured) storeKiller(ply, move.san);
         break;
       }
     }
@@ -686,7 +726,7 @@ function minimax(
       }
       if (best < beta) beta = best;
       if (beta <= alpha) {
-        if (!move.flags.includes('c')) storeKiller(ply, move.san);
+        if (!move.captured) storeKiller(ply, move.san);
         break;
       }
     }
@@ -700,7 +740,13 @@ function minimax(
     if (best <= origAlpha) flag = TTFlag.UPPERBOUND;
     else if (best >= origBeta) flag = TTFlag.LOWERBOUND;
     else flag = TTFlag.EXACT;
-    ttStore(game, depth, best, flag, depthBestMove);
+    ttStore(
+      game,
+      depth,
+      adjustMateScoreForTT(best, ply),
+      flag,
+      depthBestMove,
+    );
   }
 
   return best;
@@ -740,12 +786,16 @@ export function findBestMove(
   const maximizing = game.turn() === 'w';
   const ordered = orderMoves(moves);
   let bestMove: string = ordered[0].san;
-  searchDeadline = Date.now() + timeLimitMs;
+  const now = Date.now();
+  searchDeadline = now + timeLimitMs;
+  searchSafetyDeadline = now + timeLimitMs * 3;
 
   for (let depth = 1; depth <= maxDepth; depth++) {
-    // Only respect the time budget AFTER we've reached the minimum depth —
-    // this guarantees a certain strength regardless of device speed.
-    if (depth > minDepth && isTimeUp()) break;
+    // Disable the time-cutoff entirely while we're at or below minDepth so
+    // every minimax/quiescence node completes its search. Above minDepth
+    // the budget applies normally.
+    searchMinDepthActive = depth <= minDepth;
+    if (!searchMinDepthActive && isTimeUp()) break;
 
     let bestScore = maximizing ? -Infinity : Infinity;
     let depthBestMove: string | null = null;
@@ -797,6 +847,9 @@ export function findBestMove(
     }
   }
 
+  // Always clear the min-depth override so callers outside findBestMove
+  // (e.g. analyzeMove's direct minimax calls) see a normal time budget.
+  searchMinDepthActive = false;
   return bestMove;
 }
 
@@ -816,10 +869,10 @@ export interface DifficultyLevel {
 
 export const DIFFICULTY_LEVELS: DifficultyLevel[] = [
   { name: 'Beginner',     minDepth: 1, maxDepth: 2, timeLimitMs: 300,  randomness: 0.4 },
-  { name: 'Casual',       minDepth: 2, maxDepth: 3, timeLimitMs: 500,  randomness: 0.2 },
-  { name: 'Intermediate', minDepth: 3, maxDepth: 4, timeLimitMs: 1000, randomness: 0.05 },
-  { name: 'Advanced',     minDepth: 4, maxDepth: 5, timeLimitMs: 2000, randomness: 0 },
-  { name: 'Expert',       minDepth: 4, maxDepth: 6, timeLimitMs: 5000, randomness: 0 },
+  { name: 'Casual',       minDepth: 1, maxDepth: 3, timeLimitMs: 500,  randomness: 0.2 },
+  { name: 'Intermediate', minDepth: 2, maxDepth: 4, timeLimitMs: 1000, randomness: 0.05 },
+  { name: 'Advanced',     minDepth: 2, maxDepth: 5, timeLimitMs: 2000, randomness: 0 },
+  { name: 'Expert',       minDepth: 3, maxDepth: 6, timeLimitMs: 5000, randomness: 0 },
 ];
 
 export function getAIMove(game: Chess, level: DifficultyLevel): string | null {
