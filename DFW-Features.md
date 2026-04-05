@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 16 (April 5, 2026)
+**Last updated:** Session 17 (April 5, 2026)
 
 ---
 
@@ -57,7 +57,7 @@
 - **Memory Match** (3 difficulties, card flip animation, star rating). Header text-only (emoji stripped Session 12).
 - **Sudoku** (pure JS generator, difficulty = assistance level, no lose condition, pencil notes, save/resume)
 - **Daily Riddle** (146 riddles, deterministic daily, streak tracking, browse all)
-- **Chess** (Session 16) — vs CPU, 5 difficulty levels, iterative-deepening minimax with quiescence search. Player picks color + difficulty before each game. In-game roasts when you blunder (depth-2 sanity check after each move, 58-line roast pool across 5 severity tiers). One take-back per game with its own roast pool. Game state persists to SQLite across app close. Memory Score: 5/8/12/18/25 win points per difficulty, half for draw, -2 per blunder.
+- **Chess** (Session 16, engine hardened Session 17) — vs CPU, 5 difficulty levels, iterative-deepening minimax with quiescence search. Engine extras (Session 17): opening book of 104 hardcoded positions for instant play through the first 6-10 plies, 100K-entry FEN-keyed transposition table with mate-score ply adjustment, killer-move ordering, null-move pruning, tapered evaluation (continuous material phase blending MG/EG king PSTs), passed-pawn bonus, rook on open/semi-open file bonus, and a min-depth + max-time difficulty model with a 3× safety-deadline ceiling. Player picks color + difficulty before each game. In-game roasts when you blunder (depth-2 sanity check after each move, 58-line roast pool across 5 severity tiers). One take-back per game with its own roast pool. Game state persists to SQLite across app close. Memory Score: 5/8/12/18/25 win points per difficulty, half for draw, -2 per blunder.
 - **Memory Score** (now 6 games — Chess added Session 16. Ranks from "Who Are You Again?" to "The One Who Remembers"). Header text-only (emoji stripped Session 12).
 
 ### Home Screen Widgets (4)
@@ -383,7 +383,16 @@ Both screens:
 
 ---
 
-## 9. Chess (Session 16)
+## 9. Chess (Session 16; engine hardened Session 17)
+
+### AI Engine
+- **Opening book** — 104 hardcoded FEN-keyed positions (first 6-10 plies of theory across Italian, Ruy Lopez, Queen's Gambit, London, English as White, and Sicilian, French, Caro-Kann, KID, Slav as Black). Instant move selection, zero search cost, random pick among 1-3 sound moves per position for variety. Book check sits at the top of both `findBestMove` and `getAIMove`; `analyzeMove` skips the book so blunder analysis always compares against a search result.
+- **Transposition table** — 100,000-entry FEN-keyed cache (first 5 FEN fields so halfmove-clock differences don't collide). Stores `{depth, score, flag, bestMove}` with EXACT / LOWERBOUND / UPPERBOUND bounds. Depth-preferred replacement + FIFO eviction at capacity. Cleared at the start of each `findBestMove` call (within iterative deepening, not across moves). TT's best-move hint is the top move-ordering signal (+100,000).
+- **Killer-move heuristic** — per-ply (up to ply 32), two slots, stores quiet moves that caused a beta cutoff. Slot 0 gets +90 and slot 1 gets +80 in move ordering — above quiet moves, below equal/winning captures.
+- **Null-move pruning** — R=2 reduction. Skipped in check (illegal) and in endgame (zugzwang risk). Implemented by flipping side-to-move in a FEN and constructing a throwaway `Chess` instance (chess.js has no null-move API).
+- **Min-depth + max-time difficulty model** — each `DifficultyLevel` has `minDepth`, `maxDepth`, `timeLimitMs`. Depths up to `minDepth` complete unconditionally (module `searchMinDepthActive` flag forces `isTimeUp()` false); depths above `minDepth` respect `searchDeadline`. A safety ceiling `searchSafetyDeadline = now + timeLimitMs × 3` caps even mandatory-depth searches so a branch-heavy position can't spiral. Worst-case search time: 3× budget (≈15 s for Expert).
+- **Tapered evaluation** — continuous material-phase value in [0, 1] computed inline during the single board scan. King PSTs blend MG and EG tables by phase (`MG*phase + EG*(1-phase)`). Pawn-shield bonus scaled by phase so it fades into the endgame. Passed-pawn bonuses [0,10,15,25,40,60,90,0] by rank, scaled by `1 + (1-phase)*0.5` (up to +50% in endgames). Rook on open file: +25. Rook on semi-open file: +15.
+- **Difficulty levels:** Beginner (min 1 / max 2 / 300 ms / randomness 0.4), Casual (min 1 / max 3 / 500 ms / 0.2), Intermediate (min 2 / max 4 / 1 s / 0.05), Advanced (min 2 / max 5 / 2 s / 0), Expert (min 3 / max 6 / 5 s / 0; safety cap 15 s).
 
 ### Pre-Game Setup
 Card modal appears when no game is in progress. User picks:

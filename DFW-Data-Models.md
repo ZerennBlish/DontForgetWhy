@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 16 (April 5, 2026)
+**Last updated:** Session 17 (April 5, 2026)
 
 ---
 
@@ -208,17 +208,21 @@ interface BlunderResult {
 
 Severity bucketing: `good` <50cp, `inaccuracy` <150cp, `mistake` <300cp, `blunder` <600cp, `catastrophe` ≥600cp.
 
-### DifficultyLevel
+### DifficultyLevel (Session 17 shape)
 
 ```typescript
 interface DifficultyLevel {
-  name: string;       // 'Beginner' | 'Casual' | 'Intermediate' | 'Advanced' | 'Expert'
-  depth: number;      // max iterative-deepening depth (2..6)
-  randomness: number; // 0 = always best; higher = static-eval noise threshold (cp/100)
+  name: string;        // 'Beginner' | 'Casual' | 'Intermediate' | 'Advanced' | 'Expert'
+  minDepth: number;    // depths 1..minDepth complete unconditionally (competence floor)
+  maxDepth: number;    // hard cap on iterative deepening
+  timeLimitMs: number; // normal time budget; a 3× safety deadline caps mandatory depths
+  randomness: number;  // 0 = always best; higher = static-eval noise threshold (cp/100)
 }
 ```
 
-Paired with module-level `TIME_LIMITS_MS = [300, 500, 1000, 2000, 5000]` (ms per difficulty). This array is the single source of truth — `useChess` imports it for the thinking indicator budget, `getAIMove` uses it to cap iterative deepening.
+Current values: Beginner (1/2/300ms/0.4), Casual (1/3/500ms/0.2), Intermediate (2/4/1000ms/0.05), Advanced (2/5/2000ms/0), Expert (3/6/5000ms/0).
+
+Replaces the Session 16 `{ name, depth, randomness }` shape plus the separate `TIME_LIMITS_MS` array — the time budget now lives on each level, so `useChess` reads `level.timeLimitMs` directly for the thinking-indicator budget and `getAIMove` hands all three numbers to `findBestMove(game, level.maxDepth, level.timeLimitMs, level.minDepth)`. The `TIME_LIMITS_MS` export has been removed.
 
 ### chessStats (kv_store)
 

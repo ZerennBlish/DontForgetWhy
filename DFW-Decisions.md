@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 16 (April 5, 2026)
+**Last updated:** Session 17 (April 5, 2026)
 
 ---
 
@@ -336,6 +336,21 @@ Initially built an animated progress bar for AI thinking. Four attempts:
 4. `scaleX` with `transformOrigin: '0% 50%'` → simpler, also native.
 
 All approaches had rough edges during audit (timing misalignment, layout shift when toggling visibility). Final decision: strip the animation entirely, replace with a fixed-height 24px container that shows plain "Thinking…" text via opacity toggle. Revisit after P6 ships. Lesson: don't ship an animation that visibly breaks on the most common code path (long AI thinks).
+
+### Opening book over computed openings (Session 17)
+Hardcoded FEN→move map covering the first 6-10 plies of mainline theory (Italian, Ruy Lopez, Queen's Gambit, London, English, Sicilian, French, Caro-Kann, KID, Slav). 104 entries, random selection from 1-3 book moves per position for variety. Instant move selection, zero CPU cost, theory-correct by construction. Book sits at the top of both `findBestMove` and `getAIMove` — if the position is in book, no search runs at all. `analyzeMove` passes `useBook=false` so blunder analysis is always search-based. analyzeMove also returns `{severity: 'good', centipawnLoss: 0}` if the *played* move is itself a book move, since any book move is sound by definition.
+
+### FEN-keyed TT over Zobrist hashing (Session 17)
+The TT key is the position-only FEN string (first 5 fields, including halfmove clock). Simpler than maintaining a Zobrist incremental hash, no xor bugs to chase, no need to mirror chess.js's internal move/undo logic. GC pressure is negligible relative to chess.js overhead. 100,000-entry cap with depth-preferred replacement + FIFO eviction. Cleared at the start of each `findBestMove` call — the TT lives within one search (across iterative-deepening depths), never persists across moves. Halfmove clock included so positions with different 50-move-rule runway don't share entries (a value safe with 50 halfmoves isn't safe with 5).
+
+### Safety deadline for min-depth (Session 17)
+`searchMinDepthActive` disables the normal `isTimeUp()` check during depths at or below `minDepth` so the engine actually reaches its competence floor. Without it, every minimax/quiescence node inside the mandatory depth still polled `isTimeUp()` and bailed out to static eval once the budget expired — so the floor was a lie. But unconditionally disabling the clock caused 25-30 second searches on complex positions at depth 4. Solution: add a `searchSafetyDeadline = now + timeLimitMs × 3` hard ceiling that fires even in min-depth mode. Competence floor is guaranteed; worst-case is capped at ~15 s for Expert instead of unbounded.
+
+### Null move via new Chess instance (Session 17)
+chess.js has no null-move API (the library doesn't expose a "pass the turn" operation). Null-move pruning is implemented by splitting the current game's FEN, flipping the side-to-move field, clearing the en-passant square (invalid after a skipped turn), and constructing a throwaway `Chess` object from the modified FEN. More expensive than a proper null-move toggle, but correct and contained. Guarded by the standard safety conditions: skipped when the side to move is in check (illegal) and in the endgame (zugzwang risk).
+
+### Free local AI vs Pro cloud AI (Session 17)
+Local chess engine is part of the free tier — works offline, no login, no data leaves the device, keeps the "we don't want your data" brand promise intact. Pro tier (P8) will add cloud Stockfish (2000+ ELO) as an *additional* opponent via Firebase Cloud Function, not a replacement. Same app, two tiers: free players get a respectable local opponent; Pro players get world-class analysis on demand. Chess multiplayer also lives in P8.
 
 ### `light` theme is Ocean (Session 13)
 Rather than adding Ocean as a 7th theme, replaced the original Light theme entirely. Ocean has better contrast (darker slate text vs gray), more distinctive personality (blue-tinted background vs neutral gray), and stronger section colors. The old Light was generic — Ocean has character.

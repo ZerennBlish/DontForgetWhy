@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 16 (April 5, 2026)
+### Source of Truth · Updated: Session 17 (April 5, 2026)
 
 ---
 
@@ -10,9 +10,9 @@
 | **Current Version** | v1.12.0 (versionCode 29) — P4.5 Stability Sprint |
 | **Branch** | `dev` |
 | **Production Status** | ✅ v1.12.0 submitted to Google Play |
-| **Current Focus** | P6 Chess in progress — Chess AI + screen shipped locally, Checkers not started |
+| **Current Focus** | P6 Chess engine hardened (Session 17 upgrades + 2 audit rounds). Ready for dev build + device testing, then v1.13.0 chess-only ship. Checkers still deferred. |
 | **Blocked By** | Nothing |
-| **Next Action** | Chess polish pass + Checkers implementation, then P6 production build |
+| **Next Action** | Dev build → physical-device test → v1.13.0 production ship (chess only). Delete `__tests__/chessAISelfPlay.test.ts` before production build. |
 | **EAS Credits** | ~35 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — 68 clips shipped |
@@ -172,8 +172,9 @@
 ### Tasks
 
 - [x] **6.1 Chess vs CPU** ✅ Session 16. chess.js, 5 difficulty levels, custom AI-generated Staunton piece PNGs, Memory Score integrated. Iterative-deepening minimax with alpha-beta, MVV-LVA move ordering, quiescence search, time-budgeted search (300ms → 5s per difficulty). Full hook (useChess.ts) + screen (ChessScreen.tsx). Game state persists to SQLite across app close.
+- [x] **6.1.1 Chess engine upgrades** ✅ Session 17. Opening book (104 hardcoded positions, 6-10 plies of theory), transposition table (100K FEN-keyed entries with mate-score ply adjustment), killer-move heuristic, null-move pruning, min-depth + max-time difficulty model with 3× safety deadline, tapered evaluation (continuous material-phase blending), passed-pawn bonus (rank-scaled + endgame-scaled), rook on open/semi-open file. 2 audit rounds completed (6 findings, all fixed). 69 chessAI tests (232 total across the suite) passing.
 - [x] **6.2 Blunder Roast (text)** ✅ Session 16. 5 severity tiers + take-back pool, 58 roast lines, analyzeMove runs depth-2 shallow check per player move, fires toast with fade in/out. Voice clips deferred to P6.5.
-- [ ] **6.3 Checkers vs CPU** — pure JS, 2+ difficulty levels, Memory Score integration
+- [ ] **6.3 Checkers vs CPU** — pure JS, 2+ difficulty levels, Memory Score integration. Deferred past v1.13.0 — chess ships solo.
 - [x] **6.4 Memory Score Expansion (Chess)** ✅ Session 16. Chess scoring integrated: 5/8/12/18/25 pts per win by difficulty, half points for draw, -2 per blunder, min 0 per game. Checkers scoring deferred until Checkers ships.
 
 ### Chess Design (shipped in Session 16)
@@ -186,13 +187,15 @@
 - Custom AI-generated Staunton piece assets (ChatGPT) — 12 PNGs, not emoji/unicode
 
 ### Still to do (Chess polish)
-- Testing pass on physical device at each difficulty
-- Checkers implementation
+- Testing pass on physical device at each difficulty (minDepth/maxDepth + safety-deadline behaviour on real hardware)
+- Delete `__tests__/chessAISelfPlay.test.ts` before production build (benchmark-only, slow)
+- Checkers implementation (deferred past v1.13.0)
 - Blunder Roast voice clips (deferred to P6.5)
 
 ### Audit Gate
 - [x] **Session 16 Audit Round 1 (Codex)** — findings fixed (see DFW-Bug-History.md)
 - [x] **Session 16 Audit Round 2 (Gemini)** — findings fixed
+- [x] **Session 17 Audit Round 1 (Codex + Gemini)** — 6 findings (min-depth guarantee, en-passant flag, killer scores, TT key, mate-score TT, unbounded min-depth) — all fixed
 - [ ] Final full dual audit before production build
 - [ ] `npx tsc --noEmit` — 0 errors
 - [ ] Increment version + versionCode
@@ -237,7 +240,8 @@
 - [ ] Activate Firestore
 - [ ] Online trivia + riddles (unlimited for Pro)
 - [ ] Global leaderboards (anonymous)
-- [ ] Multiplayer (scope TBD)
+- [ ] Multiplayer (scope TBD) — chess multiplayer targeted here
+- [ ] Cloud Stockfish AI for chess (2000+ ELO via Firebase Cloud Function) — Pro-tier alternative to the local engine. Free tier keeps offline engine; Pro gets cloud Stockfish. Same app, two tiers.
 
 ---
 
@@ -362,3 +366,4 @@
 | Apr 4 | Roadmap restructured. P4.5 Stability Sprint, P5.5 Premium Foundation, P6.5 Voice Expansion added. Named founding tiers. Blunder Roast. |
 | Apr 4 | Session 15 P4.5 Stability Sprint complete. v1.12.0 shipped. NotepadScreen + AlarmListScreen decomposed. Full a11y pass. 10 PNGs → WebP (30 MB saved). OOM prevention on 5 FlatLists. Jest: 162 tests across 7 suites. Package audit clean. |
 | Apr 5 | Session 16 P6 Chess in progress. chess.js + custom Staunton piece assets, iterative-deepening minimax w/ quiescence search, 5 difficulties (300ms → 5s), full game hook + screen, SQLite persistence, 58 blunder-roast lines, Memory Score integration. Emoji picker overhaul shipped: 11 categories, 105 labeled emojis, context-specific quick-picker rows. P5 Google Calendar deferred (conflicts with no-accounts brand). Two audit rounds (Codex + Gemini), all findings fixed. Checkers not started. |
+| Apr 5 | Session 17 P6 Chess engine hardened. Opening book (104 positions), transposition table with halfmove-aware key + mate-score ply adjustment, killer moves, null-move pruning, min-depth/max-time difficulty model with 3× safety deadline, tapered eval, passed-pawn bonus, rook on open file. 2 audit rounds completed (6 findings, all fixed). 232 tests passing across 9 suites. Chess targeted to ship as v1.13.0 solo; Checkers + Premium Foundation pushed back. P8 Firebase scope now includes chess multiplayer + Pro-tier cloud Stockfish. |

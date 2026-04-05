@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 16 (April 5, 2026)
+**Last updated:** Session 17 (April 5, 2026)
 
 ---
 
@@ -486,5 +486,21 @@
 - **P2: Time limits drift between files.** Both `chessAI.ts` and `useChess.ts` had their own time-budget constants. Unified into a single exported `TIME_LIMITS_MS` in chessAI.ts that useChess imports — single source of truth, no drift risk.
 
 **Session 16 auditor summary:** 13 P0/P1 findings, 3 P2. All fixed. Performance improvement from audit fixes alone was ~2-3× at all depths (root alpha-beta + PV reordering). Quiescence + evaluation improvements added measurable move-quality gains confirmed via self-play benchmark test.
+
+### Session 17 — P6 Chess Engine Audit Findings
+
+**Round 1 (Codex + Gemini) — engine upgrades from Prompts 1-3:**
+
+- **Min-depth guarantee broken (CRITICAL).** `findBestMove` skipped the outer `isTimeUp()` check below `minDepth`, but `isTimeUp()` inside `minimax` and `quiescence` still fired — so the engine started each mandatory depth but immediately bailed on every node, returning static evals. The difficulty floor was effectively a no-op. Fixed with a module-level `searchMinDepthActive` flag set `true` while `depth <= minDepth`; `isTimeUp()` returns `false` during that window. Flag reset after the IDS loop.
+- **En-passant flag mismatch.** `scoreMoveForOrdering` and the killer-move storage guards used `move.flags.includes('c')` to detect captures, but chess.js uses flag `'e'` for en-passant captures. En-passant was treated as a quiet move and could pollute the killer table. Switched all 3 call sites to `move.captured` (chess.js populates the field for any capture type, including en passant).
+- **Killer scores outranked winning captures.** Killer slots were scored 900/800, beating every MVV-LVA capture score (PxQ ≈ 890 at highest). Killers should rank below meaningful captures. Lowered to 90/80 — still comfortably above quiet moves (0) but below equal/winning captures.
+- **TT key ignored halfmove clock.** The TT key used only the first 4 FEN fields, so two positions with identical boards but different 50-move-rule state shared a cache entry. A value proven safe with 50 halfmoves of runway was wrongly re-used when only 5 halfmoves remained. Expanded the key to include the halfmove clock (5 FEN fields).
+- **Mate-score TT instability.** Mate scores (±100000) were stored in the TT without ply adjustment. Added `adjustMateScoreForTT(score, ply)` / `adjustMateScoreFromTT(score, ply)` — mate scores are now stored relative to the current node, so TT hits from different plies stay consistent.
+
+**Round 2 (user testing) — min-depth caused unbounded searches:**
+
+- **Unbounded min-depth search.** The round-1 fix for the min-depth guarantee completely disabled `isTimeUp()` during mandatory depths, which caused 25-30 second searches on complex middlegame positions at minDepth=4 (especially on phone). The "all 5 levels" Jest test jumped from ~8 s to 43 s. Fixed by adding a second deadline, `searchSafetyDeadline = now + timeLimitMs × 3`, that fires even while `searchMinDepthActive` is set. `isTimeUp()` checks the safety ceiling in min-depth mode and the normal deadline otherwise. Also lowered `minDepth` values to realistic targets (Beginner/Casual 1, Intermediate/Advanced 2, Expert 3). Worst-case Expert is now ~15 s instead of unbounded.
+
+**Session 17 auditor summary:** 6 findings (5 from the engine-upgrades audit + 1 from user device-testing feedback). All fixed. 232 tests passing across 9 suites (69 chessAI tests, up from 24).
 
 **49 audits total.** Every ship preceded by at least one audit.
