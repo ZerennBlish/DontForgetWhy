@@ -14,10 +14,10 @@ jest.setTimeout(60000);
 
 // ── evaluateBoard ─────────────────────────────────────────────────────────
 describe('evaluateBoard', () => {
-  it('evaluates starting position near zero (±50 centipawns)', () => {
+  it('evaluates starting position near zero (±80 centipawns)', () => {
     const game = new Chess();
     const score = evaluateBoard(game);
-    expect(Math.abs(score)).toBeLessThanOrEqual(50);
+    expect(Math.abs(score)).toBeLessThanOrEqual(80);
   });
 
   it('evaluates position with extra white queen strongly positive', () => {

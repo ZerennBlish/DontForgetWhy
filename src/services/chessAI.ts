@@ -140,6 +140,16 @@ export function evaluateBoard(game: Chess): number {
   const board = game.board();
   let score = 0;
 
+  // Positional counters collected during the main loop.
+  let whiteBishops = 0;
+  let blackBishops = 0;
+  const whitePawnFiles: number[] = [];
+  const blackPawnFiles: number[] = [];
+  let whiteKingRow = 0;
+  let whiteKingCol = 0;
+  let blackKingRow = 0;
+  let blackKingCol = 0;
+
   // chess.js board()[0] = rank 8, board()[7] = rank 1.
   // Our PSQTs are indexed a1..h8 (index 0 = a1).
   // For board[row][col]: psqtIndex = (7 - row) * 8 + col (white)
@@ -157,9 +167,25 @@ export function evaluateBoard(game: Chess): number {
       if (piece.type === 'k') {
         const kingTable = endgame ? KING_EG_TABLE : KING_MG_TABLE;
         positional = kingTable[piece.color === 'w' ? whiteIdx : blackIdx];
+        if (piece.color === 'w') {
+          whiteKingRow = row;
+          whiteKingCol = col;
+        } else {
+          blackKingRow = row;
+          blackKingCol = col;
+        }
       } else {
         const table = PIECE_SQUARE_TABLES[piece.type];
         positional = table[piece.color === 'w' ? whiteIdx : blackIdx];
+      }
+
+      if (piece.type === 'b') {
+        if (piece.color === 'w') whiteBishops++;
+        else blackBishops++;
+      }
+      if (piece.type === 'p') {
+        if (piece.color === 'w') whitePawnFiles.push(col);
+        else blackPawnFiles.push(col);
       }
 
       if (piece.color === 'w') {
@@ -168,6 +194,64 @@ export function evaluateBoard(game: Chess): number {
         score -= material + positional;
       }
     }
+  }
+
+  // Bishop pair bonus (~50 cp in open positions)
+  if (whiteBishops >= 2) score += 50;
+  if (blackBishops >= 2) score -= 50;
+
+  // Doubled pawns: -15 per extra pawn on the same file
+  for (let f = 0; f < 8; f++) {
+    const wCount = whitePawnFiles.filter((c) => c === f).length;
+    const bCount = blackPawnFiles.filter((c) => c === f).length;
+    if (wCount > 1) score -= 15 * (wCount - 1);
+    if (bCount > 1) score += 15 * (bCount - 1);
+  }
+
+  // Isolated pawns: -10 per pawn with no friendly pawn on adjacent files
+  for (const file of whitePawnFiles) {
+    const hasNeighbor = whitePawnFiles.some(
+      (f) => f === file - 1 || f === file + 1,
+    );
+    if (!hasNeighbor) score -= 10;
+  }
+  for (const file of blackPawnFiles) {
+    const hasNeighbor = blackPawnFiles.some(
+      (f) => f === file - 1 || f === file + 1,
+    );
+    if (!hasNeighbor) score += 10;
+  }
+
+  // King safety (middlegame only): count friendly pawns within 1 square
+  // of the king as a "pawn shield".
+  if (!endgame) {
+    let whitePawnShield = 0;
+    let blackPawnShield = 0;
+    for (const r of [whiteKingRow - 1, whiteKingRow, whiteKingRow + 1]) {
+      for (const c of [whiteKingCol - 1, whiteKingCol, whiteKingCol + 1]) {
+        if (r < 0 || r > 7 || c < 0 || c > 7) continue;
+        const p = board[r][c];
+        if (p && p.type === 'p' && p.color === 'w') whitePawnShield++;
+      }
+    }
+    for (const r of [blackKingRow - 1, blackKingRow, blackKingRow + 1]) {
+      for (const c of [blackKingCol - 1, blackKingCol, blackKingCol + 1]) {
+        if (r < 0 || r > 7 || c < 0 || c > 7) continue;
+        const p = board[r][c];
+        if (p && p.type === 'p' && p.color === 'b') blackPawnShield++;
+      }
+    }
+    score += whitePawnShield * 15;
+    score -= blackPawnShield * 15;
+  }
+
+  // Mobility: 3 cp per legal move for the side to move.
+  const currentMoves = game.moves().length;
+  const mobilityBonus = currentMoves * 3;
+  if (game.turn() === 'w') {
+    score += mobilityBonus;
+  } else {
+    score -= mobilityBonus;
   }
 
   return score;
@@ -214,6 +298,77 @@ function isTimeUp(): boolean {
   return Date.now() >= searchDeadline;
 }
 
+// ── Quiescence search ────────────────────────────────────────────────────
+// At depth 0, instead of returning a static eval (which can be wildly
+// misleading mid-capture sequence), search captures until the position is
+// "quiet". This avoids the horizon effect: the engine no longer thinks
+// "I'm up a knight!" at the top of a trade where it's about to be
+// recaptured for free.
+function quiescence(
+  game: Chess,
+  alpha: number,
+  beta: number,
+  maximizing: boolean,
+): number {
+  if (isTimeUp()) return evaluateBoard(game);
+
+  const standPat = evaluateBoard(game);
+
+  if (maximizing) {
+    if (standPat >= beta) return standPat;
+    if (standPat > alpha) alpha = standPat;
+
+    const captures = game
+      .moves({ verbose: true })
+      .filter((m) => m.captured);
+    if (captures.length === 0) return standPat;
+
+    const ordered = orderMoves(captures);
+    let best = standPat;
+    for (const move of ordered) {
+      // Delta pruning: if capturing this piece (+ margin) still can't
+      // reach alpha, skip.
+      const victimValue = PIECE_VALUES[move.captured!] || 0;
+      if (standPat + victimValue + 200 < alpha) continue;
+
+      game.move(move.san);
+      const score = quiescence(game, alpha, beta, false);
+      game.undo();
+
+      if (isTimeUp()) return best;
+      if (score > best) best = score;
+      if (score > alpha) alpha = score;
+      if (alpha >= beta) break;
+    }
+    return best;
+  } else {
+    if (standPat <= alpha) return standPat;
+    if (standPat < beta) beta = standPat;
+
+    const captures = game
+      .moves({ verbose: true })
+      .filter((m) => m.captured);
+    if (captures.length === 0) return standPat;
+
+    const ordered = orderMoves(captures);
+    let best = standPat;
+    for (const move of ordered) {
+      const victimValue = PIECE_VALUES[move.captured!] || 0;
+      if (standPat - victimValue - 200 > beta) continue;
+
+      game.move(move.san);
+      const score = quiescence(game, alpha, beta, true);
+      game.undo();
+
+      if (isTimeUp()) return best;
+      if (score < best) best = score;
+      if (score < beta) beta = score;
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+}
+
 // ── Minimax with alpha-beta pruning ───────────────────────────────────────
 function minimax(
   game: Chess,
@@ -223,8 +378,11 @@ function minimax(
   maximizing: boolean,
 ): number {
   if (isTimeUp()) return evaluateBoard(game);
-  if (depth === 0 || game.isGameOver()) {
+  if (game.isGameOver()) {
     return evaluateBoard(game);
+  }
+  if (depth === 0) {
+    return quiescence(game, alpha, beta, maximizing);
   }
 
   const moves = orderMoves(game.moves({ verbose: true }));
@@ -348,7 +506,7 @@ export const DIFFICULTY_LEVELS: DifficultyLevel[] = [
 // ── AI move with difficulty-based randomness ──────────────────────────────
 // Time budget per difficulty (ms). Iterative deepening uses whatever search
 // depth it can fit within this budget, up to level.depth.
-export const TIME_LIMITS_MS = [300, 500, 1000, 2000, 10000];
+export const TIME_LIMITS_MS = [300, 500, 1000, 2000, 5000];
 
 export function getAIMove(game: Chess, level: DifficultyLevel): string | null {
   if (game.isGameOver()) return null;

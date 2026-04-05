@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 15 (April 4, 2026)
+**Last updated:** Session 16 (April 5, 2026)
 
 ---
 
@@ -303,7 +303,7 @@ Voice roasts use the native `AlarmChannelModule` on ALARM stream because they pl
 
 ### Home as Entry Point (v1.9.0)
 - Home is the `initialRouteName` (was AlarmList)
-- Navigation flow: Home → sections (AlarmList, Reminders, Timers, Notepad, VoiceMemoList, Calendar, Games)
+- Navigation flow: Home → sections (AlarmList, Reminders, Timers, Notepad, VoiceMemoList, Calendar, Games). `Chess` route added to `RootStackParamList` in Session 16 — reached via GamesScreen.
 - AlarmListScreen is alarms-only (AlarmsTab.tsx deleted and absorbed in Session 9)
 - ReminderScreen is standalone screen with own `Reminders` route, header, background, nav
 - TimerScreen is standalone, owns all timer state/notification logic
@@ -368,13 +368,14 @@ All persistent storage migrated from `@react-native-async-storage/async-storage`
 | `voice_memos` | Voice memo metadata |
 | `active_timers` | Currently running timers |
 | `user_timers` | User-created custom timer presets |
+| `chess_game` | Session 16: single-row table (CHECK id=1) holding in-progress chess game — fen, playerColor, difficulty, moveHistory (JSON), takeBackUsed, blunderCount, startedAt, updatedAt |
 | `kv_store` | Key-value pairs for settings, game stats, widget pins, pending actions, flags |
 
 Note: `forget_log` table removed in Session 12 (ForgetLog feature deleted).
 
 ### KV store keys (partial list)
 Settings: `appSettings`, `appTheme`, `onboardingComplete`, `hapticsEnabled`, `voiceRoastsEnabled`, `voiceIntroPlayed`, `silenceAllAlarms`, `defaultTimerSound`, `bg_main`, `bg_overlay_opacity`, `note_custom_bg_color`, `note_custom_font_color`
-Game stats: `guessWhyStats`, `memoryMatchScores`, `sudokuBestScores`, `sudokuCurrentGame`, `dailyRiddleStats`, `triviaStats`, `triviaSeenQuestions`
+Game stats: `guessWhyStats`, `memoryMatchScores`, `sudokuBestScores`, `sudokuCurrentGame`, `dailyRiddleStats`, `triviaStats`, `triviaSeenQuestions`, `chessStats` (Session 16: `{gamesPlayed, wins, losses, draws, totalPoints}`)
 Widget pins: `widgetPinnedPresets`, `widgetPinnedAlarms`, `widgetPinnedReminders`, `widgetPinnedNotes`, `widgetPinnedVoiceMemos`
 Pending actions: `pendingNoteAction`, `pendingAlarmAction`, `pendingReminderAction`, `pendingTimerAction`, `pendingCalendarAction`, `pendingVoiceAction`, `pendingAlarmListAction`, `pendingReminderListAction`
 Ephemeral: `snoozing_{alarmId}`, `snoozeCount_{alarmId}`, `handledNotifIds`
@@ -480,3 +481,57 @@ Applied to: NotepadScreen, AlarmListScreen, ReminderScreen, VoiceMemoListScreen,
 - `windowSize={5}` — 2 screens above + current + 2 below rendered (default is 21)
 - `maxToRenderPerBatch={8}` — limits items rendered per JS frame
 - `initialNumToRender={8}` — only 8 items on first mount
+
+---
+
+## 13. Chess Engine Architecture (Session 16)
+
+### Files
+| File | Purpose |
+|------|---------|
+| `src/services/chessAI.ts` | Pure search/eval engine: minimax + alpha-beta, iterative deepening, quiescence, move ordering, board evaluation, time budget, difficulty levels |
+| `src/services/chessStorage.ts` | SQLite persistence — save/load/clear single in-progress game in `chess_game` table |
+| `src/services/blunderRoast.ts` | Bridges `analyzeMove` result to roast text selection with recent-roast deduping |
+| `src/data/chessRoasts.ts` | 5-tier roast pool (good/inaccuracy/mistake/blunder/catastrophe) + take-back pool, 58 total lines |
+| `src/data/chessAssets.ts` | Piece → image mapping, 12 custom Staunton PNGs (assets/chess/{w,b}{P,N,B,R,Q,K}.png) |
+| `src/hooks/useChess.ts` | All game state + AI scheduling + move handling + persistence + roast + take-back + resign |
+| `src/screens/ChessScreen.tsx` | Thin render shell — pre-game modal, board grid, captures, action bar, game-over overlay |
+
+### Search Pipeline
+- **minimax** (recursive, alpha-beta): at depth > 0 iterates ordered legal moves, passes down tightened alpha/beta.
+- **quiescence** (at depth 0): stand-pat + only search captures until position is quiet. Delta pruning skips captures whose best gain can't reach alpha. Prevents horizon-effect — AI no longer returns "up a knight" at the top of a trade it's about to lose.
+- **findBestMove** (iterative deepening): searches depth 1, then 2, …, up to maxDepth. After each completed depth, moves the PV to front of `ordered` so next depth searches it first. Carries alpha/beta across root siblings (pruning info from earlier siblings tightens searches for later ones — biggest single perf win in the audit).
+- **Time budget**: module-level `searchDeadline` set by findBestMove. minimax polls `isTimeUp()` at top of every call. When time runs out mid-depth, the partial depth is discarded and the previous completed depth's best move is returned. Guarantees the AI always responds within budget even if nominal depth would take longer.
+- **Move ordering**: `orderMoves` sorts by MVV-LVA (captures of high-value pieces by low-value attackers first) + check bonus. Applied at root AND inside minimax.
+
+### Evaluation Terms
+1. Material (pawn 100, knight 320, bishop 330, rook 500, queen 900, king 20000)
+2. Piece-square tables (standard Chess Programming Wiki values; middlegame + endgame king tables)
+3. Bishop pair (±50cp)
+4. Doubled pawns (−15cp per extra pawn on same file)
+5. Isolated pawns (−10cp per pawn with no neighbor file)
+6. King safety (middlegame only): pawn shield within 1 square of king, +15cp per shield pawn
+7. Mobility: 3cp per legal move for side to move
+
+### Difficulty Levels & Time Budgets
+Single source of truth in `chessAI.ts`: `DIFFICULTY_LEVELS` + `TIME_LIMITS_MS` (exported). `useChess.ts` imports `TIME_LIMITS_MS` to publish the progress budget — no parallel constants.
+
+| Index | Name | Max Depth | Time Budget | Randomness |
+|-------|------|-----------|-------------|------------|
+| 0 | Beginner | 2 | 300ms | 0.4 |
+| 1 | Casual | 3 | 500ms | 0.2 |
+| 2 | Intermediate | 4 | 1000ms | 0.05 |
+| 3 | Advanced | 5 | 2000ms | 0 |
+| 4 | Expert | 6 | 5000ms | 0 |
+
+Randomness path: find best move with deep search, then score ALL moves with static eval and pick randomly from candidates within threshold. Static-only comparison prevents mixing deep-search scores with static-eval scores (audit finding — deep vs static mixup surfaced tactical blunders as "equal to best").
+
+### useChess Hook — Key Patterns
+- **Chess instance in a ref**, re-render triggered by a version counter (`bump()`). Avoids expensive clone-on-every-move.
+- **Session ID** (`sessionIdRef`) — incremented on startGame, newGame, resign, unmount. Deferred callbacks (inner `setTimeout(0)` before getAIMove, blunder analysis timer) check session before mutating state → prevents stale AI moves firing after the user left/resigned/restarted.
+- **Refs mirror state** for sync access inside closures (`playerColorRef`, `difficultyRef`, `takeBackUsedRef`, `blunderCountRef`, `startedAtRef`) — setState is async and closures would see stale values in `saveCurrentGame`.
+- **AI scheduling**: 400ms pre-delay (feels less instant) → `InteractionManager.runAfterInteractions` → `setIsAIThinking(true)` → 400ms think delay → yield via inner `setTimeout(0)` (lets React commit progress-bar state + native animations start before JS blocks) → `getAIMove` runs synchronously → move applied + state updates.
+- **Restore from saved game**: replays all saved SAN moves on a fresh `new Chess()` to rebuild chess.js's internal `_history` (a raw FEN load produces an empty history, which silently breaks take-back AND move count).
+
+### Blunder Analysis
+Runs in a `setTimeout(0)` after every player move so the board renders first. Calls `analyzeMove(fenBefore, playedSan, 2)` which runs `findBestMove` at depth 2, then scores both the best move and the played move via shallow minimax (depth 1) — static eval alone misses tactical blunders like hanging a piece to a one-move recapture. Severity bucketed by centipawn loss: `good` <50, `inaccuracy` <150, `mistake` <300, `blunder` <600, `catastrophe` ≥600. Blunder + catastrophe increment `blunderCountRef` (feeds Memory Score penalty). Toast fades in/out via native-driver opacity; take-back has its own dedicated roast pool.

@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 15 (April 4, 2026)
+**Last updated:** Session 16 (April 5, 2026)
 
 ---
 
@@ -466,3 +466,25 @@
 - P2: Timer preset pin (`togglePinPreset`, `getPinnedPresets`, `unpinPreset`) tests not added in widgetPins.test.ts. Deferred — timer preset pins less critical than the 4 covered categories.
 
 **46 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+
+### Session 16 — P6 Chess Audit Findings
+
+**Round 1 (Codex + Gemini) — Chess AI and persistence:**
+
+- **P0: Root alpha-beta not carried across siblings** (chessAI.ts findBestMove). Every root move was searched with fresh `-Infinity, Infinity` bounds, so pruning info from one move never helped prune the next. Biggest single perf issue. Fixed by tightening alpha (max) / beta (min) as the loop finds better moves, and passing the updated bounds to subsequent `minimax()` calls. Also added PV reordering — after each completed depth, moves the best move to the front of `ordered` for the next iteration. Roughly 2-3× speedup at all depths, same move quality. Tests confirmed same mates/captures found.
+- **P0: Move counter shows "Move 0" on resume, take-back silently broken.** Saved chess games restored via `new Chess(saved.fen)` only — a FEN encodes the current position but no history. chess.js's internal `_history` array was empty after restore, so `game.history()` returned `[]` (move count=0) AND `game.undo()` became a no-op (take-back silently did nothing). Fixed by replaying every SAN move from `saved.moveHistory` onto a fresh `new Chess()` on load. Fallback to FEN-only if replay throws (degraded state, still playable).
+- **P0: Captured pieces wrong on pawn promotion** (ChessScreen.tsx). The `getCaptured` helper derived captures by comparing current board piece counts to starting counts. When a pawn promoted to a queen, the pawn count dropped → UI showed the pawn as "captured" even though it wasn't. Fixed by rewriting as `getCapturedPieces(game, color)` that iterates `game.history({ verbose: true })` and collects moves where `captured` is set and the moving color matches the opponent. History-based derivation is correct under promotion.
+- **P1: Randomness path compared deep-search scores to static-eval scores** (chessAI.ts getAIMove). Used `findBestMove` to get the anchor, scored it with static eval, then scored candidates with static eval — but the anchor was chosen by deep search, so the comparison was apples-to-oranges. A tactically-best move that looked mediocre statically could get "ties" that were actually hanging pieces. Fixed by evaluating ALL moves with static eval (including the anchor), sorting, then filtering within threshold. Randomness selection is now purely among statically-similar moves.
+- **P1: Inner setTimeout(0) in triggerAIMove was untracked.** The yielding `setTimeout(0)` that gives React time to commit state + start native animations before `getAIMove` blocks was not tracked by `clearTimers`. If the user resigned/started a new game/unmounted after the outer timer fired but before the inner callback ran, stale AI computation could fire on an unmounted component. Fixed by adding `sessionIdRef` (incremented on startGame/newGame/resign/unmount) and checking it inside the inner callback. Same guard added to the blunder-analysis setTimeout in makePlayerMove.
+- **P1: Blunder analysis ran at depth 1, too shallow.** Depth 1 only sees one ply of lookahead — misses obvious 2-ply tactical blunders. Bumped `ANALYSIS_DEPTH` to 2. Adds ~50-200ms per analysis but runs async on `setTimeout(0)` so it never blocks the AI move.
+- **P2: Progress bar freeze during AI think.** Initial animated progress bar used `useNativeDriver: false` with width interpolation, which runs on the JS thread. During `getAIMove` (up to 5s on Expert), JS is blocked → the bar froze mid-fill. Multiple attempted fixes: translateX + native driver (worked but visually rough), scaleX + transformOrigin (worked but overcomplicated). Final decision: stripped the animation entirely, replaced with a fixed-height "Thinking…" text container. Revisit post-P6.
+
+**Round 2 (Gemini) — Chess evaluation + quiescence:**
+
+- **P1: Horizon effect — AI stopped mid-capture sequence.** Benchmarks showed the AI repeatedly hanging pieces in forced trades. At depth 0, minimax returned raw static eval — fine for quiet positions, terrible mid-trade (AI thought "I'm up a knight!" the ply before recapture). Fixed by adding a `quiescence` function called at depth 0: stand-pat + only search captures (MVV-LVA ordered) until the position is quiet. Delta pruning skips captures whose best gain can't reach alpha. Measurable improvement in move quality at the same nominal depth.
+- **P2: Evaluation too material-only, no positional awareness.** Added mobility (3cp/move for side to move), bishop pair (±50cp), doubled pawns (−15cp per extra pawn on same file), isolated pawns (−10cp each), king-safety pawn shield (+15cp/pawn within 1 square of king, middlegame only). All collected in a single pass through the board using in-loop counters. Test threshold for starting-position eval widened from ±50 to ±80 to account for mobility's one-sided contribution.
+- **P2: Time limits drift between files.** Both `chessAI.ts` and `useChess.ts` had their own time-budget constants. Unified into a single exported `TIME_LIMITS_MS` in chessAI.ts that useChess imports — single source of truth, no drift risk.
+
+**Session 16 auditor summary:** 13 P0/P1 findings, 3 P2. All fixed. Performance improvement from audit fixes alone was ~2-3× at all depths (root alpha-beta + PV reordering). Quiescence + evaluation improvements added measurable move-quality gains confirmed via self-play benchmark test.
+
+**49 audits total.** Every ship preceded by at least one audit.

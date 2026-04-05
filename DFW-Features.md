@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 15 (April 4, 2026)
+**Last updated:** Session 16 (April 5, 2026)
 
 ---
 
@@ -57,7 +57,8 @@
 - **Memory Match** (3 difficulties, card flip animation, star rating). Header text-only (emoji stripped Session 12).
 - **Sudoku** (pure JS generator, difficulty = assistance level, no lose condition, pencil notes, save/resume)
 - **Daily Riddle** (146 riddles, deterministic daily, streak tracking, browse all)
-- **Memory Score** (5 games × 20 pts = 100. Ranks from "Who Are You Again?" to "The One Who Remembers"). Header text-only (emoji stripped Session 12).
+- **Chess** (Session 16) — vs CPU, 5 difficulty levels, iterative-deepening minimax with quiescence search. Player picks color + difficulty before each game. In-game roasts when you blunder (depth-2 sanity check after each move, 58-line roast pool across 5 severity tiers). One take-back per game with its own roast pool. Game state persists to SQLite across app close. Memory Score: 5/8/12/18/25 win points per difficulty, half for draw, -2 per blunder.
+- **Memory Score** (now 6 games — Chess added Session 16. Ranks from "Who Are You Again?" to "The One Who Remembers"). Header text-only (emoji stripped Session 12).
 
 ### Home Screen Widgets (4)
 - **Memory's Timeline (DetailedWidget):** Header "Memory's Timeline", two-column timers/alarms, reminder bars, nav capsules colored per section (sectionAlarm/sectionTimer/sectionReminder), footer "Don't Forget Why". Themed with section colors (Session 11).
@@ -91,13 +92,15 @@
 - Delete buttons removed from cards — swipe replaces them, Pin stays as capsule button
 - GestureHandlerRootView wraps App.tsx for gesture support
 
-### Emoji Picker Modal (Sessions 10, 12)
-- EmojiPickerModal: bottom sheet modal with flat grid of ~133 curated emoji from emojiData.ts
+### Emoji Picker Modal (Sessions 10, 12, 16)
+- EmojiPickerModal: bottom sheet modal with 11 categories × ~10 emojis each = 105 labeled emojis (Session 16 overhaul)
+- Categories: Health, Routine, Food, Fitness, Home, Work/School, Finance, People, Travel, Pets, More
+- Layout: horizontal capsule category tabs + 5-column labeled grid (emoji + label per cell). Container height 45%. Replaces the flat 133-emoji grid.
+- Quick emoji rows are now context-specific (Session 16):
+  - CreateAlarmScreen: 8 wake-up/alarm-specific emojis
+  - CreateReminderScreen: 8 recurring-event emojis
 - Replaces fragile TextInput keyboard emoji hack (broke 3 times during filter attempts)
-- Quick emoji row on create screens: 12 practical preset emoji (💊🏥🏋️🐾💼🎒☕🍳🚗📅🛏️🧹) + clear button (✕, red border) + "+" for full modal. Covers: meds, appointment, workout, pet, work, school, coffee, cooking, commute, event, bedtime, chores.
-- Same quick row on both CreateAlarmScreen and CreateReminderScreen (unified Session 12)
 - AlarmCard emoji made optional: no default fallback emoji, shows AlarmIcon when none selected
-- emojiData.ts curated (Session 12): butterfly → service dog, puzzle → walking, added store/bank/toothbrush/skincare/water/trash/laundry
 
 ### Button Hierarchy (Sessions 10-11 — COMPLETE)
 - Shared `buttonStyles.ts` with `getButtonStyles(colors)` returning 4 types × 2 sizes:
@@ -377,5 +380,41 @@ Both screens:
 - Add `keyboardVisible` state with `Keyboard.addListener('keyboardDidShow'/'keyboardDidHide')`
 - Wrap the Done button in `{keyboardVisible && (...)}`
 - Bottom time-modal Done button (paired with Cancel) is NOT affected
+
+---
+
+## 9. Chess (Session 16)
+
+### Pre-Game Setup
+Card modal appears when no game is in progress. User picks:
+- **Color** — tap white king or black king (large piece image + label, selected gets accent border)
+- **Difficulty** — 5 capsule pills (Beginner/Casual/Mid/Advanced/Expert), default Intermediate (index 2)
+- **Play** button — full-width accent, starts the game. If player picked black, AI moves first.
+
+### Active Game Screen
+Top-to-bottom layout: header (difficulty name + move number) → "Thinking…" indicator (fixed-height container reserves the space, text only shows while AI computes) → opponent's captured pieces row → board → player's captured pieces row → action bar (Take Back + Resign pills) → roast toast (absolute, above safe-area bottom).
+
+### Board
+8×8 nested Views. Square size = `(screenWidth − 32) / 8`. Light/dark squares use accent color at different opacities. Selected square highlighted with `colors.accent + '90'`. Valid destination squares show a small dot (empty) or a full-border ring (enemy piece). Rank labels (1-8) inside col 0 squares, file labels (a-h) inside row 7 squares — both respect board orientation (when playing black the board is rotated 180° so the player's pieces are at the bottom).
+
+Pieces: custom AI-generated Staunton PNGs from `assets/chess/` (wK, wQ, wR, wB, wN, wP, bK, bQ, bR, bB, bN, bP). Pawn promotion hardcoded to queen.
+
+### Captured Pieces
+Derived from `game.history({ verbose: true })` — iterates moves with `captured` set and groups by color. Correct under promotion (doesn't flag a promoted pawn as "captured"). Opponent captures shown above the board, player captures below, rendered as 18×18 piece images.
+
+### Take-Back
+One per game. Pill text changes "Take Back" → "Used" and opacity drops to 0.4 when spent. Guarded by `!takeBackUsed && isPlayerTurn && history.length >= 2` — undoes player's last move + AI's response (two plies). Pending AI timers are cancelled. Fires a dedicated take-back roast.
+
+### Resign
+Red-tinted pill with `Alert.alert` confirmation. Sets `gameResult='resigned'`, `winner=opposite`, clears saved game, records a loss in chessStats.
+
+### Game-Over Overlay
+Full-screen backdrop + centered card with title ("Checkmate!" / "Stalemate" / "Draw" / "You Resigned"), contextual subtitle ("You won!" / "You lost" / "It's a draw"), and a "New Game" button that clears state and returns to the pre-game modal.
+
+### Roast Toast
+Severity-tinted background (good=accent+30, inaccuracy=amber, mistake=orange, blunder=red, catastrophe=deep red, takeBack=accent). Animated fade in/out via native-driver opacity, 4-second hold, auto-clears.
+
+### Persistence
+Every move triggers `saveCurrentGame()` which writes to `chess_game` (single-row table). On app relaunch, `loadChessGame()` reads the row, replays moveHistory on a fresh `new Chess()` (rebuilds chess.js internal history so take-back still works), and if it's the AI's turn in the restored position it automatically triggers the AI. Game row cleared on checkmate/stalemate/draw/resign/newGame.
 
 Prevents an orphaned "Done" button from lingering after keyboard dismissal via elsewhere-tap.

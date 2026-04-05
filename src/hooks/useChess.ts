@@ -6,6 +6,7 @@ import {
   getAIMove,
   analyzeMove,
   DIFFICULTY_LEVELS,
+  TIME_LIMITS_MS,
 } from '../services/chessAI';
 import {
   saveChessGame,
@@ -21,13 +22,6 @@ type Cell = { square: Square; type: PieceSymbol; color: Color } | null;
 const AI_DELAY_MS = 400;
 const ROAST_DURATION_MS = 4000;
 const ANALYSIS_DEPTH = 2;
-const AI_TIME_BUDGETS: Record<number, number> = {
-  0: 300,
-  1: 500,
-  2: 1000,
-  3: 2000,
-  4: 5000,
-};
 
 export interface UseChessReturn {
   // Game state
@@ -216,7 +210,7 @@ export function useChess(): UseChessReturn {
       }
       const level =
         DIFFICULTY_LEVELS[difficultyRef.current] ?? DIFFICULTY_LEVELS[1];
-      const budget = AI_TIME_BUDGETS[difficultyRef.current] ?? 1500;
+      const budget = TIME_LIMITS_MS[difficultyRef.current] ?? 1500;
 
       // Publish the budget/start so the UI can start its progress bar
       // animation BEFORE getAIMove blocks the JS thread. The setTimeout(0)

@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 15 (April 4, 2026)
+**Last updated:** Session 16 (April 5, 2026)
 
 ---
 
@@ -300,6 +300,42 @@ Card labels describe visual state (e.g., AlarmCard reads "7:00 AM alarm, Wake up
 
 ### Keyboard-visible Done button (Session 15)
 CreateAlarmScreen + CreateReminderScreen's small "Done" button under type-in TextInputs only renders when `Keyboard` listeners report the soft keyboard visible. When keyboard dismisses via scroll/tap-elsewhere, the Done button disappears too. Bottom time-modal Done button (paired with Cancel) is unaffected — it's the modal's own confirm action. Prevents orphaned UI.
+
+### P5 Google Calendar deferred (Session 16)
+Google Calendar Sync requires Firebase Auth + Google OAuth sign-in. That directly conflicts with the "no accounts, everything stays on your phone, we don't want your data" brand promise surfaced in onboarding, Settings, and the Vault privacy text. Ripping that promise out for a sync feature most users won't touch is a bad trade while the app is still pre-monetization. Revisit only when (a) user base justifies the complexity AND (b) a flow exists that keeps sign-in feeling optional/local. Until then, users keep using the in-app calendar.
+
+### Chess AI: time-budgeted iterative deepening (Session 16)
+AI searches depth 1 first, then 2, then 3, etc., aborting the moment a module-level `searchDeadline` passes. Each completed depth overwrites the best move; a partial depth is discarded. The previous completed depth's PV (best move) is moved to the front of the root move list for the next iteration — that's the whole point of IDS. Guarantees the AI always responds within its difficulty's time budget (300ms/500ms/1s/2s/5s) regardless of position complexity. Alternative approach (fixed depth) was tested and produced wildly variable response times — 50ms on endgame positions, 15+ seconds on tactical middlegames at depth 5.
+
+### Chess AI: quiescence search at depth 0 (Session 16)
+At depth 0, instead of returning `evaluateBoard(game)` directly, run `quiescence()` — a capture-only search that continues until the position is "quiet". Prevents the horizon effect where the AI stops mid-trade thinking "I'm up a knight!" right before the recapture that actually loses material. Delta pruning skips captures whose best possible gain can't reach alpha (saves work on clearly bad captures). Added in Session 16 after self-play benchmarks showed the AI repeatedly hanging pieces in forced trades. Measurable improvement in move quality at the same nominal search depth.
+
+### Chess AI: root alpha-beta carries across siblings (Session 16)
+Initial `findBestMove` called `minimax(…, -Infinity, Infinity, …)` fresh for every root move, meaning pruning info from one root move never helped narrow the search for the next. Audit finding — the biggest single performance fix. Now the root loop tightens alpha (for max) or beta (for min) as it finds better moves, passing the tightened bounds to subsequent root siblings' minimax calls. Roughly 2-3× speedup across all depths without changing move quality. Tests confirmed same mates/captures found.
+
+### Chess AI: static-eval consistency in randomness path (Session 16)
+Old `getAIMove` randomness path scored candidates with deep minimax and compared them to the anchor move's static eval — different scales, tactical blunders surfaced as "equal" to the deep-searched best and got randomly selected. Audit fix: evaluate ALL moves (including the anchor) with static eval, sort, then pick randomly from candidates within threshold. Randomness is meant to introduce human-like noise, not to accidentally pick tactical blunders.
+
+### Chess AI: evaluation terms tuned for cheap correctness (Session 16)
+`evaluateBoard` adds mobility (3cp/move for side to move), bishop pair (±50cp), doubled pawns (−15cp each), isolated pawns (−10cp each), king-safety pawn shield (+15cp/pawn within 1 square of king, middlegame only) on top of material + piece-square tables. All terms collected in a single pass through the board via in-loop counters (no second scan). Mobility IS a second `game.moves()` call per eval — acceptable trade for meaningful positional awareness. Test threshold for starting-position eval widened from ±50 to ±80 to account for mobility's one-sided contribution (the side to move gets the bonus, so starting position scores ~60 when white is to move).
+
+### Chess: custom Staunton piece assets, not emoji/unicode (Session 16)
+Unicode chess symbols (♔♕♖♗♘♙) render inconsistently across Android devices and themes. Emoji chess pieces look toyish and don't respect the app's visual language. ChatGPT-generated Staunton-style PNGs (12 files, 6 per color) give us consistent, readable, theme-neutral pieces across all devices. Same decision pattern as the Icons.tsx View-based replacements for emoji on HomeScreen/Settings.
+
+### Chess: one take-back per game (Session 16)
+Dedicated take-back roast pool. "One" is enough to forgive a single fat-finger, not enough to undo an entire losing plan. Matches the app's forgiving-but-judging personality. Used take-back toggles the button to "Used" at 0.4 opacity — visible, not hidden (user should see they've already spent their mulligan).
+
+### Chess: SQLite persistence replays moves, doesn't just load FEN (Session 16)
+Saved chess games restore via replaying every SAN move from `moveHistory` onto a fresh `new Chess()`, NOT by loading the FEN directly. Reason: a FEN string encodes only the current position. chess.js's internal `_history` array is what powers `undo()`, and loading a FEN alone leaves that array empty. Without replay, take-back silently breaks AND `game.history()` returns `[]` (so the move counter shows "Move 0" after resume). Fallback path loads FEN alone if replay throws — degraded state but playable.
+
+### Chess progress bar: simple text, not animated bar (Session 16)
+Initially built an animated progress bar for AI thinking. Four attempts:
+1. Width interpolation + `useNativeDriver: false` → animation runs on JS thread, freezes for the full duration of `getAIMove` (up to 5s on Expert) since that's exactly when JS is blocked.
+2. Width + native driver → not supported; native driver can only animate transform/opacity.
+3. `translateX` on a fill bar clipped by `overflow: hidden` parent, `useNativeDriver: true` → works, keeps ticking during JS block, but complex markup and interpolate math.
+4. `scaleX` with `transformOrigin: '0% 50%'` → simpler, also native.
+
+All approaches had rough edges during audit (timing misalignment, layout shift when toggling visibility). Final decision: strip the animation entirely, replace with a fixed-height 24px container that shows plain "Thinking…" text via opacity toggle. Revisit after P6 ships. Lesson: don't ship an animation that visibly breaks on the most common code path (long AI thinks).
 
 ### `light` theme is Ocean (Session 13)
 Rather than adding Ocean as a 7th theme, replaced the original Light theme entirely. Ocean has better contrast (darker slate text vs gray), more distinctive personality (blue-tinted background vs neutral gray), and stronger section colors. The old Light was generic — Ocean has character.

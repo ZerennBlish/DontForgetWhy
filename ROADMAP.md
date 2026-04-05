@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 15 (April 4, 2026)
+### Source of Truth · Updated: Session 16 (April 5, 2026)
 
 ---
 
@@ -10,9 +10,9 @@
 | **Current Version** | v1.12.0 (versionCode 29) — P4.5 Stability Sprint |
 | **Branch** | `dev` |
 | **Production Status** | ✅ v1.12.0 submitted to Google Play |
-| **Current Focus** | Session 15 complete: decomposition, accessibility, asset compression, OOM prevention, tests |
+| **Current Focus** | P6 Chess in progress — Chess AI + screen shipped locally, Checkers not started |
 | **Blocked By** | Nothing |
-| **Next Action** | P5 Google Calendar Sync or P6 Chess/Checkers |
+| **Next Action** | Chess polish pass + Checkers implementation, then P6 production build |
 | **EAS Credits** | ~35 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — 68 clips shipped |
@@ -33,9 +33,9 @@
 | — | Session 14 Onboarding Overhaul | ✅ Done | Prod only |
 | 4 | The Vault (Backup & Restore) | ✅ Done | Dev + Prod |
 | 4.5 | Stability Sprint | ✅ Done | Prod only |
-| 5 | Google Calendar Sync | ⬜ Waiting | Dev + Prod |
+| 5 | Google Calendar Sync | ⏭️ Deferred | Dev + Prod |
 | 5.5 | Premium Foundation | ⬜ Waiting | Prod only |
-| 6 | Chess + Checkers + Blunder Roast | ⬜ Waiting | Prod only |
+| 6 | Chess + Checkers + Blunder Roast | 🚧 In Progress | Prod only |
 | 6.5 | Voice Content Expansion | ⬜ Waiting | Prod only |
 | 7 | Pro Tier + Billing | ⬜ Waiting | Multiple |
 | 8 | Firebase Online + Social | ⬜ Waiting | Prod |
@@ -121,26 +121,16 @@
 
 ---
 
-## PHASE 5 — GOOGLE CALENDAR SYNC
+## PHASE 5 — GOOGLE CALENDAR SYNC ⏭️ DEFERRED
 
-**Version Target:** v1.12.0
-**Branch:** `dev`
-**New deps:** `expo-auth-session` + Firebase Auth
-**Build cost:** 1 dev build + 1 production build
-**Firebase:** Activate Firebase here. Auth only — do NOT activate Firestore yet.
+**Deferred Session 16.** Requires Google sign-in (Firebase Auth + OAuth), which conflicts with the "no accounts, we don't want your data" brand promise. Revisit only when user base justifies the complexity AND a flow exists that keeps sign-in optional/local-feeling. Until then, users keep using the in-app calendar.
 
-### Tasks
-
-- [ ] Firebase project setup (Auth only)
-- [ ] Google OAuth via expo-auth-session
-- [ ] Pull Google Calendar events into Today section + CalendarScreen dots
-- [ ] Sync settings UI in SettingsScreen
-- [ ] Optional: push DFW alarms/reminders to Google Calendar
-
-### Audit Gate
-- [ ] Full dual audit before production build
-- [ ] `npx tsc --noEmit` — 0 errors
-- [ ] Increment version + versionCode
+**Original scope (preserved):**
+- Firebase project setup (Auth only)
+- Google OAuth via expo-auth-session
+- Pull Google Calendar events into Today section + CalendarScreen dots
+- Sync settings UI in SettingsScreen
+- Optional: push DFW alarms/reminders to Google Calendar
 
 ---
 
@@ -158,7 +148,7 @@
 - [ ] **5.5.3 Backup entitlement flag** — export/import entitlement with .dfw backup
 - [ ] **5.5.4 Billing plumbing (hidden)** — Google Play Billing built but not user-facing
 - [ ] **5.5.5 Pro feature gate scaffold** — useEntitlement() hook, apply gates
-- [ ] **5.5.6 Emoji picker overhaul** — Replace generic emoji grid with 100 purpose-driven labeled icons grouped by category (Health, Food, Home, Exercise, People, Pets, Transport, Work, Tech, Misc). Each cell shows emoji + label text. 4-column layout with section headers. Designed for productivity context — what people actually set alarms and reminders for.
+- [x] **5.5.6 Emoji picker overhaul** ✅ Shipped early in Session 16. 11 categories, 105 labeled emojis (Health, Routine, Food, Fitness, Home, Work/School, Finance, People, Travel, Pets, More). EmojiPickerModal: horizontal capsule category tabs + 5-column labeled grid, container height 45%. Quick emoji differentiated per context: alarms get 8 wake-up emojis, reminders get 8 recurring-event emojis.
 
 ### Founding Tiers
 - **Founding Tester** — closed testing participants
@@ -172,7 +162,7 @@
 
 ---
 
-## PHASE 6 — CHESS + CHECKERS + BLUNDER ROAST
+## PHASE 6 — CHESS + CHECKERS + BLUNDER ROAST 🚧 IN PROGRESS
 
 **Version Target:** v1.14.0
 **Branch:** `dev`
@@ -181,13 +171,29 @@
 
 ### Tasks
 
-- [ ] **6.1 Chess vs CPU** — chess.js, 2+ difficulty levels, Memory Score integration
-- [ ] **6.2 Blunder Roast** — detect blunders, trigger sarcastic voice/text roasts
+- [x] **6.1 Chess vs CPU** ✅ Session 16. chess.js, 5 difficulty levels, custom AI-generated Staunton piece PNGs, Memory Score integrated. Iterative-deepening minimax with alpha-beta, MVV-LVA move ordering, quiescence search, time-budgeted search (300ms → 5s per difficulty). Full hook (useChess.ts) + screen (ChessScreen.tsx). Game state persists to SQLite across app close.
+- [x] **6.2 Blunder Roast (text)** ✅ Session 16. 5 severity tiers + take-back pool, 58 roast lines, analyzeMove runs depth-2 shallow check per player move, fires toast with fade in/out. Voice clips deferred to P6.5.
 - [ ] **6.3 Checkers vs CPU** — pure JS, 2+ difficulty levels, Memory Score integration
-- [ ] **6.4 Memory Score Expansion** — add Chess + Checkers scoring to 5-game system
+- [x] **6.4 Memory Score Expansion (Chess)** ✅ Session 16. Chess scoring integrated: 5/8/12/18/25 pts per win by difficulty, half points for draw, -2 per blunder, min 0 per game. Checkers scoring deferred until Checkers ships.
+
+### Chess Design (shipped in Session 16)
+- 5 difficulty levels: Beginner (300ms), Casual (500ms), Intermediate (1s), Advanced (2s), Expert (5s)
+- Time-limited iterative deepening — AI searches as deep as it can within budget, gracefully falls back to best move from previous completed depth
+- Quiescence search at depth 0 prevents horizon-effect blunders (AI no longer stops mid-capture thinking it's up material)
+- Evaluation: material + PST + mobility (3cp/move) + bishop pair (50cp) + doubled/isolated pawns + king safety pawn shield
+- One take-back per game, dedicated roast pool
+- Player chooses color (w/b) and difficulty before each game
+- Custom AI-generated Staunton piece assets (ChatGPT) — 12 PNGs, not emoji/unicode
+
+### Still to do (Chess polish)
+- Testing pass on physical device at each difficulty
+- Checkers implementation
+- Blunder Roast voice clips (deferred to P6.5)
 
 ### Audit Gate
-- [ ] Full dual audit before production build
+- [x] **Session 16 Audit Round 1 (Codex)** — findings fixed (see DFW-Bug-History.md)
+- [x] **Session 16 Audit Round 2 (Gemini)** — findings fixed
+- [ ] Final full dual audit before production build
 - [ ] `npx tsc --noEmit` — 0 errors
 - [ ] Increment version + versionCode
 
@@ -355,3 +361,4 @@
 | Apr 4 | Session 14 P4 Vault complete. Export/Import Memories, SAF auto-export, transactional restore, manifest validation. 2 audit rounds, all findings fixed. |
 | Apr 4 | Roadmap restructured. P4.5 Stability Sprint, P5.5 Premium Foundation, P6.5 Voice Expansion added. Named founding tiers. Blunder Roast. |
 | Apr 4 | Session 15 P4.5 Stability Sprint complete. v1.12.0 shipped. NotepadScreen + AlarmListScreen decomposed. Full a11y pass. 10 PNGs → WebP (30 MB saved). OOM prevention on 5 FlatLists. Jest: 162 tests across 7 suites. Package audit clean. |
+| Apr 5 | Session 16 P6 Chess in progress. chess.js + custom Staunton piece assets, iterative-deepening minimax w/ quiescence search, 5 difficulties (300ms → 5s), full game hook + screen, SQLite persistence, 58 blunder-roast lines, Memory Score integration. Emoji picker overhaul shipped: 11 categories, 105 labeled emojis, context-specific quick-picker rows. P5 Google Calendar deferred (conflicts with no-accounts brand). Two audit rounds (Codex + Gemini), all findings fixed. Checkers not started. |

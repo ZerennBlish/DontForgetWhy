@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 14 (April 4, 2026)
+**Last updated:** Session 16 (April 5, 2026)
 
 ---
 
@@ -158,3 +158,90 @@ interface WidgetTheme {
   sectionNotepad: string; sectionVoice: string; sectionTimer: string; sectionGames: string;
 }
 ```
+
+---
+
+## 9. Chess (Session 16)
+
+### SavedChessGame
+
+```typescript
+interface SavedChessGame {
+  fen: string;              // chess.js FEN — current position only
+  playerColor: 'w' | 'b';
+  difficulty: number;       // 0..4 index into DIFFICULTY_LEVELS
+  moveHistory: string[];    // SAN moves in order — replayed on load
+  takeBackUsed: boolean;
+  blunderCount: number;     // player's blunders + catastrophes this game
+  startedAt: string;        // ISO
+  updatedAt: string;        // ISO
+}
+```
+
+### chess_game table
+
+```sql
+CREATE TABLE IF NOT EXISTS chess_game (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  fen TEXT NOT NULL,
+  playerColor TEXT NOT NULL CHECK (playerColor IN ('w', 'b')),
+  difficulty INTEGER NOT NULL CHECK (difficulty BETWEEN 0 AND 4),
+  moveHistory TEXT NOT NULL DEFAULT '[]',
+  takeBackUsed INTEGER NOT NULL DEFAULT 0,
+  blunderCount INTEGER NOT NULL DEFAULT 0,
+  startedAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+```
+
+Single-row table (id=1 enforced via CHECK). `moveHistory` stored as JSON string, `takeBackUsed` as 0/1. One active game at a time; cleared on win/loss/draw/resign/newGame. FEN is stored for quick restore check, but history replay is canonical — loading via FEN alone produces an empty chess.js history and silently breaks take-back + move counter.
+
+### BlunderResult (analyzeMove output)
+
+```typescript
+interface BlunderResult {
+  severity: 'good' | 'inaccuracy' | 'mistake' | 'blunder' | 'catastrophe';
+  centipawnLoss: number;  // always >= 0, player's perspective
+  bestMove: string | null;  // SAN of best move at given depth
+}
+```
+
+Severity bucketing: `good` <50cp, `inaccuracy` <150cp, `mistake` <300cp, `blunder` <600cp, `catastrophe` ≥600cp.
+
+### DifficultyLevel
+
+```typescript
+interface DifficultyLevel {
+  name: string;       // 'Beginner' | 'Casual' | 'Intermediate' | 'Advanced' | 'Expert'
+  depth: number;      // max iterative-deepening depth (2..6)
+  randomness: number; // 0 = always best; higher = static-eval noise threshold (cp/100)
+}
+```
+
+Paired with module-level `TIME_LIMITS_MS = [300, 500, 1000, 2000, 5000]` (ms per difficulty). This array is the single source of truth — `useChess` imports it for the thinking indicator budget, `getAIMove` uses it to cap iterative deepening.
+
+### chessStats (kv_store)
+
+```typescript
+interface ChessStats {
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  totalPoints: number;  // cumulative across all games (wins + half-draw − 2 × blunders, floor 0 per game)
+}
+```
+
+Stored as JSON string under kv_store key `chessStats`. Composite Memory Score derived via `scoreChess`: `cap(totalPoints / 5, 20)` — scales cumulative chess points into the 0-20 per-game Memory Score band.
+
+### Chess Scoring by Difficulty
+
+| Difficulty | Win points | Draw points |
+|------------|-----------|-------------|
+| Beginner | 5 | 2.5 |
+| Casual | 8 | 4 |
+| Intermediate | 12 | 6 |
+| Advanced | 18 | 9 |
+| Expert | 25 | 12.5 |
+
+Blunder penalty: −2 cp per blunder/catastrophe committed during the game. Per-game minimum: 0 (never goes negative). Resignation counts as a loss (0 points).
