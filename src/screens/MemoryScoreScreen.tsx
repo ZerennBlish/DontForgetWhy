@@ -112,7 +112,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   const [triviaStats, setTriviaStats] = useState<TriviaStats>(defaultTriviaStats);
   const [compositeScore, setCompositeScore] = useState<CompositeScore>({
     total: 0,
-    breakdown: { guessWhy: 0, memoryMatch: 0, sudoku: 0, dailyRiddle: 0, trivia: 0 },
+    breakdown: { guessWhy: 0, memoryMatch: 0, sudoku: 0, dailyRiddle: 0, trivia: 0, chess: 0 },
   });
 
   const loadAllStats = useCallback(async () => {

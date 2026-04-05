@@ -18,6 +18,7 @@ import CreateReminderScreen from './src/screens/CreateReminderScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
+import ChessScreen from './src/screens/ChessScreen';
 import NotepadScreen from './src/screens/NotepadScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import VoiceRecordScreen from './src/screens/VoiceRecordScreen';
@@ -216,6 +217,11 @@ function AppNavigator() {
           <Stack.Screen
             name="Trivia"
             component={TriviaScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="Chess"
+            component={ChessScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen

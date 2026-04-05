@@ -174,6 +174,22 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
     console.error('[DB] Failed to create kv_store table:', e);
   }
 
+  try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS chess_game (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      fen TEXT NOT NULL,
+      playerColor TEXT NOT NULL CHECK (playerColor IN ('w', 'b')),
+      difficulty INTEGER NOT NULL CHECK (difficulty BETWEEN 0 AND 4),
+      moveHistory TEXT NOT NULL DEFAULT '[]',
+      takeBackUsed INTEGER NOT NULL DEFAULT 0,
+      blunderCount INTEGER NOT NULL DEFAULT 0,
+      startedAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create chess_game table:', e);
+  }
+
   console.log('[DB] _initSchema complete');
 }
 

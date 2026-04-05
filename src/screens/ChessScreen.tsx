@@ -1,0 +1,664 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ImageBackground,
+  Image,
+  Dimensions,
+  Alert,
+  Animated,
+} from 'react-native';
+import type { Chess } from 'chess.js';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../theme/ThemeContext';
+import { hapticLight } from '../utils/haptics';
+import BackButton from '../components/BackButton';
+import HomeButton from '../components/HomeButton';
+import { useChess } from '../hooks/useChess';
+import { getPieceImage } from '../data/chessAssets';
+import { DIFFICULTY_LEVELS } from '../services/chessAI';
+import type { RootStackParamList } from '../navigation/types';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Chess'>;
+
+const DIFFICULTY_LABELS = ['Beginner', 'Casual', 'Mid', 'Advanced', 'Expert'];
+const PIECE_NAMES: Record<string, string> = {
+  p: 'pawn',
+  n: 'knight',
+  b: 'bishop',
+  r: 'rook',
+  q: 'queen',
+  k: 'king',
+};
+type BoardCell = { square: string; type: string; color: 'w' | 'b' } | null;
+
+// ── Helpers: visual grid → chess square & labels ────────────────
+function squareForCell(
+  row: number,
+  col: number,
+  playerColor: 'w' | 'b',
+): string {
+  if (playerColor === 'b') {
+    return `${'hgfedcba'[col]}${row + 1}`;
+  }
+  return `${'abcdefgh'[col]}${8 - row}`;
+}
+function rankLabel(row: number, playerColor: 'w' | 'b'): string {
+  return playerColor === 'b' ? String(row + 1) : String(8 - row);
+}
+function fileLabel(col: number, playerColor: 'w' | 'b'): string {
+  return playerColor === 'b' ? 'hgfedcba'[col] : 'abcdefgh'[col];
+}
+function isLightSquare(row: number, col: number): boolean {
+  // Even parity = light square, holds for both orientations
+  // (180° rotation preserves (row+col) parity).
+  return (row + col) % 2 === 0;
+}
+
+// Return the list of piece types of `color` that were captured during the
+// game (i.e. captured BY the opponent). Derived from chess.js verbose
+// history so promotions don't wrongly flag the original pawn as captured.
+function getCapturedPieces(game: Chess, color: 'w' | 'b'): string[] {
+  const history = game.history({ verbose: true });
+  const captured: string[] = [];
+  for (const move of history) {
+    if (move.captured && move.color !== color) {
+      captured.push(move.captured);
+    }
+  }
+  return captured;
+}
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const BOARD_H_PADDING = 16;
+const BOARD_SIZE = SCREEN_WIDTH - BOARD_H_PADDING * 2;
+const SQUARE_SIZE = BOARD_SIZE / 8;
+
+export default function ChessScreen({ navigation }: Props) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const chess = useChess();
+
+  const [selectedColor, setSelectedColor] = useState<'w' | 'b'>('w');
+  const [selectedDifficulty, setSelectedDifficulty] = useState(2);
+
+  const roastFade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(roastFade, {
+      toValue: chess.currentRoast ? 1 : 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [chess.currentRoast, roastFade]);
+
+  const severityBg: Record<string, string> = useMemo(
+    () => ({
+      good: colors.accent + '30',
+      inaccuracy: '#F59E0B' + '30',
+      mistake: '#F97316' + '30',
+      blunder: '#EF4444' + '30',
+      catastrophe: '#DC2626' + '50',
+      takeBack: colors.accent + '30',
+    }),
+    [colors.accent],
+  );
+
+  const handleResignPress = () => {
+    Alert.alert('Resign?', 'Are you sure you want to resign this game?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Resign',
+        style: 'destructive',
+        onPress: () => {
+          hapticLight();
+          chess.resign();
+        },
+      },
+    ]);
+  };
+
+  const gameOverTitle = (): string => {
+    switch (chess.gameResult) {
+      case 'checkmate': return 'Checkmate!';
+      case 'stalemate': return 'Stalemate';
+      case 'draw': return 'Draw';
+      case 'resigned': return 'You Resigned';
+      default: return 'Game Over';
+    }
+  };
+  const gameOverSubtitle = (): string => {
+    if (chess.gameResult === 'stalemate' || chess.gameResult === 'draw') {
+      return "It's a draw";
+    }
+    if (chess.gameResult === 'resigned') return 'You lost';
+    if (chess.gameResult === 'checkmate') {
+      return chess.winner === chess.playerColor ? 'You won!' : 'You lost';
+    }
+    return '';
+  };
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 8,
+        },
+        headerBack: { position: 'absolute', left: 20, top: insets.top + 10 },
+        headerHome: { position: 'absolute', left: 64, top: insets.top + 10 },
+        title: { fontSize: 26, fontWeight: '800', color: colors.overlayText },
+        body: { flex: 1, paddingHorizontal: BOARD_H_PADDING },
+        centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+        loadingText: { color: colors.overlayText, fontSize: 15 },
+
+        // Pre-game modal
+        preGameCard: {
+          backgroundColor: colors.card,
+          borderRadius: 16,
+          padding: 20,
+          marginTop: 24,
+        },
+        preGameTitle: {
+          fontSize: 20,
+          fontWeight: '700',
+          color: colors.overlayText,
+          textAlign: 'center',
+          marginBottom: 18,
+        },
+        sectionLabel: {
+          fontSize: 13,
+          fontWeight: '600',
+          color: colors.overlayText,
+          marginBottom: 10,
+          opacity: 0.8,
+        },
+        colorRow: {
+          flexDirection: 'row',
+          gap: 12,
+          marginBottom: 20,
+        },
+        colorButton: {
+          flex: 1,
+          backgroundColor: colors.background,
+          borderRadius: 12,
+          paddingVertical: 14,
+          alignItems: 'center',
+          borderWidth: 2,
+          borderColor: 'transparent',
+        },
+        colorButtonSelected: {
+          borderColor: colors.accent,
+        },
+        colorPieceImg: { width: 60, height: 60, marginBottom: 6 },
+        colorLabel: { fontSize: 13, fontWeight: '600', color: colors.overlayText },
+        pillsRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 8,
+          marginBottom: 20,
+        },
+        pill: {
+          borderRadius: 16,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          borderWidth: 1,
+          borderColor: 'transparent',
+          backgroundColor: colors.background,
+        },
+        pillActive: {
+          backgroundColor: colors.accent + '30',
+          borderColor: colors.accent,
+        },
+        pillText: { fontSize: 13, color: colors.textTertiary },
+        pillTextActive: { color: colors.accent, fontWeight: '600' },
+        playButton: {
+          backgroundColor: colors.accent,
+          borderRadius: 12,
+          paddingVertical: 14,
+          alignItems: 'center',
+        },
+        playButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
+
+        // Active game
+        gameHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingVertical: 8,
+        },
+        gameHeaderText: { color: colors.overlayText, fontSize: 14 },
+        capturesRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          minHeight: 22,
+          gap: 2,
+          marginVertical: 4,
+        },
+        capturedPiece: { width: 18, height: 18 },
+
+        // Board
+        boardWrap: {
+          width: BOARD_SIZE,
+          height: BOARD_SIZE,
+          alignSelf: 'center',
+          marginTop: 8,
+        },
+        boardRow: { flexDirection: 'row' },
+        square: {
+          width: SQUARE_SIZE,
+          height: SQUARE_SIZE,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        pieceImg: { width: SQUARE_SIZE - 4, height: SQUARE_SIZE - 4 },
+        moveDot: {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: colors.accent + '80',
+        },
+        captureRing: {
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          borderWidth: 2,
+          borderColor: colors.accent,
+        },
+        rankLabel: {
+          position: 'absolute',
+          top: 1, left: 2,
+          fontSize: 9,
+          color: colors.overlayText + '60',
+        },
+        fileLabel: {
+          position: 'absolute',
+          bottom: 1, right: 2,
+          fontSize: 9,
+          color: colors.overlayText + '60',
+        },
+
+        // Action bar
+        actionBar: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: 12,
+        },
+        actionPill: {
+          borderRadius: 16,
+          paddingHorizontal: 14,
+          paddingVertical: 8,
+          backgroundColor: colors.background,
+        },
+        actionPillText: { fontSize: 13, fontWeight: '600', color: colors.overlayText },
+        resignPill: { backgroundColor: colors.red + '30' },
+        resignText: { color: colors.red, fontSize: 13, fontWeight: '600' },
+
+        // Roast toast
+        roastToast: {
+          position: 'absolute',
+          left: 20, right: 20,
+          borderRadius: 12,
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+        },
+        roastText: {
+          color: colors.overlayText,
+          fontSize: 13,
+          textAlign: 'center',
+        },
+
+        // Game over overlay
+        overlayBackdrop: {
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: 24,
+        },
+        overlayCard: {
+          backgroundColor: colors.card,
+          borderRadius: 16,
+          padding: 24,
+          width: '100%',
+          alignItems: 'center',
+        },
+        overlayTitle: {
+          fontSize: 24,
+          fontWeight: '800',
+          color: colors.overlayText,
+          marginBottom: 6,
+        },
+        overlaySubtitle: {
+          fontSize: 15,
+          color: colors.overlayText,
+          opacity: 0.8,
+          marginBottom: 18,
+        },
+      }),
+    [colors, insets.top],
+  );
+
+  // ── Pre-game modal ─────────────────────────────────────────────
+  const renderPreGame = () => (
+    <View style={styles.body}>
+      <View style={styles.preGameCard}>
+        <Text style={styles.preGameTitle}>New Game</Text>
+
+        <Text style={styles.sectionLabel}>Color</Text>
+        <View style={styles.colorRow}>
+          <TouchableOpacity
+            style={[
+              styles.colorButton,
+              selectedColor === 'w' && styles.colorButtonSelected,
+            ]}
+            onPress={() => { hapticLight(); setSelectedColor('w'); }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Play as white"
+            accessibilityState={{ selected: selectedColor === 'w' }}
+          >
+            <Image
+              source={getPieceImage({ type: 'k', color: 'w' })}
+              style={styles.colorPieceImg}
+              resizeMode="contain"
+            />
+            <Text style={styles.colorLabel}>White</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.colorButton,
+              selectedColor === 'b' && styles.colorButtonSelected,
+            ]}
+            onPress={() => { hapticLight(); setSelectedColor('b'); }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Play as black"
+            accessibilityState={{ selected: selectedColor === 'b' }}
+          >
+            <Image
+              source={getPieceImage({ type: 'k', color: 'b' })}
+              style={styles.colorPieceImg}
+              resizeMode="contain"
+            />
+            <Text style={styles.colorLabel}>Black</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.sectionLabel}>Difficulty</Text>
+        <View style={styles.pillsRow}>
+          {DIFFICULTY_LEVELS.map((_, idx) => {
+            const active = selectedDifficulty === idx;
+            return (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.pill, active && styles.pillActive]}
+                onPress={() => { hapticLight(); setSelectedDifficulty(idx); }}
+                activeOpacity={0.7}
+                accessibilityRole="tab"
+                accessibilityLabel={DIFFICULTY_LABELS[idx]}
+                accessibilityState={{ selected: active }}
+              >
+                <Text
+                  style={[styles.pillText, active && styles.pillTextActive]}
+                >
+                  {DIFFICULTY_LABELS[idx]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <TouchableOpacity
+          style={styles.playButton}
+          onPress={() => {
+            hapticLight();
+            chess.startGame(selectedColor, selectedDifficulty);
+          }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Play"
+        >
+          <Text style={styles.playButtonText}>Play</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // ── Active game ────────────────────────────────────────────────
+  const renderBoard = () => {
+    const { board, selectedSquare, validMoves, playerColor } = chess;
+    return (
+      <View style={styles.boardWrap}>
+        {board.map((row, rowIdx) => (
+          <View key={rowIdx} style={styles.boardRow}>
+            {row.map((cell, colIdx) => {
+              const sq = squareForCell(rowIdx, colIdx, playerColor);
+              const isSelected = selectedSquare === sq;
+              const isValidMove = validMoves.includes(sq);
+              const isLight = isLightSquare(rowIdx, colIdx);
+              const bg = isSelected
+                ? colors.accent + '90'
+                : isLight
+                ? colors.accent + '60'
+                : colors.accent + 'CC';
+              const showRankLabel = colIdx === 0;
+              const showFileLabel = rowIdx === 7;
+              const label = cell
+                ? `${sq}, ${cell.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[cell.type] || cell.type}`
+                : `${sq}, empty`;
+              return (
+                <TouchableOpacity
+                  key={colIdx}
+                  style={[styles.square, { backgroundColor: bg }]}
+                  onPress={() => {
+                    hapticLight();
+                    chess.selectSquare(sq);
+                  }}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={label}
+                >
+                  {showRankLabel && (
+                    <Text style={styles.rankLabel}>
+                      {rankLabel(rowIdx, playerColor)}
+                    </Text>
+                  )}
+                  {showFileLabel && (
+                    <Text style={styles.fileLabel}>
+                      {fileLabel(colIdx, playerColor)}
+                    </Text>
+                  )}
+                  {cell && (
+                    <Image
+                      source={getPieceImage(cell)}
+                      style={styles.pieceImg}
+                      resizeMode="contain"
+                    />
+                  )}
+                  {isValidMove && !cell && <View style={styles.moveDot} />}
+                  {isValidMove && cell && <View style={styles.captureRing} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderCaptured = (pieces: string[], color: 'w' | 'b') => (
+    <View style={styles.capturesRow}>
+      {pieces.map((type, i) => (
+        <Image
+          key={i}
+          source={getPieceImage({ type, color })}
+          style={styles.capturedPiece}
+          resizeMode="contain"
+        />
+      ))}
+    </View>
+  );
+
+  const renderActiveGame = () => {
+    const opponentColor: 'w' | 'b' = chess.playerColor === 'w' ? 'b' : 'w';
+    // Derive captures from move history (correct under promotion).
+    const playerCapturedPieces = chess.game
+      ? getCapturedPieces(chess.game, opponentColor)
+      : [];
+    const opponentCapturedPieces = chess.game
+      ? getCapturedPieces(chess.game, chess.playerColor)
+      : [];
+    const moveNum = Math.max(1, Math.ceil(chess.moveHistory.length / 2));
+    const diffName = DIFFICULTY_LABELS[chess.difficulty] ?? '';
+
+    return (
+      <View style={styles.body}>
+        <View style={styles.gameHeader}>
+          <Text style={styles.gameHeaderText}>{diffName}</Text>
+          <Text style={styles.gameHeaderText}>Move {moveNum}</Text>
+        </View>
+        <View
+          style={{
+            height: 24,
+            marginHorizontal: 16,
+            marginBottom: 4,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          {chess.isAIThinking && (
+            <Text
+              style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
+            >
+              Thinking…
+            </Text>
+          )}
+        </View>
+        {/* Opponent captures (pieces opponent took from player) */}
+        {renderCaptured(opponentCapturedPieces, chess.playerColor)}
+        {renderBoard()}
+        {/* Player captures (pieces player took from opponent) */}
+        {renderCaptured(playerCapturedPieces, opponentColor)}
+
+        <View style={styles.actionBar}>
+          <TouchableOpacity
+            style={[
+              styles.actionPill,
+              { opacity: chess.takeBackAvailable ? 1 : 0.4 },
+            ]}
+            onPress={() => {
+              if (!chess.takeBackAvailable) return;
+              hapticLight();
+              chess.takeBack();
+            }}
+            disabled={!chess.takeBackAvailable}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={
+              chess.takeBackAvailable ? 'Take back' : 'Take back used'
+            }
+            accessibilityState={{ disabled: !chess.takeBackAvailable }}
+          >
+            <Text style={styles.actionPillText}>
+              {chess.takeBackAvailable ? 'Take Back' : 'Used'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionPill, styles.resignPill]}
+            onPress={handleResignPress}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Resign"
+          >
+            <Text style={styles.resignText}>Resign</Text>
+          </TouchableOpacity>
+        </View>
+
+        {chess.currentRoast && (
+          <Animated.View
+            style={[
+              styles.roastToast,
+              {
+                bottom: insets.bottom + 70,
+                backgroundColor:
+                  severityBg[chess.roastSeverity || 'good'] ||
+                  colors.accent + '30',
+                opacity: roastFade,
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <Text style={styles.roastText}>{chess.currentRoast}</Text>
+          </Animated.View>
+        )}
+
+        {chess.isGameOver && (
+          <View style={styles.overlayBackdrop}>
+            <View style={styles.overlayCard}>
+              <Text style={styles.overlayTitle}>{gameOverTitle()}</Text>
+              <Text style={styles.overlaySubtitle}>{gameOverSubtitle()}</Text>
+              <TouchableOpacity
+                style={[styles.playButton, { alignSelf: 'stretch' }]}
+                onPress={() => {
+                  hapticLight();
+                  chess.newGame();
+                }}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="New game"
+              >
+                <Text style={styles.playButtonText}>New Game</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <ImageBackground
+      source={require('../../assets/chess/chessbg.webp')}
+      style={{ flex: 1 }}
+      resizeMode="cover"
+    >
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <View style={styles.header}>
+          <View style={styles.headerBack}>
+            <BackButton
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation.navigate('Home');
+                }
+              }}
+              forceDark
+            />
+          </View>
+          <View style={styles.headerHome}>
+            <HomeButton forceDark />
+          </View>
+          <Text style={styles.title}>Chess</Text>
+        </View>
+        {chess.isLoading ? (
+          <View style={styles.centerContent}>
+            <Text style={styles.loadingText}>Loading…</Text>
+          </View>
+        ) : !chess.game ? (
+          renderPreGame()
+        ) : (
+          renderActiveGame()
+        )}
+      </View>
+    </ImageBackground>
+  );
+}

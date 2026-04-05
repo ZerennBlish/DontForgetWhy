@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image } from 'react-native';
 import { kvGet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -130,6 +130,30 @@ export default function GamesScreen({ navigation }: Props) {
     </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={[styles.subtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Exercise that forgetful brain of yours</Text>
+
+      {/* Chess */}
+      <TouchableOpacity
+        style={styles.gameCard}
+        onPress={() => { hapticLight(); navigation.navigate('Chess'); }}
+        activeOpacity={0.7}
+        accessibilityLabel="Chess, play against CPU"
+        accessibilityRole="button"
+      >
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Image
+            source={require('../../assets/chess/wN.png')}
+            style={{ width: 24, height: 24 }}
+            resizeMode="contain"
+          />
+        </View>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>Chess</Text>
+          <Text style={styles.gameDesc}>vs CPU • 5 difficulties</Text>
+        </View>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <ChevronRightIcon color={colors.sectionGames} size={16} />
+        </View>
+      </TouchableOpacity>
 
       {/* Daily Riddle */}
       <TouchableOpacity

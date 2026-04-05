@@ -1,4 +1,4 @@
-import { kvGet, kvRemove } from './database';
+import { kvGet, kvSet, kvRemove } from './database';
 
 export interface ScoreBreakdown {
   guessWhy: number;
@@ -6,7 +6,11 @@ export interface ScoreBreakdown {
   sudoku: number;
   dailyRiddle: number;
   trivia: number;
+  chess: number;
 }
+
+// Chess win points by difficulty index (0-4: Beginner → Expert)
+const CHESS_WIN_POINTS = [5, 8, 12, 18, 25];
 
 export interface CompositeScore {
   total: number;
@@ -141,6 +145,14 @@ function scoreTrivia(data: Record<string, unknown> | null): number {
   return cap(accuracy + bestRoundPts + breadthPts, 20);
 }
 
+function scoreChess(data: Record<string, unknown> | null): number {
+  if (!data) return 0;
+  // totalPoints is accumulated raw points (per-game win/draw minus blunder penalty).
+  // Scale so roughly ~100 raw points = max contribution (4 expert wins, etc.).
+  const totalPoints = num(data.totalPoints);
+  return cap(totalPoints / 5, 20);
+}
+
 // --- Main ---
 
 export async function calculateCompositeScore(): Promise<CompositeScore> {
@@ -149,23 +161,57 @@ export async function calculateCompositeScore(): Promise<CompositeScore> {
   const sudRaw = kvGet('sudokuBestScores');
   const ridRaw = kvGet('dailyRiddleStats');
   const trivRaw = kvGet('triviaStats');
+  const chessRaw = kvGet('chessStats');
 
   const gw = scoreGuessWhy(safeParseJSON(gwRaw));
   const mm = scoreMemoryMatch(safeParseJSON(mmRaw));
   const sud = scoreSudoku(safeParseJSON(sudRaw));
   const rid = scoreDailyRiddle(safeParseJSON(ridRaw));
   const triv = scoreTrivia(safeParseJSON(trivRaw));
+  const ch = scoreChess(safeParseJSON(chessRaw));
 
   return {
-    total: Math.round(gw + mm + sud + triv + rid),
+    total: Math.round(gw + mm + sud + triv + rid + ch),
     breakdown: {
       guessWhy: Math.round(gw),
       memoryMatch: Math.round(mm),
       sudoku: Math.round(sud),
       dailyRiddle: Math.round(rid),
       trivia: Math.round(triv),
+      chess: Math.round(ch),
     },
   };
+}
+
+// --- Chess result recording ---
+
+export async function recordChessResult(
+  result: 'win' | 'loss' | 'draw',
+  difficultyIndex: number,
+  blunderCount: number,
+): Promise<void> {
+  const base =
+    difficultyIndex >= 0 && difficultyIndex < CHESS_WIN_POINTS.length
+      ? CHESS_WIN_POINTS[difficultyIndex]
+      : 0;
+
+  let gamePoints = 0;
+  if (result === 'win') gamePoints = base;
+  else if (result === 'draw') gamePoints = base / 2;
+  // loss = 0
+
+  gamePoints -= 2 * Math.max(0, blunderCount);
+  if (gamePoints < 0) gamePoints = 0;
+
+  const existing = safeParseJSON(kvGet('chessStats')) || {};
+  const updated = {
+    gamesPlayed: num(existing.gamesPlayed) + 1,
+    wins: num(existing.wins) + (result === 'win' ? 1 : 0),
+    losses: num(existing.losses) + (result === 'loss' ? 1 : 0),
+    draws: num(existing.draws) + (result === 'draw' ? 1 : 0),
+    totalPoints: num(existing.totalPoints) + gamePoints,
+  };
+  kvSet('chessStats', JSON.stringify(updated));
 }
 
 export const ALL_STATS_KEYS = [
@@ -177,6 +223,7 @@ export const ALL_STATS_KEYS = [
   'dailyRiddleStats',
   'triviaStats',
   'triviaSeenQuestions',
+  'chessStats',
 ];
 
 export async function resetAllScores(): Promise<void> {
