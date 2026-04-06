@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 17 (April 5, 2026)
+**Last updated:** Session 18 (April 5, 2026)
 
 ---
 
@@ -57,8 +57,9 @@
 - **Memory Match** (3 difficulties, card flip animation, star rating). Header text-only (emoji stripped Session 12).
 - **Sudoku** (pure JS generator, difficulty = assistance level, no lose condition, pencil notes, save/resume)
 - **Daily Riddle** (146 riddles, deterministic daily, streak tracking, browse all)
-- **Chess** (Session 16, engine hardened Session 17) — vs CPU, 5 difficulty levels, iterative-deepening minimax with quiescence search. Engine extras (Session 17): opening book of 104 hardcoded positions for instant play through the first 6-10 plies, 100K-entry FEN-keyed transposition table with mate-score ply adjustment, killer-move ordering, null-move pruning, tapered evaluation (continuous material phase blending MG/EG king PSTs), passed-pawn bonus, rook on open/semi-open file bonus, and a min-depth + max-time difficulty model with a 3× safety-deadline ceiling. Player picks color + difficulty before each game. In-game roasts when you blunder (depth-2 sanity check after each move, 58-line roast pool across 5 severity tiers). One take-back per game with its own roast pool. Game state persists to SQLite across app close. Memory Score: 5/8/12/18/25 win points per difficulty, half for draw, -2 per blunder.
-- **Memory Score** (now 6 games — Chess added Session 16. Ranks from "Who Are You Again?" to "The One Who Remembers"). Header text-only (emoji stripped Session 12).
+- **Chess** (Session 16, engine hardened Session 17) — vs CPU, 5 difficulty levels, iterative-deepening minimax with quiescence search. Engine extras (Session 17): opening book of 104 hardcoded positions for instant play through the first 6-10 plies, 100K-entry FEN-keyed transposition table with mate-score ply adjustment, killer-move ordering, null-move pruning, tapered evaluation (continuous material phase blending MG/EG king PSTs), passed-pawn bonus, rook on open/semi-open file bonus, and a min-depth + max-time difficulty model with a 3× safety-deadline ceiling. Player picks color + difficulty before each game. In-game roasts when you blunder (depth-2 sanity check after each move, 58-line roast pool across 5 severity tiers). One take-back per game with its own roast pool. Game state persists to SQLite across app close. Memory Score: 5/8/12/18/25 win points per difficulty, half for draw.
+- **Checkers** (Session 18) — vs CPU, 5 difficulty levels (Beginner through Expert), American rules (forced captures, promotion ends turn). Pure JS engine: minimax with alpha-beta, transposition table, killer moves, iterative deepening. No external deps. Checker piece PNGs (red, red-king, black, black-king) + weathered wood table background (WebP). Player picks color + difficulty. No blunder roasts, no take-back. Game state persists to SQLite. Memory Score: same point scale as chess.
+- **Memory Score** (now 7 games — Chess added Session 16, Checkers added Session 18. Max 140 points. Ranks from "Who Are You Again?" to "The One Who Remembers"). Header text-only (emoji stripped Session 12). Breakdown bars and detailed stat sections for all 7 games ordered: Guess Why, Daily Riddle, Chess, Checkers, Trivia, Sudoku, Memory Match.
 
 ### Home Screen Widgets (4)
 - **Memory's Timeline (DetailedWidget):** Header "Memory's Timeline", two-column timers/alarms, reminder bars, nav capsules colored per section (sectionAlarm/sectionTimer/sectionReminder), footer "Don't Forget Why". Themed with section colors (Session 11).

@@ -166,11 +166,7 @@ export function useChess(): UseChessReturn {
     setGameResult(result);
     setWinner(win);
     void clearChessGame();
-    void recordChessResult(
-      outcome,
-      difficultyRef.current,
-      blunderCountRef.current,
-    );
+    void recordChessResult(outcome, difficultyRef.current);
     return true;
   }, []);
 
@@ -408,11 +404,7 @@ export function useChess(): UseChessReturn {
     setGameResult('resigned');
     setWinner(playerColorRef.current === 'w' ? 'b' : 'w');
     void clearChessGame();
-    void recordChessResult(
-      'loss',
-      difficultyRef.current,
-      blunderCountRef.current,
-    );
+    void recordChessResult('loss', difficultyRef.current);
   }, [gameResult, clearTimers]);
 
   // ── New game (returns to pre-game modal) ──

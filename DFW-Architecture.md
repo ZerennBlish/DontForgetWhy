@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 17 (April 5, 2026)
+**Last updated:** Session 18 (April 5, 2026)
 
 ---
 
@@ -369,13 +369,14 @@ All persistent storage migrated from `@react-native-async-storage/async-storage`
 | `active_timers` | Currently running timers |
 | `user_timers` | User-created custom timer presets |
 | `chess_game` | Session 16: single-row table (CHECK id=1) holding in-progress chess game — fen, playerColor, difficulty, moveHistory (JSON), takeBackUsed, blunderCount, startedAt, updatedAt |
+| `checkers_game` | Session 18: single-row table (CHECK id=1) holding in-progress checkers game — board (JSON), turn, playerColor, difficulty, rules (DEFAULT 'american'), moveCount, startedAt, updatedAt |
 | `kv_store` | Key-value pairs for settings, game stats, widget pins, pending actions, flags |
 
 Note: `forget_log` table removed in Session 12 (ForgetLog feature deleted).
 
 ### KV store keys (partial list)
 Settings: `appSettings`, `appTheme`, `onboardingComplete`, `hapticsEnabled`, `voiceRoastsEnabled`, `voiceIntroPlayed`, `silenceAllAlarms`, `defaultTimerSound`, `bg_main`, `bg_overlay_opacity`, `note_custom_bg_color`, `note_custom_font_color`
-Game stats: `guessWhyStats`, `memoryMatchScores`, `sudokuBestScores`, `sudokuCurrentGame`, `dailyRiddleStats`, `triviaStats`, `triviaSeenQuestions`, `chessStats` (Session 16: `{gamesPlayed, wins, losses, draws, totalPoints}`)
+Game stats: `guessWhyStats`, `memoryMatchScores`, `sudokuBestScores`, `sudokuCurrentGame`, `dailyRiddleStats`, `triviaStats`, `triviaSeenQuestions`, `chessStats` (Session 16: `{gamesPlayed, wins, losses, draws, totalPoints}`), `checkersStats` (Session 18: `{gamesPlayed, wins, losses, totalPoints}`)
 Widget pins: `widgetPinnedPresets`, `widgetPinnedAlarms`, `widgetPinnedReminders`, `widgetPinnedNotes`, `widgetPinnedVoiceMemos`
 Pending actions: `pendingNoteAction`, `pendingAlarmAction`, `pendingReminderAction`, `pendingTimerAction`, `pendingCalendarAction`, `pendingVoiceAction`, `pendingAlarmListAction`, `pendingReminderListAction`
 Ephemeral: `snoozing_{alarmId}`, `snoozeCount_{alarmId}`, `handledNotifIds`
@@ -535,4 +536,55 @@ Randomness path: find best move with deep search, then score ALL moves with stat
 - **Restore from saved game**: replays all saved SAN moves on a fresh `new Chess()` to rebuild chess.js's internal `_history` (a raw FEN load produces an empty history, which silently breaks take-back AND move count).
 
 ### Blunder Analysis
-Runs in a `setTimeout(0)` after every player move so the board renders first. Calls `analyzeMove(fenBefore, playedSan, 2)` which runs `findBestMove` at depth 2, then scores both the best move and the played move via shallow minimax (depth 1) — static eval alone misses tactical blunders like hanging a piece to a one-move recapture. Severity bucketed by centipawn loss: `good` <50, `inaccuracy` <150, `mistake` <300, `blunder` <600, `catastrophe` ≥600. Blunder + catastrophe increment `blunderCountRef` (feeds Memory Score penalty). Toast fades in/out via native-driver opacity; take-back has its own dedicated roast pool.
+Runs in a `setTimeout(0)` after every player move so the board renders first. Calls `analyzeMove(fenBefore, playedSan, 2)` which runs `findBestMove` at depth 2, then scores both the best move and the played move via shallow minimax (depth 1) — static eval alone misses tactical blunders like hanging a piece to a one-move recapture. Severity bucketed by centipawn loss: `good` <50, `inaccuracy` <150, `mistake` <300, `blunder` <600, `catastrophe` ≥600. Blunder + catastrophe increment `blunderCountRef`. Toast fades in/out via native-driver opacity; take-back has its own dedicated roast pool.
+
+---
+
+## 14. Checkers Engine Architecture (Session 18)
+
+### Files
+| File | Purpose |
+|------|---------|
+| `src/services/checkersAI.ts` | Pure search/eval engine: minimax + alpha-beta, TT, killer moves, IDS, forced capture, multi-jump, king promotion. No external deps. |
+| `src/services/checkersStorage.ts` | SQLite persistence — save/load/clear single in-progress game in `checkers_game` table |
+| `src/data/checkersAssets.ts` | Piece → image mapping: 4 checker PNGs (red, red-king, black, black-king) |
+| `src/hooks/useCheckers.ts` | All game state + AI scheduling + move handling + persistence + resign |
+| `src/screens/CheckersScreen.tsx` | Thin render shell — pre-game modal (color + difficulty), board grid, piece counts, resign, game-over overlay |
+| `__tests__/checkersAI.test.ts` | 52 tests: board setup, move generation, jumps, multi-jumps, kings, promotion, forced capture, game over, evaluation, AI at all difficulties, serialization, immutability, TT, mate ply, eval perf, AI null |
+
+### Board Representation
+8×8 array of `(Piece | null)[][]`. Only dark squares `((row + col) % 2 === 1)` hold pieces. Red starts rows 5-7 (bottom), black rows 0-2 (top). Red moves toward row 0, black toward row 7. Red moves first.
+
+### Move Generation (American Rules)
+1. Generate all jumps via recursive DFS (`findJumpChains`). Multi-jumps are single moves with multiple captured pieces.
+2. If any jumps exist for any piece, return ONLY jumps (forced capture rule).
+3. If no jumps, generate simple diagonal moves (forward only for regular pieces, all 4 for kings).
+4. **Promotion stops the chain:** when a non-king lands on the back rank during a multi-jump, the chain ends there (crowned but no continuing as king that turn). Kings are unaffected.
+
+### Evaluation
+Pure material + positional — no `generateMoves` calls (critical perf fix from audit). Material: piece=100, king=160. Position: advancement bonus table (red toward row 0, black toward row 7). King center preference (+8 for rows 3-4, cols 2-5). Back rank bonus (+8 for non-kings on own back rank). No pieces: ±100000.
+
+### Search
+Same patterns as chess (minimax, alpha-beta, TT, killers, IDS) but simpler:
+- No quiescence search (forced captures make positions naturally quiescent)
+- No opening book, no null-move pruning
+- Mate scores include ply penalty (`-100000 + ply` / `100000 - ply`) for faster-mate preference and TT consistency
+- TT: 100K entries, board serialized as 33-char string (32 dark squares + turn)
+
+### Difficulty Levels
+| Index | Name | Min Depth | Max Depth | Time | Randomness |
+|-------|------|-----------|-----------|------|------------|
+| 0 | Beginner | 2 | 4 | 500ms | 0.4 |
+| 1 | Casual | 3 | 6 | 800ms | 0.2 |
+| 2 | Intermediate | 4 | 8 | 1.5s | 0.05 |
+| 3 | Advanced | 5 | 10 | 3s | 0 |
+| 4 | Expert | 6 | 14 | 5s | 0 |
+
+Deeper than chess due to lower branching factor (~7-10 moves vs ~30-35 in chess).
+
+### Key Differences from Chess Engine
+- No external library (chess has chess.js). Board is a raw 2D array.
+- `applyMove` returns a new board (immutable), not in-place mutation.
+- No quiescence search, no opening book, no null-move pruning, no blunder analysis.
+- No take-back, no roasts.
+- Board flipped 180° for black player (same as chess).

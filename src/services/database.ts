@@ -190,6 +190,22 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
     console.error('[DB] Failed to create chess_game table:', e);
   }
 
+  try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS checkers_game (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      board TEXT NOT NULL,
+      turn TEXT NOT NULL CHECK (turn IN ('r', 'b')),
+      playerColor TEXT NOT NULL CHECK (playerColor IN ('r', 'b')),
+      difficulty INTEGER NOT NULL CHECK (difficulty BETWEEN 0 AND 4),
+      rules TEXT NOT NULL DEFAULT 'american' CHECK (rules IN ('american', 'freestyle')),
+      moveCount INTEGER NOT NULL DEFAULT 0,
+      startedAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create checkers_game table:', e);
+  }
+
   console.log('[DB] _initSchema complete');
 }
 

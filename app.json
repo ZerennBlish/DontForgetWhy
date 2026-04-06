@@ -2,7 +2,7 @@
   "expo": {
     "name": "DontForgetWhy",
     "slug": "DontForgetWhy",
-    "version": "1.13.0",
+    "version": "1.14.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
         "backgroundColor": "#121220"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 30,
+      "versionCode": 31,
       "package": "com.zerennblish.DontForgetWhy",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",

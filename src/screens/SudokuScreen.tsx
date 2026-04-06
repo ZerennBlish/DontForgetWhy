@@ -544,7 +544,7 @@ export default function SudokuScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark />
         </View>
-        <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
+        <Text style={styles.title}>Sudoku</Text>
       </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
         <Text style={[styles.selectSubtitle, { paddingHorizontal: 20 }]}>Classic number puzzle. No forgetting allowed.</Text>
@@ -644,7 +644,7 @@ export default function SudokuScreen({ navigation }: Props) {
         <View style={styles.winHeaderHome}>
           <HomeButton forceDark />
         </View>
-        <Text style={styles.title}>{'\u{1F522}'} Sudoku</Text>
+        <Text style={styles.title}>Sudoku</Text>
       </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
         <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>

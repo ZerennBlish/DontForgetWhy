@@ -1111,7 +1111,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       <View style={styles.headerHome}>
         <HomeButton forceDark />
       </View>
-      <Text style={styles.title}>{'\u{1F4A1}'} Daily Riddle</Text>
+      <Text style={styles.title}>Daily Riddle</Text>
     </View>
     <ScrollView
       style={styles.container}

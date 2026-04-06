@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 17 (April 5, 2026)
+**Last updated:** Session 18 (April 5, 2026)
 
 ---
 
@@ -232,7 +232,7 @@ interface ChessStats {
   wins: number;
   losses: number;
   draws: number;
-  totalPoints: number;  // cumulative across all games (wins + half-draw − 2 × blunders, floor 0 per game)
+  totalPoints: number;  // cumulative across all games (wins + half-draw, weighted by difficulty)
 }
 ```
 
@@ -248,4 +248,93 @@ Stored as JSON string under kv_store key `chessStats`. Composite Memory Score de
 | Advanced | 18 | 9 |
 | Expert | 25 | 12.5 |
 
-Blunder penalty: −2 cp per blunder/catastrophe committed during the game. Per-game minimum: 0 (never goes negative). Resignation counts as a loss (0 points).
+No blunder penalty (removed Session 18). Resignation counts as a loss (0 points).
+
+---
+
+## 10. Checkers (Session 18)
+
+### SavedCheckersGame
+
+```typescript
+interface SavedCheckersGame {
+  board: string;           // JSON stringified Board (8×8 array)
+  turn: 'r' | 'b';
+  playerColor: 'r' | 'b';
+  difficulty: number;      // 0..4 index into DIFFICULTY_LEVELS
+  moveCount: number;
+  startedAt: string;       // ISO
+  updatedAt: string;       // ISO
+}
+```
+
+### checkers_game table
+
+```sql
+CREATE TABLE IF NOT EXISTS checkers_game (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  board TEXT NOT NULL,
+  turn TEXT NOT NULL CHECK (turn IN ('r', 'b')),
+  playerColor TEXT NOT NULL CHECK (playerColor IN ('r', 'b')),
+  difficulty INTEGER NOT NULL CHECK (difficulty BETWEEN 0 AND 4),
+  rules TEXT NOT NULL DEFAULT 'american' CHECK (rules IN ('american', 'freestyle')),
+  moveCount INTEGER NOT NULL DEFAULT 0,
+  startedAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+```
+
+Single-row table (id=1 enforced via CHECK). `board` stored as JSON string of the 8×8 array. `rules` column present in schema (DEFAULT 'american') but ignored in code — American rules hardcoded. One active game at a time; cleared on win/loss/resign/newGame.
+
+### checkersStats (kv_store)
+
+```typescript
+interface CheckersStats {
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  totalPoints: number;  // cumulative (wins weighted by difficulty, no draws in checkers)
+}
+```
+
+Stored as JSON string under kv_store key `checkersStats`. Composite Memory Score derived via `scoreCheckers`: `cap(totalPoints / 5, 20)`.
+
+### Checkers Scoring by Difficulty
+
+| Difficulty | Win points |
+|------------|-----------|
+| Beginner | 5 |
+| Casual | 8 |
+| Intermediate | 12 |
+| Advanced | 18 |
+| Expert | 25 |
+
+No draws in American checkers. Loss = 0 points. Resignation counts as a loss.
+
+### Checkers DifficultyLevel
+
+```typescript
+interface DifficultyLevel {
+  name: string;
+  minDepth: number;
+  maxDepth: number;
+  timeLimitMs: number;
+  randomness: number;
+}
+```
+
+Current values: Beginner (2/4/500ms/0.4), Casual (3/6/800ms/0.2), Intermediate (4/8/1500ms/0.05), Advanced (5/10/3000ms/0), Expert (6/14/5000ms/0). Deeper than chess due to lower branching factor.
+
+### Memory Score System (Session 18 overhaul)
+
+Max score: 140 (7 games × 20). Rank thresholds scaled from 0-100 to 0-140.
+
+| Game | Max Points | Scoring |
+|------|-----------|---------|
+| Guess Why | 20 | Win rate × 12 + streak (max 8) |
+| Memory Match | 20 | Star ratings by difficulty |
+| Sudoku | 20 | Star ratings by difficulty |
+| Daily Riddle | 20 | Accuracy × 10 + longest streak (max 10) |
+| Trivia | 20 | Accuracy × 10 + best round + category breadth |
+| Chess | 20 | totalPoints / 5 (wins/draws weighted by difficulty) |
+| Checkers | 20 | totalPoints / 5 (wins weighted by difficulty) |

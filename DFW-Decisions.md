@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 17 (April 5, 2026)
+**Last updated:** Session 18 (April 5, 2026)
 
 ---
 
@@ -348,6 +348,24 @@ The TT key is the position-only FEN string (first 5 fields, including halfmove c
 
 ### Null move via new Chess instance (Session 17)
 chess.js has no null-move API (the library doesn't expose a "pass the turn" operation). Null-move pruning is implemented by splitting the current game's FEN, flipping the side-to-move field, clearing the en-passant square (invalid after a skipped turn), and constructing a throwaway `Chess` object from the modified FEN. More expensive than a proper null-move toggle, but correct and contained. Guarded by the standard safety conditions: skipped when the side to move is in check (illegal) and in the endgame (zugzwang risk).
+
+### Checkers: American rules only, no freestyle (Session 18)
+Freestyle mode (no forced captures) was built, tested, and removed in the same session. Two rule variants doubled the API surface across engine, hook, storage, screen, database, and tests for marginal gameplay value. American checkers is the standard most players expect. One set of rules, fully tested, fully hardcoded. The `rules` column remains in the DB schema with DEFAULT 'american' — harmless to leave, risky to drop (SQLite column drops require table recreation).
+
+### Checkers: no blunder roasts, no take-back (Session 18)
+Checkers is simpler than chess — forced captures mean fewer truly "bad" moves, and the game tree is narrower. Blunder analysis would add complexity without meaningfully changing the experience. Take-back was also skipped because checkers games are shorter and less investment per move. These features remain chess-exclusive.
+
+### Checkers: evaluateBoard must not call generateMoves (Session 18)
+The initial checkers evaluateBoard called `generateMoves` for both colors to compute mobility bonuses and detect blocked-piece game-over. This was catastrophically slow — full recursive DFS at every leaf node of the search tree. The fix: evaluateBoard is pure material + positional only. `minimax` already handles "no legal moves = game over" at the top of each node. Mobility detection belongs in the search, not the eval.
+
+### Checkers: deeper search depths than chess (Session 18)
+Checkers has a branching factor of ~7-10 moves vs ~30-35 in chess. The same time budget supports much deeper searches. Expert checkers goes to depth 14 (vs depth 6 in chess). Beginner starts at depth 4 (vs depth 2 in chess). This compensates for checkers having no quiescence search, opening book, or null-move pruning.
+
+### Chess scoring: blunder penalty removed (Session 18)
+`recordChessResult` originally took a `blunderCount` parameter and subtracted 2 points per blunder from the game's score. Removed because scoring should reflect outcome (wins/draws/losses weighted by difficulty), not penalize process. A player who blunders but recovers to win shouldn't score less than a clean win.
+
+### Memory Score: 140 max, 7 games (Session 18)
+Score ceiling raised from 100 (5 games × 20) to 140 (7 games × 20) with the addition of chess and checkers. Rank thresholds scaled proportionally (each threshold × 1.4, rounded). The 20-per-game cap prevents any single game from dominating.
 
 ### Free local AI vs Pro cloud AI (Session 17)
 Local chess engine is part of the free tier — works offline, no login, no data leaves the device, keeps the "we don't want your data" brand promise intact. Pro tier (P8) will add cloud Stockfish (2000+ ELO) as an *additional* opponent via Firebase Cloud Function, not a replacement. Same app, two tiers: free players get a respectable local opponent; Pro players get world-class analysis on demand. Chess multiplayer also lives in P8.

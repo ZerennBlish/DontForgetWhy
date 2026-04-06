@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 17 (April 5, 2026)
+**Last updated:** Session 18 (April 5, 2026)
 
 ---
 
@@ -503,4 +503,14 @@
 
 **Session 17 auditor summary:** 6 findings (5 from the engine-upgrades audit + 1 from user device-testing feedback). All fixed. 232 tests passing across 9 suites (69 chessAI tests, up from 24).
 
-**49 audits total.** Every ship preceded by at least one audit.
+### Session 18 — P6 Checkers Audit Findings
+
+**Round 1 (Codex + Gemini) — checkers engine + integration:**
+
+- **CRITICAL: evaluateBoard called generateMoves for both colors.** `evaluateBoard` computed mobility bonuses (+3 per legal move) and detected blocked-piece game-over by calling `generateMoves(board, 'r')` and `generateMoves(board, 'b')` — full recursive DFS at every leaf node. This made the engine catastrophically slow. Removed all `generateMoves` calls from eval. Now pure material + positional only. `minimax` already handles "no legal moves = game over" correctly.
+- **MAJOR: Flat mate scores corrupted TT.** `minimax` returned flat `±100000` for game-over positions. `adjustMateScoreForTT`/`adjustMateScoreFromTT` shift by ply, but on a score with no ply component. Fixed: `return maximizingRed ? -100000 + ply : 100000 - ply` — AI now prefers faster mates, TT entries consistent.
+- **MAJOR: AI null return froze game.** `triggerAIMove` only called `checkGameOver` inside `if (aiMove)`. If `getAIMove` returned null (no legal moves), game-over was never detected and the game froze on the AI's turn. Fixed: moved `checkGameOver` call outside the conditional so it runs regardless.
+
+**Session 18 also removed freestyle mode** (American/Freestyle variant system built and stripped in same session — scope creep). No bugs, just API cleanup across engine, hook, screen, storage, and tests.
+
+**50 audits total.** Every ship preceded by at least one audit.

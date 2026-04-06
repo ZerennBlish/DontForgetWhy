@@ -109,10 +109,22 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     lastPlayedDate: '', streak: 0, longestStreak: 0,
     totalPlayed: 0, totalCorrect: 0, seenRiddleIds: [],
   });
+  interface BoardGameStats {
+    gamesPlayed: number;
+    wins: number;
+    losses: number;
+    draws: number;
+  }
+  const [chessStats, setChessStats] = useState<BoardGameStats>({
+    gamesPlayed: 0, wins: 0, losses: 0, draws: 0,
+  });
+  const [checkersStats, setCheckersStats] = useState<BoardGameStats>({
+    gamesPlayed: 0, wins: 0, losses: 0, draws: 0,
+  });
   const [triviaStats, setTriviaStats] = useState<TriviaStats>(defaultTriviaStats);
   const [compositeScore, setCompositeScore] = useState<CompositeScore>({
     total: 0,
-    breakdown: { guessWhy: 0, memoryMatch: 0, sudoku: 0, dailyRiddle: 0, trivia: 0, chess: 0 },
+    breakdown: { guessWhy: 0, memoryMatch: 0, sudoku: 0, dailyRiddle: 0, trivia: 0, chess: 0, checkers: 0 },
   });
 
   const loadAllStats = useCallback(async () => {
@@ -148,6 +160,36 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         lastPlayedDate: '', streak: 0, longestStreak: 0,
         totalPlayed: 0, totalCorrect: 0, seenRiddleIds: [],
       });
+    }
+
+    const chessData = kvGet('chessStats');
+    if (chessData) {
+      try {
+        const parsed = JSON.parse(chessData);
+        setChessStats({
+          gamesPlayed: parsed.gamesPlayed || 0,
+          wins: parsed.wins || 0,
+          losses: parsed.losses || 0,
+          draws: parsed.draws || 0,
+        });
+      } catch {}
+    } else {
+      setChessStats({ gamesPlayed: 0, wins: 0, losses: 0, draws: 0 });
+    }
+
+    const checkersData = kvGet('checkersStats');
+    if (checkersData) {
+      try {
+        const parsed = JSON.parse(checkersData);
+        setCheckersStats({
+          gamesPlayed: parsed.gamesPlayed || 0,
+          wins: parsed.wins || 0,
+          losses: parsed.losses || 0,
+          draws: 0,
+        });
+      } catch {}
+    } else {
+      setCheckersStats({ gamesPlayed: 0, wins: 0, losses: 0, draws: 0 });
     }
   }, []);
 
@@ -223,7 +265,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         <View style={styles.summaryInfo}>
           <Text style={styles.summaryRank}>{rank.title}</Text>
           <Text style={styles.summaryScore}>
-            Score: {compositeScore.total} / 100
+            Score: {compositeScore.total} / 140
           </Text>
         </View>
       </View>
@@ -246,6 +288,22 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
         <View style={styles.breakdownBar}>
           <View style={[styles.breakdownFill, { width: `${(breakdown.dailyRiddle / 20) * 100}%`, backgroundColor: colors.accent }]} />
+        </View>
+
+        <View style={styles.breakdownRow}>
+          <Text style={styles.statLabel}>{'\u265E'} Chess</Text>
+          <Text style={styles.statValue}>{breakdown.chess} / 20</Text>
+        </View>
+        <View style={styles.breakdownBar}>
+          <View style={[styles.breakdownFill, { width: `${(breakdown.chess / 20) * 100}%`, backgroundColor: colors.accent }]} />
+        </View>
+
+        <View style={styles.breakdownRow}>
+          <Text style={styles.statLabel}>{'\u26C0'} Checkers</Text>
+          <Text style={styles.statValue}>{breakdown.checkers} / 20</Text>
+        </View>
+        <View style={styles.breakdownBar}>
+          <View style={[styles.breakdownFill, { width: `${(breakdown.checkers / 20) * 100}%`, backgroundColor: colors.accent }]} />
         </View>
 
         <View style={styles.breakdownRow}>
@@ -363,6 +421,76 @@ export default function MemoryScoreScreen({ navigation }: Props) {
           </>
         ) : (
           <Text style={styles.notPlayed}>No riddles attempted yet</Text>
+        )}
+      </View>
+
+      {/* Section: Chess */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>{'\u265E'} Chess</Text>
+
+        {chessStats.gamesPlayed > 0 ? (
+          <>
+            <View style={styles.rankRow}>
+              <Text style={styles.bigValue}>
+                {Math.round((chessStats.wins / chessStats.gamesPlayed) * 100)}%
+              </Text>
+              <Text style={styles.rankLabel}>Win Rate</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>{'\u2705'} Wins</Text>
+              <Text style={styles.statValue}>{chessStats.wins}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>{'\u274C'} Losses</Text>
+              <Text style={styles.statValue}>{chessStats.losses}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>{'\u{1F91D}'} Draws</Text>
+              <Text style={styles.statValue}>{chessStats.draws}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Games Played</Text>
+              <Text style={styles.statValue}>{chessStats.gamesPlayed}</Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.notPlayed}>No chess games played yet</Text>
+        )}
+      </View>
+
+      {/* Section: Checkers */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>{'\u26C0'} Checkers</Text>
+
+        {checkersStats.gamesPlayed > 0 ? (
+          <>
+            <View style={styles.rankRow}>
+              <Text style={styles.bigValue}>
+                {Math.round((checkersStats.wins / checkersStats.gamesPlayed) * 100)}%
+              </Text>
+              <Text style={styles.rankLabel}>Win Rate</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>{'\u2705'} Wins</Text>
+              <Text style={styles.statValue}>{checkersStats.wins}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>{'\u274C'} Losses</Text>
+              <Text style={styles.statValue}>{checkersStats.losses}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Games Played</Text>
+              <Text style={styles.statValue}>{checkersStats.gamesPlayed}</Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.notPlayed}>No checkers games played yet</Text>
         )}
       </View>
 

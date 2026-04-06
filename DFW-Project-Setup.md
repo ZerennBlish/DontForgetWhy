@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 15 (April 4, 2026)
+**Last updated:** Session 18 (April 5, 2026)
 
 ---
 
@@ -114,6 +114,7 @@ DontForgetWhy/
     ├── data/
     │   ├── alarmSounds.ts
     │   ├── appOpenQuotes.ts
+    │   ├── checkersAssets.ts         # Checker piece image map (4 PNGs: r, rk, b, bk)
     │   ├── emojiData.ts              # Curated emoji dataset for picker modal (Session 10)
     │   ├── voiceClips.ts          # voice clip registry (10 categories, 63 clips)
     │   ├── guessWhyIcons.ts
@@ -130,6 +131,8 @@ DontForgetWhy/
     │   ├── useAlarmForm.ts         # alarm create/edit form state + deferred photo save
     │   ├── useAlarmList.ts         # AlarmListScreen state + sort/filter + handlers (Session 15)
     │   ├── useCalendar.ts          # accepts initialDate + onSelectDate callback
+    │   ├── useCheckers.ts          # Checkers game state + AI + persistence (Session 18)
+    │   ├── useChess.ts             # Chess game state + AI + persistence (Session 16)
     │   ├── useDaySelection.ts
     │   ├── useNotepad.ts           # NotepadScreen state + effects + handlers (Session 15)
     │   ├── useNotificationRouting.ts # notification event handlers extracted from App.tsx
@@ -142,6 +145,8 @@ DontForgetWhy/
     │   ├── AlarmListScreen.tsx
     │   ├── AlarmsTab.tsx              # DELETED Session 9 — absorbed into AlarmListScreen
     │   ├── CalendarScreen.tsx
+    │   ├── CheckersScreen.tsx        # Checkers vs CPU (Session 18)
+    │   ├── ChessScreen.tsx           # Chess vs CPU (Session 16)
     │   ├── CreateAlarmScreen.tsx
     │   ├── CreateReminderScreen.tsx
     │   ├── DailyRiddleScreen.tsx
@@ -165,6 +170,10 @@ DontForgetWhy/
     │   ├── alarmPhotoStorage.ts    # per-alarm photo save/delete/exists
     │   ├── alarmSound.ts
     │   ├── backgroundStorage.ts    # shared screen background photo
+    │   ├── blunderRoast.ts         # Chess blunder → roast text (Session 16)
+    │   ├── checkersAI.ts           # Checkers engine: minimax, TT, killers, IDS (Session 18)
+    │   ├── checkersStorage.ts      # Checkers game save/load/clear (Session 18)
+    │   ├── chessAI.ts              # Chess engine: minimax, quiescence, TT, killers, null-move (Session 16-17)
     │   ├── forgetLog.ts                # DELETED Session 12 — ForgetLog feature removed
     │   ├── guessWhyStats.ts
     │   ├── memoryScore.ts
@@ -256,6 +265,8 @@ DontForgetWhy/
 | Mar 30 | 1.8.0 | 22 | Voice memos (recording, pause/resume, dual-mode detail screen, inline playback, pinning), MicWidget, card unification (dark bars with accent borders), View-based play icons, capsule buttons, calendar voice memo dots, navigation guards (beforeRemove), transactional save, personality text. Audits 44-45 complete. | Production (pending review) |
 | Mar 31 | 1.8.1 | 23 | SDK 55 upgrade: Expo 54→55, RN 0.81→0.83, React 19.1→19.2. `react-native-notification-sounds` removed (jcenter/Gradle 9.0 incompatible), replaced with native `getSystemAlarmSounds` in AlarmChannelModule. `newArchEnabled`/`edgeToEdgeEnabled` removed from app.json (always-on in SDK 55). worklets 0.5.1→0.7.2, Skia→2.4.18, screens→4.23, pager-view→8.0. Android 15 foreground service warning resolved. | Build in progress |
 | Apr 1 | 1.9.0 | 24 | Home screen (icon grid, Quick Capture, personality banner, Today section), TimerScreen standalone, VoiceMemoListScreen standalone, AlarmListScreen 2-tab, HomeButton on all screens, widget rebranding (Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice), Forget Log moved to Settings. Audit 47 complete. | Dev branch — build pending |
+| Apr 5 | 1.13.0 | 30 | Chess engine hardened (Session 17): opening book, transposition table, killer moves, null-move pruning, tapered eval, min-depth/max-time difficulty model. 2 audit rounds, 6 findings fixed. Benchmark test removed for production. | Production |
+| Apr 5 | 1.14.0 | 31 | Checkers (Session 18): pure JS engine, 5 difficulty levels, American rules, Memory Score integration. Scoring overhaul: max 140 (7 games × 20), chess blunder penalty removed, chess+checkers stat sections. UI: emoji removal from headers, GamesScreen reordered. 52 checkers tests. | Production |
 
 ---
 
@@ -297,6 +308,11 @@ DontForgetWhy/
 | `library.webp` | MemoryScoreScreen | AI-generated |
 | `fullscreenicon.webp` | Watermark (all main screens) | Custom |
 | `chirp.mp3` | Sound feedback (3KB, 150ms) | Python numpy |
+| `checkers-bg.webp` | CheckersScreen | AI-generated (weathered wood table) |
+| `red.png` | Checker piece (red) | AI-generated (400×400 transparent) |
+| `red-king.png` | Checker piece (red king) | AI-generated (400×400 transparent) |
+| `black.png` | Checker piece (black) | AI-generated (400×400 transparent) |
+| `black-king.png` | Checker piece (black king) | AI-generated (400×400 transparent) |
 
 ---
 
@@ -304,8 +320,8 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.12.0 (versionCode 29) — P4.5 Stability Sprint |
-| Production status | v1.12.0 submitted to Google Play |
+| Current version | v1.14.0 (versionCode 31) — P6 Chess + Checkers |
+| Production status | v1.14.0 submitted to Google Play |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
@@ -313,9 +329,10 @@ DontForgetWhy/
 | Phase 3.5 (Voice Memos) | COMPLETE |
 | Phase 4 (The Vault) | COMPLETE |
 | Phase 4.5 (Stability Sprint) | COMPLETE |
-| Audit status | Session 15 audit complete, all P1 findings resolved |
-| Jest tests | 162 passing (7 suites: time, timeUtils, noteColors, soundModeUtils, backupRestore, widgetPins, settings) — ts-jest, node env |
-| EAS build credits | ~35 remaining (reset April 12) |
+| Phase 6 (Chess + Checkers) | COMPLETE |
+| Audit status | Session 18 checkers audit complete, 3 findings fixed |
+| Jest tests | 10 suites passing: time, timeUtils, noteColors, soundModeUtils, backupRestore, widgetPins, settings, chessAI (69 tests), checkersAI (52 tests) — ts-jest, node env |
+| EAS build credits | ~27 remaining (reset April 12) |
 
 ### Packages Added (Session 12)
 - `expo-sqlite` — synchronous SQLite database (replaced AsyncStorage for all persistent storage)
@@ -324,6 +341,9 @@ DontForgetWhy/
 ### Packages Added (Session 14)
 - `react-native-zip-archive` — native ZIP/unzip for backup files. Installed via npm, requires dev build.
 - `expo-document-picker` — file picker for .dfw import. Added to app.json plugins.
+
+### Packages Added (Session 16)
+- `chess.js` — JS-only chess library (move generation, FEN, game state). No native modules, no build required.
 
 ### Package Audit (Session 15)
 - Ran `depcheck` — no abandoned packages. Flagged as "unused" but actually required implicitly: `expo-dev-client`, `expo-notifications`, `react-native-screens`, `react-native-worklets`.
@@ -357,7 +377,7 @@ DontForgetWhy/
   - `settings.test.ts` — settings CRUD, onboarding, silence-all, timer sound (with fake timers)
 - **Run:** `npm test` or `npx jest`
 - **Config:** `package.json` `"jest"` section with `moduleNameMapper` for `src/` paths
-- **Scope:** Pure utility functions AND pure service files (those whose only side-effect is `kvGet`/`kvSet`/`kvRemove`, mocked with in-memory Map). No React Native, no SQLite, no native modules.
+- **Scope:** Pure utility functions AND pure service files (those whose only side-effect is `kvGet`/`kvSet`/`kvRemove`, mocked with in-memory Map). No React Native, no SQLite, no native modules. Game engines (chessAI, checkersAI) tested directly (pure JS, no native deps).
 - **Mock pattern:** `jest.mock('../src/services/database', () => ({ kvGet, kvSet, kvRemove }))` backed by `new Map<string, string>()` cleared in `beforeEach`
 - `jest-expo` in devDependencies for future component testing (not used as preset — crashes on expo-modules-core)
 

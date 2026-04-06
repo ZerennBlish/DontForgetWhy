@@ -131,6 +131,34 @@ export default function GamesScreen({ navigation }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={[styles.subtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Exercise that forgetful brain of yours</Text>
 
+      {/* Daily Riddle */}
+      <TouchableOpacity
+        style={styles.gameCard}
+        onPress={() => { hapticLight(); navigation.navigate('DailyRiddle'); }}
+        activeOpacity={0.7}
+        accessibilityLabel="Daily Riddle"
+        accessibilityRole="button"
+      >
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <LightbulbIcon color={colors.accent} size={28} />
+        </View>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>Daily Riddle</Text>
+          <Text style={styles.gameDesc}>
+            A new brain teaser every day. Can you keep your streak?
+          </Text>
+          {riddleStreak > 0 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, justifyContent: 'center' }}>
+              <FireIcon color={colors.orange} size={14} />
+              <Text style={styles.streakText}>{riddleStreak} day streak</Text>
+            </View>
+          )}
+        </View>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <ChevronRightIcon color={colors.sectionGames} size={16} />
+        </View>
+      </TouchableOpacity>
+
       {/* Chess */}
       <TouchableOpacity
         style={styles.gameCard}
@@ -155,28 +183,24 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
       </TouchableOpacity>
 
-      {/* Daily Riddle */}
+      {/* Checkers */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); navigation.navigate('DailyRiddle'); }}
+        onPress={() => { hapticLight(); navigation.navigate('Checkers'); }}
         activeOpacity={0.7}
-        accessibilityLabel="Daily Riddle"
+        accessibilityLabel="Checkers, play against CPU"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <LightbulbIcon color={colors.accent} size={28} />
+          <Image
+            source={require('../../assets/checkers/red.png')}
+            style={{ width: 24, height: 24 }}
+            resizeMode="contain"
+          />
         </View>
         <View style={styles.gameInfo}>
-          <Text style={styles.gameName}>Daily Riddle</Text>
-          <Text style={styles.gameDesc}>
-            A new brain teaser every day. Can you keep your streak?
-          </Text>
-          {riddleStreak > 0 && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, justifyContent: 'center' }}>
-              <FireIcon color={colors.orange} size={14} />
-              <Text style={styles.streakText}>{riddleStreak} day streak</Text>
-            </View>
-          )}
+          <Text style={styles.gameName}>Checkers</Text>
+          <Text style={styles.gameDesc}>vs CPU • 5 difficulties</Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
