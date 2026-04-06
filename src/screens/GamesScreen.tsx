@@ -249,19 +249,19 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
       </TouchableOpacity>
 
-      {/* Memory Match */}
+      {/* Memory Guy Match */}
       <TouchableOpacity
         style={styles.gameCard}
         onPress={() => { hapticLight(); navigation.navigate('MemoryMatch'); }}
         activeOpacity={0.7}
-        accessibilityLabel="Memory Match"
+        accessibilityLabel="Memory Guy Match"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
           <PuzzleIcon color={colors.accent} size={28} />
         </View>
         <View style={styles.gameInfo}>
-          <Text style={styles.gameName}>Memory Match</Text>
+          <Text style={styles.gameName}>Memory Guy Match</Text>
           <Text style={styles.gameDesc}>Flip cards and find matching pairs</Text>
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>

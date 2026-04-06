@@ -8,6 +8,8 @@ import {
   Animated,
   Alert,
   ImageBackground,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
@@ -38,17 +40,17 @@ type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
 type SpeedOption = 'relaxed' | 'normal' | 'blitz';
 const SPEED_SECONDS: Record<SpeedOption, number> = { relaxed: 25, normal: 15, blitz: 8 };
 
-const CATEGORY_EMOJIS: Record<TriviaCategory, string> = {
-  general: '\u{1F9E0}',
-  science: '\u{1F52C}',
-  history: '\u{1F3DB}',
-  music: '\u{1F3B5}',
-  movies_tv: '\u{1F3AC}',
-  geography: '\u{1F30D}',
-  sports: '\u{1F3C6}',
-  technology: '\u{1F4BB}',
-  food: '\u{1F37D}',
-  kids: '\u{1F9D2}',
+const CATEGORY_IMAGES: Record<TriviaCategory, ImageSourcePropType> = {
+  general: require('../../assets/trivia/trivia-general.webp'),
+  science: require('../../assets/trivia/trivia-science.webp'),
+  history: require('../../assets/trivia/trivia-history.webp'),
+  music: require('../../assets/trivia/trivia-music.webp'),
+  movies_tv: require('../../assets/trivia/trivia-movies.webp'),
+  geography: require('../../assets/trivia/trivia-geography.webp'),
+  sports: require('../../assets/trivia/trivia-sports.webp'),
+  technology: require('../../assets/trivia/trivia-technology.webp'),
+  food: require('../../assets/trivia/trivia-food.webp'),
+  kids: require('../../assets/trivia/trivia-kids.webp'),
 };
 
 function shuffle<T>(arr: T[]): T[] {
@@ -378,7 +380,6 @@ export default function TriviaScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark />
         </View>
-        <Text style={styles.title}>Trivia Time</Text>
         <TouchableOpacity
           style={{ position: 'absolute', right: 20, top: insets.top + 14, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: 0.4 }}
           onPress={() => { hapticLight(); Alert.alert('Online Mode', 'Online mode coming in a future update'); }}
@@ -388,6 +389,7 @@ export default function TriviaScreen({ navigation }: Props) {
           <Text style={{ fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.5)' }}>Online</Text>
         </TouchableOpacity>
       </View>
+      <Text style={[styles.title, { textAlign: 'center', marginTop: 8 }]}>Trivia Time</Text>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {allSeenMessage && (
           <Text style={styles.seenNote}>{allSeenMessage}</Text>
@@ -401,7 +403,7 @@ export default function TriviaScreen({ navigation }: Props) {
               onPress={() => { hapticLight(); setSelectedCategory(cat.id); }}
               activeOpacity={0.7}
             >
-              <Text style={styles.categoryEmoji}>{CATEGORY_EMOJIS[cat.id]}</Text>
+              <Image source={CATEGORY_IMAGES[cat.id]} style={styles.categoryImage} resizeMode="contain" />
               <Text style={[styles.categoryLabel, selectedCategory === cat.id && styles.categoryLabelActive]}>{cat.label}</Text>
             </TouchableOpacity>
           ))}
@@ -447,9 +449,10 @@ export default function TriviaScreen({ navigation }: Props) {
           onPress={() => { hapticLight(); startRound(selectedCategory); }}
           activeOpacity={0.7}
         >
-          <Text style={styles.startBtnText}>
-            {CATEGORY_EMOJIS[selectedCategory]} Start Round
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Image source={CATEGORY_IMAGES[selectedCategory]} style={{ width: 40, height: 40 }} resizeMode="contain" />
+            <Text style={styles.startBtnText}>Start Round</Text>
+          </View>
         </TouchableOpacity>
       </View>
       </View>
@@ -470,8 +473,8 @@ export default function TriviaScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark />
         </View>
-        <Text style={styles.title}>Trivia Time</Text>
       </View>
+      <Text style={[styles.title, { textAlign: 'center', marginTop: 8 }]}>Trivia Time</Text>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsTitle}>Round Complete</Text>
@@ -482,9 +485,7 @@ export default function TriviaScreen({ navigation }: Props) {
           </Text>
 
           <View style={styles.resultsBadge}>
-            <Text style={styles.resultsBadgeEmoji}>
-              {CATEGORY_EMOJIS[selectedCategory]}
-            </Text>
+            <Image source={CATEGORY_IMAGES[selectedCategory]} style={{ width: 40, height: 40 }} resizeMode="contain" />
             <Text style={styles.resultsBadgeText}>{catInfo?.label}</Text>
           </View>
 
@@ -642,7 +643,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       justifyContent: 'center',
       paddingTop: insets.top + 10,
       paddingHorizontal: 20,
-      paddingBottom: 2,
+      paddingBottom: 44,
     },
     headerBack: {
       position: 'absolute',
@@ -710,8 +711,9 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       borderColor: 'rgba(255,255,255,0.2)',
       gap: 8,
     },
-    categoryEmoji: {
-      fontSize: 36,
+    categoryImage: {
+      width: 56,
+      height: 56,
     },
     categoryLabel: {
       fontSize: 14,
@@ -968,9 +970,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       borderWidth: 1,
       borderColor: colors.border,
       marginBottom: 24,
-    },
-    resultsBadgeEmoji: {
-      fontSize: 20,
     },
     resultsBadgeText: {
       fontSize: 15,

@@ -10,7 +10,7 @@
 | **Current Version** | v1.14.0 (versionCode 31) — P6 Chess + Checkers complete |
 | **Branch** | `dev` |
 | **Production Status** | v1.14.0 submitted to Google Play |
-| **Current Focus** | v1.14.0 submitted. Next: P5.5 Premium Foundation or P6.5 Voice Content Expansion. |
+| **Current Focus** | v1.14.0 submitted. Session 19: P5.5 roadmap revised, Memory Match polish, premium pipeline planning. |
 | **Blocked By** | Nothing |
 | **Next Action** | Upload to Play Store, update listing. |
 | **EAS Credits** | ~27 remaining (reset April 12) |
@@ -139,22 +139,19 @@
 
 **Version Target:** v1.15.0
 **Branch:** `dev`
-**New deps:** None
-**Build cost:** 1 production build only
+**New deps:** `expo-iap`
+**Build cost:** 1 dev build + 1 production build
 
 ### Tasks
 
-- [ ] **5.5.1 Entitlement storage** — local entitlement in kv_store with tier, date, reason
-- [ ] **5.5.2 Grandfather / founder logic** — detect existing users, grant named tier
-- [ ] **5.5.3 Backup entitlement flag** — export/import entitlement with .dfw backup
-- [ ] **5.5.4 Billing plumbing (hidden)** — Google Play Billing built but not user-facing
-- [ ] **5.5.5 Pro feature gate scaffold** — useEntitlement() hook, apply gates
-- [x] **5.5.6 Emoji picker overhaul** ✅ Shipped early in Session 16. 11 categories, 105 labeled emojis (Health, Routine, Food, Fitness, Home, Work/School, Finance, People, Travel, Pets, More). EmojiPickerModal: horizontal capsule category tabs + 5-column labeled grid, container height 45%. Quick emoji differentiated per context: alarms get 8 wake-up emojis, reminders get 8 recurring-event emojis.
-
-### Founding Tiers
-- **Founding Tester** — closed testing participants
-- **Founding User** — first 90 days of production
-- **Early Supporter** — first year of production
+- [ ] **5.5.1 Entitlement storage** — `proStatus.ts` service: checks Pro entitlement, caches in `kv_store` (tier, purchaseDate, productId). Single source of truth for "is this user Pro?"
+- [ ] **5.5.2 Install expo-iap** — Expo Module for Google Play Billing. `npx expo install expo-iap`. Native dep = requires dev build. Create in-app product in Play Console (one-time, $1.99, dormant — not surfaced to users yet).
+- [ ] **5.5.3 ProGate component** — wrapper that checks `proStatus`. Currently always unlocked (no paywall until P7). Apply gates to: Chess, Checkers, Sudoku, voice memos, photo backgrounds, note images, drawing, backup/restore, full voice pack.
+- [ ] **5.5.4 useEntitlement() hook** — React hook exposing Pro status to screens. Drives ProGate and future Pro UI.
+- [ ] **5.5.5 Backup entitlement flag** — export/import entitlement state with .dfw backup so Pro status survives restore.
+- [ ] **5.5.6 License testing setup** — configure Google Play license testers for test purchases without real charges.
+- [ ] **5.5.7 Jest tests** — proStatus service, entitlement logic, ProGate behavior (locked/unlocked).
+- [x] **5.5.8 Emoji picker overhaul** ✅ Shipped early in Session 16. 11 categories, 105 labeled emojis. EmojiPickerModal: horizontal capsule category tabs + 5-column labeled grid.
 
 ### Audit Gate
 - [ ] Full dual audit before production build
@@ -243,6 +240,8 @@
 - [ ] **7.3 Founding user display** — named badge in Settings
 - [ ] **7.4 Android compliance** — edge-to-edge (15), orientation (16)
 - [ ] **7.5 Reminder fire → Guess Why** — reminders through AlarmFireScreen
+- [ ] **7.6 Master difficulty tier (chess)** — Pro-gated. ~15-20s think time, min-depth 8-10. Strongest local engine level.
+- [ ] **7.7 Master difficulty tier (checkers)** — Pro-gated. ~10-15s think time, min-depth 10-12. Strongest local engine level.
 
 ---
 
@@ -264,6 +263,7 @@
 ## BACKLOG (Not Scheduled)
 
 ### Features
+- Memory Match custom card art — replace emoji with custom-designed images (ChatGPT-generated, DFW-themed). ~20-22 unique cards + custom card back. Polish pass for free tier storefront quality.
 - Timer notification buttons: "Go Away" + "Start me?"
 - Add holidays to calendar
 - Theme-responsive icon colors
@@ -289,31 +289,33 @@
 
 ## PRO vs FREE BREAKDOWN
 
-### Free Tier — Keeps Everything Current, Forever
+### Free Tier — Polished, Fully Functional Core
 - All alarms, reminders, timers, notepad
 - In-app calendar (day/week/month views)
 - All 6 themes (Dark, Light, High Contrast, Vivid, Sunset, Ruby)
-- All 5 games (Guess Why, Memory Match, Trivia offline, Sudoku, Daily Riddle)
-- Memory Score tracking
 - Home screen + 4 widgets
 - All personality content (text quotes, roasts, snooze messages, placeholders)
 - Sound picker + custom alarm sounds
 - Privacy mode, Silence All mode
+- Guess Why (built into alarm dismissal)
+- Memory Score tracking
+- Daily Riddle (daily engagement hook — free forever)
+- Trivia (limited offline question pool)
+- Memory Match (with custom card art)
+- Starter voice roast pack (limited lines)
 
-### Pro Tier — ~$1.99 One-Time Unlock
-- Voice roasts + voice memos + voice on alarms
-- Custom photo backgrounds + note images + drawing
+### Pro Tier — $1.99 One-Time Unlock
+- Chess + Checkers (all difficulties including Master tier)
+- Sudoku
+- Trivia unlimited question pool + online questions (P8)
+- Voice memos
+- Full voice roast pack + female voice character (P6.5+)
+- Custom photo backgrounds + note images
+- Drawing canvas
 - Backup & Restore (.dfw export/import + auto-export)
-- Google Calendar sync
-- Chess + Checkers + Blunder Roast
-- Online trivia + riddles (unlimited)
-- Leaderboards
-
-### Founding Tiers — Automatic, Named, Permanent
-- Founding Tester / Founding User / Early Supporter
-- All Pro features forever, no charge
-- Named badge in Settings
-- Survives backup/restore
+- Cloud Stockfish AI for chess (P8)
+- Multiplayer chess (P8)
+- Online riddles + leaderboards (P8)
 
 ---
 
@@ -323,12 +325,12 @@
 |-------|-----------|-------------|-------------|
 | ~~P4.5 Stability~~ | ~~0~~ | ~~1~~ | ✅ Done |
 | P5 Calendar | 1 | 1 | ~2 |
-| P5.5 Premium | 0 | 1 | ~1 |
+| P5.5 Premium | 1 | 1 | ~2 |
 | P6 Games | 0 | 1 | ~1 |
 | P6.5 Voice | 0 | 1 | ~1 |
 | P7 Pro Tier | 0 | 2 | ~2 |
 | P8 Firebase | 0 | 1+ | ~1+ |
-| **Total** | **1** | **8+** | **~9–11** |
+| **Total** | **2** | **8+** | **~10–12** |
 
 ---
 

@@ -8,6 +8,8 @@ import {
   Dimensions,
   ScrollView,
   ImageBackground,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { kvGet, kvSet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,6 +21,7 @@ import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
+import { CARD_POOL, CARD_BACK } from '../data/memoryMatchAssets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MemoryMatch'>;
 
@@ -27,7 +30,8 @@ type GamePhase = 'select' | 'playing' | 'won';
 
 interface Card {
   id: number;
-  emoji: string;
+  cardKey: string;
+  imageSource: ImageSourcePropType;
   isFlipped: boolean;
   isMatched: boolean;
 }
@@ -44,14 +48,6 @@ interface BestScores {
 }
 
 const SCORES_KEY = 'memoryMatchScores';
-
-const EMOJI_POOL = [
-  '\u{1F355}', '\u{1F3B8}', '\u{1F680}', '\u{1F308}', '\u{1F3AF}',
-  '\u{1F9E9}', '\u{1F3AA}', '\u{1F98A}', '\u{1F33A}', '\u{1F3AD}',
-  '\u{1F369}', '\u{1F98B}', '\u{1F3A8}', '\u{1F52E}', '\u{1F3B2}',
-  '\u{1F319}', '\u{1F984}', '\u{1F3B5}', '\u{1F340}', '\u{1F419}',
-  '\u{1F388}', '\u{1F3C6}',
-];
 
 const DIFFICULTY_CONFIG: Record<
   Difficulty,
@@ -108,7 +104,8 @@ function formatTime(seconds: number): string {
 
 const CardComponent = React.memo(function CardComponent({
   index,
-  emoji,
+  imageSource,
+  cardKey,
   isMatched,
   flipAnim,
   onPress,
@@ -116,7 +113,8 @@ const CardComponent = React.memo(function CardComponent({
   colors,
 }: {
   index: number;
-  emoji: string;
+  imageSource: ImageSourcePropType;
+  cardKey: string;
   isMatched: boolean;
   flipAnim: Animated.Value;
   onPress: (index: number) => void;
@@ -134,8 +132,6 @@ const CardComponent = React.memo(function CardComponent({
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
-
-  const emojiSize = Math.floor(cardSize * 0.45);
 
   return (
     <TouchableOpacity onPress={() => onPress(index)} activeOpacity={0.8}>
@@ -155,7 +151,11 @@ const CardComponent = React.memo(function CardComponent({
             transform: [{ scaleX: frontScale }],
           }}
         >
-          <Text style={{ fontSize: emojiSize }}>{'\u2753'}</Text>
+          <Image
+            source={CARD_BACK}
+            style={{ width: cardSize * 0.75, height: cardSize * 0.75 }}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         {/* Back face (face up) */}
@@ -173,7 +173,11 @@ const CardComponent = React.memo(function CardComponent({
             transform: [{ scaleX: backScale }],
           }}
         >
-          <Text style={{ fontSize: emojiSize }}>{emoji}</Text>
+          <Image
+            source={imageSource}
+            style={{ width: cardSize * 0.8, height: cardSize * 0.8 }}
+            resizeMode="contain"
+          />
         </Animated.View>
       </View>
     </TouchableOpacity>
@@ -230,12 +234,13 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
   const startGame = useCallback((diff: Difficulty) => {
     const config = DIFFICULTY_CONFIG[diff];
-    const selectedEmojis = shuffleArray(EMOJI_POOL).slice(0, config.pairs);
-    const cardEmojis = shuffleArray([...selectedEmojis, ...selectedEmojis]);
+    const selectedCards = shuffleArray([...CARD_POOL]).slice(0, config.pairs);
+    const pairedCards = shuffleArray([...selectedCards, ...selectedCards]);
 
-    const newCards: Card[] = cardEmojis.map((emoji, i) => ({
+    const newCards: Card[] = pairedCards.map((card, i) => ({
       id: i,
-      emoji,
+      cardKey: card.key,
+      imageSource: card.source,
       isFlipped: false,
       isMatched: false,
     }));
@@ -302,7 +307,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
       movesRef.current += 1;
       setMoves(movesRef.current);
 
-      if (cardsRef.current[first].emoji === cardsRef.current[second].emoji) {
+      if (cardsRef.current[first].cardKey === cardsRef.current[second].cardKey) {
         // Match found
         const matchedCards = cardsRef.current.map((c, i) =>
           i === first || i === second ? { ...c, isMatched: true } : c,
@@ -415,7 +420,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           justifyContent: 'center',
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 2,
+          paddingBottom: 44,
         },
         headerBack: {
           position: 'absolute',
@@ -515,7 +520,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           alignSelf: 'stretch',
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 2,
+          paddingBottom: 44,
         },
         winHeaderBack: {
           position: 'absolute',
@@ -614,8 +619,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
   if (gamePhase === 'select') {
     return (
-      <ImageBackground source={require('../../assets/oakbackground.webp')} style={{ flex: 1 }} resizeMode="cover">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      <ImageBackground source={require('../../assets/memory-match-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)' }}>
           <View style={styles.header}>
             <View style={styles.headerBack}>
               <BackButton onPress={() => navigation.goBack()} forceDark />
@@ -623,10 +628,10 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             <View style={styles.headerHome}>
               <HomeButton forceDark />
             </View>
-            <Text style={styles.title}>Memory Match</Text>
           </View>
+          <Text style={[styles.title, { textAlign: 'center', marginTop: 8 }]}>Memory Guy Match</Text>
+          <Text style={[styles.selectSubtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Find all the matching pairs!</Text>
           <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
-            <Text style={[styles.selectSubtitle, { paddingHorizontal: 20 }]}>Find all the matching pairs!</Text>
 
             {(['easy', 'medium', 'hard'] as Difficulty[]).map((diff) => {
               const config = DIFFICULTY_CONFIG[diff];
@@ -667,8 +672,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     const stars = finalMoves < par ? 3 : finalMoves === par ? 2 : 1;
 
     return (
-      <ImageBackground source={require('../../assets/oakbackground.webp')} style={{ flex: 1 }} resizeMode="cover">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      <ImageBackground source={require('../../assets/memory-match-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)' }}>
           <View style={styles.winHeader}>
             <View style={styles.winHeaderBack}>
               <BackButton onPress={() => navigation.goBack()} forceDark />
@@ -676,8 +681,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             <View style={styles.winHeaderHome}>
               <HomeButton forceDark />
             </View>
-            <Text style={styles.title}>Memory Match</Text>
           </View>
+          <Text style={[styles.title, { textAlign: 'center', marginTop: 8 }]}>Memory Guy Match</Text>
           <ScrollView
             style={styles.container}
             contentContainerStyle={styles.winContent}
@@ -746,8 +751,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
   const gridWidth = config.cols * cardSize + (config.cols - 1) * CARD_GAP;
 
   return (
-    <ImageBackground source={require('../../assets/oakbackground.webp')} style={{ flex: 1 }} resizeMode="cover">
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+    <ImageBackground source={require('../../assets/memory-match-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)' }}>
         <View style={styles.container}>
           <View style={styles.gameHeader}>
             <View style={styles.gameHeaderRow}>
@@ -776,7 +781,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
                 <CardComponent
                   key={`${gameId}-${index}`}
                   index={index}
-                  emoji={card.emoji}
+                  imageSource={card.imageSource}
+                  cardKey={card.cardKey}
                   isMatched={card.isMatched}
                   flipAnim={flipAnims.current[index]}
                   onPress={handleCardPress}

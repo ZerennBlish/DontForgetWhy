@@ -323,7 +323,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u{1F9E9}'} Memory Match</Text>
+          <Text style={styles.statLabel}>{'\u{1F9E9}'} Memory Guy Match</Text>
           <Text style={styles.statValue}>{breakdown.memoryMatch} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
@@ -598,7 +598,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Section: Memory Match */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u{1F9E9}'} Memory Match</Text>
+        <Text style={styles.sectionTitle}>{'\u{1F9E9}'} Memory Guy Match</Text>
 
         {(['easy', 'medium', 'hard'] as const).map((diff) => {
           const best = mmScores[diff];
