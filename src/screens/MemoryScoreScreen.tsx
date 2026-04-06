@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ImageBackground, Image, ImageSourcePropType } from 'react-native';
 import { kvGet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -21,6 +21,17 @@ import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import type { TriviaStats, TriviaCategory } from '../types/trivia';
+
+const SECTION_ICONS: Record<string, ImageSourcePropType> = {
+  chart: require('../../assets/icons/icon-chart.webp'),
+  guessWhy: require('../../assets/trivia/trivia-general.webp'),
+  dailyRiddle: require('../../assets/icons/icon-lightbulb.webp'),
+  chess: require('../../assets/chess/wN.png'),
+  checkers: require('../../assets/checkers/red-king.png'),
+  trivia: require('../../assets/trivia/trivia-general.webp'),
+  sudoku: require('../../assets/icons/icon-sudoku.webp'),
+  memoryMatch: require('../../assets/memory-match/card-back.webp'),
+};
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MemoryScore'>;
 
@@ -249,11 +260,13 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     <ImageBackground source={require('../../assets/library.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.header}>
-      <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} forceDark />
-      </View>
-      <View style={styles.headerHome}>
-        <HomeButton forceDark />
+      <View style={styles.headerRow}>
+        <View style={styles.headerBack}>
+          <BackButton onPress={() => navigation.goBack()} forceDark />
+        </View>
+        <View style={styles.headerHome}>
+          <HomeButton forceDark />
+        </View>
       </View>
       <Text style={styles.title}>Memory Score</Text>
     </View>
@@ -261,7 +274,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Overall Summary — composite rank */}
       <View style={styles.summaryCard}>
-        <Text style={styles.summaryEmoji}>{rank.emoji}</Text>
+        <Image source={rank.imageSource} style={styles.summaryImage} resizeMode="contain" />
         <View style={styles.summaryInfo}>
           <Text style={styles.summaryRank}>{rank.title}</Text>
           <Text style={styles.summaryScore}>
@@ -272,10 +285,16 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Score Breakdown */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u{1F4CA}'} Score Breakdown</Text>
+        <View style={styles.sectionTitleRow}>
+          <Image source={SECTION_ICONS.chart} style={styles.sectionIcon} resizeMode="contain" />
+          <Text style={styles.sectionTitle}>Score Breakdown</Text>
+        </View>
 
         <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u{1F9E0}'} Guess Why</Text>
+          <View style={styles.breakdownLabelRow}>
+            <Image source={SECTION_ICONS.guessWhy} style={styles.breakdownIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Guess Why</Text>
+          </View>
           <Text style={styles.statValue}>{breakdown.guessWhy} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
@@ -283,7 +302,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u{1F4A1}'} Daily Riddle</Text>
+          <View style={styles.breakdownLabelRow}>
+            <Image source={SECTION_ICONS.dailyRiddle} style={styles.breakdownIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Daily Riddle</Text>
+          </View>
           <Text style={styles.statValue}>{breakdown.dailyRiddle} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
@@ -291,7 +313,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u265E'} Chess</Text>
+          <View style={styles.breakdownLabelRow}>
+            <Image source={SECTION_ICONS.chess} style={styles.breakdownIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Chess</Text>
+          </View>
           <Text style={styles.statValue}>{breakdown.chess} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
@@ -299,7 +324,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u26C0'} Checkers</Text>
+          <View style={styles.breakdownLabelRow}>
+            <Image source={SECTION_ICONS.checkers} style={styles.breakdownIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Checkers</Text>
+          </View>
           <Text style={styles.statValue}>{breakdown.checkers} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
@@ -307,7 +335,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u{1F9E0}'} Trivia</Text>
+          <View style={styles.breakdownLabelRow}>
+            <Image source={SECTION_ICONS.trivia} style={styles.breakdownIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Trivia</Text>
+          </View>
           <Text style={styles.statValue}>{breakdown.trivia} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
@@ -315,7 +346,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u{1F522}'} Sudoku</Text>
+          <View style={styles.breakdownLabelRow}>
+            <Image source={SECTION_ICONS.sudoku} style={styles.breakdownIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Sudoku</Text>
+          </View>
           <Text style={styles.statValue}>{breakdown.sudoku} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
@@ -323,7 +357,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.breakdownRow}>
-          <Text style={styles.statLabel}>{'\u{1F9E9}'} Memory Match</Text>
+          <View style={styles.breakdownLabelRow}>
+            <Image source={SECTION_ICONS.memoryMatch} style={styles.breakdownIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Memory Match</Text>
+          </View>
           <Text style={styles.statValue}>{breakdown.memoryMatch} / 20</Text>
         </View>
         <View style={styles.breakdownBar}>
@@ -333,7 +370,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Section: Guess Why */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u{1F9E0}'} Guess Why</Text>
+        <View style={styles.sectionTitleRow}>
+          <Image source={SECTION_ICONS.guessWhy} style={styles.sectionIcon} resizeMode="contain" />
+          <Text style={styles.sectionTitle}>Guess Why</Text>
+        </View>
 
         <View style={styles.rankRow}>
           <Text style={styles.bigValue}>{gwTotal > 0 ? `${gwPercentage}%` : '--'}</Text>
@@ -360,15 +400,15 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         <View style={styles.divider} />
 
         <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u{1F525}'} Current Streak</Text>
+          <Text style={styles.statLabel}>Current Streak</Text>
           <Text style={styles.statValue}>{guessWhyStats.streak}</Text>
         </View>
         <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u{1F3C6}'} Best Streak</Text>
+          <Text style={styles.statLabel}>Best Streak</Text>
           <Text style={styles.statValue}>{guessWhyStats.bestStreak}</Text>
         </View>
         <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u{1F3AE}'} Total Games</Text>
+          <Text style={styles.statLabel}>Total Games</Text>
           <Text style={styles.statValue}>{gwTotal}</Text>
         </View>
 
@@ -376,20 +416,23 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Section: Daily Riddle */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u{1F4A1}'} Daily Riddle</Text>
+        <View style={styles.sectionTitleRow}>
+          <Image source={SECTION_ICONS.dailyRiddle} style={styles.sectionIcon} resizeMode="contain" />
+          <Text style={styles.sectionTitle}>Daily Riddle</Text>
+        </View>
 
         {riddleStats.totalPlayed > 0 ? (
           <>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>
-                {riddleStats.streak > 0 ? '\u{1F525} ' : ''}Current Streak
+                Current Streak
               </Text>
               <Text style={styles.statValue}>
                 {riddleStats.streak} day{riddleStats.streak !== 1 ? 's' : ''}
               </Text>
             </View>
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>{'\u{1F3C6}'} Longest Streak</Text>
+              <Text style={styles.statLabel}>Longest Streak</Text>
               <Text style={styles.statValue}>
                 {riddleStats.longestStreak} day{riddleStats.longestStreak !== 1 ? 's' : ''}
               </Text>
@@ -426,7 +469,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Section: Chess */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u265E'} Chess</Text>
+        <View style={styles.sectionTitleRow}>
+          <Image source={SECTION_ICONS.chess} style={styles.sectionIcon} resizeMode="contain" />
+          <Text style={styles.sectionTitle}>Chess</Text>
+        </View>
 
         {chessStats.gamesPlayed > 0 ? (
           <>
@@ -448,7 +494,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
               <Text style={styles.statValue}>{chessStats.losses}</Text>
             </View>
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>{'\u{1F91D}'} Draws</Text>
+              <Text style={styles.statLabel}>Draws</Text>
               <Text style={styles.statValue}>{chessStats.draws}</Text>
             </View>
             <View style={styles.statRow}>
@@ -463,7 +509,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Section: Checkers */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u26C0'} Checkers</Text>
+        <View style={styles.sectionTitleRow}>
+          <Image source={SECTION_ICONS.checkers} style={styles.sectionIcon} resizeMode="contain" />
+          <Text style={styles.sectionTitle}>Checkers</Text>
+        </View>
 
         {checkersStats.gamesPlayed > 0 ? (
           <>
@@ -496,7 +545,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Section: Trivia */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u{1F9E0}'} Trivia</Text>
+        <View style={styles.sectionTitleRow}>
+          <Image source={SECTION_ICONS.trivia} style={styles.sectionIcon} resizeMode="contain" />
+          <Text style={styles.sectionTitle}>Trivia</Text>
+        </View>
 
         {triviaStats.totalRoundsPlayed > 0 ? (
           <>
@@ -523,14 +575,14 @@ export default function MemoryScoreScreen({ navigation }: Props) {
             <View style={styles.divider} />
 
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>{'\u{1F3C6}'} Best Round</Text>
+              <Text style={styles.statLabel}>Best Round</Text>
               <Text style={styles.statValue}>
                 {triviaStats.bestRoundScore}/10
                 {bestCatLabel ? ` (${bestCatLabel})` : ''}
               </Text>
             </View>
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>{'\u{1F525}'} Longest Streak</Text>
+              <Text style={styles.statLabel}>Longest Streak</Text>
               <Text style={styles.statValue}>{triviaStats.longestStreak}</Text>
             </View>
 
@@ -563,7 +615,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Section: Sudoku */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u{1F522}'} Sudoku</Text>
+        <View style={styles.sectionTitleRow}>
+          <Image source={SECTION_ICONS.sudoku} style={styles.sectionIcon} resizeMode="contain" />
+          <Text style={styles.sectionTitle}>Sudoku</Text>
+        </View>
 
         {(['easy', 'medium', 'hard'] as const).map((diff) => {
           const best = sudokuScores[diff];
@@ -598,7 +653,10 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
       {/* Section: Memory Match */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{'\u{1F9E9}'} Memory Match</Text>
+        <View style={styles.sectionTitleRow}>
+          <Image source={SECTION_ICONS.memoryMatch} style={styles.sectionIcon} resizeMode="contain" />
+          <Text style={styles.sectionTitle}>Memory Guy Match</Text>
+        </View>
 
         {(['easy', 'medium', 'hard'] as const).map((diff) => {
           const best = mmScores[diff];
@@ -655,27 +713,24 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       paddingBottom: 60 + bottomInset,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
       paddingTop: topInset + 10,
       paddingHorizontal: 20,
       paddingBottom: 2,
     },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
     headerBack: {
-      position: 'absolute',
-      left: 20,
-      top: topInset + 10,
+      marginRight: 8,
     },
-    headerHome: {
-      position: 'absolute',
-      left: 64,
-      top: topInset + 10,
-    },
+    headerHome: {},
     title: {
       fontSize: 28,
       fontWeight: '800',
       color: colors.overlayText,
+      textAlign: 'center',
+      marginTop: 8,
     },
 
     // Overall summary
@@ -691,8 +746,9 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       alignItems: 'center',
       gap: 16,
     },
-    summaryEmoji: {
-      fontSize: 48,
+    summaryImage: {
+      width: 100,
+      height: 100,
     },
     summaryInfo: {
       flex: 1,
@@ -720,12 +776,21 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.2)',
     },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+    },
+    sectionIcon: {
+      width: 28,
+      height: 28,
+      marginRight: 8,
+    },
     sectionTitle: {
       fontSize: 18,
       fontWeight: '700',
       color: colors.overlayText,
-      marginBottom: 16,
-      textAlign: 'center',
     },
 
     // Score breakdown bars
@@ -745,6 +810,15 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
     breakdownFill: {
       height: 6,
       borderRadius: 3,
+    },
+    breakdownLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    breakdownIcon: {
+      width: 20,
+      height: 20,
+      marginRight: 8,
     },
 
     // Guess Why rank row
