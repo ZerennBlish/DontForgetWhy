@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import { hapticLight } from '../utils/haptics';
-import { LightbulbIcon, PuzzleIcon, NumbersIcon, BrainIcon, TrophyIcon, FireIcon, ChevronRightIcon } from '../components/Icons';
+import { ChevronRightIcon } from '../components/Icons';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Games'>;
@@ -140,7 +140,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <LightbulbIcon color={colors.accent} size={28} />
+          <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Daily Riddle</Text>
@@ -149,7 +149,6 @@ export default function GamesScreen({ navigation }: Props) {
           </Text>
           {riddleStreak > 0 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, justifyContent: 'center' }}>
-              <FireIcon color={colors.orange} size={14} />
               <Text style={styles.streakText}>{riddleStreak} day streak</Text>
             </View>
           )}
@@ -168,11 +167,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image
-            source={require('../../assets/chess/wN.png')}
-            style={{ width: 24, height: 24 }}
-            resizeMode="contain"
-          />
+          <Image source={require('../../assets/icons/icon-chess.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Chess</Text>
@@ -192,11 +187,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image
-            source={require('../../assets/checkers/red.png')}
-            style={{ width: 24, height: 24 }}
-            resizeMode="contain"
-          />
+          <Image source={require('../../assets/icons/icon-checkers.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Checkers</Text>
@@ -216,7 +207,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <BrainIcon color={colors.accent} size={28} />
+          <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trivia</Text>
@@ -238,7 +229,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <NumbersIcon color={colors.accent} size={28} />
+          <Image source={require('../../assets/icons/icon-sudoku.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Sudoku</Text>
@@ -258,7 +249,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <PuzzleIcon color={colors.accent} size={28} />
+          <Image source={require('../../assets/memory-match/card-back.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Memory Guy Match</Text>
@@ -278,7 +269,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <TrophyIcon color={colors.accent} size={28} />
+          <Image source={require('../../assets/trivia/trivia-sports.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trophies</Text>

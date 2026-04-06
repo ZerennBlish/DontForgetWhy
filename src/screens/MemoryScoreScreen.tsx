@@ -26,8 +26,12 @@ const SECTION_ICONS: Record<string, ImageSourcePropType> = {
   chart: require('../../assets/icons/icon-chart.webp'),
   guessWhy: require('../../assets/trivia/trivia-general.webp'),
   dailyRiddle: require('../../assets/icons/icon-lightbulb.webp'),
-  chess: require('../../assets/chess/wN.png'),
-  checkers: require('../../assets/checkers/red-king.png'),
+  chess: require('../../assets/icons/icon-chess.webp'),
+  checkers: require('../../assets/icons/icon-checkers.webp'),
+  win: require('../../assets/icons/icon-win.webp'),
+  loss: require('../../assets/icons/icon-loss.webp'),
+  skip: require('../../assets/icons/icon-skip.webp'),
+  star: require('../../assets/icons/icon-star.webp'),
   trivia: require('../../assets/trivia/trivia-general.webp'),
   sudoku: require('../../assets/icons/icon-sudoku.webp'),
   memoryMatch: require('../../assets/memory-match/card-back.webp'),
@@ -385,15 +389,24 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         <View style={styles.divider} />
 
         <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u2705'} Wins</Text>
+          <View style={styles.statLabelRow}>
+            <Image source={SECTION_ICONS.win} style={styles.statIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Wins</Text>
+          </View>
           <Text style={styles.statValue}>{guessWhyStats.wins}</Text>
         </View>
         <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u274C'} Losses</Text>
+          <View style={styles.statLabelRow}>
+            <Image source={SECTION_ICONS.loss} style={styles.statIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Losses</Text>
+          </View>
           <Text style={styles.statValue}>{guessWhyStats.losses}</Text>
         </View>
         <View style={styles.statRow}>
-          <Text style={styles.statLabel}>{'\u23ED\uFE0F'} Skips</Text>
+          <View style={styles.statLabelRow}>
+            <Image source={SECTION_ICONS.skip} style={styles.statIcon} resizeMode="contain" />
+            <Text style={styles.statLabel}>Skips</Text>
+          </View>
           <Text style={styles.statValue}>{guessWhyStats.skips}</Text>
         </View>
 
@@ -486,11 +499,17 @@ export default function MemoryScoreScreen({ navigation }: Props) {
             <View style={styles.divider} />
 
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>{'\u2705'} Wins</Text>
+              <View style={styles.statLabelRow}>
+                <Image source={SECTION_ICONS.win} style={styles.statIcon} resizeMode="contain" />
+                <Text style={styles.statLabel}>Wins</Text>
+              </View>
               <Text style={styles.statValue}>{chessStats.wins}</Text>
             </View>
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>{'\u274C'} Losses</Text>
+              <View style={styles.statLabelRow}>
+                <Image source={SECTION_ICONS.loss} style={styles.statIcon} resizeMode="contain" />
+                <Text style={styles.statLabel}>Losses</Text>
+              </View>
               <Text style={styles.statValue}>{chessStats.losses}</Text>
             </View>
             <View style={styles.statRow}>
@@ -526,11 +545,17 @@ export default function MemoryScoreScreen({ navigation }: Props) {
             <View style={styles.divider} />
 
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>{'\u2705'} Wins</Text>
+              <View style={styles.statLabelRow}>
+                <Image source={SECTION_ICONS.win} style={styles.statIcon} resizeMode="contain" />
+                <Text style={styles.statLabel}>Wins</Text>
+              </View>
               <Text style={styles.statValue}>{checkersStats.wins}</Text>
             </View>
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>{'\u274C'} Losses</Text>
+              <View style={styles.statLabelRow}>
+                <Image source={SECTION_ICONS.loss} style={styles.statIcon} resizeMode="contain" />
+                <Text style={styles.statLabel}>Losses</Text>
+              </View>
               <Text style={styles.statValue}>{checkersStats.losses}</Text>
             </View>
             <View style={styles.statRow}>
@@ -637,9 +662,11 @@ export default function MemoryScoreScreen({ navigation }: Props) {
                   </View>
                   <View style={styles.statRow}>
                     <Text style={styles.statLabel}>Rating</Text>
-                    <Text style={styles.statValue}>
-                      {'\u2B50'.repeat(sudokuStars(best.bestMistakes))}
-                    </Text>
+                    <View style={styles.starRow}>
+                      {Array.from({ length: sudokuStars(best.bestMistakes) }).map((_, i) => (
+                        <Image key={i} source={SECTION_ICONS.star} style={styles.starIcon} resizeMode="contain" />
+                      ))}
+                    </View>
                   </View>
                 </>
               ) : (
@@ -675,9 +702,11 @@ export default function MemoryScoreScreen({ navigation }: Props) {
                   </View>
                   <View style={styles.statRow}>
                     <Text style={styles.statLabel}>Rating</Text>
-                    <Text style={styles.statValue}>
-                      {'\u2B50'.repeat(mmStars(best.bestMoves, diff))}
-                    </Text>
+                    <View style={styles.starRow}>
+                      {Array.from({ length: mmStars(best.bestMoves, diff) }).map((_, i) => (
+                        <Image key={i} source={SECTION_ICONS.star} style={styles.starIcon} resizeMode="contain" />
+                      ))}
+                    </View>
                   </View>
                 </>
               ) : (
@@ -843,6 +872,24 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingVertical: 8,
+    },
+    statLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    statIcon: {
+      width: 20,
+      height: 20,
+      marginRight: 8,
+    },
+    starRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    starIcon: {
+      width: 24,
+      height: 24,
+      marginRight: 2,
     },
     statLabel: {
       fontSize: 15,
