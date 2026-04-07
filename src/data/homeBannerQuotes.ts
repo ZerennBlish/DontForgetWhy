@@ -65,7 +65,7 @@ export const HOME_BANNER_QUOTES: BannerQuote[] = [
 
   { section: 'games', text: "Five games to sharpen whatever it is you've got going on up there." },
   { section: 'games', text: "Guess Why tests if you remember why you set your alarm. Spoiler: your track record isn't great." },
-  { section: 'games', text: "Memory Match. Flip cards. Find pairs. Try not to embarrass yourself." },
+  { section: 'games', text: "Memory Guy Match. Flip cards. Find pairs. Try not to embarrass yourself." },
   { section: 'games', text: "Sudoku. Numbers. Logic. Everything you avoid at the grocery store self-checkout." },
   { section: 'games', text: "Trivia questions to prove you know things. No pressure. Actually, lots of pressure." },
   { section: 'games', text: "Daily Riddle gives you one shot per day. One. So don't waste it being you." },

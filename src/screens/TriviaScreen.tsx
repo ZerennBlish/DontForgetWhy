@@ -380,16 +380,9 @@ export default function TriviaScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark />
         </View>
-        <TouchableOpacity
-          style={{ position: 'absolute', right: 20, top: insets.top + 14, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: 0.4 }}
-          onPress={() => { hapticLight(); Alert.alert('Online Mode', 'Online mode coming in a future update'); }}
-          activeOpacity={0.6}
-        >
-          <Text style={{ fontSize: 14 }}>{'\u{1F310}'}</Text>
-          <Text style={{ fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.5)' }}>Online</Text>
-        </TouchableOpacity>
+        <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
-      <Text style={[styles.title, { textAlign: 'center', marginTop: 8 }]}>Trivia Time</Text>
+      <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Trivia Time</Text>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {allSeenMessage && (
           <Text style={styles.seenNote}>{allSeenMessage}</Text>
@@ -473,8 +466,9 @@ export default function TriviaScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark />
         </View>
+        <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
-      <Text style={[styles.title, { textAlign: 'center', marginTop: 8 }]}>Trivia Time</Text>
+      <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Trivia Time</Text>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsTitle}>Round Complete</Text>
@@ -550,7 +544,10 @@ export default function TriviaScreen({ navigation }: Props) {
         <View style={styles.topBarRight}>
           <Text style={styles.topBarCounter}>{currentIndex + 1}/{questions.length}</Text>
           {currentStreak > 1 && (
-            <Text style={styles.topBarStreak}>{'\u{1F525}'}{currentStreak}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Image source={require('../../assets/icons/icon-fire.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <Text style={styles.topBarStreak}>{currentStreak} streak</Text>
+            </View>
           )}
         </View>
       </View>
@@ -643,7 +640,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       justifyContent: 'center',
       paddingTop: insets.top + 10,
       paddingHorizontal: 20,
-      paddingBottom: 44,
+      paddingBottom: 4,
     },
     headerBack: {
       position: 'absolute',

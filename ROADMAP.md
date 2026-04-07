@@ -10,7 +10,7 @@
 | **Current Version** | v1.14.0 (versionCode 31) — P6 Chess + Checkers complete |
 | **Branch** | `dev` |
 | **Production Status** | v1.14.0 submitted to Google Play |
-| **Current Focus** | v1.14.0 submitted. Session 19: P5.5 roadmap revised, Memory Match polish, premium pipeline planning. |
+| **Current Focus** | v1.14.0 live. Session 19: Visual art overhaul — Memory Guy Match, custom icons, rank system, trivia icons. Next: production build + custom icon set phase. |
 | **Blocked By** | Nothing |
 | **Next Action** | Upload to Play Store, update listing. |
 | **EAS Credits** | ~27 remaining (reset April 12) |
@@ -264,6 +264,9 @@
 
 ### Features
 - Memory Match custom card art — replace emoji with custom-designed images (ChatGPT-generated, DFW-themed). ~20-22 unique cards + custom card back. Polish pass for free tier storefront quality.
+- Chess post-game move review (replay viewer: step through moves on board after game over, forward/back buttons)
+- DailyRiddleScreen emoji → custom art pass (category emoji, button label emoji)
+- SudokuScreen emoji → custom art pass (win emoji, hint button, new game button)
 - Timer notification buttons: "Go Away" + "Start me?"
 - Add holidays to calendar
 - Theme-responsive icon colors
@@ -386,3 +389,4 @@
 | Apr 5 | Session 16 P6 Chess in progress. chess.js + custom Staunton piece assets, iterative-deepening minimax w/ quiescence search, 5 difficulties (300ms → 5s), full game hook + screen, SQLite persistence, 58 blunder-roast lines, Memory Score integration. Emoji picker overhaul shipped: 11 categories, 105 labeled emojis, context-specific quick-picker rows. P5 Google Calendar deferred (conflicts with no-accounts brand). Two audit rounds (Codex + Gemini), all findings fixed. Checkers not started. |
 | Apr 5 | Session 17 P6 Chess engine hardened. Opening book (104 positions), transposition table with halfmove-aware key + mate-score ply adjustment, killer moves, null-move pruning, min-depth/max-time difficulty model with 3× safety deadline, tapered eval, passed-pawn bonus, rook on open file. 2 audit rounds completed (6 findings, all fixed). 232 tests passing across 9 suites. Chess targeted to ship as v1.13.0 solo; Checkers + Premium Foundation pushed back. P8 Firebase scope now includes chess multiplayer + Pro-tier cloud Stockfish. |
 | Apr 5 | Session 18 P6 complete. Checkers shipped: pure JS engine (minimax, alpha-beta, TT, killers, IDS, forced captures, multi-jump, king promotion), 5 difficulty levels, American rules only (freestyle built and removed). 3 audit bug fixes (evaluateBoard perf, mate ply penalty, AI null game-over). Scoring system overhauled: max 140 (7×20), rank thresholds scaled, chess blunder penalty removed, chess+checkers stat sections added to MemoryScoreScreen. UI cleanup: emoji removal from headers, GamesScreen reordered (Daily Riddle first). v1.14.0 (versionCode 31). |
+| Apr 6 | Session 19 visual art overhaul. Memory Match → Memory Guy Match with 22 custom card images + card back + felt background. 10 trivia category icons + library background. 9 rank tier images with new titles (The Rock → The Elephant). Score screen emoji → custom art. GamesScreen icons → custom art. P5.5 roadmap revised: no grandfathering, expo-iap, revised Pro/Free split. Dual audit clean (0 P0/P1). |

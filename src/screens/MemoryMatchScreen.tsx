@@ -106,6 +106,7 @@ const CardComponent = React.memo(function CardComponent({
   index,
   imageSource,
   cardKey,
+  isFlipped,
   isMatched,
   flipAnim,
   onPress,
@@ -115,6 +116,7 @@ const CardComponent = React.memo(function CardComponent({
   index: number;
   imageSource: ImageSourcePropType;
   cardKey: string;
+  isFlipped: boolean;
   isMatched: boolean;
   flipAnim: Animated.Value;
   onPress: (index: number) => void;
@@ -134,7 +136,12 @@ const CardComponent = React.memo(function CardComponent({
   });
 
   return (
-    <TouchableOpacity onPress={() => onPress(index)} activeOpacity={0.8}>
+    <TouchableOpacity
+      onPress={() => onPress(index)}
+      activeOpacity={0.8}
+      accessibilityLabel={isMatched ? `${cardKey}, matched` : isFlipped ? cardKey : 'Card, face down'}
+      accessibilityState={{ disabled: isMatched }}
+    >
       <View style={{ width: cardSize, height: cardSize, opacity: isMatched ? 0.7 : 1 }}>
         {/* Front face (face down) */}
         <Animated.View
@@ -420,7 +427,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           justifyContent: 'center',
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 44,
+          paddingBottom: 4,
         },
         headerBack: {
           position: 'absolute',
@@ -520,7 +527,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           alignSelf: 'stretch',
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 44,
+          paddingBottom: 4,
         },
         winHeaderBack: {
           position: 'absolute',
@@ -628,8 +635,9 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             <View style={styles.headerHome}>
               <HomeButton forceDark />
             </View>
+            <Image source={require('../../assets/memory-match/card-back.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
           </View>
-          <Text style={[styles.title, { textAlign: 'center', marginTop: 8 }]}>Memory Guy Match</Text>
+          <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Memory Guy Match</Text>
           <Text style={[styles.selectSubtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Find all the matching pairs!</Text>
           <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
 
@@ -648,9 +656,12 @@ export default function MemoryMatchScreen({ navigation }: Props) {
                     {config.cols}{'\u00D7'}{config.rows} {'\u00B7'} {config.pairs} pairs {'\u00B7'} Par: {config.par} moves
                   </Text>
                   {best ? (
-                    <Text style={styles.bestScoreText}>
-                      {'\u{1F3C6}'} Best: {best.bestMoves} moves ({formatTime(best.bestTime)})
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                      <Image source={require('../../assets/icons/icon-win.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                      <Text style={[styles.bestScoreText, { marginTop: 0 }]}>
+                        Best: {best.bestMoves} moves ({formatTime(best.bestTime)})
+                      </Text>
+                    </View>
                   ) : (
                     <Text style={[styles.bestScoreText, { color: 'rgba(255,255,255,0.5)' }]}>
                       No games played yet
@@ -681,15 +692,20 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             <View style={styles.winHeaderHome}>
               <HomeButton forceDark />
             </View>
+            <Image source={require('../../assets/memory-match/card-back.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
           </View>
-          <Text style={[styles.title, { textAlign: 'center', marginTop: 8 }]}>Memory Guy Match</Text>
+          <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Memory Guy Match</Text>
           <ScrollView
             style={styles.container}
             contentContainerStyle={styles.winContent}
           >
-            <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
+            <Image source={require('../../assets/icons/icon-party.webp')} style={{ width: 48, height: 48, marginBottom: 8 }} resizeMode="contain" />
             <Text style={styles.winTitle}>Congratulations!</Text>
-            <Text style={styles.starsText}>{'\u2B50'.repeat(stars)}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+              {Array.from({ length: stars }).map((_, i) => (
+                <Image key={i} source={require('../../assets/icons/icon-star.webp')} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              ))}
+            </View>
 
             <View style={styles.winStatsCard}>
               <View style={styles.winStatRow}>
@@ -783,6 +799,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
                   index={index}
                   imageSource={card.imageSource}
                   cardKey={card.cardKey}
+                  isFlipped={card.isFlipped}
                   isMatched={card.isMatched}
                   flipAnim={flipAnims.current[index]}
                   onPress={handleCardPress}

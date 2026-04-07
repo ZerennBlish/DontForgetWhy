@@ -264,16 +264,15 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     <ImageBackground source={require('../../assets/library.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.header}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} forceDark />
-        </View>
-        <View style={styles.headerHome}>
-          <HomeButton forceDark />
-        </View>
+      <View style={styles.headerBack}>
+        <BackButton onPress={() => navigation.goBack()} forceDark />
       </View>
-      <Text style={styles.title}>Memory Score</Text>
+      <View style={styles.headerHome}>
+        <HomeButton forceDark />
+      </View>
+      <Image source={require('../../assets/icons/icon-chart.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
     </View>
+    <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Memory Score</Text>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
       {/* Overall Summary — composite rank */}
@@ -363,7 +362,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         <View style={styles.breakdownRow}>
           <View style={styles.breakdownLabelRow}>
             <Image source={SECTION_ICONS.memoryMatch} style={styles.breakdownIcon} resizeMode="contain" />
-            <Text style={styles.statLabel}>Memory Match</Text>
+            <Text style={styles.statLabel}>Memory Guy Match</Text>
           </View>
           <Text style={styles.statValue}>{breakdown.memoryMatch} / 20</Text>
         </View>
@@ -742,18 +741,23 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       paddingBottom: 60 + bottomInset,
     },
     header: {
-      paddingTop: topInset + 10,
-      paddingHorizontal: 20,
-      paddingBottom: 2,
-    },
-    headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: topInset + 10,
+      paddingHorizontal: 20,
+      paddingBottom: 4,
     },
     headerBack: {
-      marginRight: 8,
+      position: 'absolute',
+      left: 20,
+      top: topInset + 10,
     },
-    headerHome: {},
+    headerHome: {
+      position: 'absolute',
+      left: 64,
+      top: topInset + 10,
+    },
     title: {
       fontSize: 28,
       fontWeight: '800',

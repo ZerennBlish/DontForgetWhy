@@ -8,6 +8,7 @@ import {
   Dimensions,
   Alert,
   ImageBackground,
+  Image,
 } from 'react-native';
 import { kvGet, kvSet, kvRemove } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
@@ -544,8 +545,9 @@ export default function SudokuScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark />
         </View>
-        <Text style={styles.title}>Sudoku</Text>
+        <Image source={require('../../assets/icons/icon-sudoku.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
+      <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Sudoku</Text>
       <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
         <Text style={[styles.selectSubtitle, { paddingHorizontal: 20 }]}>Classic number puzzle. No forgetting allowed.</Text>
 
@@ -644,10 +646,11 @@ export default function SudokuScreen({ navigation }: Props) {
         <View style={styles.winHeaderHome}>
           <HomeButton forceDark />
         </View>
-        <Text style={styles.title}>Sudoku</Text>
+        <Image source={require('../../assets/icons/icon-sudoku.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
+      <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Sudoku</Text>
       <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
-        <Text style={styles.winEmoji}>{'\u{1F389}'}</Text>
+        <Image source={require('../../assets/icons/icon-party.webp')} style={{ width: 48, height: 48, marginBottom: 8 }} resizeMode="contain" />
         <Text style={styles.winTitle}>Puzzle Complete!</Text>
 
         {isHard && (
@@ -738,7 +741,10 @@ export default function SudokuScreen({ navigation }: Props) {
             <Text style={styles.timerText}>{'\u23F1\uFE0F'} {formatTime(elapsed)}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { hapticLight(); handleNewGameConfirm(); }} activeOpacity={0.7}>
-            <Text style={[styles.statText, { color: colors.accent }]}>{'\u{1F504}'} New</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Image source={require('../../assets/icons/icon-refresh.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+              <Text style={[styles.statText, { color: colors.accent }]}>New</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -862,9 +868,14 @@ export default function SudokuScreen({ navigation }: Props) {
             activeOpacity={0.7}
             disabled={hintDisabled}
           >
-            <Text style={[styles.toolBtnText, hintDisabled && { color: colors.textTertiary }]}>
-              {hintsUsed >= MAX_HINTS ? 'No hints left' : `\u{1F4A1} Hint (${MAX_HINTS - hintsUsed})`}
-            </Text>
+            {hintsUsed >= MAX_HINTS ? (
+              <Text style={[styles.toolBtnText, { color: colors.textTertiary }]}>No hints left</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                <Text style={[styles.toolBtnText, hintDisabled && { color: colors.textTertiary }]}>Hint ({MAX_HINTS - hintsUsed})</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -894,7 +905,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       justifyContent: 'center',
       paddingTop: topInset + 10,
       paddingHorizontal: 20,
-      paddingBottom: 2,
+      paddingBottom: 4,
     },
     headerBack: {
       position: 'absolute',
@@ -994,7 +1005,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       alignSelf: 'stretch',
       paddingTop: topInset + 10,
       paddingHorizontal: 20,
-      paddingBottom: 2,
+      paddingBottom: 4,
     },
     winHeaderBack: {
       position: 'absolute',

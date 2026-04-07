@@ -87,11 +87,11 @@ export default function CheckersScreen({ navigation }: Props) {
           justifyContent: 'center',
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 8,
+          paddingBottom: 4,
         },
         headerBack: { position: 'absolute', left: 20, top: insets.top + 10 },
         headerHome: { position: 'absolute', left: 64, top: insets.top + 10 },
-        title: { fontSize: 26, fontWeight: '800', color: colors.overlayText },
+        title: { fontSize: 28, fontWeight: '800', color: colors.overlayText },
         body: { flex: 1, paddingHorizontal: BOARD_H_PADDING },
         centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
         loadingText: { color: colors.overlayText, fontSize: 15 },
@@ -536,8 +536,9 @@ export default function CheckersScreen({ navigation }: Props) {
           <View style={styles.headerHome}>
             <HomeButton forceDark />
           </View>
-          <Text style={styles.title}>Checkers</Text>
+          <Image source={require('../../assets/icons/icon-checkers.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </View>
+        <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Checkers</Text>
         {game.isLoading ? (
           <View style={styles.centerContent}>
             <Text style={styles.loadingText}>Loading…</Text>

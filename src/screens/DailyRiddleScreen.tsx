@@ -9,6 +9,8 @@ import {
   Animated,
   ActivityIndicator,
   ImageBackground,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { kvGet, kvSet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
@@ -68,12 +70,12 @@ const WRONG_MESSAGES = [
   'Your brain has left the chat.',
 ];
 
-const CATEGORY_EMOJI: Record<RiddleCategory, string> = {
-  memory: '\u{1F9E0}',
-  classic: '\u{1F3DB}',
-  wordplay: '\u{1F524}',
-  logic: '\u{1F9E9}',
-  quick: '\u26A1',
+const RIDDLE_CATEGORY_IMAGES: Record<string, ImageSourcePropType> = {
+  memory: require('../../assets/trivia/trivia-general.webp'),
+  classic: require('../../assets/trivia/trivia-history.webp'),
+  wordplay: require('../../assets/icons/icon-wordplay.webp'),
+  logic: require('../../assets/icons/icon-puzzle.webp'),
+  quick: require('../../assets/icons/icon-quick.webp'),
 };
 
 const ALL_CATEGORIES: RiddleCategory[] = ['memory', 'classic', 'logic', 'wordplay', 'quick'];
@@ -283,7 +285,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           justifyContent: 'center',
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 2,
+          paddingBottom: 4,
         },
         headerBack: {
           position: 'absolute',
@@ -298,7 +300,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         title: {
           fontSize: 28,
           fontWeight: '800',
-          color: '#FFFFFF',
+          color: colors.overlayText,
         },
         dateText: {
           fontSize: 15,
@@ -752,9 +754,11 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   dailyRiddle.difficulty.slice(1)}
               </Text>
             </View>
-            <View style={styles.categoryBadge}>
+            <View style={[styles.categoryBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+              {RIDDLE_CATEGORY_IMAGES[dailyRiddle.category] && (
+                <Image source={RIDDLE_CATEGORY_IMAGES[dailyRiddle.category]} style={{ width: 14, height: 14 }} resizeMode="contain" />
+              )}
               <Text style={styles.categoryBadgeText}>
-                {CATEGORY_EMOJI[dailyRiddle.category]}{' '}
                 {CATEGORY_LABELS[dailyRiddle.category]}
               </Text>
             </View>
@@ -768,13 +772,12 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             <>
               {!hintShown ? (
                 <TouchableOpacity
-                  style={styles.hintBtn}
+                  style={[styles.hintBtn, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
                   onPress={() => { hapticLight(); handleShowHint(); }}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.hintBtnText}>
-                    {'\u{1F4A1}'} Need a hint?
-                  </Text>
+                  <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                  <Text style={styles.hintBtnText}>Need a hint?</Text>
                 </TouchableOpacity>
               ) : (
                 <Text style={styles.hintText}>
@@ -837,9 +840,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                       {'\u201C'}{resultMessage}{'\u201D'}
                     </Text>
                   ) : (
-                    <View style={styles.alreadyPlayed}>
+                    <View style={[styles.alreadyPlayed, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                      <Image source={require('../../assets/icons/icon-win.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
                       <Text style={styles.alreadyPlayedText}>
-                        {'\u2705'} You already played today!
+                        You already played today!
                       </Text>
                     </View>
                   )}
@@ -855,9 +859,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             onPress={() => { hapticLight(); handleReveal(); }}
             activeOpacity={0.8}
           >
-            <Text style={styles.revealBtnText}>
-              {'\u{1F50D}'} Reveal Answer
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Image source={require('../../assets/icons/icon-magnify.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+              <Text style={styles.revealBtnText}>Reveal Answer</Text>
+            </View>
           </TouchableOpacity>
         )}
 
@@ -866,9 +871,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           onPress={() => { hapticLight(); setMode('browse'); }}
           activeOpacity={0.7}
         >
-          <Text style={styles.browseBtnText}>
-            {'\u{1F4DA}'} Browse All Riddles
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Image source={require('../../assets/icons/icon-books.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+            <Text style={styles.browseBtnText}>Browse All Riddles</Text>
+          </View>
         </TouchableOpacity>
 
       </>
@@ -887,7 +893,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             style={[styles.sourceBtn, styles.sourceBtnActive]}
             activeOpacity={1}
           >
-            <Text style={styles.sourceBtnIcon}>{'\u{1F4F1}'}</Text>
+            <Image source={require('../../assets/icons/icon-phone.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
             <Text style={[styles.sourceBtnText, styles.sourceBtnTextActive]}>
               Offline Bank
             </Text>
@@ -896,7 +902,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             style={[styles.sourceBtn, { opacity: 0.4 }]}
             pointerEvents="none"
           >
-            <Text style={styles.sourceBtnIcon}>{'\u{1F310}'}</Text>
+            <Image source={require('../../assets/icons/icon-globe.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
             <Text style={[styles.sourceBtnText, { color: colors.textTertiary }]}>
               Fresh Riddles
             </Text>
@@ -920,7 +926,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}
+              contentContainerStyle={[styles.filterRow, { paddingHorizontal: 16 }]}
             >
               <TouchableOpacity
                 style={[
@@ -949,14 +955,19 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   onPress={() => { hapticLight(); setSelectedCategory(cat); }}
                   activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.filterBtnText,
-                      selectedCategory === cat && styles.filterBtnTextActive,
-                    ]}
-                  >
-                    {CATEGORY_EMOJI[cat]} {CATEGORY_LABELS[cat]}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    {RIDDLE_CATEGORY_IMAGES[cat] && (
+                      <Image source={RIDDLE_CATEGORY_IMAGES[cat]} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                    )}
+                    <Text
+                      style={[
+                        styles.filterBtnText,
+                        selectedCategory === cat && styles.filterBtnTextActive,
+                      ]}
+                    >
+                      {CATEGORY_LABELS[cat]}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -1056,10 +1067,9 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                       }}
                       activeOpacity={0.7}
                     >
-                      <View style={styles.onlineBadge}>
-                        <Text style={styles.onlineBadgeText}>
-                          {'\u{1F310}'} Online
-                        </Text>
+                      <View style={[styles.onlineBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+                        <Image source={require('../../assets/icons/icon-globe.webp')} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                        <Text style={styles.onlineBadgeText}>Online</Text>
                       </View>
                       <Text style={styles.onlineQuestion}>
                         {'\u201C'}{riddle.question}{'\u201D'}
@@ -1111,8 +1121,9 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       <View style={styles.headerHome}>
         <HomeButton forceDark />
       </View>
-      <Text style={styles.title}>Daily Riddle</Text>
+      <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
     </View>
+    <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Daily Riddle</Text>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
@@ -1122,9 +1133,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
 
       {stats.streak > 0 && (
         <View style={[styles.streakRow, { paddingHorizontal: 20 }]}>
-          <Text style={styles.streakText}>
-            {'\u{1F525}'} {stats.streak} day streak
-          </Text>
+          <Image source={require('../../assets/icons/icon-fire.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+          <Text style={styles.streakText}>{stats.streak} day streak</Text>
         </View>
       )}
 
@@ -1149,28 +1159,34 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           onPress={() => { hapticLight(); setMode('daily'); }}
           activeOpacity={0.7}
         >
-          <Text
-            style={[
-              styles.modeBtnText,
-              mode === 'daily' && styles.modeBtnTextActive,
-            ]}
-          >
-            {'\u2B50'} Today
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Image source={require('../../assets/icons/icon-star.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+            <Text
+              style={[
+                styles.modeBtnText,
+                mode === 'daily' && styles.modeBtnTextActive,
+              ]}
+            >
+              Today
+            </Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.modeBtn, mode === 'browse' && styles.modeBtnActive]}
           onPress={() => { hapticLight(); setMode('browse'); }}
           activeOpacity={0.7}
         >
-          <Text
-            style={[
-              styles.modeBtnText,
-              mode === 'browse' && styles.modeBtnTextActive,
-            ]}
-          >
-            {'\u{1F4DA}'} Browse All
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Image source={require('../../assets/icons/icon-books.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+            <Text
+              style={[
+                styles.modeBtnText,
+                mode === 'browse' && styles.modeBtnTextActive,
+              ]}
+            >
+              Browse All
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
 

@@ -50,7 +50,7 @@ export default function GamesScreen({ navigation }: Props) {
           justifyContent: 'center',
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 2,
+          paddingBottom: 4,
         },
         headerBack: {
           position: 'absolute',
@@ -126,8 +126,9 @@ export default function GamesScreen({ navigation }: Props) {
       <View style={styles.headerHome}>
         <HomeButton forceDark />
       </View>
-      <Text style={styles.title}>Brain Games</Text>
+      <Image source={require('../../assets/icons/icon-chart.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
     </View>
+    <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Brain Games</Text>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={[styles.subtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Exercise that forgetful brain of yours</Text>
 
@@ -149,6 +150,7 @@ export default function GamesScreen({ navigation }: Props) {
           </Text>
           {riddleStreak > 0 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, justifyContent: 'center' }}>
+              <Image source={require('../../assets/icons/icon-fire.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
               <Text style={styles.streakText}>{riddleStreak} day streak</Text>
             </View>
           )}
@@ -269,7 +271,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={require('../../assets/trivia/trivia-sports.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={require('../../assets/icons/icon-chart.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trophies</Text>
