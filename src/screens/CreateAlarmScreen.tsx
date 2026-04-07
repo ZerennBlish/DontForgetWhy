@@ -821,7 +821,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               onPress={() => { hapticLight(); setEmojiModalVisible(true); }}
               style={styles.quickEmojiBtn}
             >
-              <Image source={APP_ICONS.plus} style={{ width: 18, height: 18 }} resizeMode="contain" />
+              <Image source={APP_ICONS.plus} style={{ width: 22, height: 22 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         )}

@@ -943,7 +943,7 @@ export default function NoteEditorModal({
                     }}
                     activeOpacity={0.7}
                   >
-                    <Image source={APP_ICONS.plus} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                    <Image source={APP_ICONS.plus} style={{ width: 24, height: 24 }} resizeMode="contain" />
                   </TouchableOpacity>
                   {note && (
                     <TouchableOpacity
@@ -1257,7 +1257,7 @@ export default function NoteEditorModal({
                 })()}
                 {/* Picker button */}
                 <TouchableOpacity
-                  style={[styles.colorDot, { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)', backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)' }]}
+                  style={[styles.colorDot, { borderWidth: 1, borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)', backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)' }]}
                   onPress={() => {
                     hapticLight();
                     pickedBgRef.current = customBgColor || '#4A90D9';
@@ -1265,7 +1265,7 @@ export default function NoteEditorModal({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Image source={APP_ICONS.plus} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                  <Image source={APP_ICONS.plus} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
               <Text style={[styles.pickerRowLabel, { color: resolvedFontColor, marginTop: 14 }]}>A  Text Color</Text>
@@ -1325,7 +1325,7 @@ export default function NoteEditorModal({
                 })()}
                 {/* Font picker button */}
                 <TouchableOpacity
-                  style={[styles.fontColorDot, { width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)', backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)' }]}
+                  style={[styles.fontColorDot, { borderWidth: 1, borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)', backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)' }]}
                   onPress={() => {
                     hapticLight();
                     pickedFontRef.current = customFontColor || '#FF6B6B';
@@ -1333,7 +1333,7 @@ export default function NoteEditorModal({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Image source={APP_ICONS.plus} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                  <Image source={APP_ICONS.plus} style={{ width: 20, height: 20 }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
             </View>

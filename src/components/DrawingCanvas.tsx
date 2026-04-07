@@ -723,7 +723,7 @@ export default function DrawingCanvas({
               }}
               activeOpacity={0.7}
             >
-              <Image source={APP_ICONS.plus} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <Image source={APP_ICONS.plus} style={{ width: 20, height: 20 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
 

@@ -1061,19 +1061,37 @@ export default function CalendarScreen({ navigation, route }: Props) {
     ],
   );
 
-  const emptyMessage = useMemo(() => {
+  const emptyData = useMemo(() => {
     if (viewMode === 'day') {
-      return `Nothing here. Either you're free or you forgot to write it down. ${'\uD83E\uDD37'}`;
+      return {
+        image: APP_ICONS.hammock,
+        text: "Nothing here. Either you're free or you forgot to write it down.",
+      };
     }
     if (viewMode === 'week') {
-      return `Nothing this week. Enjoy the silence. ${'\uD83D\uDE0C'}`;
+      return {
+        image: APP_ICONS['beach-chair'],
+        text: 'Nothing this week. Enjoy the silence.',
+      };
     }
-    return `A whole month of nothing? That's either zen or denial. ${'\uD83E\uDDD8'}`;
+    return {
+      image: APP_ICONS.couch,
+      text: "A whole month of nothing? That's either zen or denial.",
+    };
   }, [viewMode]);
 
   const listEmpty = useMemo(
-    () => <Text style={styles.emptyText}>{emptyMessage}</Text>,
-    [styles, emptyMessage],
+    () => (
+      <View style={{ alignItems: 'center', paddingTop: 40 }}>
+        <Image
+          source={emptyData.image}
+          style={{ width: 120, height: 120, marginBottom: 16 }}
+          resizeMode="contain"
+        />
+        <Text style={styles.emptyText}>{emptyData.text}</Text>
+      </View>
+    ),
+    [styles, emptyData],
   );
 
   return (

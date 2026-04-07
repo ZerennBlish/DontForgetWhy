@@ -564,7 +564,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
           activeOpacity={0.8}
         >
-          <Image source={APP_ICONS.plus} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          <Image source={APP_ICONS.plus} style={{ width: 34, height: 34 }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast

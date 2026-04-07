@@ -293,7 +293,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
           accessibilityLabel="Create new note"
           accessibilityRole="button"
         >
-          <Image source={APP_ICONS.plus} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          <Image source={APP_ICONS.plus} style={{ width: 34, height: 34 }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast

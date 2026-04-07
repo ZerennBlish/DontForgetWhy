@@ -534,11 +534,17 @@ export default function ChessScreen({ navigation }: Props) {
             alignItems: 'center',
           }}
         >
-          {chess.isAIThinking && (
+          {chess.isAIThinking ? (
             <Text
               style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
             >
               Thinking…
+            </Text>
+          ) : (
+            <Text
+              style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '800' }}
+            >
+              Your Move
             </Text>
           )}
         </View>
