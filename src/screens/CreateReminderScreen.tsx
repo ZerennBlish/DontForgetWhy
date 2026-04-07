@@ -662,7 +662,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               {form.selectedDate && (
                 <View style={styles.setDateRow}>
                   <Text style={styles.setDateText}>
-                    {'\u{1F4C5}'} {formatDateDisplay(form.selectedDate)}
+                    <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 4 }} /> {formatDateDisplay(form.selectedDate)}
                   </Text>
                   <TouchableOpacity
                     onPress={() => { hapticLight(); form.setSelectedDate(null); }}
@@ -683,7 +683,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 activeOpacity={0.6}
               >
                 <Text style={styles.setDateText}>
-                  {'\u{1F4C5}'} {form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}
+                  <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 4 }} /> {form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}
                 </Text>
               </TouchableOpacity>
               {form.selectedDate ? (

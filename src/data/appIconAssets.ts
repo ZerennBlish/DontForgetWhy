@@ -24,6 +24,8 @@ const APP_ICONS = {
   plus: require('../../assets/app-icons/plus.webp') as ImageSourcePropType,
   printer: require('../../assets/app-icons/printer.webp') as ImageSourcePropType,
   pdf: require('../../assets/app-icons/pdf.webp') as ImageSourcePropType,
+  vibrate: require('../../assets/app-icons/vibrate.webp') as ImageSourcePropType,
+  silent: require('../../assets/app-icons/silent.webp') as ImageSourcePropType,
 };
 
 export default APP_ICONS;

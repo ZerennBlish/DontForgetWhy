@@ -1,3 +1,6 @@
+import { ImageSourcePropType } from 'react-native';
+import APP_ICONS from '../data/appIconAssets';
+
 export type SoundMode = 'sound' | 'vibrate' | 'silent';
 
 export function cycleSoundMode(current: SoundMode): SoundMode {
@@ -18,10 +21,10 @@ export function soundIdToSoundMode(soundId: string | undefined): SoundMode {
   return 'sound';
 }
 
-export function getSoundModeIcon(mode: SoundMode): string {
-  if (mode === 'sound') return '\u{1F514}';
-  if (mode === 'vibrate') return '\u{1F4F3}';
-  return '\u{1F507}';
+export function getSoundModeIcon(mode: SoundMode): ImageSourcePropType {
+  if (mode === 'sound') return APP_ICONS.bell;
+  if (mode === 'vibrate') return APP_ICONS.vibrate;
+  return APP_ICONS.silent;
 }
 
 export function getSoundModeLabel(mode: SoundMode): string {

@@ -71,7 +71,7 @@
       "^../types/(.*)$": "<rootDir>/src/types/$1",
       "^../theme/(.*)$": "<rootDir>/src/theme/$1",
       "^../data/(.*)$": "<rootDir>/src/data/$1",
-      "\\.(png|jpg|jpeg|gif|svg)$": "<rootDir>/__mocks__/fileMock.js"
+      "\\.(png|jpg|jpeg|gif|svg|webp)$": "<rootDir>/__mocks__/fileMock.js"
     }
   },
   "private": true

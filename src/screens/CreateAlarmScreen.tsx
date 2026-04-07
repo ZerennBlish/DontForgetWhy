@@ -495,9 +495,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       borderRadius: 18,
       backgroundColor: cardBg,
     },
-    soundModeIconText: {
-      fontSize: 18,
-    },
+
     soundRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -690,7 +688,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               {form.selectedDate && (
                 <View style={styles.setDateRow}>
                   <Text style={styles.setDateText}>
-                    {'\u{1F4C5}'} {formatDateDisplay(form.selectedDate)}
+                    <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 4 }} /> {formatDateDisplay(form.selectedDate)}
                   </Text>
                   <TouchableOpacity
                     onPress={() => { hapticLight(); form.setSelectedDate(null); }}
@@ -711,7 +709,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 activeOpacity={0.6}
               >
                 <Text style={styles.setDateText}>
-                  {'\u{1F4C5}'} {form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}
+                  <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 4 }} /> {form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}
                 </Text>
               </TouchableOpacity>
               {form.selectedDate ? (
@@ -871,7 +869,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             activeOpacity={0.7}
             style={{ borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', borderStyle: 'dashed' as const, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)', height: 120, justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}
           >
-            <Text style={{ fontSize: 28, marginBottom: 4 }}>{'\u{1F4F7}'}</Text>
+            <Image source={APP_ICONS.camera} style={{ width: 28, height: 28, marginBottom: 4 }} />
             <Text style={{ fontSize: 14, color: colors.textTertiary }}>Tap to add photo</Text>
           </TouchableOpacity>
         )}
@@ -935,9 +933,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               ]}
               activeOpacity={0.7}
             >
-              <Text style={styles.soundModeIconText}>
-                {getSoundModeIcon(form.soundMode)}
-              </Text>
+              <Image source={getSoundModeIcon(form.soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
             </TouchableOpacity>
             <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
               {getSoundModeLabel(form.soundMode)}
