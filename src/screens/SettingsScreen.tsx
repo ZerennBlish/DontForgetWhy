@@ -562,7 +562,10 @@ export default function SettingsScreen({ navigation }: Props) {
       <View style={styles.headerHome}>
         <HomeButton forceDark />
       </View>
-      <Text style={styles.title}>Settings</Text>
+      <View style={{ alignItems: 'center' }}>
+        <Image source={APP_ICONS.gear} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+        <Text style={styles.title}>Settings</Text>
+      </View>
     </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
 

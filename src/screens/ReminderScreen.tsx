@@ -832,7 +832,10 @@ export default function ReminderScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark={!!bgUri} />
         </View>
-        <Text style={[styles.screenTitle, bgUri && { color: colors.overlayText }]}>Reminders</Text>
+        <View style={{ alignItems: 'center' }}>
+          <Image source={APP_ICONS.bell} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+          <Text style={[styles.screenTitle, bgUri && { color: colors.overlayText }]}>Reminders</Text>
+        </View>
       </View>
       <View style={{ paddingHorizontal: 20 }}>
         <Text style={[styles.subtitleText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>

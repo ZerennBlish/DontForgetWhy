@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { Alarm, ALL_DAYS, WEEKDAYS, WEEKENDS, AlarmDay } from '../types/alarm';
 import { formatTime } from '../utils/time';
 import { useTheme } from '../theme/ThemeContext';
+
+const GUESS_WHY_RED = require('../../assets/icons/guess-why-red.webp');
 
 function getScheduleLabel(alarm: Alarm): string {
   const mode = alarm.mode || 'recurring';
@@ -19,12 +21,12 @@ function getScheduleLabel(alarm: Alarm): string {
 }
 
 const mysteryTexts = [
-  '\u2753 Can you remember?',
-  '\u2753 Mystery Alarm',
-  '\u2753 Think hard...',
-  '\u2753 What was this for?',
-  '\u{1F914} ???',
-  '\u{1F9E0} Brain check incoming',
+  'Can you remember?',
+  'Mystery Alarm',
+  'Think hard...',
+  'What was this for?',
+  '???',
+  'Brain check incoming',
 ];
 
 function getMysteryText(id: string): string {
@@ -178,12 +180,20 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
           {isPinned && <View style={styles.pinDot} />}
         </View>
         {!hideDetail && detailText !== '' && (
-          <Text
-            style={[detailStyle, !alarm.enabled && styles.textDisabled]}
-            numberOfLines={1}
-          >
-            {detailText}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {guessWhy && (
+              <Image source={GUESS_WHY_RED} style={{ width: 32, height: 32, marginRight: 4, transform: [{ scaleX: -1 }] }} resizeMode="contain" />
+            )}
+            <Text
+              style={[detailStyle, !alarm.enabled && styles.textDisabled]}
+              numberOfLines={1}
+            >
+              {detailText}
+            </Text>
+            {guessWhy && (
+              <Image source={GUESS_WHY_RED} style={{ width: 32, height: 32, marginLeft: 4 }} resizeMode="contain" />
+            )}
+          </View>
         )}
         <Text style={[styles.schedule, !alarm.enabled && styles.textDisabled]}>
           {getScheduleLabel(alarm)}

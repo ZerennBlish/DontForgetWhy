@@ -40,6 +40,7 @@ import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import APP_ICONS from '../data/appIconAssets';
 import TimePicker from '../components/TimePicker';
 import SoundPickerModal from '../components/SoundPickerModal';
 import type { SystemSound } from '../components/SoundPickerModal';
@@ -948,7 +949,10 @@ export default function TimerScreen({ navigation }: Props) {
           <BackButton onPress={() => navigation.goBack()} forceDark={!!bgUri} />
           <HomeButton forceDark={!!bgUri} />
         </View>
-        <Text style={{ fontSize: 22, fontWeight: '700', color: bgUri ? colors.overlayText : colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>Timers</Text>
+        <View style={{ alignItems: 'center' }}>
+          <Image source={APP_ICONS.stopwatch} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+          <Text style={{ fontSize: 22, fontWeight: '700', color: bgUri ? colors.overlayText : colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>Timers</Text>
+        </View>
       </View>
       <ScrollView
         style={styles.container}

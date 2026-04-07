@@ -8,6 +8,7 @@ import {
   ScrollView,
   Animated,
   ImageBackground,
+  Image,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatTime } from '../utils/time';
@@ -26,6 +27,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playRandomClip, stopVoice } from '../services/voicePlayback';
 import type { RootStackParamList } from '../navigation/types';
+
+const GUESS_RIGHT = require('../../assets/icons/guess-right.webp');
+const GUESS_WRONG = require('../../assets/icons/guess-wrong.webp');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GuessWhy'>;
 
@@ -474,6 +478,11 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
         {/* Result overlay */}
         {result && (
           <View style={[styles.overlay, { backgroundColor: overlayColor }]}>
+            <Image
+              source={result.type === 'win' ? GUESS_RIGHT : GUESS_WRONG}
+              style={{ width: 80, height: 80, marginBottom: 12 }}
+              resizeMode="contain"
+            />
             <Text style={styles.overlayMessage}>{result.message}</Text>
             <TouchableOpacity
               style={styles.overlayBtn}

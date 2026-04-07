@@ -224,7 +224,10 @@ export default function NotepadScreen({ navigation, route }: Props) {
           <View style={styles.headerHome}>
             <HomeButton forceDark={!!notepad.bgUri} />
           </View>
-          <Text style={[styles.title, notepad.bgUri && { color: colors.overlayText }]}>Notes</Text>
+          <View style={{ alignItems: 'center' }}>
+            <Image source={APP_ICONS.notepad} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+            <Text style={[styles.title, notepad.bgUri && { color: colors.overlayText }]}>Notes</Text>
+          </View>
         </View>
 
         <View style={styles.filterToggleRow}>

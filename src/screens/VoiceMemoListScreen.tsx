@@ -501,7 +501,10 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           <View style={styles.headerHome}>
             <HomeButton forceDark={!!bgUri} />
           </View>
-          <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Voice Memos</Text>
+          <View style={{ alignItems: 'center' }}>
+            <Image source={APP_ICONS.microphone} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+            <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Voice Memos</Text>
+          </View>
         </View>
 
         <View style={styles.filterToggleRow}>

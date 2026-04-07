@@ -27,6 +27,7 @@ import { formatTime } from '../utils/time';
 import { loadSettings } from '../services/settings';
 import { hapticLight } from '../utils/haptics';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
+import APP_ICONS from '../data/appIconAssets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>;
 
@@ -1098,7 +1099,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark={!!bgUri} />
         </View>
-        <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>{'\uD83D\uDCC5'} Calendar</Text>
+        <View style={{ alignItems: 'center' }}>
+          <Image source={APP_ICONS.calendar} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+          <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Calendar</Text>
+        </View>
       </View>
       <FlatList
         data={listData}

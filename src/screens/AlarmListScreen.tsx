@@ -214,7 +214,10 @@ export default function AlarmListScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark={!!al.bgUri} />
         </View>
-        <Text style={[styles.screenTitle, al.bgUri && { color: colors.overlayText }]}>Alarms</Text>
+        <View style={{ alignItems: 'center' }}>
+          <Image source={APP_ICONS.alarm} style={{ width: 48, height: 48, marginBottom: 2 }} resizeMode="contain" />
+          <Text style={[styles.screenTitle, al.bgUri && { color: colors.overlayText }]}>Alarms</Text>
+        </View>
       </View>
 
       <View style={{ paddingHorizontal: 20 }}>

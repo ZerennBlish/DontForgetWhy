@@ -24,7 +24,7 @@ import type { TriviaStats, TriviaCategory } from '../types/trivia';
 
 const SECTION_ICONS: Record<string, ImageSourcePropType> = {
   chart: require('../../assets/icons/icon-chart.webp'),
-  guessWhy: require('../../assets/icons/icon-magnify.webp'),
+  guessWhy: require('../../assets/icons/guess-why.webp'),
   dailyRiddle: require('../../assets/icons/icon-lightbulb.webp'),
   chess: require('../../assets/icons/icon-chess.webp'),
   checkers: require('../../assets/icons/icon-checkers.webp'),
