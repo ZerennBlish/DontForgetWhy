@@ -74,8 +74,10 @@ function getCapturedPieces(game: Chess, color: 'w' | 'b'): string[] {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BOARD_H_PADDING = 16;
+const BOARD_BORDER = 2;
 const BOARD_SIZE = SCREEN_WIDTH - BOARD_H_PADDING * 2;
-const SQUARE_SIZE = BOARD_SIZE / 8;
+const INNER_BOARD = BOARD_SIZE - BOARD_BORDER * 2;
+const SQUARE_SIZE = INNER_BOARD / 8;
 
 export default function ChessScreen({ navigation }: Props) {
   const { colors } = useTheme();
@@ -93,6 +95,31 @@ export default function ChessScreen({ navigation }: Props) {
       useNativeDriver: true,
     }).start();
   }, [chess.currentRoast, roastFade]);
+
+  // ── Pulsing animation for "Your Move" / "CHECK!" ──
+  const turnPulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (chess.isPlayerTurn) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(turnPulse, {
+            toValue: 0.4,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(turnPulse, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      turnPulse.setValue(1);
+    }
+  }, [chess.isPlayerTurn, turnPulse]);
 
   const severityBg: Record<string, string> = useMemo(
     () => ({
@@ -249,6 +276,8 @@ export default function ChessScreen({ navigation }: Props) {
           height: BOARD_SIZE,
           alignSelf: 'center',
           marginTop: 8,
+          borderWidth: BOARD_BORDER,
+          borderColor: 'transparent',
         },
         boardRow: { flexDirection: 'row' },
         square: {
@@ -342,6 +371,36 @@ export default function ChessScreen({ navigation }: Props) {
           opacity: 0.8,
           marginBottom: 18,
         },
+
+        // Review mode
+        reviewNav: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: 12,
+          gap: 8,
+        },
+        reviewBtn: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: colors.background,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        reviewBtnText: {
+          color: colors.overlayText,
+          fontSize: 20,
+          fontWeight: '700',
+        },
+        reviewCounter: {
+          color: colors.overlayText,
+          fontSize: 14,
+          fontWeight: '600',
+          marginHorizontal: 8,
+          minWidth: 100,
+          textAlign: 'center',
+        },
       }),
     [colors, insets.top],
   );
@@ -432,11 +491,15 @@ export default function ChessScreen({ navigation }: Props) {
     </View>
   );
 
-  // ── Active game ────────────────────────────────────────────────
+  // ── Board renderer (interactive, active game) ─────────────────
   const renderBoard = () => {
     const { board, selectedSquare, validMoves, playerColor } = chess;
     return (
-      <View style={styles.boardWrap}>
+      <View style={[
+        styles.boardWrap,
+        chess.isInCheck && { borderColor: '#EF4444' },
+        !chess.isInCheck && chess.isPlayerTurn && { borderColor: colors.accent },
+      ]}>
         {board.map((row, rowIdx) => (
           <View key={rowIdx} style={styles.boardRow}>
             {row.map((cell, colIdx) => {
@@ -444,8 +507,15 @@ export default function ChessScreen({ navigation }: Props) {
               const isSelected = selectedSquare === sq;
               const isValidMove = validMoves.includes(sq);
               const isLight = isLightSquare(rowIdx, colIdx);
+              const isKingInCheck =
+                chess.isInCheck &&
+                cell &&
+                cell.type === 'k' &&
+                cell.color === chess.game?.turn();
               const bg = isSelected
                 ? colors.accent + '90'
+                : isKingInCheck
+                ? 'rgba(220, 38, 38, 0.6)'
                 : isLight
                 ? colors.accent + '60'
                 : colors.accent + 'CC';
@@ -494,6 +564,54 @@ export default function ChessScreen({ navigation }: Props) {
     );
   };
 
+  // ── Board renderer (non-interactive, review mode) ─────────────
+  const renderReviewBoard = () => {
+    const { reviewBoard, playerColor } = chess;
+    return (
+      <View style={styles.boardWrap}>
+        {reviewBoard.map((row, rowIdx) => (
+          <View key={rowIdx} style={styles.boardRow}>
+            {row.map((cell, colIdx) => {
+              const sq = squareForCell(rowIdx, colIdx, playerColor);
+              const isLight = isLightSquare(rowIdx, colIdx);
+              const bg = isLight ? colors.accent + '60' : colors.accent + 'CC';
+              const showRankLabel = colIdx === 0;
+              const showFileLabel = rowIdx === 7;
+              const label = cell
+                ? `${sq}, ${cell.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[cell.type] || cell.type}`
+                : `${sq}, empty`;
+              return (
+                <View
+                  key={colIdx}
+                  style={[styles.square, { backgroundColor: bg }]}
+                  accessibilityLabel={label}
+                >
+                  {showRankLabel && (
+                    <Text style={styles.rankLabel}>
+                      {rankLabel(rowIdx, playerColor)}
+                    </Text>
+                  )}
+                  {showFileLabel && (
+                    <Text style={styles.fileLabel}>
+                      {fileLabel(colIdx, playerColor)}
+                    </Text>
+                  )}
+                  {cell && (
+                    <Image
+                      source={getPieceImage(cell)}
+                      style={styles.pieceImg}
+                      resizeMode="contain"
+                    />
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const renderCaptured = (pieces: string[], color: 'w' | 'b') => (
     <View style={styles.capturesRow}>
       {pieces.map((type, i) => (
@@ -507,6 +625,7 @@ export default function ChessScreen({ navigation }: Props) {
     </View>
   );
 
+  // ── Active game ────────────────────────────────────────────────
   const renderActiveGame = () => {
     const opponentColor: 'w' | 'b' = chess.playerColor === 'w' ? 'b' : 'w';
     // Derive captures from move history (correct under promotion).
@@ -527,26 +646,42 @@ export default function ChessScreen({ navigation }: Props) {
         </View>
         <View
           style={{
-            height: 24,
+            height: 28,
             marginHorizontal: 16,
             marginBottom: 4,
             justifyContent: 'center',
             alignItems: 'center',
           }}
         >
-          {chess.isAIThinking ? (
+          {chess.isInCheck && chess.isPlayerTurn ? (
+            <Animated.Text
+              style={{
+                color: '#EF4444',
+                fontSize: 18,
+                fontWeight: '800',
+                opacity: turnPulse,
+              }}
+            >
+              CHECK!
+            </Animated.Text>
+          ) : chess.isAIThinking ? (
             <Text
               style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
             >
               Thinking…
             </Text>
-          ) : (
-            <Text
-              style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '800' }}
+          ) : chess.isPlayerTurn ? (
+            <Animated.Text
+              style={{
+                color: colors.accent,
+                fontSize: 20,
+                fontWeight: '800',
+                opacity: turnPulse,
+              }}
             >
               Your Move
-            </Text>
-          )}
+            </Animated.Text>
+          ) : null}
         </View>
         {/* Opponent captures (pieces opponent took from player) */}
         {renderCaptured(opponentCapturedPieces, chess.playerColor)}
@@ -606,7 +741,7 @@ export default function ChessScreen({ navigation }: Props) {
           </Animated.View>
         )}
 
-        {chess.isGameOver && (
+        {chess.isGameOver && !chess.isReviewing && (
           <View style={styles.overlayBackdrop}>
             <View style={styles.overlayCard}>
               <Text style={styles.overlayTitle}>{gameOverTitle()}</Text>
@@ -615,17 +750,116 @@ export default function ChessScreen({ navigation }: Props) {
                 style={[styles.playButton, { alignSelf: 'stretch' }]}
                 onPress={() => {
                   hapticLight();
+                  chess.enterReview();
+                }}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Review game"
+              >
+                <Text style={styles.playButtonText}>Review Game</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.playButton, { alignSelf: 'stretch', marginTop: 10, backgroundColor: colors.background }]}
+                onPress={() => {
+                  hapticLight();
                   chess.newGame();
                 }}
                 activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityLabel="New game"
               >
-                <Text style={styles.playButtonText}>New Game</Text>
+                <Text style={[styles.playButtonText, { color: colors.overlayText }]}>New Game</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
+      </View>
+    );
+  };
+
+  // ── Review mode ────────────────────────────────────────────────
+  const renderReviewMode = () => {
+    const total = chess.fenHistoryLength - 1;
+    const opponentColor: 'w' | 'b' = chess.playerColor === 'w' ? 'b' : 'w';
+    const playerCapturedPieces = chess.game
+      ? getCapturedPieces(chess.game, opponentColor)
+      : [];
+    const opponentCapturedPieces = chess.game
+      ? getCapturedPieces(chess.game, chess.playerColor)
+      : [];
+    const atStart = chess.reviewIndex === 0;
+    const atEnd = chess.reviewIndex === chess.fenHistoryLength - 1;
+
+    return (
+      <View style={styles.body}>
+        {renderCaptured(opponentCapturedPieces, chess.playerColor)}
+        {renderReviewBoard()}
+        {renderCaptured(playerCapturedPieces, opponentColor)}
+
+        <View style={styles.reviewNav}>
+          <TouchableOpacity
+            style={[styles.reviewBtn, atStart && { opacity: 0.3 }]}
+            onPress={() => { hapticLight(); chess.reviewGoToStart(); }}
+            disabled={atStart}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Go to start"
+            accessibilityState={{ disabled: atStart }}
+          >
+            <Text style={styles.reviewBtnText}>{'\u00AB'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.reviewBtn, atStart && { opacity: 0.3 }]}
+            onPress={() => { hapticLight(); chess.reviewStepBack(); }}
+            disabled={atStart}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Step back"
+            accessibilityState={{ disabled: atStart }}
+          >
+            <Text style={styles.reviewBtnText}>{'\u2039'}</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.reviewCounter}>
+            Move {chess.reviewIndex} of {total}
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.reviewBtn, atEnd && { opacity: 0.3 }]}
+            onPress={() => { hapticLight(); chess.reviewStepForward(); }}
+            disabled={atEnd}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Step forward"
+            accessibilityState={{ disabled: atEnd }}
+          >
+            <Text style={styles.reviewBtnText}>{'\u203A'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.reviewBtn, atEnd && { opacity: 0.3 }]}
+            onPress={() => { hapticLight(); chess.reviewGoToEnd(); }}
+            disabled={atEnd}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Go to end"
+            accessibilityState={{ disabled: atEnd }}
+          >
+            <Text style={styles.reviewBtnText}>{'\u00BB'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.playButton, { marginTop: 16 }]}
+          onPress={() => {
+            hapticLight();
+            chess.newGame();
+          }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="New game"
+        >
+          <Text style={styles.playButtonText}>New Game</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -662,6 +896,8 @@ export default function ChessScreen({ navigation }: Props) {
           </View>
         ) : !chess.game ? (
           renderPreGame()
+        ) : chess.isReviewing ? (
+          renderReviewMode()
         ) : (
           renderActiveGame()
         )}

@@ -15,7 +15,7 @@ import {
 } from '../services/chessStorage';
 import { getRoastForMove, getTakeBackRoast } from '../services/blunderRoast';
 import { recordChessResult } from '../services/memoryScore';
-import { hapticLight } from '../utils/haptics';
+import { hapticLight, hapticHeavy, hapticError } from '../utils/haptics';
 
 type Cell = { square: Square; type: PieceSymbol; color: Color } | null;
 
@@ -31,6 +31,7 @@ export interface UseChessReturn {
   difficulty: number;
   isPlayerTurn: boolean;
   isGameOver: boolean;
+  isInCheck: boolean;
   gameResult: string | null;
   winner: 'w' | 'b' | null;
   moveHistory: string[];
@@ -50,6 +51,18 @@ export interface UseChessReturn {
   isAIThinking: boolean;
   aiTimeBudget: number;
   aiThinkStart: number;
+
+  // Review mode
+  isReviewing: boolean;
+  reviewIndex: number;
+  reviewBoard: Cell[][];
+  fenHistoryLength: number;
+  enterReview: () => void;
+  exitReview: () => void;
+  reviewStepBack: () => void;
+  reviewStepForward: () => void;
+  reviewGoToStart: () => void;
+  reviewGoToEnd: () => void;
 
   // Actions
   startGame: (color: 'w' | 'b', difficultyIndex: number) => void;
@@ -73,6 +86,13 @@ export function useChess(): UseChessReturn {
   // inside triggerAIMove, blunder analysis) bail out if the user has moved
   // on, since those aren't tracked by clearTimers.
   const sessionIdRef = useRef(0);
+
+  // ── FEN history for post-game review ──
+  const fenHistoryRef = useRef<string[]>([]);
+
+  // ── Review mode state ──
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [reviewIndex, setReviewIndex] = useState(0);
 
   // ── Persisted state: refs for sync access, state for React rendering ──
   const playerColorRef = useRef<'w' | 'b'>('w');
@@ -156,6 +176,7 @@ export function useChess(): UseChessReturn {
       // The side to move is mated; the other side wins.
       win = g.turn() === 'w' ? 'b' : 'w';
       outcome = win === playerColorRef.current ? 'win' : 'loss';
+      hapticError();
     } else if (g.isStalemate()) {
       result = 'stalemate';
       outcome = 'draw';
@@ -236,8 +257,9 @@ export function useChess(): UseChessReturn {
         if (aiSan) {
           try {
             c2.move(aiSan);
+            fenHistoryRef.current.push(c2.fen());
             if (c2.isCheck() && !c2.isCheckmate()) {
-              hapticLight();
+              hapticHeavy();
             }
           } catch {
             // ignore malformed AI move
@@ -249,6 +271,9 @@ export function useChess(): UseChessReturn {
         bump();
         saveCurrentGame();
         checkGameOver(c2);
+        if (!c2.isGameOver() && c2.turn() === playerColorRef.current) {
+          hapticLight();
+        }
       }, 0);
     }, AI_DELAY_MS);
   }, [bump, saveCurrentGame, checkGameOver]);
@@ -267,8 +292,9 @@ export function useChess(): UseChessReturn {
       }
       if (!applied) return;
       const moveSan = applied.san;
+      fenHistoryRef.current.push(g.fen());
       if (g.isCheck() && !g.isCheckmate()) {
-        hapticLight();
+        hapticHeavy();
       }
 
       // Move applied. Render the new position immediately, then schedule the
@@ -370,6 +396,10 @@ export function useChess(): UseChessReturn {
     // Undo AI's last response + player's last move.
     g.undo();
     g.undo();
+    // Remove the last 2 FEN entries (AI response + player move)
+    if (fenHistoryRef.current.length >= 2) {
+      fenHistoryRef.current = fenHistoryRef.current.slice(0, -2);
+    }
     setTakeBackUsed(true);
     setSelectedSquare(null);
     setValidMoves([]);
@@ -396,6 +426,8 @@ export function useChess(): UseChessReturn {
   // ── Resign ──
   const resign = useCallback(() => {
     if (gameResult) return;
+    const g = gameRef.current;
+    if (g) fenHistoryRef.current.push(g.fen());
     sessionIdRef.current += 1;
     clearTimers();
     setIsAIThinking(false);
@@ -412,6 +444,9 @@ export function useChess(): UseChessReturn {
     sessionIdRef.current += 1;
     clearTimers();
     gameRef.current = null;
+    fenHistoryRef.current = [];
+    setIsReviewing(false);
+    setReviewIndex(0);
     setPlayerColor('w');
     setDifficulty(1);
     setTakeBackUsed(false);
@@ -437,6 +472,7 @@ export function useChess(): UseChessReturn {
       clearTimers();
       const newChess = new Chess();
       gameRef.current = newChess;
+      fenHistoryRef.current = [newChess.fen()];
       const now = new Date().toISOString();
       setPlayerColor(color);
       setDifficulty(difficultyIndex);
@@ -477,6 +513,34 @@ export function useChess(): UseChessReturn {
     [bump, clearTimers, triggerAIMove],
   );
 
+  // ── Review mode actions ──
+  const enterReview = useCallback(() => {
+    if (!gameResult) return;
+    setIsReviewing(true);
+    setReviewIndex(fenHistoryRef.current.length - 1);
+  }, [gameResult]);
+
+  const exitReview = useCallback(() => {
+    setIsReviewing(false);
+    setReviewIndex(0);
+  }, []);
+
+  const reviewStepBack = useCallback(() => {
+    setReviewIndex((i) => Math.max(0, i - 1));
+  }, []);
+
+  const reviewStepForward = useCallback(() => {
+    setReviewIndex((i) => Math.min(fenHistoryRef.current.length - 1, i + 1));
+  }, []);
+
+  const reviewGoToStart = useCallback(() => {
+    setReviewIndex(0);
+  }, []);
+
+  const reviewGoToEnd = useCallback(() => {
+    setReviewIndex(fenHistoryRef.current.length - 1);
+  }, []);
+
   // ── Load saved game on mount ──
   useEffect(() => {
     let cancelled = false;
@@ -491,8 +555,10 @@ export function useChess(): UseChessReturn {
           let restored: Chess;
           try {
             restored = new Chess();
+            const fens: string[] = [restored.fen()];
             for (const san of saved.moveHistory) {
               restored.move(san);
+              fens.push(restored.fen());
             }
             // If replay drifted from the saved FEN, fall back to FEN-only.
             if (restored.fen() !== saved.fen) {
@@ -500,6 +566,9 @@ export function useChess(): UseChessReturn {
                 '[useChess] Move replay drifted from saved FEN, using FEN fallback',
               );
               restored = new Chess(saved.fen);
+              fenHistoryRef.current = [saved.fen];
+            } else {
+              fenHistoryRef.current = fens;
             }
           } catch (e) {
             console.warn(
@@ -507,6 +576,7 @@ export function useChess(): UseChessReturn {
               e,
             );
             restored = new Chess(saved.fen);
+            fenHistoryRef.current = [saved.fen];
           }
           gameRef.current = restored;
           setPlayerColor(saved.playerColor);
@@ -556,6 +626,22 @@ export function useChess(): UseChessReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game, version, playerColor]);
 
+  const reviewBoard = useMemo<Cell[][]>(() => {
+    if (!isReviewing) return [];
+    const fen = fenHistoryRef.current[reviewIndex];
+    if (!fen) return [];
+    try {
+      const temp = new Chess(fen);
+      const raw = temp.board();
+      if (playerColor === 'b') {
+        return raw.map((row) => [...row].reverse()).reverse();
+      }
+      return raw.map((row) => [...row]);
+    } catch {
+      return [];
+    }
+  }, [isReviewing, reviewIndex, playerColor]);
+
   const moveHistory = useMemo<string[]>(
     () => (game ? game.history() : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -564,6 +650,7 @@ export function useChess(): UseChessReturn {
 
   const isGameOver =
     gameResult !== null || (game ? game.isGameOver() : false);
+  const isInCheck = !!game && game.isCheck() && !isGameOver;
   const isPlayerTurn =
     !!game && !isAIThinking && !isGameOver && game.turn() === playerColor;
   const takeBackAvailable =
@@ -578,6 +665,7 @@ export function useChess(): UseChessReturn {
     difficulty,
     isPlayerTurn,
     isGameOver,
+    isInCheck,
     gameResult,
     winner,
     moveHistory,
@@ -589,6 +677,16 @@ export function useChess(): UseChessReturn {
     isAIThinking,
     aiTimeBudget,
     aiThinkStart,
+    isReviewing,
+    reviewIndex,
+    reviewBoard,
+    fenHistoryLength: fenHistoryRef.current.length,
+    enterReview,
+    exitReview,
+    reviewStepBack,
+    reviewStepForward,
+    reviewGoToStart,
+    reviewGoToEnd,
     startGame,
     selectSquare,
     takeBack,

@@ -45,6 +45,13 @@ export function hapticHeavy() {
   } catch {}
 }
 
+export function hapticError() {
+  if (!_hapticsEnabled) return;
+  try {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  } catch {}
+}
+
 export function hapticSelection() {
   if (!_hapticsEnabled) return;
   try {
