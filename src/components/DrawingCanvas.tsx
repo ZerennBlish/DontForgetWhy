@@ -25,7 +25,9 @@ import { File, Directory, Paths } from 'expo-file-system';
 import { v4 as uuidv4 } from 'uuid';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
+import { Image } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import APP_ICONS from '../data/appIconAssets';
 import DrawingPickerModal from './DrawingPickerModal';
 
 // ---------------------------------------------------------------------------
@@ -721,7 +723,7 @@ export default function DrawingCanvas({
               }}
               activeOpacity={0.7}
             >
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)' }}>+</Text>
+              <Image source={APP_ICONS.plus} style={{ width: 16, height: 16 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
 

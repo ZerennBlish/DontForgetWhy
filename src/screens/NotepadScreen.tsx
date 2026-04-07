@@ -18,7 +18,7 @@ import UndoToast from '../components/UndoToast';
 import NoteEditorModal from '../components/NoteEditorModal';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
-import { TrashIcon, DocIcon } from '../components/Icons';
+import APP_ICONS from '../data/appIconAssets';
 import type { Note } from '../types/note';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -155,11 +155,6 @@ export default function NotepadScreen({ navigation, route }: Props) {
       shadowOpacity: 0.4,
       shadowRadius: 8,
     },
-    fabText: {
-      fontSize: 36,
-      color: colors.textPrimary,
-      fontWeight: '300',
-    },
   }), [colors, insets.bottom, insets.top]);
 
   const renderItem = ({ item }: { item: Note }) => {
@@ -187,7 +182,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     if (notepad.filter === 'deleted') {
       return (
         <View style={styles.empty}>
-          <View style={{ marginBottom: 12 }}><TrashIcon color={colors.textTertiary} size={40} /></View>
+          <View style={{ marginBottom: 12 }}><Image source={APP_ICONS.trash} style={{ width: 40, height: 40 }} resizeMode="contain" /></View>
           <Text style={[styles.emptyTitle, notepad.bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Nothing in the trash</Text>
           <Text style={[styles.emptyText, notepad.bgUri && { color: 'rgba(255,255,255,0.5)' }]}>How responsible of you.</Text>
         </View>
@@ -195,7 +190,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     }
     return (
       <View style={styles.empty}>
-        <View style={{ marginBottom: 12 }}><DocIcon color={colors.textTertiary} size={40} /></View>
+        <View style={{ marginBottom: 12 }}><Image source={APP_ICONS.notepad} style={{ width: 40, height: 40 }} resizeMode="contain" /></View>
         <Text style={[styles.emptyTitle, notepad.bgUri && { color: 'rgba(255,255,255,0.5)' }]}>No notes yet</Text>
         <Text style={[styles.emptyText, notepad.bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
           Tap the notepad to create one.
@@ -295,7 +290,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
           accessibilityLabel="Create new note"
           accessibilityRole="button"
         >
-          <Text style={styles.fabText}>+</Text>
+          <Image source={APP_ICONS.plus} style={{ width: 28, height: 28 }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast

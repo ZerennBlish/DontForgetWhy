@@ -24,6 +24,7 @@ import TimePicker from '../components/TimePicker';
 import DayPickerRow from '../components/DayPickerRow';
 import { useReminderForm } from '../hooks/useReminderForm';
 import EmojiPickerModal from '../components/EmojiPickerModal';
+import APP_ICONS from '../data/appIconAssets';
 import type { RootStackParamList } from '../navigation/types';
 
 function formatDateDisplay(dateStr: string): string {
@@ -794,7 +795,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               onPress={() => { hapticLight(); setEmojiModalVisible(true); }}
               style={styles.quickEmojiBtn}
             >
-              <Text style={{ fontSize: 18, color: colors.textTertiary }}>+</Text>
+              <Image source={APP_ICONS.plus} style={{ width: 18, height: 18 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         )}

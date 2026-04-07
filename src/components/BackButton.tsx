@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { hapticLight } from '../utils/haptics';
 import { useTheme } from '../theme/ThemeContext';
+import APP_ICONS from '../data/appIconAssets';
 
 interface BackButtonProps {
   onPress: () => void;
@@ -22,11 +23,6 @@ export default function BackButton({ onPress, forceDark }: BackButtonProps) {
       borderWidth: 1,
       borderColor: (forceDark || colors.mode === 'dark') ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
-    arrow: {
-      fontSize: 22,
-      marginTop: -2,
-      color: (forceDark || colors.mode === 'dark') ? '#F0F0F8' : colors.textPrimary,
-    },
   }), [colors, forceDark]);
 
   return (
@@ -37,7 +33,7 @@ export default function BackButton({ onPress, forceDark }: BackButtonProps) {
       accessibilityLabel="Go back"
       accessibilityRole="button"
     >
-      <Text style={styles.arrow}>{'\u2039'}</Text>
+      <Image source={APP_ICONS.backArrow} style={{ width: 20, height: 20 }} resizeMode="contain" />
     </TouchableOpacity>
   );
 }

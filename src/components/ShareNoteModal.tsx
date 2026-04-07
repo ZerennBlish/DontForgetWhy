@@ -2,6 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   Modal,
@@ -9,6 +10,7 @@ import {
   Share,
 } from 'react-native';
 import * as Print from 'expo-print';
+import APP_ICONS from '../data/appIconAssets';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { hapticLight } from '../utils/haptics';
@@ -72,10 +74,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 4,
   },
-  optionIcon: {
-    fontSize: 20,
-    marginRight: 14,
-  },
   optionText: {
     fontSize: 16,
     fontWeight: '500',
@@ -115,7 +113,7 @@ export default function ShareNoteModal({
             if (!content.trim()) { ToastAndroid.show('Nothing to share', ToastAndroid.SHORT); return; }
             Share.share({ message: content });
           }} activeOpacity={0.7}>
-            <Text style={styles.optionIcon}>{'\u{1F4DD}'}</Text>
+            <Image source={APP_ICONS.notepad} style={{ width: 28, height: 28, marginRight: 14 }} resizeMode="contain" />
             <Text style={styles.optionText}>Share Text</Text>
           </TouchableOpacity>
 
@@ -134,7 +132,7 @@ export default function ShareNoteModal({
                 ToastAndroid.show("Couldn't share photos.", ToastAndroid.SHORT);
               }
             }} activeOpacity={0.7}>
-              <Text style={styles.optionIcon}>{'\u{1F4F7}'}</Text>
+              <Image source={APP_ICONS.camera} style={{ width: 28, height: 28, marginRight: 14 }} resizeMode="contain" />
               <Text style={styles.optionText}>{noteImages.length === 1 ? 'Share Photo' : 'Share Photos'}</Text>
             </TouchableOpacity>
           )}
@@ -151,7 +149,7 @@ export default function ShareNoteModal({
                 ToastAndroid.show("Couldn't share PDF.", ToastAndroid.SHORT);
               }
             }} activeOpacity={0.7}>
-              <Text style={styles.optionIcon}>{'\u{1F4C4}'}</Text>
+              <Image source={APP_ICONS.pdf} style={{ width: 38, height: 38, marginRight: 14, marginLeft: -5 }} resizeMode="contain" />
               <Text style={styles.optionText}>Share as PDF</Text>
             </TouchableOpacity>
           )}
@@ -173,7 +171,7 @@ export default function ShareNoteModal({
               ToastAndroid.show("Couldn't print.", ToastAndroid.SHORT);
             }
           }} activeOpacity={0.7}>
-            <Text style={styles.optionIcon}>{'\u{1F5A8}\uFE0F'}</Text>
+            <Image source={APP_ICONS.printer} style={{ width: 28, height: 28, marginRight: 14 }} resizeMode="contain" />
             <Text style={styles.optionText}>Print</Text>
           </TouchableOpacity>
 

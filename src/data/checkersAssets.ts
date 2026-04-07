@@ -1,12 +1,14 @@
+import { ImageSourcePropType } from 'react-native';
+
 // Keys: 'r' = red piece, 'rk' = red king, 'b' = black piece, 'bk' = black king
-const CHECKER_IMAGES: Record<string, any> = {
-  r: require('../../assets/checkers/red.png'),
-  rk: require('../../assets/checkers/red-king.png'),
-  b: require('../../assets/checkers/black.png'),
-  bk: require('../../assets/checkers/black-king.png'),
+const CHECKER_IMAGES: Record<string, ImageSourcePropType> = {
+  r: require('../../assets/checkers/checker-red.webp'),
+  rk: require('../../assets/checkers/checker-red-king.webp'),
+  b: require('../../assets/checkers/checker-black.webp'),
+  bk: require('../../assets/checkers/checker-black-king.webp'),
 };
 
-export function getCheckerImage(piece: { color: 'r' | 'b'; king: boolean }): any {
+export function getCheckerImage(piece: { color: 'r' | 'b'; king: boolean }): ImageSourcePropType | undefined {
   const key = piece.king ? `${piece.color}k` : piece.color;
-  return CHECKER_IMAGES[key] ?? null;
+  return CHECKER_IMAGES[key];
 }

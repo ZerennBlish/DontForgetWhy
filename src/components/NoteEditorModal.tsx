@@ -30,7 +30,7 @@ import type { Note } from '../types/note';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import BackButton from './BackButton';
-import { ImageIcon, CameraIcon, PaintBrushIcon, MicIcon, ShareIcon, TrashIcon, HomeIcon } from './Icons';
+import APP_ICONS from '../data/appIconAssets';
 import { useNavigation } from '@react-navigation/native';
 import DrawingCanvas from './DrawingCanvas';
 import type { StrokeData } from './DrawingCanvas';
@@ -643,11 +643,11 @@ export default function NoteEditorModal({
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.red + '40',
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     editorTrashIconWrap: {
       alignItems: 'center' as const,
@@ -863,7 +863,7 @@ export default function NoteEditorModal({
                     onPress={handleGoHome}
                     activeOpacity={0.7}
                   >
-                    <HomeIcon color={colors.mode === 'dark' ? '#F0F0F8' : colors.textPrimary} size={18} />
+                    <Image source={APP_ICONS.house} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.topBarCenter}>
@@ -890,7 +890,7 @@ export default function NoteEditorModal({
                     }}
                     activeOpacity={0.7}
                   >
-                    <ShareIcon color={colors.textPrimary} size={18} />
+                    <Image source={APP_ICONS.share} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
                   {note && (
                     <TouchableOpacity
@@ -898,7 +898,7 @@ export default function NoteEditorModal({
                       onPress={handleDeleteFromEditor}
                       activeOpacity={0.7}
                     >
-                      <TrashIcon color={colors.red} size={18} />
+                      <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -918,7 +918,7 @@ export default function NoteEditorModal({
                     onPress={handleGoHome}
                     activeOpacity={0.7}
                   >
-                    <HomeIcon color={colors.mode === 'dark' ? '#F0F0F8' : colors.textPrimary} size={18} />
+                    <Image source={APP_ICONS.house} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.topBarCenter}>
@@ -943,7 +943,7 @@ export default function NoteEditorModal({
                     }}
                     activeOpacity={0.7}
                   >
-                    <Text style={{ fontSize: 18, fontWeight: '600', color: colors.textPrimary }}>+</Text>
+                    <Image source={APP_ICONS.plus} style={{ width: 20, height: 20 }} resizeMode="contain" />
                   </TouchableOpacity>
                   {note && (
                     <TouchableOpacity
@@ -951,7 +951,7 @@ export default function NoteEditorModal({
                       onPress={handleDeleteFromEditor}
                       activeOpacity={0.7}
                     >
-                      <TrashIcon color={colors.red} size={18} />
+                      <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -972,7 +972,7 @@ export default function NoteEditorModal({
                 }}
                 activeOpacity={0.7}
               >
-                <View style={[styles.dropdownDot, { backgroundColor: editorColor, borderWidth: 1.5, borderColor: colors.border }]} />
+                <Image source={APP_ICONS.palette} style={{ width: 26, height: 26, marginLeft: -4 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>Colors</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -984,7 +984,7 @@ export default function NoteEditorModal({
                 }}
                 activeOpacity={0.7}
               >
-                <ImageIcon color={colors.textSecondary} size={18} />
+                <Image source={APP_ICONS.image} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>Photo Library</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -996,7 +996,7 @@ export default function NoteEditorModal({
                 }}
                 activeOpacity={0.7}
               >
-                <CameraIcon color={colors.textSecondary} size={18} />
+                <Image source={APP_ICONS.camera} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>Take Photo</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1014,7 +1014,7 @@ export default function NoteEditorModal({
                 }}
                 activeOpacity={0.7}
               >
-                <PaintBrushIcon color={colors.textSecondary} size={18} />
+                <Image source={APP_ICONS.paintbrush} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>Draw</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1026,7 +1026,7 @@ export default function NoteEditorModal({
                 }}
                 activeOpacity={0.7}
               >
-                <MicIcon color={isRecording ? '#FF3333' : colors.textSecondary} size={18} />
+                <Image source={APP_ICONS.microphone} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>{isRecording ? 'Stop Recording' : 'Record'}</Text>
                 {isRecording && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3333', marginLeft: 6 }} />}
               </TouchableOpacity>
@@ -1265,7 +1265,7 @@ export default function NoteEditorModal({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: 'rgba(255, 255, 255, 0.6)' }}>+</Text>
+                  <Image source={APP_ICONS.plus} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
               <Text style={[styles.pickerRowLabel, { color: resolvedFontColor, marginTop: 14 }]}>A  Text Color</Text>
@@ -1333,7 +1333,7 @@ export default function NoteEditorModal({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: 'rgba(255, 255, 255, 0.6)' }}>+</Text>
+                  <Image source={APP_ICONS.plus} style={{ width: 14, height: 14 }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
             </View>

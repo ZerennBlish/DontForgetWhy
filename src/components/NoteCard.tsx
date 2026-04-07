@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ToastAndroid } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ToastAndroid } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight, hapticMedium } from '../utils/haptics';
+import APP_ICONS from '../data/appIconAssets';
 import { getRelativeTime } from '../utils/time';
 import SwipeableRow from './SwipeableRow';
 import type { Note } from '../types/note';
@@ -120,8 +121,14 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Text style={styles.cardSubtitle} numberOfLines={1}>
               {getRelativeTime(note.updatedAt)}
-              {(note.images?.length ?? 0) > 0 ? ` \u00B7 \u{1F4F7} ${note.images!.length}` : ''}
             </Text>
+            {(note.images?.length ?? 0) > 0 && (
+              <>
+                <Text style={styles.cardSubtitle}> · </Text>
+                <Image source={APP_ICONS.camera} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                <Text style={styles.cardSubtitle}> {note.images!.length}</Text>
+              </>
+            )}
             {isPinned && <View style={styles.pinnedDot} />}
           </View>
         </TouchableOpacity>

@@ -16,7 +16,7 @@ import UndoToast from '../components/UndoToast';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import SwipeableRow from '../components/SwipeableRow';
-import { FireIcon } from '../components/Icons';
+import APP_ICONS from '../data/appIconAssets';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -188,12 +188,6 @@ export default function AlarmListScreen({ navigation }: Props) {
       shadowOpacity: 0.4,
       shadowRadius: 8,
     },
-    fabText: {
-      fontSize: 32,
-      color: colors.textPrimary,
-      fontWeight: '300',
-      marginTop: -2,
-    },
   }), [colors, insets.bottom, insets.top]);
 
   return (
@@ -230,7 +224,7 @@ export default function AlarmListScreen({ navigation }: Props) {
 
         {al.hasPlayed && al.stats!.streak > 0 && (
           <View style={styles.streakRow}>
-            <FireIcon color={colors.accent} size={14} />
+            <Image source={APP_ICONS.flame} style={{ width: 14, height: 14 }} resizeMode="contain" />
             <Text style={[styles.streakText, { color: colors.accent }]}>
               {`${al.stats!.streak} in a row`}
             </Text>
@@ -361,7 +355,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         accessibilityLabel="Create new alarm"
         accessibilityRole="button"
       >
-        <Text style={styles.fabText}>+</Text>
+        <Image source={APP_ICONS.plus} style={{ width: 28, height: 28 }} resizeMode="contain" />
       </TouchableOpacity>
 
       <UndoToast

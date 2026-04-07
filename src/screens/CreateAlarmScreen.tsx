@@ -29,7 +29,7 @@ import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import TimePicker from '../components/TimePicker';
 import EmojiPickerModal from '../components/EmojiPickerModal';
-import { AlarmIcon } from '../components/Icons';
+import APP_ICONS from '../data/appIconAssets';
 import type { RootStackParamList } from '../navigation/types';
 
 function formatDateDisplay(dateStr: string): string {
@@ -796,7 +796,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             onPress={() => { hapticLight(); setEmojiPickerOpen((o) => !o); }}
             activeOpacity={0.7}
           >
-            {form.selectedIcon ? <Text style={styles.emojiCircleText}>{form.selectedIcon}</Text> : <AlarmIcon color={colors.textSecondary} size={22} />}
+            {form.selectedIcon ? <Text style={styles.emojiCircleText}>{form.selectedIcon}</Text> : <Image source={APP_ICONS.alarm} style={{ width: 22, height: 22 }} resizeMode="contain" />}
           </TouchableOpacity>
         </View>
         {emojiPickerOpen && (
@@ -823,7 +823,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               onPress={() => { hapticLight(); setEmojiModalVisible(true); }}
               style={styles.quickEmojiBtn}
             >
-              <Text style={{ fontSize: 18, color: colors.textTertiary }}>+</Text>
+              <Image source={APP_ICONS.plus} style={{ width: 18, height: 18 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         )}

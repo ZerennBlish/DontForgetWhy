@@ -31,7 +31,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
-import { CameraIcon, ChevronRightIcon, WarningIcon } from '../components/Icons';
+import { ChevronRightIcon } from '../components/Icons';
+import APP_ICONS from '../data/appIconAssets';
 import { saveBackground, loadBackground, clearBackground, getOverlayOpacity, setOverlayOpacity } from '../services/backgroundStorage';
 import TimePicker from '../components/TimePicker';
 import { getButtonStyles } from '../theme/buttonStyles';
@@ -571,7 +572,7 @@ export default function SettingsScreen({ navigation }: Props) {
           onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
           activeOpacity={0.7}
         >
-          <WarningIcon color={colors.orange} size={18} />
+          <Image source={APP_ICONS.warning} style={{ width: 18, height: 18 }} resizeMode="contain" />
           <Text style={styles.permissionBannerText}>Some permissions need attention</Text>
           <ChevronRightIcon color={colors.textTertiary} size={16} />
         </TouchableOpacity>
@@ -699,7 +700,7 @@ export default function SettingsScreen({ navigation }: Props) {
               <Image source={{ uri: bgUri }} style={{ width: 80, height: 80, borderRadius: 8 }} resizeMode="cover" />
             ) : (
               <View style={{ width: 80, height: 80, borderRadius: 8, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' }}>
-                <CameraIcon color={colors.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.4)'} size={24} />
+                <Image source={APP_ICONS.camera} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 <Text style={{ fontSize: 10, color: colors.mode === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)', marginTop: 4 }}>Tap to set</Text>
               </View>
             )}

@@ -26,7 +26,7 @@ import {
 import { saveVoiceMemoFile, deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
-import { TrashIcon } from '../components/Icons';
+import APP_ICONS from '../data/appIconAssets';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
@@ -379,9 +379,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           borderRadius: 20,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
           borderWidth: 1,
-          borderColor: 'rgba(239, 68, 68, 0.4)',
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
         },
         trashIconWrap: {
           alignItems: 'center',
@@ -673,7 +673,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               onPress={handleDelete}
               activeOpacity={0.7}
             >
-              <TrashIcon color={colors.red} size={18} />
+              <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         </View>

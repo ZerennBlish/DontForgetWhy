@@ -35,6 +35,7 @@ import {
 } from '../services/widgetPins';
 import { refreshWidgets } from '../widget/updateWidget';
 import { loadSettings } from '../services/settings';
+import APP_ICONS from '../data/appIconAssets';
 import { formatTime } from '../utils/time';
 import { getRandomReminderQuote } from '../data/reminderQuotes';
 import { useTheme } from '../theme/ThemeContext';
@@ -546,12 +547,6 @@ export default function ReminderScreen({ navigation }: Props) {
       shadowOpacity: 0.4,
       shadowRadius: 8,
     },
-    fabText: {
-      fontSize: 32,
-      color: colors.textPrimary,
-      fontWeight: '300',
-      marginTop: -2,
-    },
     sortFilterRow: {
       flexDirection: 'row',
       paddingHorizontal: 16,
@@ -942,7 +937,7 @@ export default function ReminderScreen({ navigation }: Props) {
         accessibilityLabel="Create new reminder"
         accessibilityRole="button"
       >
-        <Text style={styles.fabText}>+</Text>
+        <Image source={APP_ICONS.plus} style={{ width: 28, height: 28 }} resizeMode="contain" />
       </TouchableOpacity>
 
       <UndoToast

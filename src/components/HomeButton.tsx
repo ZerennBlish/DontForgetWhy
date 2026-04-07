@@ -1,9 +1,9 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight } from '../utils/haptics';
-import { HomeIcon } from './Icons';
+import APP_ICONS from '../data/appIconAssets';
 
 export default function HomeButton({ forceDark }: { forceDark?: boolean }) {
   const navigation = useNavigation<any>();
@@ -22,7 +22,7 @@ export default function HomeButton({ forceDark }: { forceDark?: boolean }) {
       accessibilityLabel="Go home"
       accessibilityRole="button"
     >
-      <HomeIcon color={(forceDark || colors.mode === 'dark') ? '#F0F0F8' : colors.textPrimary} size={18} />
+      <Image source={APP_ICONS.house} style={{ width: 20, height: 20 }} resizeMode="contain" />
     </TouchableOpacity>
   );
 }

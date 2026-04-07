@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   Image,
+  ImageSourcePropType,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import notifee from '@notifee/react-native';
@@ -24,10 +25,7 @@ import { setOnboardingComplete } from '../services/settings';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import { canUseFullScreenIntent, openFullScreenIntentSettings } from '../utils/fullScreenPermission';
-import {
-  BellIcon, AlarmIcon, WarningIcon, FireIcon, GearIcon,
-  MicIcon, CameraIcon, PuzzleIcon, HomeIcon,
-} from '../components/Icons';
+import APP_ICONS from '../data/appIconAssets';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
@@ -462,22 +460,28 @@ export default function OnboardingScreen({ navigation, route }: Props) {
   const displayColors = shouldCycleThemes ? themes[previewTheme] : colors;
 
   const renderIcon = (slideId: string) => {
-    const iconColor = displayColors.accent;
-    const size = 48;
-    switch (slideId) {
-      case 'welcome': return <PuzzleIcon color={iconColor} size={size} />;
-      case 'whats-inside': return <HomeIcon color={iconColor} size={size} />;
-      case 'notifications': return <BellIcon color={iconColor} size={size} />;
-      case 'exact-alarms': return <AlarmIcon color={iconColor} size={size} />;
-      case 'battery': return <WarningIcon color={iconColor} size={size} />;
-      case 'full-screen': return <FireIcon color={iconColor} size={size} />;
-      case 'samsung-dnd': return <GearIcon color={iconColor} size={size} />;
-      case 'overlay': return <AlarmIcon color={iconColor} size={size} />;
-      case 'microphone': return <MicIcon color={iconColor} size={size} />;
-      case 'camera-photos': return <CameraIcon color={iconColor} size={size} />;
-      case 'done': return <HomeIcon color={iconColor} size={size} />;
-      default: return null;
-    }
+    const iconMap: Record<string, ImageSourcePropType> = {
+      'welcome': APP_ICONS.gamepad,
+      'whats-inside': APP_ICONS.house,
+      'notifications': APP_ICONS.bell,
+      'exact-alarms': APP_ICONS.alarm,
+      'battery': APP_ICONS.warning,
+      'full-screen': APP_ICONS.flame,
+      'samsung-dnd': APP_ICONS.gear,
+      'overlay': APP_ICONS.alarm,
+      'microphone': APP_ICONS.microphone,
+      'camera-photos': APP_ICONS.camera,
+      'done': APP_ICONS.house,
+    };
+    const source = iconMap[slideId];
+    if (!source) return null;
+    return (
+      <Image
+        source={source}
+        style={{ width: 48, height: 48 }}
+        resizeMode="contain"
+      />
+    );
   };
 
   useEffect(() => {

@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Image,
+  ImageSourcePropType,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -27,17 +28,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { shouldAutoBackup, autoExportBackup } from '../services/backupRestore';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
-import {
-  AlarmIcon,
-  TimerIcon,
-  BellIcon,
-  DocIcon,
-  MicIcon,
-  CalendarIcon,
-  GamepadIcon,
-  PencilIcon,
-  GearIcon,
-} from '../components/Icons';
+import APP_ICONS from '../data/appIconAssets';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -123,16 +114,16 @@ function getTodayEvents(alarms: Alarm[], reminders: Reminder[]): TodayEvent[] {
   return events;
 }
 
-const SECTION_ICONS: Record<string, React.FC<{ color: string }>> = {
-  alarms: AlarmIcon,
-  timers: TimerIcon,
-  reminders: BellIcon,
-  notepad: DocIcon,
-  voice: MicIcon,
-  calendar: CalendarIcon,
-  games: GamepadIcon,
-  forgetlog: PencilIcon,
-  settings: GearIcon,
+const SECTION_ICON_SOURCES: Record<string, ImageSourcePropType> = {
+  alarms: APP_ICONS.alarm,
+  timers: APP_ICONS.stopwatch,
+  reminders: APP_ICONS.bell,
+  notepad: APP_ICONS.notepad,
+  voice: APP_ICONS.microphone,
+  calendar: APP_ICONS.calendar,
+  games: APP_ICONS.gamepad,
+  forgetlog: APP_ICONS.notepad,  // reuse notepad icon for forget log
+  settings: APP_ICONS.gear,
 };
 
 // ── Section definitions ─────────────────────────────────────────
@@ -490,7 +481,7 @@ export default function HomeScreen({ navigation }: Props) {
             accessibilityRole="button"
           >
             <View style={styles.gearCircle}>
-              <GearIcon color={bgUri ? 'rgba(255,255,255,0.7)' : colors.textSecondary} />
+              <Image source={APP_ICONS.gear} style={{ width: 20, height: 20 }} resizeMode="contain" />
             </View>
           </TouchableOpacity>
         </View>
@@ -511,9 +502,7 @@ export default function HomeScreen({ navigation }: Props) {
             accessibilityLabel="New Note"
             accessibilityRole="button"
           >
-            <View style={{ transform: [{ scale: 0.8 }] }}>
-              <DocIcon color={colors.sectionNotepad} />
-            </View>
+            <Image source={APP_ICONS.notepad} style={{ width: 20, height: 20 }} resizeMode="contain" />
             <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>New Note</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -523,9 +512,7 @@ export default function HomeScreen({ navigation }: Props) {
             accessibilityLabel="Record Memo"
             accessibilityRole="button"
           >
-            <View style={{ transform: [{ scale: 0.8 }] }}>
-              <MicIcon color={colors.sectionVoice} />
-            </View>
+            <Image source={APP_ICONS.microphone} style={{ width: 20, height: 20 }} resizeMode="contain" />
             <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>Record Memo</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -535,9 +522,7 @@ export default function HomeScreen({ navigation }: Props) {
             accessibilityLabel="Set Timer"
             accessibilityRole="button"
           >
-            <View style={{ transform: [{ scale: 0.8 }] }}>
-              <TimerIcon color={colors.sectionTimer} />
-            </View>
+            <Image source={APP_ICONS.stopwatch} style={{ width: 20, height: 20 }} resizeMode="contain" />
             <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>Set Timer</Text>
           </TouchableOpacity>
         </View>
@@ -545,7 +530,7 @@ export default function HomeScreen({ navigation }: Props) {
         {/* D. Section grid */}
         <View style={styles.grid}>
           {sections.map((section) => {
-            const IconComp = SECTION_ICONS[section.key];
+            const iconSource = SECTION_ICON_SOURCES[section.key];
             const subtitle = section.getSubtitle(counts);
             return (
               <TouchableOpacity
@@ -565,9 +550,11 @@ export default function HomeScreen({ navigation }: Props) {
                 ]}
               >
                 <View style={[styles.iconCircle, { backgroundColor: 'transparent' }]}>
-                  <View style={{ transform: [{ scale: 0.9 }] }}>
-                    <IconComp color={section.color} />
-                  </View>
+                  <Image
+                    source={iconSource}
+                    style={{ width: 30, height: 30 }}
+                    resizeMode="contain"
+                  />
                 </View>
                 <Text style={[styles.gridLabel, { color: (colors.mode === 'dark' || bgUri) ? '#FFFFFF' : '#1F2937' }]}>{section.label}</Text>
                 {subtitle !== '' && <Text style={[styles.gridSubtitle, { color: bgUri ? 'rgba(255,255,255,0.55)' : (colors.mode === 'dark' ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)') }]}>{subtitle}</Text>}

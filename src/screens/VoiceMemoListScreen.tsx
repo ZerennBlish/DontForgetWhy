@@ -32,6 +32,7 @@ import VoiceMemoCard from '../components/VoiceMemoCard';
 import UndoToast from '../components/UndoToast';
 import { createAudioPlayer } from 'expo-audio';
 import type { VoiceMemo } from '../types/voiceMemo';
+import APP_ICONS from '../data/appIconAssets';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VoiceMemoList'>;
@@ -415,11 +416,6 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       shadowOpacity: 0.4,
       shadowRadius: 8,
     },
-    fabText: {
-      fontSize: 36,
-      color: colors.textPrimary,
-      fontWeight: '300',
-    },
   }), [colors, insets.bottom, insets.top]);
 
   const renderDeletedItem = (memo: VoiceMemo) => (
@@ -565,7 +561,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
           activeOpacity={0.8}
         >
-          <Text style={styles.fabText}>+</Text>
+          <Image source={APP_ICONS.plus} style={{ width: 28, height: 28 }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast
