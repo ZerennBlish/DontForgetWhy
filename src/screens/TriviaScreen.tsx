@@ -373,17 +373,17 @@ export default function TriviaScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
-      <View style={styles.header}>
-        <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} forceDark />
-        </View>
-        <View style={styles.headerHome}>
-          <HomeButton forceDark />
-        </View>
-        <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+      <View style={styles.headerBack}>
+        <BackButton onPress={() => navigation.goBack()} forceDark />
       </View>
-      <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Trivia Time</Text>
+      <View style={styles.headerHome}>
+        <HomeButton forceDark />
+      </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        </View>
+        <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Trivia Time</Text>
         {allSeenMessage && (
           <Text style={styles.seenNote}>{allSeenMessage}</Text>
         )}
@@ -459,24 +459,26 @@ export default function TriviaScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
-      <View style={styles.header}>
-        <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} forceDark />
-        </View>
-        <View style={styles.headerHome}>
-          <HomeButton forceDark />
-        </View>
-        <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+      <View style={styles.headerBack}>
+        <BackButton onPress={() => navigation.goBack()} forceDark />
       </View>
-      <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Trivia Time</Text>
+      <View style={styles.headerHome}>
+        <HomeButton forceDark />
+      </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        </View>
+        <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Trivia Time</Text>
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsTitle}>Round Complete</Text>
 
           <Text style={styles.resultsScore}>{score}/{questions.length}</Text>
-          <Text style={styles.resultsStars}>
-            {stars > 0 ? '\u2B50'.repeat(stars) : '\u2014'}
-          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginVertical: 8 }}>
+            {stars > 0 ? Array.from({ length: stars }).map((_, i) => (
+              <Image key={i} source={require('../../assets/icons/icon-star.webp')} style={{ width: 24, height: 24 }} resizeMode="contain" />
+            )) : <Text style={styles.resultsStars}>{'\u2014'}</Text>}
+          </View>
 
           <View style={styles.resultsBadge}>
             <Image source={CATEGORY_IMAGES[selectedCategory]} style={{ width: 40, height: 40 }} resizeMode="contain" />
@@ -646,11 +648,13 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       position: 'absolute',
       left: 20,
       top: insets.top + 10,
+      zIndex: 10,
     },
     headerHome: {
       position: 'absolute',
       left: 64,
       top: insets.top + 10,
+      zIndex: 10,
     },
     title: {
       fontSize: 28,
@@ -797,9 +801,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-    },
-    topBarEmoji: {
-      fontSize: 20,
     },
     topBarCategory: {
       fontSize: 15,

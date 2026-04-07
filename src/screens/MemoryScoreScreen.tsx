@@ -24,7 +24,7 @@ import type { TriviaStats, TriviaCategory } from '../types/trivia';
 
 const SECTION_ICONS: Record<string, ImageSourcePropType> = {
   chart: require('../../assets/icons/icon-chart.webp'),
-  guessWhy: require('../../assets/trivia/trivia-general.webp'),
+  guessWhy: require('../../assets/icons/icon-magnify.webp'),
   dailyRiddle: require('../../assets/icons/icon-lightbulb.webp'),
   chess: require('../../assets/icons/icon-chess.webp'),
   checkers: require('../../assets/icons/icon-checkers.webp'),
@@ -263,17 +263,17 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/library.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-    <View style={styles.header}>
-      <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} forceDark />
-      </View>
-      <View style={styles.headerHome}>
-        <HomeButton forceDark />
-      </View>
-      <Image source={require('../../assets/icons/icon-chart.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+    <View style={styles.headerBack}>
+      <BackButton onPress={() => navigation.goBack()} forceDark />
     </View>
-    <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Memory Score</Text>
+    <View style={styles.headerHome}>
+      <HomeButton forceDark />
+    </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <Image source={require('../../assets/icons/icon-chart.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+      </View>
+      <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Memory Score</Text>
 
       {/* Overall Summary — composite rank */}
       <View style={styles.summaryCard}>
@@ -752,11 +752,13 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       position: 'absolute',
       left: 20,
       top: topInset + 10,
+      zIndex: 10,
     },
     headerHome: {
       position: 'absolute',
       left: 64,
       top: topInset + 10,
+      zIndex: 10,
     },
     title: {
       fontSize: 28,

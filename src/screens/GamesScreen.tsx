@@ -56,11 +56,13 @@ export default function GamesScreen({ navigation }: Props) {
           position: 'absolute',
           left: 20,
           top: insets.top + 10,
+          zIndex: 10,
         },
         headerHome: {
           position: 'absolute',
           left: 64,
           top: insets.top + 10,
+          zIndex: 10,
         },
         title: {
           fontSize: 28,
@@ -119,17 +121,17 @@ export default function GamesScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/brain.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-    <View style={styles.header}>
-      <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} forceDark />
-      </View>
-      <View style={styles.headerHome}>
-        <HomeButton forceDark />
-      </View>
-      <Image source={require('../../assets/icons/icon-chart.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+    <View style={styles.headerBack}>
+      <BackButton onPress={() => navigation.goBack()} forceDark />
     </View>
-    <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Brain Games</Text>
+    <View style={styles.headerHome}>
+      <HomeButton forceDark />
+    </View>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <Image source={require('../../assets/icons/icon-controller.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+      </View>
+      <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Brain Games</Text>
       <Text style={[styles.subtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Exercise that forgetful brain of yours</Text>
 
       {/* Daily Riddle */}

@@ -539,10 +539,6 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           left: 64,
           top: insets.top + 10,
         },
-        winEmoji: {
-          fontSize: 64,
-          marginBottom: 8,
-        },
         winTitle: {
           fontSize: 28,
           fontWeight: '800',

@@ -291,11 +291,13 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           position: 'absolute',
           left: 20,
           top: insets.top + 10,
+          zIndex: 10,
         },
         headerHome: {
           position: 'absolute',
           left: 64,
           top: insets.top + 10,
+          zIndex: 10,
         },
         title: {
           fontSize: 28,
@@ -1114,21 +1116,21 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/door.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-    <View style={styles.header}>
-      <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} forceDark />
-      </View>
-      <View style={styles.headerHome}>
-        <HomeButton forceDark />
-      </View>
-      <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+    <View style={styles.headerBack}>
+      <BackButton onPress={() => navigation.goBack()} forceDark />
     </View>
-    <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Daily Riddle</Text>
+    <View style={styles.headerHome}>
+      <HomeButton forceDark />
+    </View>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
     >
+      <View style={styles.header}>
+        <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+      </View>
+      <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Daily Riddle</Text>
       <Text style={[styles.dateText, { paddingHorizontal: 20 }]}>{getFormattedDate()}</Text>
 
       {stats.streak > 0 && (
