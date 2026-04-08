@@ -270,7 +270,7 @@ export function useChess(): UseChessReturn {
         }
         const t2 = Date.now();
         const aiSan = getAIMove(c2, level);
-        console.log('AI move took:', Date.now() - t2, 'ms');
+        if (__DEV__) console.log('AI move took:', Date.now() - t2, 'ms');
         if (aiSan) {
           try {
             c2.move(aiSan);
@@ -322,13 +322,9 @@ export function useChess(): UseChessReturn {
       const gameEnded = checkGameOver(g);
 
       if (!gameEnded) {
-        if (aiDelayRef.current) clearTimeout(aiDelayRef.current);
-        aiDelayRef.current = setTimeout(() => {
-          aiDelayRef.current = null;
-          InteractionManager.runAfterInteractions(() => {
-            triggerAIMove();
-          });
-        }, AI_DELAY_MS);
+        InteractionManager.runAfterInteractions(() => {
+          triggerAIMove();
+        });
       }
 
       // Quick blunder sanity check (shallow — runs async, doesn't block AI).

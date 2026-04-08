@@ -278,7 +278,7 @@ function AppNavigator() {
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Satisfy_400Regular,
     LilitaOne_400Regular,
     Nunito_400Regular,
@@ -313,12 +313,12 @@ export default function App() {
   }, [attemptMigration]);
 
   useEffect(() => {
-    if (fontsLoaded && (dbReady || migrationFailed)) {
+    if ((fontsLoaded || fontError) && (dbReady || migrationFailed)) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, dbReady, migrationFailed]);
+  }, [fontsLoaded, fontError, dbReady, migrationFailed]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded && !fontError) return null;
 
   if (migrationFailed) {
     return (

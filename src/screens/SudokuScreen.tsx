@@ -141,7 +141,7 @@ export default function SudokuScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       const scoresData = kvGet(SCORES_KEY);
-      console.log('[Sudoku] loaded scores from storage:', scoresData);
+      if (__DEV__) console.log('[Sudoku] loaded scores from storage:', scoresData);
       if (scoresData) {
         try { setBestScores(JSON.parse(scoresData)); } catch (e) {
           console.error('[Sudoku] parse scores failed:', e);
@@ -339,10 +339,10 @@ export default function SudokuScreen({ navigation }: Props) {
       clearSavedGame();
 
       const diff = difficultyRef.current;
-      console.log('[Sudoku] game won — saving stats for', diff);
+      if (__DEV__) console.log('[Sudoku] game won — saving stats for', diff);
       try {
         const data = kvGet(SCORES_KEY);
-        console.log('[Sudoku] existing scores raw:', data);
+        if (__DEV__) console.log('[Sudoku] existing scores raw:', data);
         const scores: BestScores = data ? JSON.parse(data) : {};
         const current = scores[diff];
         const gamesPlayed = (current?.gamesPlayed ?? 0) + 1;
@@ -354,7 +354,7 @@ export default function SudokuScreen({ navigation }: Props) {
         } else {
           scores[diff] = { ...current!, gamesPlayed };
         }
-        console.log('[Sudoku] writing scores:', JSON.stringify(scores));
+        if (__DEV__) console.log('[Sudoku] writing scores:', JSON.stringify(scores));
         kvSet(SCORES_KEY, JSON.stringify(scores));
         setBestScores({ ...scores });
       } catch (e) { console.error('[Sudoku] save scores failed:', e); }
@@ -433,10 +433,10 @@ export default function SudokuScreen({ navigation }: Props) {
       clearSavedGame();
 
       const diff = difficultyRef.current;
-      console.log('[Sudoku] game won via hint — saving stats for', diff);
+      if (__DEV__) console.log('[Sudoku] game won via hint — saving stats for', diff);
       try {
         const data = kvGet(SCORES_KEY);
-        console.log('[Sudoku] existing scores raw:', data);
+        if (__DEV__) console.log('[Sudoku] existing scores raw:', data);
         const scores: BestScores = data ? JSON.parse(data) : {};
         const current = scores[diff];
         const gamesPlayed = (current?.gamesPlayed ?? 0) + 1;
@@ -448,7 +448,7 @@ export default function SudokuScreen({ navigation }: Props) {
         } else {
           scores[diff] = { ...current!, gamesPlayed };
         }
-        console.log('[Sudoku] writing scores:', JSON.stringify(scores));
+        if (__DEV__) console.log('[Sudoku] writing scores:', JSON.stringify(scores));
         kvSet(SCORES_KEY, JSON.stringify(scores));
         setBestScores({ ...scores });
       } catch (e) { console.error('[Sudoku] save scores failed:', e); }

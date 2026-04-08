@@ -1264,6 +1264,8 @@ export default function NoteEditorModal({
                     setShowBgPicker(true);
                   }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add custom background color"
                 >
                   <Image source={APP_ICONS.plus} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </TouchableOpacity>
@@ -1332,6 +1334,8 @@ export default function NoteEditorModal({
                     setShowFontPicker(true);
                   }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add custom text color"
                 >
                   <Image source={APP_ICONS.plus} style={{ width: 20, height: 20 }} resizeMode="contain" />
                 </TouchableOpacity>
