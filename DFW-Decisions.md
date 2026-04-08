@@ -430,3 +430,12 @@ Dead field. HomeScreen resolves section colors via `bannerColorMap` from theme t
 - `npm ci` lock file sync: WSL package install → run `npm install` from PowerShell → commit package-lock.json
 - Builds on Expo cloud — local specs don't affect build speed
 - `development-emulator` profile in eas.json: `developmentClient: true`, `distribution: "internal"`, `buildType: "apk"`, env `ORG_GRADLE_PROJECT_reactNativeArchitectures=x86_64`. Used for emulator-only dev builds (x86_64 arch, separate from ARM physical device builds).
+
+### Session 21 Decisions
+- Chess pieces are anthropomorphic (matching game section art style), not silver chrome (which is core app only). Games use playful cartoon art; core utilities use silver metallic icons.
+- Training mode re-derives from difficulty on restore rather than persisting — simpler, acceptable default (always ON for eligible difficulties, which is the right default for beginners).
+- Font rollout in phases: Phase 1 headers only, Phase 2 body text — prevents massive single-prompt scope and lets us validate the look before committing everywhere.
+- App icon kept as-is (alarm + glowing ?) — silver chrome version didn't meaningfully improve on existing.
+- Calendar empty states use color cartoon art (not silver chrome) since they're decorative illustrations, not utility icons.
+- CHECK! shows whenever isInCheck is true regardless of whose turn — both players should see the check state. Pulses only when it's the player's turn (they need to act); solid during AI turn.
+- isInCheck not gated by isGameOver — king highlight persists on checkmate so the player can see why the game ended.

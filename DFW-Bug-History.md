@@ -514,3 +514,29 @@
 **Session 18 also removed freestyle mode** (American/Freestyle variant system built and stripped in same session — scope creep). No bugs, just API cleanup across engine, hook, screen, storage, and tests.
 
 **50 audits total.** Every ship preceded by at least one audit.
+
+---
+
+### Session 21 — Chess Overhaul + Fonts Audit Findings
+
+**Round 1 (chess features):**
+- **P1: isInCheck gated by !isGameOver** — `const isInCheck = !!game && game.isCheck() && !isGameOver` caused the red king highlight to vanish on the final checkmate frame. Players couldn't see why the game ended. Fixed: removed `!isGameOver` guard.
+- **P1: Duplicate FEN pushed on resign** — `resign()` unconditionally pushed `g.fen()` to fenHistoryRef, creating a duplicate entry when the current position was already the last entry. Caused a phantom review step at the end. Fixed: only push if FEN differs from last entry.
+- **P1: Double haptic on AI check move** — `triggerAIMove` fired both `hapticHeavy()` for check AND `hapticLight()` for it being the player's turn, back-to-back. Fixed: added `&& !c2.isCheck()` guard to the hapticLight call.
+- **P2: Review captures showed final game state** — Captured piece trays in review mode showed the full game's captures regardless of review position, which was misleading. Fixed: removed capture trays from review mode entirely (missing pieces visible by their absence on the board).
+- **P2: CHECK! only showed on player's turn** — Status bar condition `chess.isInCheck && chess.isPlayerTurn` hid the CHECK! banner during AI's turn. Fixed: CHECK! now shows whenever isInCheck is true; pulses only when it's the player's turn.
+
+**Round 2 (polish):**
+- **P2: Review board squares not screen-reader accessible** — Review board used plain `<View>` without `accessible={true}`. Screen readers couldn't focus individual squares. Fixed: added `accessible={true}`.
+- **P2: Status bar text not announced to screen readers** — CHECK! and Your Move text had no live region. Fixed: added `accessibilityLiveRegion="polite"` + `accessibilityRole="alert"` on CHECK!, `accessibilityLiveRegion="polite"` on Your Move.
+- **P3: "Move 0 of N" confusing in review** — Review counter showed "Move 0 of N" at starting position. Fixed: shows "Start of N" at index 0.
+- **P3: Threatened/last-move not in accessibility labels** — Teaching mode highlights weren't reflected in square labels. Fixed: labels now append ", threatened" and ", last move".
+- **P2: Training mode highlights vanished on game-over** — `threatenedSquares` and `lastMoveSquares` useMemo hooks returned early when `!isPlayerTurn`. Since `isPlayerTurn` is false on game-over, highlights disappeared. Fixed: changed guard to `isAIThinking` instead.
+
+**Round 3 (production):**
+- **P1: Font loading hang** — `useFonts` error not handled, app stuck on splash screen forever if fonts failed to download. Fixed: error fallback proceeds with system fonts.
+- **P2: Double AI delay (800ms)** — `makePlayerMove` had a nested `setTimeout(AI_DELAY_MS)` before `InteractionManager.runAfterInteractions` which called `triggerAIMove` (which had its own `setTimeout(AI_DELAY_MS)`). Total delay was 800ms instead of 400ms. Fixed: removed the outer setTimeout, kept only `InteractionManager.runAfterInteractions(() => triggerAIMove())`.
+- **P2: Color picker buttons missing accessibility** — NoteEditorModal color picker circles had no `accessibilityLabel` or `accessibilityRole`. Fixed: added labels.
+- **P3: console.log in production** — AI move timing `console.log` in triggerAIMove shipped to production. Fixed: wrapped in `__DEV__` guard.
+
+**53 audits total.**

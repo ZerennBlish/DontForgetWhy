@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 18 (April 5, 2026)
+### Source of Truth · Updated: Session 21 (April 7, 2026)
 
 ---
 
@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.14.0 (versionCode 31) — P6 Chess + Checkers complete |
+| **Current Version** | v1.16.0 (versionCode 33) — Chess overhaul + custom fonts + art refresh |
 | **Branch** | `dev` |
-| **Production Status** | v1.14.0 submitted to Google Play |
-| **Current Focus** | v1.14.0 live. Session 19: Visual art overhaul — Memory Guy Match, custom icons, rank system, trivia icons. Next: production build + custom icon set phase. |
+| **Production Status** | v1.16.0 submitted to Google Play |
+| **Current Focus** | Session 21: Chess features (review mode, check indication, training mode, haptic tiers), custom fonts (Satisfy/Lilita One/Nunito), calendar empty state art, chess piece art, plus icon sizing, color picker alignment. Production build v1.16.0. |
 | **Blocked By** | Nothing |
-| **Next Action** | Upload to Play Store, update listing. |
+| **Next Action** | Play Store listing refresh (screenshots, description), Sound FX pass, Phase 2 font rollout (Nunito to all body text). |
 | **EAS Credits** | ~27 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — 68 clips shipped |
@@ -55,6 +55,9 @@
 - **P4 · The Vault** — Shipped v1.11.0. Export/Import Memories (.dfw backup), auto-export via SAF to Google Drive/external folders, transactional restore with rollback, manifest-first architecture, strict validation, notification rescheduling, Jest tests.
 - **P4.5 · Stability Sprint** — Shipped v1.12.0. NotepadScreen + AlarmListScreen decomposed into thin shells + hooks + card components, full accessibility pass, PNG→WebP compression (31.8 MB → 1.5 MB), FlatList OOM prevention, Jest resurrection (162 tests), clean package audit.
 - **P6 · Chess + Checkers + Blunder Roast** — Shipped v1.13.0 (chess) + v1.14.0 (checkers + scoring overhaul). Chess: chess.js, iterative-deepening minimax, opening book, TT, killer moves, null-move pruning, tapered eval, 5 difficulties, blunder roasts. Checkers: pure JS engine, American rules, 5 difficulties, forced capture, promotion-stops-chain. Scoring: max 140 (7 games × 20), rank thresholds scaled, chess/checkers stat sections in Memory Score.
+- **Session 19 · Visual Art Overhaul** — Memory Match → Memory Guy Match (22 custom cards + card back + felt bg). 10 trivia category icons + library bg. 9 rank tier images with new titles. GamesScreen + score screen emoji → custom art.
+- **Session 20 · Silver Metallic Icon Set + Guess Why Art** — 25+ silver/chrome utility icons replacing View-based CSS geometry. Two-tier visual language (silver core, anthropomorphic games). Screen header icons on 7 core screens. Sound mode icons. ShareNoteModal icons. FAB plus buttons. Guess Why art. Checker pieces (4 WebP). Icons.tsx pruned. Jest webp moduleNameMapper.
+- **Session 21 · Chess Overhaul + Custom Fonts (v1.16.0)** — Chess: post-game move review (FEN history, step-through board), check/checkmate indication (red king square, CHECK! banner, red board border), training mode (threatened pieces, last move highlight, toggle for difficulty 0-2), haptic tiers (light=turn, heavy=check, error=checkmate). Art: 12 anthropomorphic chess pieces (6 white cream/gold, 6 black charcoal/silver), 3 calendar empty state illustrations (hammock, beach chair, couch), calendar icon refresh. Visual: plus icon sizes increased across 8 files, color picker circles aligned in NoteEditorModal. Fonts: Satisfy (app title), Lilita One (game headers), Nunito (core UI headers). Phase 1 font rollout — headers only, body text Phase 2.
 
 ---
 
@@ -182,7 +185,7 @@
 - Evaluation: material + PST + mobility (3cp/move) + bishop pair (50cp) + doubled/isolated pawns + king safety pawn shield
 - One take-back per game, dedicated roast pool
 - Player chooses color (w/b) and difficulty before each game
-- Custom AI-generated Staunton piece assets (ChatGPT) — 12 PNGs, not emoji/unicode
+- Custom AI-generated Staunton piece assets (ChatGPT) — 12 PNGs, replaced with 12 anthropomorphic WebP pieces in Session 21
 
 ### Checkers Design (shipped in Session 18)
 - 5 difficulty levels: Beginner (500ms/depth 4), Casual (800ms/6), Intermediate (1.5s/8), Advanced (3s/10), Expert (5s/14)
@@ -212,6 +215,45 @@
 - [x] `npx tsc --noEmit` — 0 errors
 - [x] `npx jest` — 52 checkers tests + 69 chess tests + existing suites passing
 - [x] v1.14.0 (versionCode 31)
+
+---
+
+## SESSION 21 — CHESS OVERHAUL + CUSTOM FONTS (v1.16.0)
+
+**Shipped in:** v1.16.0 (versionCode 33)
+**Branch:** `dev`
+**New deps:** `expo-font`, `expo-splash-screen`, `@expo-google-fonts/satisfy`, `@expo-google-fonts/lilita-one`, `@expo-google-fonts/nunito`
+**Build cost:** 1 production build
+
+### Chess Features
+- [x] Post-game move review — FEN history tracked per move, step-through with « ‹ › » controls, non-interactive review board, "Review Game" button on game-over overlay
+- [x] Check/checkmate indication — red king square, pulsing "CHECK!" text, red board border, hapticHeavy on check, hapticError (notification error pattern) on checkmate
+- [x] Turn indicator — pulsing "Your Move" text (accent color, fontSize 20), accent board border when player's turn
+- [x] Training mode — threatened pieces highlighted red, AI's last move highlighted gold, toggle in pre-game screen for difficulty 0-2, training games don't record results
+- [x] Haptic tiers — light tap on player's turn (suppressed during check), heavy impact on check, long error vibration on checkmate
+- [x] hapticError() function added to haptics.ts
+
+### Art
+- [x] 12 anthropomorphic chess pieces replacing stock PNGs — cream/gold (white) + charcoal/silver (black), thick outlines, personality per piece type (tired pawn, smug knight, judgmental bishop, etc.)
+- [x] 3 calendar empty state illustrations — hammock (day), beach chair (week), couch (month) replacing emoji
+- [x] Calendar chrome icon refresh — grid-based calendar replacing "15" number icon
+- [x] Plus icon sizes increased across 8 files (FABs 28→34, inline 18→22, etc.)
+- [x] NoteEditorModal color picker + circles aligned to match sibling dot sizes
+
+### Fonts
+- [x] Satisfy — app title "Don't Forget Why" on HomeScreen
+- [x] Lilita One — game screen headers (GamesScreen, Chess, Checkers, Sudoku, Trivia, MemoryMatch, GuessWhy, DailyRiddle)
+- [x] Nunito — core screen headers (AlarmList, Reminders, Timer, Notes, VoiceMemos, Calendar, Settings)
+- [x] Font loading with expo-font + expo-splash-screen, error fallback to system fonts
+- [ ] Phase 2: Nunito to all body text, labels, buttons (deferred)
+
+### Audit Gate
+- [x] Dual audit (Codex + Gemini) — 3 rounds
+- [x] Round 1 (chess features): P1 isInCheck false on checkmate, duplicate FEN on resign, double haptic. P2 review captures, CHECK! priority. All fixed.
+- [x] Round 2 (polish): accessibility on review squares, live regions on CHECK!/Your Move, "Move 0"→"Start", threatened/lastMove in labels, training data persist through game-over. All fixed.
+- [x] Round 3 (production): P1 font loading hang, P2 double AI delay, P2 accessibility on color picker buttons, P3 console.log cleanup. All fixed.
+- [x] `npx tsc --noEmit` — 0 errors
+- [x] `npx jest` — 9 suites, 283 tests passing
 
 ---
 
@@ -264,7 +306,6 @@
 
 ### Features
 - Memory Match custom card art — replace emoji with custom-designed images (ChatGPT-generated, DFW-themed). ~20-22 unique cards + custom card back. Polish pass for free tier storefront quality.
-- Chess post-game move review (replay viewer: step through moves on board after game over, forward/back buttons)
 - DailyRiddleScreen emoji → custom art pass (category emoji, button label emoji)
 - SudokuScreen emoji → custom art pass (win emoji, hint button, new game button)
 - Timer notification buttons: "Go Away" + "Start me?"
@@ -390,3 +431,5 @@
 | Apr 5 | Session 17 P6 Chess engine hardened. Opening book (104 positions), transposition table with halfmove-aware key + mate-score ply adjustment, killer moves, null-move pruning, min-depth/max-time difficulty model with 3× safety deadline, tapered eval, passed-pawn bonus, rook on open file. 2 audit rounds completed (6 findings, all fixed). 232 tests passing across 9 suites. Chess targeted to ship as v1.13.0 solo; Checkers + Premium Foundation pushed back. P8 Firebase scope now includes chess multiplayer + Pro-tier cloud Stockfish. |
 | Apr 5 | Session 18 P6 complete. Checkers shipped: pure JS engine (minimax, alpha-beta, TT, killers, IDS, forced captures, multi-jump, king promotion), 5 difficulty levels, American rules only (freestyle built and removed). 3 audit bug fixes (evaluateBoard perf, mate ply penalty, AI null game-over). Scoring system overhauled: max 140 (7×20), rank thresholds scaled, chess blunder penalty removed, chess+checkers stat sections added to MemoryScoreScreen. UI cleanup: emoji removal from headers, GamesScreen reordered (Daily Riddle first). v1.14.0 (versionCode 31). |
 | Apr 6 | Session 19 visual art overhaul. Memory Match → Memory Guy Match with 22 custom card images + card back + felt background. 10 trivia category icons + library background. 9 rank tier images with new titles (The Rock → The Elephant). Score screen emoji → custom art. GamesScreen icons → custom art. P5.5 roadmap revised: no grandfathering, expo-iap, revised Pro/Free split. Dual audit clean (0 P0/P1). |
+| Apr 7 | Session 20 silver metallic icon set. 25+ silver/chrome utility icons replacing View-based CSS geometry + emoji. Two-tier visual language (silver core, anthropomorphic games). Screen headers on 7 core screens. Sound mode icons. ShareNoteModal icons. FAB plus buttons. Guess Why art. Checker pieces (4 WebP). Icons.tsx pruned. Jest webp moduleNameMapper. Accessibility labels. TimerScreen header absolute positioning. |
+| Apr 7 | Session 21 chess overhaul + custom fonts. v1.16.0 (versionCode 33). Chess: post-game move review (FEN history, step-through), check/checkmate indication (red king, CHECK! banner, red border, haptic tiers), training mode (threatened red, last move gold, toggle for difficulty 0-2). 12 anthropomorphic chess pieces. 3 calendar empty state illustrations. Calendar icon refresh. Plus icon sizes. Color picker alignment. Fonts: Satisfy (title), Lilita One (games), Nunito (core headers). 3 audit rounds (9 findings, all fixed). 283 tests passing. |

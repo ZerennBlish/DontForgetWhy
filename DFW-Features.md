@@ -16,6 +16,7 @@
 - **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7). Notes-only (voice memos have own screen since v1.9.0). Card style with green section-colored border. Note icon circle uses the note's own color. Text capsule pin/delete buttons. Note editor dropdown: consolidated draw/photo/record/color into single "+" dropdown menu with labeled rows and View-based icons. NoteEditorModal: view/edit mode with centered accent pills — "Edit" in view mode (moved from topBarRight to topBarCenter, Session 13), "Save" only when `hasUnsavedChanges()`. Recording controls (Session 12): proper pause (green) + stop (red) button row. Home button in modal with unsaved changes guard. Voice memos stored as `voiceMemos TEXT` column in notes table (JSON array).
 - **Voice Memos** — standalone VoiceMemoListScreen (separated from Notepad in v1.9.0). VoiceRecordScreen (tap-to-record/stop, pause/resume), VoiceMemoDetailScreen (view/edit mode: existing memos open read-only with centered "Edit" pill, tap to enter edit mode with "Save" pill on changes — matches NoteEditorModal pattern), VoiceMemoCard (View-based play/pause icons, inline progress, capsule pin/delete). Pinning (max 4), soft delete with undo, dark bar card style with purple left border accent (#A29BFE). Calendar shows voice memos as purple dots. Note-attached voice memos share a 3-attachment limit with images.
 - **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing). Week view locked to current week (always shows Sunday–Saturday containing today). Tapping a date outside current week while in week view auto-switches to day view. Supports initialDate route param for deep-linking from widget or other screens.
+  - **Calendar empty state art (Session 21):** Three color cartoon illustrations replacing emoji — hammock (day view), beach chair (week view), couch (month view). Calendar chrome icon refresh: grid-based calendar replacing "15" number icon.
   - **Calendar fixes (dev):** Tappable event cards — alarm cards navigate to CreateAlarm, reminder cards to CreateReminder, note cards to Notepad. Annual/date-specific recurring reminders now correctly show only on matching month/day (previously showed on every day due to missing dueDate check).
 - **Calendar Widget** — Home screen widget showing current month as a mini grid. Colored dots per day: red=alarms, blue=reminders, green=notes. Tap any day → opens CalendarScreen focused on that date. Today highlighted with accent background. Past days dimmed. Adjacent month days shown in secondary color. Registered as third widget in app.json (minWidth 250dp, minHeight 280dp).
 - **DND bypass** — Notifee full-screen intent + Samsung onboarding
@@ -418,8 +419,46 @@ One per game. Pill text changes "Take Back" → "Used" and opacity drops to 0.4 
 ### Resign
 Red-tinted pill with `Alert.alert` confirmation. Sets `gameResult='resigned'`, `winner=opposite`, clears saved game, records a loss in chessStats.
 
+### Check / Checkmate Indication (Session 21)
+- Red king square (`rgba(220, 38, 38, 0.6)`) highlights the checked king on the board
+- Pulsing "CHECK!" text (red, fontSize 18) in the status bar — pulses when it's the player's turn, solid during AI turn
+- Red board border (`#EF4444`) replaces accent border when in check
+- `hapticHeavy()` fires on check (both player and AI moves)
+- `hapticError()` (notification error pattern — long vibration) fires on checkmate
+- Red king square persists on the final checkmate board (isInCheck not gated by isGameOver)
+
+### Training Mode (Session 21)
+- Toggle in pre-game screen for difficulty 0-2 (Beginner/Casual/Mid)
+- Threatened pieces: player's pieces under attack highlighted with red overlay (`rgba(220, 38, 38, 0.35)`)
+- Last move: AI's previous from/to squares highlighted gold (`rgba(250, 204, 21, 0.4)`)
+- Both highlights persist through game-over (guarded by `!isAIThinking`, not `isPlayerTurn`)
+- Training games don't record results to Memory Score (`teachingModeRef` skips `recordChessResult`)
+- Accessibility labels append ", threatened" and ", last move" when applicable
+- Teaching pill toggle in game header when active
+
+### Turn Indicator (Session 21)
+- Pulsing "Your Move" text (accent color, fontSize 20, fontWeight '800', opacity 0.4→1.0 800ms loop)
+- Accent board border when it's the player's turn (2px, always present to avoid layout shift)
+- Status bar priority: CHECK! (red) > Thinking… (white) > Your Move (accent) > nothing
+- `hapticLight()` fires when AI finishes and it becomes the player's turn (suppressed during check)
+
+### Post-Game Move Review (Session 21)
+- FEN history tracked in `fenHistoryRef` — pushed after every player/AI move, sliced on take-back, rebuilt from moveHistory on restore
+- Game-over overlay shows "Review Game" (accent) + "New Game" (secondary) buttons
+- Review mode: non-interactive board rendered from `reviewBoard` (derived from FEN at current index)
+- Navigation controls: « (start) ‹ (back) [counter] › (forward) » (end) — 36px circular buttons
+- Move counter: "Start of N" at index 0, "Move X of N" otherwise
+- Nav buttons disabled (opacity 0.3) at bounds with `accessibilityState={{ disabled: true }}`
+- Captures hidden in review mode (missing pieces visible on the board itself)
+- "New Game" button below nav controls returns to pre-game screen
+
+### Chess Pieces (Session 21)
+- 12 anthropomorphic WebP pieces (512×512, transparent bg) replacing stock Staunton PNGs
+- White set: cream/gold tones. Black set: charcoal/silver tones. Thick outlines, personality per piece type.
+- Mapped in `chessAssets.ts` via `getPieceImage({ type, color })`
+
 ### Game-Over Overlay
-Full-screen backdrop + centered card with title ("Checkmate!" / "Stalemate" / "Draw" / "You Resigned"), contextual subtitle ("You won!" / "You lost" / "It's a draw"), and a "New Game" button that clears state and returns to the pre-game modal.
+Full-screen backdrop + centered card with title ("Checkmate!" / "Stalemate" / "Draw" / "You Resigned"), contextual subtitle ("You won!" / "You lost" / "It's a draw"), "Review Game" button (accent) + "New Game" button (secondary). Review Game enters move review mode; New Game clears state and returns to pre-game modal.
 
 ### Roast Toast
 Severity-tinted background (good=accent+30, inaccuracy=amber, mistake=orange, blunder=red, catastrophe=deep red, takeBack=accent). Animated fade in/out via native-driver opacity, 4-second hold, auto-clears.
@@ -428,3 +467,26 @@ Severity-tinted background (good=accent+30, inaccuracy=amber, mistake=orange, bl
 Every move triggers `saveCurrentGame()` which writes to `chess_game` (single-row table). On app relaunch, `loadChessGame()` reads the row, replays moveHistory on a fresh `new Chess()` (rebuilds chess.js internal history so take-back still works), and if it's the AI's turn in the restored position it automatically triggers the AI. Game row cleared on checkmate/stalemate/draw/resign/newGame.
 
 Prevents an orphaned "Done" button from lingering after keyboard dismissal via elsewhere-tap.
+
+---
+
+## Fonts (Session 21)
+
+### Three-Font System
+- **Satisfy** — cursive script for the app title "Don't Forget Why" on HomeScreen
+- **Lilita One** — bold display for game screen headers (GamesScreen, Chess, Checkers, Sudoku, Trivia, MemoryMatch, GuessWhy, DailyRiddle)
+- **Nunito** — rounded sans-serif for core screen headers (AlarmList, Reminders, Timer, Notes, VoiceMemos, Calendar, Settings)
+
+### Font Loading
+- `expo-font` + `expo-splash-screen` in App.tsx
+- `useFonts` hook loads all three families; splash screen held until fonts ready
+- Error fallback: if fonts fail to load, app proceeds with system fonts (no crash)
+- `FONTS` constant exported from `src/theme/fonts.ts` with `appTitle`, `gameHeader`, `screenHeader` keys
+
+### Phase Rollout
+- **Phase 1 (Session 21):** headers only — title, game headers, core screen headers
+- **Phase 2 (planned):** Nunito to all body text, labels, buttons, pills, cards
+
+### Android Restriction
+- Android ignores `fontWeight` when a custom `fontFamily` is set — must use weight-specific font files
+- Styles using custom fonts must remove `fontWeight` property to avoid silent rendering issues

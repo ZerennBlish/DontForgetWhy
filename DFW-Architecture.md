@@ -112,6 +112,20 @@ VoiceMemoDetailScreen and NoteEditorModal both use `isViewMode` state for existi
 ### Brand Title Token
 `brandTitle` field in ThemeColors: per-theme title color for "Don't Forget Why" on HomeScreen. Dark: `#2563EB` (blue), Light: `#1E3A8A` (navy), High Contrast: `#00D4FF` (cyan), Vivid: `#00FF88` (green), Sunset: `#9A3412` (brown), Ruby: `#9F1239` (deep red).
 
+### Font System (Session 21)
+- `FONTS` constant in `src/theme/fonts.ts` — exports `appTitle` (Satisfy), `gameHeader` (LilitaOne), `screenHeader` (Nunito)
+- Font loading in App.tsx: `useFonts` hook from `expo-font` loads all three families; `expo-splash-screen` held until ready
+- Error fallback: if fonts fail, app proceeds with system fonts — `FONTS` values are just font family strings
+- Android `fontWeight` restriction: custom `fontFamily` ignores `fontWeight` on Android — must use weight-specific font files and remove `fontWeight` from styles
+
+### Haptics (Session 21)
+- `hapticLight()` — standard UI feedback (button taps, player's turn notification)
+- `hapticMedium()` — medium emphasis
+- `hapticHeavy()` — strong feedback (check detected after a move)
+- `hapticError()` — `Haptics.notificationAsync(NotificationFeedbackType.Error)` — long error vibration (checkmate)
+- `hapticSelection()` — selection change feedback
+- All gated by `_hapticsEnabled` from kv_store, with try/catch fallback
+
 ### Migration
 All old theme names migrate to current 6: midnight/ember/neon/void→dark, frost/sand→light, custom→dark. Legacy names from pre-6-theme era also mapped. Applied in both ThemeContext.tsx and widget theme loader.
 
