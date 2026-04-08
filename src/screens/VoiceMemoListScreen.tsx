@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { getButtonStyles } from '../theme/buttonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
@@ -279,8 +280,8 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     },
     title: {
       fontSize: 28,
-      fontWeight: '800',
       color: colors.textPrimary,
+      fontFamily: FONTS.extraBold,
     },
     filterToggleRow: {
       flexDirection: 'row',

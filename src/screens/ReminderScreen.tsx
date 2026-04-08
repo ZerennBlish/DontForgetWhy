@@ -39,6 +39,7 @@ import APP_ICONS from '../data/appIconAssets';
 import { formatTime } from '../utils/time';
 import { getRandomReminderQuote } from '../data/reminderQuotes';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { getButtonStyles } from '../theme/buttonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
@@ -367,9 +368,9 @@ export default function ReminderScreen({ navigation }: Props) {
     },
     screenTitle: {
       fontSize: 22,
-      fontWeight: '700',
       color: colors.textPrimary,
       marginBottom: 8,
+      fontFamily: FONTS.extraBold,
     },
     subtitleText: {
       fontSize: 13,

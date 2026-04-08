@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import type { ThemeColors } from '../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { EdgeInsets } from 'react-native-safe-area-context';
@@ -658,8 +659,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
     },
     title: {
       fontSize: 28,
-      fontWeight: '800',
       color: colors.overlayText,
+      fontFamily: FONTS.gameHeader,
     },
 
     // Mode toggle

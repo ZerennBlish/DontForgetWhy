@@ -14,6 +14,7 @@ import type { Chess } from 'chess.js';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
@@ -181,7 +182,7 @@ export default function ChessScreen({ navigation }: Props) {
         },
         headerBack: { position: 'absolute', left: 20, top: insets.top + 10 },
         headerHome: { position: 'absolute', left: 64, top: insets.top + 10 },
-        title: { fontSize: 28, fontWeight: '800', color: colors.overlayText },
+        title: { fontSize: 28, color: colors.overlayText, fontFamily: FONTS.gameHeader },
         body: { flex: 1, paddingHorizontal: BOARD_H_PADDING },
         centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
         loadingText: { color: colors.overlayText, fontSize: 15 },
@@ -195,10 +196,10 @@ export default function ChessScreen({ navigation }: Props) {
         },
         preGameTitle: {
           fontSize: 20,
-          fontWeight: '700',
           color: colors.overlayText,
           textAlign: 'center',
           marginBottom: 18,
+          fontFamily: FONTS.gameHeader,
         },
         sectionLabel: {
           fontSize: 13,
@@ -262,26 +263,6 @@ export default function ChessScreen({ navigation }: Props) {
           paddingVertical: 8,
         },
         gameHeaderText: { color: colors.overlayText, fontSize: 14 },
-        teachPill: {
-          borderRadius: 12,
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-          backgroundColor: colors.background,
-          borderWidth: 1,
-          borderColor: 'transparent',
-        },
-        teachPillActive: {
-          backgroundColor: colors.accent + '30',
-          borderColor: colors.accent,
-        },
-        teachPillText: {
-          fontSize: 12,
-          fontWeight: '600',
-          color: colors.textTertiary,
-        },
-        teachPillTextActive: {
-          color: colors.accent,
-        },
         capturesRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',

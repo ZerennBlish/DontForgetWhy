@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import { useNotepad } from '../hooks/useNotepad';
@@ -63,8 +64,8 @@ export default function NotepadScreen({ navigation, route }: Props) {
     },
     title: {
       fontSize: 28,
-      fontWeight: '800',
       color: colors.textPrimary,
+      fontFamily: FONTS.extraBold,
     },
     filterToggleRow: {
       flexDirection: 'row',

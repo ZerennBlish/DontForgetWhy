@@ -2,18 +2,18 @@
 // chess.js uses lowercase type letters: p, n, b, r, q, k
 // and single-character colors: 'w' (white) | 'b' (black).
 const PIECE_IMAGES: Record<string, any> = {
-  wK: require('../../assets/chess/wK.png'),
-  wQ: require('../../assets/chess/wQ.png'),
-  wR: require('../../assets/chess/wR.png'),
-  wB: require('../../assets/chess/wB.png'),
-  wN: require('../../assets/chess/wN.png'),
-  wP: require('../../assets/chess/wP.png'),
-  bK: require('../../assets/chess/bK.png'),
-  bQ: require('../../assets/chess/bQ.png'),
-  bR: require('../../assets/chess/bR.png'),
-  bB: require('../../assets/chess/bB.png'),
-  bN: require('../../assets/chess/bN.png'),
-  bP: require('../../assets/chess/bP.png'),
+  wK: require('../../assets/chess/wK.webp'),
+  wQ: require('../../assets/chess/wQ.webp'),
+  wR: require('../../assets/chess/wR.webp'),
+  wB: require('../../assets/chess/wB.webp'),
+  wN: require('../../assets/chess/wN.webp'),
+  wP: require('../../assets/chess/wP.webp'),
+  bK: require('../../assets/chess/bK.webp'),
+  bQ: require('../../assets/chess/bQ.webp'),
+  bR: require('../../assets/chess/bR.webp'),
+  bB: require('../../assets/chess/bB.webp'),
+  bN: require('../../assets/chess/bN.webp'),
+  bP: require('../../assets/chess/bP.webp'),
 };
 
 export function getPieceImage(piece: { type: string; color: string }): any {

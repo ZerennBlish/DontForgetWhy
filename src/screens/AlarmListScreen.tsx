@@ -18,6 +18,7 @@ import HomeButton from '../components/HomeButton';
 import SwipeableRow from '../components/SwipeableRow';
 import APP_ICONS from '../data/appIconAssets';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAlarmList } from '../hooks/useAlarmList';
@@ -61,9 +62,9 @@ export default function AlarmListScreen({ navigation }: Props) {
     },
     screenTitle: {
       fontSize: 22,
-      fontWeight: '700',
       color: colors.textPrimary,
       marginBottom: 8,
+      fontFamily: FONTS.extraBold,
     },
     subtitleText: {
       fontSize: 13,

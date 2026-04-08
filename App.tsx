@@ -2,6 +2,15 @@ import 'react-native-get-random-values';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts, Satisfy_400Regular } from '@expo-google-fonts/satisfy';
+import { LilitaOne_400Regular } from '@expo-google-fonts/lilita-one';
+import {
+  Nunito_400Regular,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
+import * as SplashScreen from 'expo-splash-screen';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AlarmListScreen from './src/screens/AlarmListScreen';
@@ -266,7 +275,17 @@ function AppNavigator() {
   );
 }
 
+SplashScreen.preventAutoHideAsync();
+
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Satisfy_400Regular,
+    LilitaOne_400Regular,
+    Nunito_400Regular,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+  });
   const [dbReady, setDbReady] = useState(false);
   const [migrationFailed, setMigrationFailed] = useState(false);
 
@@ -292,6 +311,14 @@ export default function App() {
   useEffect(() => {
     attemptMigration();
   }, [attemptMigration]);
+
+  useEffect(() => {
+    if (fontsLoaded && (dbReady || migrationFailed)) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, dbReady, migrationFailed]);
+
+  if (!fontsLoaded) return null;
 
   if (migrationFailed) {
     return (

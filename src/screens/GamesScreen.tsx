@@ -4,6 +4,7 @@ import { kvGet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
@@ -66,8 +67,8 @@ export default function GamesScreen({ navigation }: Props) {
         },
         title: {
           fontSize: 28,
-          fontWeight: '800',
           color: colors.overlayText,
+          fontFamily: FONTS.gameHeader,
         },
         subtitle: {
           fontSize: 15,
@@ -98,9 +99,9 @@ export default function GamesScreen({ navigation }: Props) {
         },
         gameName: {
           fontSize: 18,
-          fontWeight: '700',
           color: colors.textPrimary,
           textAlign: 'center',
+          fontFamily: FONTS.gameHeader,
         },
         gameDesc: {
           fontSize: 14,

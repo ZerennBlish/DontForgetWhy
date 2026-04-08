@@ -22,6 +22,7 @@ import { formatTime } from '../utils/time';
 import { getRandomBannerQuote } from '../data/homeBannerQuotes';
 import type { BannerQuote } from '../data/homeBannerQuotes';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
@@ -294,10 +295,10 @@ export default function HomeScreen({ navigation }: Props) {
     },
     title: {
       flex: 1,
-      fontSize: 28,
-      fontWeight: '800',
+      fontSize: 32,
       color: colors.brandTitle,
       textAlign: 'center',
+      fontFamily: FONTS.title,
     },
     gearSpacer: {
       width: 44,
@@ -388,8 +389,8 @@ export default function HomeScreen({ navigation }: Props) {
     },
     gridLabel: {
       fontSize: 12,
-      fontWeight: '500',
       textAlign: 'center',
+      fontFamily: FONTS.bold,
     },
     gridSubtitle: {
       fontSize: 10,

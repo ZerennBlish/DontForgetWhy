@@ -35,6 +35,7 @@ import { refreshWidgets } from '../widget/updateWidget';
 import { loadSettings, getDefaultTimerSound, saveDefaultTimerSound } from '../services/settings';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
@@ -951,7 +952,7 @@ export default function TimerScreen({ navigation }: Props) {
         </View>
         <View style={{ alignItems: 'center' }}>
           <Image source={APP_ICONS.stopwatch} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
-          <Text style={{ fontSize: 22, fontWeight: '700', color: bgUri ? colors.overlayText : colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>Timers</Text>
+          <Text style={{ fontSize: 22, color: bgUri ? colors.overlayText : colors.textPrimary, textAlign: 'center', marginBottom: 8, fontFamily: FONTS.extraBold }}>Timers</Text>
         </View>
       </View>
       <ScrollView

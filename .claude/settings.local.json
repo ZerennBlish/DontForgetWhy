@@ -61,7 +61,21 @@
       "Bash(npx jest:*)",
       "Bash(echo \"Exit code: $?\")",
       "Bash(npx ts-node -e ':*)",
-      "Bash(echo \"Exit: $?\")"
+      "Bash(echo \"Exit: $?\")",
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(apt list:*)",
+      "Bash(sudo npm:*)",
+      "Bash(chmod -R u+w /mnt/c/DontForgetWhy/node_modules/expo/node_modules/expo-font)",
+      "Bash(mkdir -p /tmp/font-packages)",
+      "Bash(npm pack:*)",
+      "Bash(mkdir -p expo-font)",
+      "Bash(tar xzf:*)",
+      "Bash(mkdir -p expo-splash-screen)",
+      "Bash(mkdir -p @expo-google-fonts/satisfy)",
+      "Bash(mkdir -p @expo-google-fonts/lilita-one)",
+      "Bash(head -5 ls /mnt/c/DontForgetWhy/node_modules/@expo-google-fonts/lilita-one/*.ttf)",
+      "Bash(head -5 ls /mnt/c/DontForgetWhy/node_modules/@expo-google-fonts/nunito/*.ttf)"
     ]
   }
 }

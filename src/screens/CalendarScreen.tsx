@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Calendar } from 'react-native-calendars';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import { loadAlarms } from '../services/storage';
@@ -527,8 +528,8 @@ export default function CalendarScreen({ navigation, route }: Props) {
         },
         title: {
           fontSize: 28,
-          fontWeight: '800',
           color: colors.textPrimary,
+          fontFamily: FONTS.extraBold,
         },
         calendarWrap: {
           paddingHorizontal: 8,

@@ -14,6 +14,7 @@ import { kvGet, kvSet, kvRemove } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation/types';
@@ -919,8 +920,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     },
     title: {
       fontSize: 28,
-      fontWeight: '800',
       color: colors.overlayText,
+      fontFamily: FONTS.gameHeader,
     },
     selectSubtitle: {
       fontSize: 15,

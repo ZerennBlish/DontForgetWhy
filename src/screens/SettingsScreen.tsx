@@ -26,6 +26,7 @@ import notifee from '@notifee/react-native';
 import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
 import { getVoiceEnabled, setVoiceEnabled } from '../services/voicePlayback';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
@@ -101,8 +102,8 @@ export default function SettingsScreen({ navigation }: Props) {
     },
     title: {
       fontSize: 28,
-      fontWeight: '800',
       color: colors.overlayText,
+      fontFamily: FONTS.extraBold,
     },
     permissionBanner: {
       marginHorizontal: 16,
