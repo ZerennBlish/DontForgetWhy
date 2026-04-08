@@ -86,6 +86,7 @@ export default function ChessScreen({ navigation }: Props) {
 
   const [selectedColor, setSelectedColor] = useState<'w' | 'b'>('w');
   const [selectedDifficulty, setSelectedDifficulty] = useState(2);
+  const [teachingEnabled, setTeachingEnabled] = useState(true);
 
   const roastFade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -261,6 +262,26 @@ export default function ChessScreen({ navigation }: Props) {
           paddingVertical: 8,
         },
         gameHeaderText: { color: colors.overlayText, fontSize: 14 },
+        teachPill: {
+          borderRadius: 12,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          backgroundColor: colors.background,
+          borderWidth: 1,
+          borderColor: 'transparent',
+        },
+        teachPillActive: {
+          backgroundColor: colors.accent + '30',
+          borderColor: colors.accent,
+        },
+        teachPillText: {
+          fontSize: 12,
+          fontWeight: '600',
+          color: colors.textTertiary,
+        },
+        teachPillTextActive: {
+          color: colors.accent,
+        },
         capturesRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
@@ -475,11 +496,63 @@ export default function ChessScreen({ navigation }: Props) {
           })}
         </View>
 
+        {selectedDifficulty <= 2 && (
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: teachingEnabled ? colors.accent + '20' : colors.background,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: teachingEnabled ? colors.accent : 'transparent',
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              marginBottom: 20,
+            }}
+            onPress={() => {
+              hapticLight();
+              setTeachingEnabled(!teachingEnabled);
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="switch"
+            accessibilityLabel="Training mode"
+            accessibilityState={{ checked: teachingEnabled }}
+          >
+            <Text style={{ color: teachingEnabled ? colors.accent : colors.overlayText, fontSize: 14, fontWeight: '600' }}>
+              Training Mode
+            </Text>
+            <View
+              style={{
+                width: 44,
+                height: 24,
+                borderRadius: 12,
+                backgroundColor: teachingEnabled ? colors.accent : colors.background,
+                borderWidth: 1,
+                borderColor: teachingEnabled ? colors.accent : colors.overlayText + '30',
+                justifyContent: 'center',
+                paddingHorizontal: 2,
+              }}
+            >
+              <View
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  backgroundColor: '#FFFFFF',
+                  alignSelf: teachingEnabled ? 'flex-end' : 'flex-start',
+                }}
+              />
+            </View>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={styles.playButton}
           onPress={() => {
             hapticLight();
             chess.startGame(selectedColor, selectedDifficulty);
+            chess.setTeachingMode(teachingEnabled && selectedDifficulty <= 2);
           }}
           activeOpacity={0.8}
           accessibilityRole="button"
@@ -512,13 +585,29 @@ export default function ChessScreen({ navigation }: Props) {
                 cell &&
                 cell.type === 'k' &&
                 cell.color === chess.game?.turn();
-              const bg = isSelected
-                ? colors.accent + '90'
-                : isKingInCheck
-                ? 'rgba(220, 38, 38, 0.6)'
-                : isLight
-                ? colors.accent + '60'
-                : colors.accent + 'CC';
+
+              // Teaching mode highlights
+              const isLastMoveSquare =
+                chess.teachingMode &&
+                chess.lastMoveSquares &&
+                (sq === chess.lastMoveSquares.from || sq === chess.lastMoveSquares.to);
+              const isThreatened =
+                chess.teachingMode &&
+                chess.threatenedSquares.has(sq);
+
+              // Background priority
+              let bg: string;
+              if (isSelected) {
+                bg = colors.accent + '90';
+              } else if (isKingInCheck) {
+                bg = 'rgba(220, 38, 38, 0.6)';
+              } else if (isThreatened) {
+                bg = 'rgba(220, 38, 38, 0.35)';
+              } else if (isLastMoveSquare) {
+                bg = 'rgba(250, 204, 21, 0.4)';
+              } else {
+                bg = isLight ? colors.accent + '60' : colors.accent + 'CC';
+              }
               const showRankLabel = colIdx === 0;
               const showFileLabel = rowIdx === 7;
               const label = cell

@@ -52,6 +52,12 @@ export interface UseChessReturn {
   aiTimeBudget: number;
   aiThinkStart: number;
 
+  // Teaching mode
+  teachingMode: boolean;
+  setTeachingMode: (enabled: boolean) => void;
+  threatenedSquares: Set<string>;
+  lastMoveSquares: { from: string; to: string } | null;
+
   // Review mode
   isReviewing: boolean;
   reviewIndex: number;
@@ -116,6 +122,15 @@ export function useChess(): UseChessReturn {
     takeBackUsedRef.current = u;
     setTakeBackUsedState(u);
   };
+
+  // ── Teaching mode ──
+  const [teachingMode, setTeachingMode] = useState(false);
+  const teachingModeRef = useRef(false);
+
+  const setTeachingModeWrapped = useCallback((enabled: boolean) => {
+    teachingModeRef.current = enabled;
+    setTeachingMode(enabled);
+  }, []);
 
   // ── UI state ──
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
@@ -187,7 +202,9 @@ export function useChess(): UseChessReturn {
     setGameResult(result);
     setWinner(win);
     void clearChessGame();
-    void recordChessResult(outcome, difficultyRef.current);
+    if (!teachingModeRef.current) {
+      void recordChessResult(outcome, difficultyRef.current);
+    }
     return true;
   }, []);
 
@@ -436,7 +453,9 @@ export function useChess(): UseChessReturn {
     setGameResult('resigned');
     setWinner(playerColorRef.current === 'w' ? 'b' : 'w');
     void clearChessGame();
-    void recordChessResult('loss', difficultyRef.current);
+    if (!teachingModeRef.current) {
+      void recordChessResult('loss', difficultyRef.current);
+    }
   }, [gameResult, clearTimers]);
 
   // ── New game (returns to pre-game modal) ──
@@ -450,6 +469,7 @@ export function useChess(): UseChessReturn {
     setPlayerColor('w');
     setDifficulty(1);
     setTakeBackUsed(false);
+    setTeachingModeWrapped(false);
     blunderCountRef.current = 0;
     startedAtRef.current = '';
     setSelectedSquare(null);
@@ -463,7 +483,7 @@ export function useChess(): UseChessReturn {
     setWinner(null);
     bump();
     void clearChessGame();
-  }, [bump, clearTimers]);
+  }, [bump, clearTimers, setTeachingModeWrapped]);
 
   // ── Start a new game with chosen color + difficulty ──
   const startGame = useCallback(
@@ -477,6 +497,8 @@ export function useChess(): UseChessReturn {
       setPlayerColor(color);
       setDifficulty(difficultyIndex);
       setTakeBackUsed(false);
+      const teachingEligible = difficultyIndex <= 2;
+      setTeachingModeWrapped(teachingEligible);
       blunderCountRef.current = 0;
       startedAtRef.current = now;
       setSelectedSquare(null);
@@ -510,7 +532,7 @@ export function useChess(): UseChessReturn {
         triggerAIMove();
       }
     },
-    [bump, clearTimers, triggerAIMove],
+    [bump, clearTimers, triggerAIMove, setTeachingModeWrapped],
   );
 
   // ── Review mode actions ──
@@ -582,6 +604,8 @@ export function useChess(): UseChessReturn {
           setPlayerColor(saved.playerColor);
           setDifficulty(saved.difficulty);
           setTakeBackUsed(saved.takeBackUsed);
+          const teachingEligible = saved.difficulty <= 2;
+          setTeachingModeWrapped(teachingEligible);
           blunderCountRef.current = saved.blunderCount;
           startedAtRef.current = saved.startedAt;
           bump();
@@ -658,6 +682,35 @@ export function useChess(): UseChessReturn {
     isPlayerTurn &&
     (game ? game.history().length >= 2 : false);
 
+  // ── Teaching mode derived data ──
+  const threatenedSquares = useMemo<Set<string>>(() => {
+    if (!teachingMode || !game || isGameOver || !isPlayerTurn) return new Set();
+    const opponentColor = playerColor === 'w' ? 'b' : 'w';
+    const squares = new Set<string>();
+    const b = game.board();
+    for (const row of b) {
+      for (const cell of row) {
+        if (cell && cell.color === playerColor) {
+          if (game.isAttacked(cell.square, opponentColor)) {
+            squares.add(cell.square);
+          }
+        }
+      }
+    }
+    return squares;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teachingMode, game, version, isGameOver, isPlayerTurn, playerColor]);
+
+  const lastMoveSquares = useMemo<{ from: string; to: string } | null>(() => {
+    if (!teachingMode || !game || !isPlayerTurn) return null;
+    const history = game.history({ verbose: true });
+    if (history.length === 0) return null;
+    const lastMove = history[history.length - 1];
+    if (lastMove.color === playerColor) return null;
+    return { from: lastMove.from, to: lastMove.to };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teachingMode, game, version, isPlayerTurn, playerColor]);
+
   return {
     game,
     board,
@@ -677,6 +730,10 @@ export function useChess(): UseChessReturn {
     isAIThinking,
     aiTimeBudget,
     aiThinkStart,
+    teachingMode,
+    setTeachingMode: setTeachingModeWrapped,
+    threatenedSquares,
+    lastMoveSquares,
     isReviewing,
     reviewIndex,
     reviewBoard,
