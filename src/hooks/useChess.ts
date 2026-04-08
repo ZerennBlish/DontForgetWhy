@@ -288,7 +288,7 @@ export function useChess(): UseChessReturn {
         bump();
         saveCurrentGame();
         checkGameOver(c2);
-        if (!c2.isGameOver() && c2.turn() === playerColorRef.current) {
+        if (!c2.isGameOver() && c2.turn() === playerColorRef.current && !c2.isCheck()) {
           hapticLight();
         }
       }, 0);
@@ -444,7 +444,13 @@ export function useChess(): UseChessReturn {
   const resign = useCallback(() => {
     if (gameResult) return;
     const g = gameRef.current;
-    if (g) fenHistoryRef.current.push(g.fen());
+    if (g) {
+      const currentFen = g.fen();
+      const lastFen = fenHistoryRef.current[fenHistoryRef.current.length - 1];
+      if (currentFen !== lastFen) {
+        fenHistoryRef.current.push(currentFen);
+      }
+    }
     sessionIdRef.current += 1;
     clearTimers();
     setIsAIThinking(false);
@@ -674,7 +680,7 @@ export function useChess(): UseChessReturn {
 
   const isGameOver =
     gameResult !== null || (game ? game.isGameOver() : false);
-  const isInCheck = !!game && game.isCheck() && !isGameOver;
+  const isInCheck = !!game && game.isCheck();
   const isPlayerTurn =
     !!game && !isAIThinking && !isGameOver && game.turn() === playerColor;
   const takeBackAvailable =
@@ -684,7 +690,7 @@ export function useChess(): UseChessReturn {
 
   // ── Teaching mode derived data ──
   const threatenedSquares = useMemo<Set<string>>(() => {
-    if (!teachingMode || !game || isGameOver || !isPlayerTurn) return new Set();
+    if (!teachingMode || !game || isAIThinking) return new Set();
     const opponentColor = playerColor === 'w' ? 'b' : 'w';
     const squares = new Set<string>();
     const b = game.board();
@@ -699,17 +705,17 @@ export function useChess(): UseChessReturn {
     }
     return squares;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teachingMode, game, version, isGameOver, isPlayerTurn, playerColor]);
+  }, [teachingMode, game, version, isAIThinking, playerColor]);
 
   const lastMoveSquares = useMemo<{ from: string; to: string } | null>(() => {
-    if (!teachingMode || !game || !isPlayerTurn) return null;
+    if (!teachingMode || !game || isAIThinking) return null;
     const history = game.history({ verbose: true });
     if (history.length === 0) return null;
     const lastMove = history[history.length - 1];
     if (lastMove.color === playerColor) return null;
     return { from: lastMove.from, to: lastMove.to };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teachingMode, game, version, isPlayerTurn, playerColor]);
+  }, [teachingMode, game, version, isAIThinking, playerColor]);
 
   return {
     game,

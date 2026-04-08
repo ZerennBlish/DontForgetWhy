@@ -610,9 +610,11 @@ export default function ChessScreen({ navigation }: Props) {
               }
               const showRankLabel = colIdx === 0;
               const showFileLabel = rowIdx === 7;
-              const label = cell
+              let label = cell
                 ? `${sq}, ${cell.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[cell.type] || cell.type}`
                 : `${sq}, empty`;
+              if (isThreatened && cell) label += ', threatened';
+              if (isLastMoveSquare) label += ', last move';
               return (
                 <TouchableOpacity
                   key={colIdx}
@@ -673,6 +675,7 @@ export default function ChessScreen({ navigation }: Props) {
                 <View
                   key={colIdx}
                   style={[styles.square, { backgroundColor: bg }]}
+                  accessible={true}
                   accessibilityLabel={label}
                 >
                   {showRankLabel && (
@@ -742,13 +745,15 @@ export default function ChessScreen({ navigation }: Props) {
             alignItems: 'center',
           }}
         >
-          {chess.isInCheck && chess.isPlayerTurn ? (
+          {chess.isInCheck ? (
             <Animated.Text
+              accessibilityLiveRegion="polite"
+              accessibilityRole="alert"
               style={{
                 color: '#EF4444',
                 fontSize: 18,
                 fontWeight: '800',
-                opacity: turnPulse,
+                opacity: chess.isPlayerTurn ? turnPulse : 1,
               }}
             >
               CHECK!
@@ -761,6 +766,7 @@ export default function ChessScreen({ navigation }: Props) {
             </Text>
           ) : chess.isPlayerTurn ? (
             <Animated.Text
+              accessibilityLiveRegion="polite"
               style={{
                 color: colors.accent,
                 fontSize: 20,
@@ -869,21 +875,12 @@ export default function ChessScreen({ navigation }: Props) {
   // ── Review mode ────────────────────────────────────────────────
   const renderReviewMode = () => {
     const total = chess.fenHistoryLength - 1;
-    const opponentColor: 'w' | 'b' = chess.playerColor === 'w' ? 'b' : 'w';
-    const playerCapturedPieces = chess.game
-      ? getCapturedPieces(chess.game, opponentColor)
-      : [];
-    const opponentCapturedPieces = chess.game
-      ? getCapturedPieces(chess.game, chess.playerColor)
-      : [];
     const atStart = chess.reviewIndex === 0;
     const atEnd = chess.reviewIndex === chess.fenHistoryLength - 1;
 
     return (
       <View style={styles.body}>
-        {renderCaptured(opponentCapturedPieces, chess.playerColor)}
         {renderReviewBoard()}
-        {renderCaptured(playerCapturedPieces, opponentColor)}
 
         <View style={styles.reviewNav}>
           <TouchableOpacity
@@ -910,7 +907,7 @@ export default function ChessScreen({ navigation }: Props) {
           </TouchableOpacity>
 
           <Text style={styles.reviewCounter}>
-            Move {chess.reviewIndex} of {total}
+            {chess.reviewIndex === 0 ? 'Start' : `Move ${chess.reviewIndex}`} of {total}
           </Text>
 
           <TouchableOpacity
