@@ -372,6 +372,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
         processingRef.current = true;
 
         setTimeout(() => {
+          playGameSound('flipBack');
           Animated.parallel([
             Animated.timing(flipAnims.current[first], {
               toValue: 0,

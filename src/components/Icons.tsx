@@ -180,16 +180,6 @@ export function PlusIcon({ color, size = 20, accessibilityLabel }: IconProps) {
   );
 }
 
-export function CloseIcon({ color, size = 20, accessibilityLabel }: IconProps) {
-  const s = size;
-  return (
-    <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }} accessible={!!accessibilityLabel} accessibilityLabel={accessibilityLabel} importantForAccessibility={accessibilityLabel ? 'yes' : 'no-hide-descendants'}>
-      <View style={{ width: s * 0.6, height: s * 0.1, backgroundColor: color, borderRadius: s * 0.05, transform: [{ rotate: '45deg' }], position: 'absolute' }} />
-      <View style={{ width: s * 0.6, height: s * 0.1, backgroundColor: color, borderRadius: s * 0.05, transform: [{ rotate: '-45deg' }], position: 'absolute' }} />
-    </View>
-  );
-}
-
 export function LightbulbIcon({ color, size = 20, accessibilityLabel }: IconProps) {
   const s = size;
   return (

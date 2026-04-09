@@ -312,10 +312,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     clearDateBtn: {
       padding: 8,
     },
-    clearDateText: {
-      fontSize: 16,
-      color: colors.textTertiary,
-    },
     calHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -672,7 +668,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                     onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                     style={styles.clearDateBtn}
                   >
-                    <Text style={styles.clearDateText}>{'\u2715'}</Text>
+                    <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -695,7 +691,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                   onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                   style={styles.clearDateBtn}
                 >
-                  <Text style={styles.clearDateText}>{'\u2715'}</Text>
+                  <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 </TouchableOpacity>
               ) : (
                 <Text style={styles.setDateChevron}>{form.showCalendar ? '\u25B4' : '\u25BE'}</Text>
@@ -792,7 +788,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 style={[styles.quickEmojiBtn, { borderColor: colors.red + '40' }]}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 13, color: colors.red, fontFamily: FONTS.semiBold }}>{'\u2715'}</Text>
+                <Image source={APP_ICONS.closeX} style={{ width: 13, height: 13 }} resizeMode="contain" />
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity

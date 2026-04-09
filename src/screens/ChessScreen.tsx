@@ -731,7 +731,11 @@ export default function ChessScreen({ navigation }: Props) {
             alignItems: 'center',
           }}
         >
-          {chess.isInCheck ? (
+          {chess.isGameOver && chess.gameResult === 'checkmate' ? (
+            <Text style={{ color: '#EF4444', fontSize: 17, fontFamily: FONTS.extraBold }}>
+              CHECKMATE!
+            </Text>
+          ) : chess.isInCheck ? (
             <Animated.Text
               accessibilityLiveRegion="polite"
               accessibilityRole="alert"
@@ -786,12 +790,12 @@ export default function ChessScreen({ navigation }: Props) {
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={
-              chess.takeBackAvailable ? 'Take back' : 'Take back used'
+              chess.takeBackUsed ? 'Take back used' : 'Take back'
             }
             accessibilityState={{ disabled: !chess.takeBackAvailable }}
           >
             <Text style={styles.actionPillText}>
-              {chess.takeBackAvailable ? 'Take Back' : 'Used'}
+              {chess.takeBackUsed ? 'Used' : 'Take Back'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

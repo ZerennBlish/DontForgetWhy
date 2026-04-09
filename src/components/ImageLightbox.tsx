@@ -1,13 +1,12 @@
 import React from 'react';
-import { FONTS } from '../theme/fonts';
 import {
-  Text,
   StyleSheet,
   TouchableOpacity,
   Modal,
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import APP_ICONS from '../data/appIconAssets';
 
 interface ImageLightboxProps {
   visible: boolean;
@@ -29,7 +28,7 @@ export default function ImageLightbox({ visible, imageUri, onClose }: ImageLight
           onPress={onClose}
           activeOpacity={0.7}
         >
-          <Text style={styles.closeText}>{'\u2715'}</Text>
+          <Image source={APP_ICONS.closeX} style={{ width: 18, height: 18 }} resizeMode="contain" />
         </TouchableOpacity>
       </TouchableOpacity>
     </Modal>
@@ -56,10 +55,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  closeText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontFamily: FONTS.bold,
   },
 });

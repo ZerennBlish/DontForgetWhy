@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 22 (April 8, 2026)
+**Last updated:** Session 23 (April 9, 2026)
 
 ---
 
@@ -51,7 +51,7 @@
 
 ### Removed Features (With Reasons)
 - **Alarm sound picker:** 6 channels all used `sound: 'default'`. Indistinguishable.
-- **Game sounds:** Enhanced haptic patterns not distinct from regular haptics.
+- **~~Game sounds:~~** Originally removed (enhanced haptic patterns not distinct). Reinstated in Session 23 with actual wav sound effects (11 files), per-sound volume map, and expo-audio fire-and-forget playback. Previous attempt was haptic-only; new version uses real audio.
 - **~~SwipeableRow:~~** Originally removed due to gesture conflicts with react-native-tab-view. Reinstated in Session 10 after tab-view removed and screens separated — no more gesture conflicts.
 - **expo-av for sound preview:** Failed silently in release builds. Replaced with Notifee.
 - **Category system:** Redundant after icon picker added.
@@ -457,3 +457,14 @@ Changed splash backgroundColor from white `#ffffff` to dark `#121220` to elimina
 - Calendar empty states use color cartoon art (not silver chrome) since they're decorative illustrations, not utility icons.
 - CHECK! shows whenever isInCheck is true regardless of whose turn — both players should see the check state. Pulses only when it's the player's turn (they need to act); solid during AI turn.
 - isInCheck not gated by isGameOver — king highlight persists on checkmate so the player can see why the game ended.
+
+### Session 23 Decisions
+- **GlowIcon over colored circles** — Accidental discovery. Removing colored button backgrounds revealed shadow glow that looked intentional and premium. Created GlowIcon component to standardize. Android requires translucent `backgroundColor` fill (`glowColor + '20'`) to avoid hollow ring shadow. Centered shadow offset `{0,0}`.
+- **Two-tier media icon styles** — Green anthropomorphic character (game-play.webp) for game contexts, brushed chrome set for app controls. Matches existing two-tier visual language from Session 20 (silver core, anthropomorphic games).
+- **Sound mapping: shared vs dedicated** — Chess capture/promote sounds shared with checkers. Win/loss shared. Saves bundle size, sounds are generic enough. Tap sound only on UI buttons, not gameplay interactions — avoids annoyance on high-frequency taps.
+- **Volume map over hardcoded** — `VOLUMES: Record<SoundName, number>` allows per-sound tuning without touching play logic. Built for future expansion.
+- **gameSounds default ON** — Audit caught that null init effectively disabled sounds. Fixed to match haptics pattern: treat null kvGet as enabled.
+- **Close-X chrome icon over unicode** — Replaced all 15 `\u2715` characters with chrome close-x.webp. Consistent with silver icon language. Dead CloseIcon function removed from Icons.tsx.
+- **Checkmate banner priority** — Must check `gameResult === 'checkmate'` BEFORE `isInCheck` because checkmate implies check. Without priority ordering, checkmate always showed "CHECK!".
+- **Take Back label vs state** — `takeBackUsed` (boolean) drives the label text. `takeBackAvailable` (derived: !used && isPlayerTurn && moves >= 2) drives disabled/opacity. Separate concerns prevent "Used" showing on move 1 of a fresh game.
+- **FAB glow standardization** — All 4 FABs use identical styles. Position (right: 24), size (56×56), shadow, borderRadius (28) all matched across AlarmList, Notepad, Reminder, VoiceMemoList.

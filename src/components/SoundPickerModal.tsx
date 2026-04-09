@@ -14,6 +14,7 @@ import {
   NativeModules,
 } from 'react-native';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
+import APP_ICONS from '../data/appIconAssets';
 import { previewSystemSound, cancelSoundPreview } from '../services/notifications';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
@@ -172,11 +173,6 @@ export default function SoundPickerModal({
       justifyContent: 'center',
       alignItems: 'center',
     },
-    closeBtnText: {
-      fontSize: 16,
-      color: colors.textTertiary,
-      fontFamily: FONTS.semiBold,
-    },
     searchBox: {
       marginHorizontal: 16,
       marginBottom: 8,
@@ -311,7 +307,7 @@ export default function SoundPickerModal({
                   onPress={handleClose}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.closeBtnText}>{'\u2715'}</Text>
+                  <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
 

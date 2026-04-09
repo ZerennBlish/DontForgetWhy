@@ -616,7 +616,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 16, color: colors.textTertiary, fontFamily: FONTS.semiBold }}>{'\u2715'}</Text>
+                <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
               </TouchableOpacity>
             </View>
 

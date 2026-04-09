@@ -18,6 +18,7 @@ import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
+import { cycleSoundMode, getSoundModeIcon } from '../utils/soundModeUtils';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import APP_ICONS from '../data/appIconAssets';
@@ -136,21 +137,12 @@ export default function TimerScreen({ navigation }: Props) {
     },
     actionBtn: {
       padding: 6,
-      backgroundColor: colors.activeBackground,
-      borderRadius: 8,
     },
     actionBtnText: {
       fontSize: 16,
     },
     cancelBtn: {
       padding: 6,
-      backgroundColor: colors.card,
-      borderRadius: 8,
-    },
-    cancelBtnText: {
-      fontSize: 13,
-      color: colors.red,
-      fontFamily: FONTS.bold,
     },
     presetGrid: {
       flexDirection: 'row',
@@ -242,11 +234,6 @@ export default function TimerScreen({ navigation }: Props) {
       height: 34,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 17,
-      backgroundColor: colors.card,
-    },
-    soundModeIconText: {
-      fontSize: 18,
     },
     modalSubtitle: {
       fontSize: 13,
@@ -344,10 +331,8 @@ export default function TimerScreen({ navigation }: Props) {
     headerSoundBtn: {
       width: 44,
       height: 44,
-      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.card,
     },
     emojiHintSmall: {
       fontSize: 11,
@@ -464,7 +449,7 @@ export default function TimerScreen({ navigation }: Props) {
                     style={styles.cancelBtn}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.cancelBtnText}>{'\u2715'}</Text>
+                    <GlowIcon source={APP_ICONS.closeX} size={20} glowColor={colors.red} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -589,20 +574,16 @@ export default function TimerScreen({ navigation }: Props) {
                   <TouchableOpacity
                     onPress={() => {
                       setSoundMode((prev) => {
-                        if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
-                        if (prev === 'vibrate') return 'silent';
-                        hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); return 'sound';
+                        const next = cycleSoundMode(prev);
+                        if (next === 'vibrate') { hapticMedium(); }
+                        if (next === 'sound') { hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); }
+                        return next;
                       });
                     }}
-                    style={[
-                      styles.headerSoundBtn,
-                      soundMode === 'sound' && { backgroundColor: colors.accent },
-                    ]}
+                    style={styles.headerSoundBtn}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.soundModeIconText}>
-                      {soundMode === 'sound' ? '\u{1F514}' : soundMode === 'vibrate' ? '\u{1F4F3}' : '\u{1F507}'}
-                    </Text>
+                    <Image source={getSoundModeIcon(soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.emojiHintSmall}>Tap {'\u{1F60A}'} to set icon</Text>
@@ -632,20 +613,16 @@ export default function TimerScreen({ navigation }: Props) {
                   <TouchableOpacity
                     onPress={() => {
                       setSoundMode((prev) => {
-                        if (prev === 'sound') { hapticMedium(); return 'vibrate'; }
-                        if (prev === 'vibrate') return 'silent';
-                        hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); return 'sound';
+                        const next = cycleSoundMode(prev);
+                        if (next === 'vibrate') { hapticMedium(); }
+                        if (next === 'sound') { hapticLight(); setTimeout(() => hapticLight(), 100); playChirp(); }
+                        return next;
                       });
                     }}
-                    style={[
-                      styles.soundModeIconBtn,
-                      soundMode === 'sound' && { backgroundColor: colors.accent },
-                    ]}
+                    style={styles.soundModeIconBtn}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.soundModeIconText}>
-                      {soundMode === 'sound' ? '\u{1F514}' : soundMode === 'vibrate' ? '\u{1F4F3}' : '\u{1F507}'}
-                    </Text>
+                    <Image source={getSoundModeIcon(soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.modalSubtitle}>

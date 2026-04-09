@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 22 (April 8, 2026)
+**Last updated:** Session 23 (April 9, 2026)
 
 ---
 
@@ -281,6 +281,25 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 | `src/services/settings.ts` | MODIFIED | Removed ghost voiceRoasts field |
 | `src/utils/soundFeedback.ts` | MODIFIED | expo-av → expo-audio migration |
 | `package.json` | MODIFIED | expo-av removed, expo-audio + expo-asset added |
+
+### New/Modified Files in Session 23
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/utils/gameSounds.ts` | NEW | Game sound effect service (cached toggle + VOLUMES map, fire-and-forget expo-audio) |
+| `src/assets/mediaIcons.ts` | NEW | Media control icon registry (5 WebP assets) + GlowIcon component (colored glow shadow) |
+| `metro.config.js` | MODIFIED | Added wav to assetExts for sound file bundling |
+| `assets/sounds/` | NEW | 11 wav sound files (chess, checkers, memory match, tap) |
+| `assets/icons/game-play.webp` | NEW | Green anthropomorphic play character for game contexts |
+| `assets/icons/play-app.webp` | NEW | Chrome play icon for app controls |
+| `assets/icons/pause.webp` | NEW | Chrome pause icon |
+| `assets/icons/record.webp` | NEW | Chrome record icon |
+| `assets/icons/stop.webp` | NEW | Chrome stop icon |
+| `assets/app-icons/close-x.webp` | NEW | Chrome close/dismiss icon (512×512, transparent bg) |
+
+### Dependencies (Session 23)
+- `expo-audio` used by both `soundFeedback.ts` (alarm chirp) and `gameSounds.ts` (game SFX)
+- `metro.config.js` required for wav asset bundling (added `wav` to `resolver.assetExts`)
 
 ---
 

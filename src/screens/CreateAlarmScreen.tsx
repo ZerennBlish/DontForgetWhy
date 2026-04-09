@@ -407,10 +407,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     clearDateBtn: {
       padding: 8,
     },
-    clearDateText: {
-      fontSize: 16,
-      color: colors.textTertiary,
-    },
     calHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -496,8 +492,6 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       height: 36,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 18,
-      backgroundColor: cardBg,
     },
 
     soundRow: {
@@ -698,7 +692,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                     onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                     style={styles.clearDateBtn}
                   >
-                    <Text style={styles.clearDateText}>{'\u2715'}</Text>
+                    <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -721,7 +715,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                   onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                   style={styles.clearDateBtn}
                 >
-                  <Text style={styles.clearDateText}>{'\u2715'}</Text>
+                  <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 </TouchableOpacity>
               ) : (
                 <Text style={styles.setDateChevron}>{form.showCalendar ? '\u25B4' : '\u25BE'}</Text>
@@ -818,7 +812,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 style={[styles.quickEmojiBtn, { borderColor: colors.red + '40' }]}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 14, color: colors.red, fontFamily: FONTS.semiBold }}>{'\u2715'}</Text>
+                <Image source={APP_ICONS.closeX} style={{ width: 14, height: 14 }} resizeMode="contain" />
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -864,7 +858,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               }}
               activeOpacity={0.7}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: FONTS.bold }}>{'\u2715'}</Text>
+              <Image source={APP_ICONS.closeX} style={{ width: 14, height: 14 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -931,10 +925,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                   return next;
                 });
               }}
-              style={[
-                styles.soundModeIconBtn,
-                form.soundMode === 'sound' && { backgroundColor: colors.accent },
-              ]}
+              style={styles.soundModeIconBtn}
               activeOpacity={0.7}
             >
               <Image source={getSoundModeIcon(form.soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />

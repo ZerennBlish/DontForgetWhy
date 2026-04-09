@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 22 (April 8, 2026)
+**Last updated:** Session 23 (April 9, 2026)
 
 ---
 
@@ -61,6 +61,36 @@
 - **Chess** (Session 16, engine hardened Session 17) — vs CPU, 5 difficulty levels, iterative-deepening minimax with quiescence search. Engine extras (Session 17): opening book of 104 hardcoded positions for instant play through the first 6-10 plies, 100K-entry FEN-keyed transposition table with mate-score ply adjustment, killer-move ordering, null-move pruning, tapered evaluation (continuous material phase blending MG/EG king PSTs), passed-pawn bonus, rook on open/semi-open file bonus, and a min-depth + max-time difficulty model with a 3× safety-deadline ceiling. Player picks color + difficulty before each game. In-game roasts when you blunder (depth-2 sanity check after each move, 58-line roast pool across 5 severity tiers). One take-back per game with its own roast pool. Game state persists to SQLite across app close. Memory Score: 5/8/12/18/25 win points per difficulty, half for draw.
 - **Checkers** (Session 18) — vs CPU, 5 difficulty levels (Beginner through Expert), American rules (forced captures, promotion ends turn). Pure JS engine: minimax with alpha-beta, transposition table, killer moves, iterative deepening. No external deps. Checker piece PNGs (red, red-king, black, black-king) + weathered wood table background (WebP). Player picks color + difficulty. No blunder roasts, no take-back. Game state persists to SQLite. Memory Score: same point scale as chess.
 - **Memory Score** (now 7 games — Chess added Session 16, Checkers added Session 18. Max 140 points. Ranks from "Who Are You Again?" to "The One Who Remembers"). Header text-only (emoji stripped Session 12). Breakdown bars and detailed stat sections for all 7 games ordered: Guess Why, Daily Riddle, Chess, Checkers, Trivia, Sudoku, Memory Match.
+
+### Game Sound Effects (Session 23)
+- 11 sound files in `assets/sounds/` (wav format, bundled via metro.config.js assetExts)
+- `gameSounds.ts` — cached toggle pattern matching haptics.ts, fire-and-forget via `createAudioPlayer` (expo-audio)
+- `VOLUMES: Record<SoundName, number>` map for per-sound volume control
+- Settings toggle: "Game Sounds" (default ON, stored in kv as `gameSoundsEnabled`)
+- Sound mapping:
+  - Chess: pickUp (select piece), chessPlace (move), capture, promote, gameWin, gameLoss
+  - Checkers: pickUp (select piece), checkersMove, capture (shared), promote (shared for king), gameWin (shared), gameLoss (shared)
+  - Memory Match: cardFlip, flipBack (mismatch), memoryWin
+  - UI: tap (game UI buttons only — not gameplay interactions like sudoku cells, trivia answers, card flips)
+
+### Media Control Icons (Session 23)
+- 5 WebP assets (512×512, transparent bg) in `assets/icons/`: game-play.webp (green character), play-app.webp, pause.webp, record.webp, stop.webp (chrome set)
+- `src/assets/mediaIcons.ts` — asset registry + GlowIcon component
+- GlowIcon: colored shadow spotlight, centered offset `{0,0}`, translucent fill (`glowColor + '20'`) for Android shadow hole fix, `borderRadius: size`
+- Replaces all CSS border-triangle play/pause/stop icons and emoji characters (\u25B6, \u23F8, \u23F9, \u25A0)
+- VoiceMemoCard playBtn intentionally keeps sectionVoice background (colored circle is intentional there)
+
+### Close-X Chrome Icon (Session 23)
+- `close-x.webp` (512×512, transparent bg) in `assets/app-icons/`
+- Added to `appIconAssets.ts` as `APP_ICONS.closeX`
+- Replaces all 15 `\u2715` unicode characters across 9 files
+- Dead `CloseIcon` function removed from `Icons.tsx`
+
+### FAB Buttons (Session 23)
+- Colored backgrounds removed from all 4 FABs (AlarmList, Notepad, Reminder, VoiceMemoList)
+- Glow shadow with `colors.accent`, centered, translucent fill
+- Plus icon from APP_ICONS.plus at 40×40
+- All 4 standardized: width 56, height 56, right 24, borderRadius 28
 
 ### Play Store Listing (Session 22)
 - 8 screenshots: Home, Alarms/Reminders/Calendar, Chess/Checkers/Memory, Notes, Timers, Settings, Widgets, Alarm Fire
@@ -479,6 +509,11 @@ Severity-tinted background (good=accent+30, inaccuracy=amber, mistake=orange, bl
 Every move triggers `saveCurrentGame()` which writes to `chess_game` (single-row table). On app relaunch, `loadChessGame()` reads the row, replays moveHistory on a fresh `new Chess()` (rebuilds chess.js internal history so take-back still works), and if it's the AI's turn in the restored position it automatically triggers the AI. Game row cleared on checkmate/stalemate/draw/resign/newGame.
 
 Prevents an orphaned "Done" button from lingering after keyboard dismissal via elsewhere-tap.
+
+### Chess Fixes (Session 23)
+- Checkmate banner: "CHECKMATE!" displays on checkmate (checked before isInCheck), "CHECK!" on regular check
+- Take Back label: uses `takeBackUsed` boolean for label text ("Take Back" / "Used"), `takeBackAvailable` for disabled/opacity state
+- Light mode: pre-game and game-over card text uses `colors.textPrimary`/`colors.textSecondary` (not overlayText) since cards use `colors.card` background
 
 ---
 

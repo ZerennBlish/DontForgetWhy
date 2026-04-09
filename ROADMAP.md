@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 22 (April 8, 2026)
+### Source of Truth · Updated: Session 23 (April 9, 2026)
 
 ---
 
@@ -7,13 +7,13 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.17.0 (versionCode 34) — Montserrat Alternates font rollout + hook extractions + audit fixes |
+| **Current Version** | v1.18.0 (versionCode 35) — Game sounds, media control icons, GlowIcon, close-x, checkmate banner |
 | **Branch** | `dev` |
-| **Production Status** | v1.16.0 submitted to Google Play |
-| **Current Focus** | Session 22: Phase 2 font rollout (Montserrat Alternates to all body text), hook extractions (useSudoku, useTimerScreen, useDailyRiddle, useSettings), NoteEditorModal cleanup (linkedText, NoteVoiceMemo, ColorPickerModal), font swap Nunito→Montserrat Alternates, font size adjustment, Quick Capture rename, splash dark bg, Play Store refresh, dual audit (11 fixes). |
+| **Production Status** | v1.18.0 building for Google Play |
+| **Current Focus** | Session 23: Game sound effects (11 wav files, volume map, expo-audio, settings toggle), media control icon replacement (5 WebP chrome/character icons replacing all CSS border-triangle and emoji play/pause/stop/record), GlowIcon component with colored glow shadow, FAB glow effect, close-x chrome icon (15 replacements across 9 files), checkmate banner, take back label fix, metro.config.js wav support, chess light mode card text fix, 3 audit rounds (6 total fixes). |
 | **Blocked By** | Nothing |
-| **Next Action** | Sound FX pass (Universal Sound FX library), splash screen icon replacement (needs build), P5.5 Premium Foundation (expo-iap, entitlement system, ProGate). |
-| **EAS Credits** | ~27 remaining (reset April 12) |
+| **Next Action** | Session 24: Full codebase audit sweep (accumulated debt, stale code, missed inconsistencies across 23 sessions). Then P5.5 Premium Foundation (expo-iap, entitlement system, ProGate), Checkers (P6.3). |
+| **EAS Credits** | ~25 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — 68 clips shipped |
 
@@ -58,6 +58,8 @@
 - **Session 19 · Visual Art Overhaul** — Memory Match → Memory Guy Match (22 custom cards + card back + felt bg). 10 trivia category icons + library bg. 9 rank tier images with new titles. GamesScreen + score screen emoji → custom art.
 - **Session 20 · Silver Metallic Icon Set + Guess Why Art** — 25+ silver/chrome utility icons replacing View-based CSS geometry. Two-tier visual language (silver core, anthropomorphic games). Screen header icons on 7 core screens. Sound mode icons. ShareNoteModal icons. FAB plus buttons. Guess Why art. Checker pieces (4 WebP). Icons.tsx pruned. Jest webp moduleNameMapper.
 - **Session 21 · Chess Overhaul + Custom Fonts (v1.16.0)** — Chess: post-game move review (FEN history, step-through board), check/checkmate indication (red king square, CHECK! banner, red board border), training mode (threatened pieces, last move highlight, toggle for difficulty 0-2), haptic tiers (light=turn, heavy=check, error=checkmate). Art: 12 anthropomorphic chess pieces (6 white cream/gold, 6 black charcoal/silver), 3 calendar empty state illustrations (hammock, beach chair, couch), calendar icon refresh. Visual: plus icon sizes increased across 8 files, color picker circles aligned in NoteEditorModal. Fonts: Satisfy (app title), Lilita One (game headers), Nunito (core UI headers). Phase 1 font rollout — headers only, body text Phase 2.
+- **Session 22 · Montserrat Alternates + Hook Extractions** — Font Phase 2: Montserrat Alternates to all ~40 files, fontWeight→fontFamily pattern, systematic font size reduction. Hook extractions: useSudoku, useTimerScreen, useDailyRiddle, useSettings. NoteEditorModal cleanup: linkedText.tsx, NoteVoiceMemo.tsx, ColorPickerModal.tsx. Quick Capture simplification. Splash dark bg prep. Play Store refresh (8 screenshots, updated description). Dual audit, 11 fixes.
+- **Session 23 · Game Sounds + Media Control Icons + Close-X (v1.18.0)** — Game sound effects: 11 wav files (chess place/capture/promote/pickUp, checkers move, game win/loss, card flip/flipBack, memory win, tap), gameSounds.ts service with VOLUMES map (cached toggle, fire-and-forget expo-audio), settings toggle, wired to useChess/useCheckers/MemoryMatchScreen. Tap SFX on game UI buttons across 8 screens. Media control icon replacement: 5 WebP assets (game-play character, chrome play/pause/stop/record) replacing all CSS border-triangle and emoji play/pause/stop icons. GlowIcon component with colored shadow spotlight (Android translucent fill fix). FAB + buttons: colored backgrounds removed, glow shadow added across 4 screens. Close-X chrome icon: 15 replacements across 9 files, dead CloseIcon removed from Icons.tsx. Checkmate banner (CHECK! vs CHECKMATE!). Take back label fix (fresh game shows "Take Back" not "Used"). Chess light mode card text fix. metro.config.js wav asset extension. 3 audit rounds, 6 total fixes.
 
 ---
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { FONTS } from '../theme/fonts';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
+import APP_ICONS from '../data/appIconAssets';
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -96,11 +97,6 @@ const voiceMemoStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  memoDeleteText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontFamily: FONTS.bold,
-  },
 });
 
 export { voiceMemoStyles };
@@ -185,7 +181,7 @@ export function MemoCard({ isActive, isPlaying, currentTime, duration, accentCol
           onPress={onDelete}
           activeOpacity={0.7}
         >
-          <Text style={voiceMemoStyles.memoDeleteText}>{'\u2715'}</Text>
+          <Image source={APP_ICONS.closeX} style={{ width: 12, height: 12 }} resizeMode="contain" />
         </TouchableOpacity>
       )}
     </View>

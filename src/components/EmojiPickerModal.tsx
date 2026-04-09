@@ -7,9 +7,11 @@ import {
   FlatList,
   ScrollView,
   StyleSheet,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import APP_ICONS from '../data/appIconAssets';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { emojiCategories, EmojiItem } from '../data/emojiData';
@@ -72,11 +74,6 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
       backgroundColor: colors.background,
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    closeBtnText: {
-      fontSize: 16,
-      color: colors.textTertiary,
-      fontFamily: FONTS.semiBold,
     },
     tabBar: {
       flexDirection: 'row',
@@ -162,7 +159,7 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
               accessibilityRole="button"
               accessibilityLabel="Close picker"
             >
-              <Text style={styles.closeBtnText}>{'\u2715'}</Text>
+              <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
           <ScrollView

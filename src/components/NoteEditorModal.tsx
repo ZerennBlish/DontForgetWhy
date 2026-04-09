@@ -603,11 +603,6 @@ export default function NoteEditorModal({
       justifyContent: 'center',
       alignItems: 'center',
     },
-    thumbnailRemoveText: {
-      color: '#FFFFFF',
-      fontSize: 10,
-      fontFamily: FONTS.bold,
-    },
   }), [colors, insets.top, insets.bottom]);
 
   return (
@@ -894,7 +889,7 @@ export default function NoteEditorModal({
                       }}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.thumbnailRemoveText}>{'\u2715'}</Text>
+                      <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
                     </TouchableOpacity>
                   )}
                 </TouchableOpacity>

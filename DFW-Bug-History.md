@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 22 (April 8, 2026)
+**Last updated:** Session 23 (April 9, 2026)
 
 ---
 
@@ -553,3 +553,16 @@
 - **Unused @expo-google-fonts/nunito dependency:** Package still in package.json after font swap. Uninstalled.
 
 **54 audits total.**
+
+### Session 23 — Game Sounds + Media Icons + Close-X Audit Findings
+
+**3 audit rounds, 6 total fixes:**
+- **gameSounds default OFF** — `_gameSoundsEnabled` initialized as null, `playGameSound` returned early on falsy. First-time users got no game sounds. Fixed: default to true when kvGet returns null. Found by Gemini audit round 1.
+- **Chess pre-game/game-over card white-on-white in light mode** — Pre-game card and game-over overlay card used `colors.overlayText` (always white) for text on `colors.card` surfaces (white in light themes). Fixed: use `colors.textPrimary` / `colors.textSecondary` for text on card surfaces. Found by Gemini audit round 1.
+- **FAB horizontal position inconsistency** — NotepadScreen and VoiceMemoListScreen used `right: 20`, AlarmListScreen and ReminderScreen used `right: 24`. Standardized to 24. Found by both auditors round 1.
+- **Android GlowIcon shadow hole** — Views with transparent backgroundColor render shadow as hollow ring on Android. Fixed with translucent fill (`glowColor + '20'`). Found during live testing.
+- **Checkmate banner showed CHECK!** — `isInCheck` checked before `gameResult === 'checkmate'`. Since checkmate implies check, the checkmate branch was unreachable. Fixed by checking checkmate first. Found by Codex re-audit round 2.
+- **Take Back accessibility mismatch** — Visual label used `takeBackUsed` but accessibility label still used `takeBackAvailable`, causing TalkBack to announce "used" on fresh games. Fixed to derive from `takeBackUsed`. Found by Codex re-audit round 2.
+- **Dead styles from close-x swap** — Text→Image replacement left orphaned style entries (clearDateText, closeBtnText, closeText, thumbnailRemoveText, memoDeleteText, cancelBtnText) and dead imports in ImageLightbox. Cleaned up. Found by Codex re-audit round 2.
+
+**57 audits total.**

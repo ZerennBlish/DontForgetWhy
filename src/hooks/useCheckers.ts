@@ -264,6 +264,7 @@ export function useCheckers(): UseCheckersReturn {
       // Check if tapped own piece
       const piece = b[row][col];
       if (piece && piece.color === playerColorRef.current) {
+        playGameSound('pickUp');
         setSelectedSquare([row, col]);
         const allMoves = generateMoves(b, playerColorRef.current);
         const pieceMoves = allMoves.filter(

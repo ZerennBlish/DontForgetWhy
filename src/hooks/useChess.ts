@@ -47,6 +47,7 @@ export interface UseChessReturn {
 
   // Take-back
   takeBackAvailable: boolean;
+  takeBackUsed: boolean;
 
   // AI thinking
   isAIThinking: boolean;
@@ -373,6 +374,7 @@ export function useChess(): UseChessReturn {
       if (!selectedSquare) {
         const piece = g.get(sq);
         if (piece && piece.color === playerColorRef.current) {
+          playGameSound('pickUp');
           setSelectedSquare(square);
           const moves = g.moves({ square: sq, verbose: true });
           setValidMoves(moves.map((m) => m.to));
@@ -392,6 +394,7 @@ export function useChess(): UseChessReturn {
       // Tapped another of own pieces: switch selection.
       const piece = g.get(sq);
       if (piece && piece.color === playerColorRef.current) {
+        playGameSound('pickUp');
         setSelectedSquare(square);
         const moves = g.moves({ square: sq, verbose: true });
         setValidMoves(moves.map((m) => m.to));
@@ -740,6 +743,7 @@ export function useChess(): UseChessReturn {
     currentRoast,
     roastSeverity,
     takeBackAvailable,
+    takeBackUsed,
     isAIThinking,
     aiTimeBudget,
     aiThinkStart,
