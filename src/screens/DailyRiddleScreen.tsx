@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,64 +12,19 @@ import {
   Image,
   ImageSourcePropType,
 } from 'react-native';
-import { kvGet, kvSet } from '../services/database';
-import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticMedium, hapticLight } from '../utils/haptics';
-import { checkConnectivity } from '../utils/connectivity';
+import { hapticLight } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
-import {
-  RIDDLES,
-  CATEGORY_LABELS,
-  getDailyRiddleIndex,
-  type RiddleCategory,
-} from '../data/riddles';
-import {
-  fetchMultipleOnlineRiddles,
-  type OnlineRiddle,
-} from '../services/riddleOnline';
+import { RIDDLES, CATEGORY_LABELS } from '../data/riddles';
+import { useDailyRiddle, ALL_CATEGORIES, getFormattedDate, difficultyColor } from '../hooks/useDailyRiddle';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DailyRiddle'>;
-
-type ScreenMode = 'daily' | 'browse';
-type BrowseSource = 'offline' | 'online';
-
-interface DailyRiddleStats {
-  lastPlayedDate: string;
-  streak: number;
-  longestStreak: number;
-  totalPlayed: number;
-  totalCorrect: number;
-  lastPlayedCorrect: boolean;
-  seenRiddleIds: number[];
-}
-
-const STATS_KEY = 'dailyRiddleStats';
-
-const CORRECT_MESSAGES = [
-  'Look at that brain actually working!',
-  'You might not need this app after all.',
-  'Memory flex detected.',
-  "Impressive. Don't let it go to your head.",
-  'One riddle down. Now try remembering your alarms.',
-  'Your neurons are high-fiving each other right now.',
-  "That's suspiciously good. Did you peek?",
-];
-
-const WRONG_MESSAGES = [
-  'Classic you.',
-  'This is why you need alarm reminders.',
-  "Your memory sends its regards... wait, no it doesn't.",
-  'The riddle will try not to take it personally.',
-  'Even your phone remembers better than this.',
-  "Don't worry, tomorrow's riddle will be easier. Probably.",
-  'Your brain has left the chat.',
-];
 
 const RIDDLE_CATEGORY_IMAGES: Record<string, ImageSourcePropType> = {
   memory: require('../../assets/trivia/trivia-general.webp'),
@@ -79,196 +34,24 @@ const RIDDLE_CATEGORY_IMAGES: Record<string, ImageSourcePropType> = {
   quick: require('../../assets/icons/icon-quick.webp'),
 };
 
-const ALL_CATEGORIES: RiddleCategory[] = ['memory', 'classic', 'logic', 'wordplay', 'quick'];
-
-function getTodayString(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function getYesterdayString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function getFormattedDate(): string {
-  const d = new Date();
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
-}
-
-const DEFAULT_STATS: DailyRiddleStats = {
-  lastPlayedDate: '',
-  streak: 0,
-  longestStreak: 0,
-  totalPlayed: 0,
-  totalCorrect: 0,
-  lastPlayedCorrect: false,
-  seenRiddleIds: [],
-};
-
-async function loadStats(): Promise<DailyRiddleStats> {
-  try {
-    const data = kvGet(STATS_KEY);
-    if (data) return { ...DEFAULT_STATS, ...JSON.parse(data) };
-  } catch {}
-  return { ...DEFAULT_STATS };
-}
-
-async function saveStats(stats: DailyRiddleStats): Promise<void> {
-  kvSet(STATS_KEY, JSON.stringify(stats));
-}
-
 export default function DailyRiddleScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const [mode, setMode] = useState<ScreenMode>('daily');
-  const [stats, setStats] = useState<DailyRiddleStats>(DEFAULT_STATS);
-  const [revealed, setRevealed] = useState(false);
-  const [answered, setAnswered] = useState(false);
-  const [resultMessage, setResultMessage] = useState('');
-  const [gotIt, setGotIt] = useState(false);
-  const [hintShown, setHintShown] = useState(false);
-  const [alreadyPlayedToday, setAlreadyPlayedToday] = useState(false);
-
-  // Browse mode state
-  const [selectedCategory, setSelectedCategory] = useState<RiddleCategory | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedRiddleId, setExpandedRiddleId] = useState<number | null>(null);
-
-  // Online browse state
-  const [browseSource, setBrowseSource] = useState<BrowseSource>('offline');
-  const [onlineRiddles, setOnlineRiddles] = useState<OnlineRiddle[]>([]);
-  const [onlineLoading, setOnlineLoading] = useState(false);
-  const [onlineError, setOnlineError] = useState(false);
-  const [expandedOnlineId, setExpandedOnlineId] = useState<string | null>(null);
-  const [isOnlineAvailable, setIsOnlineAvailable] = useState(true);
-
-  // Reveal animation
-  const revealAnim = useRef(new Animated.Value(0)).current;
-
-  // Today's riddle
-  const todayStr = getTodayString();
-  const dailyIndex = getDailyRiddleIndex(todayStr);
-  const dailyRiddle = RIDDLES[dailyIndex];
-
-  // Check internet connectivity and load settings on mount
-  useEffect(() => {
-    checkConnectivity().then(setIsOnlineAvailable);
-  }, []);
-
-  // Load stats on focus
-  useFocusEffect(
-    useCallback(() => {
-      loadStats().then((s) => {
-        setStats(s);
-        if (s.lastPlayedDate === todayStr) {
-          setAlreadyPlayedToday(true);
-          setRevealed(true);
-          setAnswered(true);
-          setGotIt(s.lastPlayedCorrect);
-        } else {
-          setAlreadyPlayedToday(false);
-          setRevealed(false);
-          setAnswered(false);
-          setHintShown(false);
-          setResultMessage('');
-          revealAnim.setValue(0);
-        }
-      });
-    }, [todayStr, dailyRiddle.id, revealAnim]),
-  );
-
-  const handleReveal = useCallback(() => {
-    setRevealed(true);
-    Animated.timing(revealAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-  }, [revealAnim]);
-
-  const handleAnswer = useCallback(
-    async (correct: boolean) => {
-      hapticMedium();
-      setAnswered(true);
-      setGotIt(correct);
-
-      const msgs = correct ? CORRECT_MESSAGES : WRONG_MESSAGES;
-      setResultMessage(msgs[Math.floor(Math.random() * msgs.length)]);
-
-      const current = await loadStats();
-      const yesterday = getYesterdayString();
-      const newStreak =
-        current.lastPlayedDate === yesterday ? current.streak + 1 :
-        current.lastPlayedDate === todayStr ? current.streak :
-        1;
-
-      const prevLongest = current.longestStreak ?? current.streak ?? 0;
-      const newStats: DailyRiddleStats = {
-        lastPlayedDate: todayStr,
-        streak: newStreak,
-        longestStreak: Math.max(newStreak, prevLongest),
-        totalPlayed: current.totalPlayed + 1,
-        totalCorrect: current.totalCorrect + (correct ? 1 : 0),
-        lastPlayedCorrect: correct,
-        seenRiddleIds: current.seenRiddleIds.includes(dailyRiddle.id)
-          ? current.seenRiddleIds
-          : [...current.seenRiddleIds, dailyRiddle.id],
-      };
-      setStats(newStats);
-      setAlreadyPlayedToday(true);
-      await saveStats(newStats);
-    },
-    [todayStr, dailyRiddle.id],
-  );
-
-  const handleShowHint = useCallback(() => {
-    setHintShown(true);
-  }, []);
-
-  const handleFetchOnlineRiddles = useCallback(async () => {
-    setOnlineLoading(true);
-    setOnlineError(false);
-    const riddles = await fetchMultipleOnlineRiddles(5);
-    if (riddles.length === 0) {
-      setOnlineError(true);
-    } else {
-      setOnlineRiddles((prev) => [...prev, ...riddles]);
-    }
-    setOnlineLoading(false);
-  }, []);
-
-  const filteredRiddles = useMemo(() => {
-    let list = RIDDLES;
-    if (selectedCategory !== 'all') {
-      list = list.filter((r) => r.category === selectedCategory);
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(
-        (r) =>
-          r.question.toLowerCase().includes(q) ||
-          r.answer.toLowerCase().includes(q),
-      );
-    }
-    return list;
-  }, [selectedCategory, searchQuery]);
-
-  const difficultyColor = (diff: string) => {
-    if (diff === 'easy') return '#4CAF50';
-    if (diff === 'medium') return '#FF9800';
-    return '#F44336';
-  };
+  const {
+    mode, setMode,
+    dailyRiddle, stats, revealed, answered, resultMessage, gotIt,
+    hintShown, alreadyPlayedToday, revealAnim,
+    selectedCategory, setSelectedCategory,
+    searchQuery, setSearchQuery,
+    expandedRiddleId, setExpandedRiddleId,
+    filteredRiddles,
+    browseSource, setBrowseSource,
+    onlineRiddles, onlineLoading, onlineError,
+    expandedOnlineId, setExpandedOnlineId,
+    isOnlineAvailable,
+    handleReveal, handleAnswer, handleShowHint, handleFetchOnlineRiddles,
+  } = useDailyRiddle();
 
   const styles = useMemo(
     () =>
@@ -306,7 +89,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           fontFamily: FONTS.gameHeader,
         },
         dateText: {
-          fontSize: 15,
+          fontSize: 14,
+          fontFamily: FONTS.regular,
           color: 'rgba(255,255,255,0.5)',
           marginTop: 4,
           textAlign: 'center',
@@ -318,8 +102,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           gap: 6,
         },
         streakText: {
-          fontSize: 15,
-          fontWeight: '700',
+          fontSize: 14,
+          fontFamily: FONTS.bold,
           color: colors.orange,
         },
         statsRow: {
@@ -328,7 +112,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           marginTop: 4,
         },
         statText: {
-          fontSize: 13,
+          fontSize: 12,
+          fontFamily: FONTS.regular,
           color: 'rgba(255,255,255,0.5)',
         },
 
@@ -350,7 +135,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         difficultyBadgeText: {
           fontSize: 12,
-          fontWeight: '700',
+          fontFamily: FONTS.bold,
           color: '#FFFFFF',
         },
         categoryBadge: {
@@ -361,12 +146,12 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         categoryBadgeText: {
           fontSize: 12,
-          fontWeight: '600',
+          fontFamily: FONTS.semiBold,
           color: colors.textSecondary,
         },
         questionText: {
-          fontSize: 22,
-          fontWeight: '600',
+          fontSize: 20,
+          fontFamily: FONTS.semiBold,
           color: '#FFFFFF',
           fontStyle: 'italic',
           lineHeight: 32,
@@ -383,14 +168,14 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           paddingHorizontal: 16,
         },
         hintBtnText: {
-          fontSize: 14,
+          fontSize: 13,
           color: 'rgba(255,255,255,0.5)',
-          fontWeight: '500',
+          fontFamily: FONTS.semiBold,
         },
         hintText: {
-          fontSize: 14,
+          fontSize: 13,
           color: colors.accent,
-          fontWeight: '600',
+          fontFamily: FONTS.semiBold,
           textAlign: 'center',
           marginTop: 8,
         },
@@ -408,13 +193,14 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           marginBottom: 16,
         },
         answerText: {
-          fontSize: 20,
-          fontWeight: '800',
+          fontSize: 18,
+          fontFamily: FONTS.extraBold,
           color: colors.accent,
           textAlign: 'center',
         },
         didYouGetIt: {
-          fontSize: 15,
+          fontSize: 14,
+          fontFamily: FONTS.regular,
           color: 'rgba(255,255,255,0.5)',
           marginTop: 16,
           marginBottom: 12,
@@ -432,8 +218,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         gotItBtnText: {
-          fontSize: 16,
-          fontWeight: '700',
+          fontSize: 15,
+          fontFamily: FONTS.bold,
           color: '#FFFFFF',
         },
         nopeBtn: {
@@ -444,12 +230,13 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         nopeBtnText: {
-          fontSize: 16,
-          fontWeight: '700',
+          fontSize: 15,
+          fontFamily: FONTS.bold,
           color: '#FFFFFF',
         },
         resultText: {
-          fontSize: 15,
+          fontSize: 14,
+          fontFamily: FONTS.regular,
           color: 'rgba(255,255,255,0.7)',
           fontStyle: 'italic',
           textAlign: 'center',
@@ -467,8 +254,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         revealBtnText: {
-          fontSize: 18,
-          fontWeight: '700',
+          fontSize: 17,
+          fontFamily: FONTS.bold,
           color: colors.overlayText,
         },
 
@@ -484,8 +271,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           borderColor: colors.border,
         },
         browseBtnText: {
-          fontSize: 16,
-          fontWeight: '600',
+          fontSize: 15,
+          fontFamily: FONTS.semiBold,
           color: colors.accent,
         },
         // Browse mode
@@ -508,8 +295,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           backgroundColor: colors.accent,
         },
         modeBtnText: {
-          fontSize: 14,
-          fontWeight: '600',
+          fontSize: 13,
+          fontFamily: FONTS.semiBold,
           color: colors.textSecondary,
         },
         modeBtnTextActive: {
@@ -547,8 +334,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           borderColor: colors.accent,
         },
         filterBtnText: {
-          fontSize: 13,
-          fontWeight: '600',
+          fontSize: 12,
+          fontFamily: FONTS.semiBold,
           color: colors.textSecondary,
         },
         filterBtnTextActive: {
@@ -574,7 +361,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         browseQuestion: {
           flex: 1,
-          fontSize: 15,
+          fontSize: 14,
+          fontFamily: FONTS.regular,
           color: colors.textPrimary,
           lineHeight: 22,
         },
@@ -588,13 +376,14 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           marginTop: 8,
         },
         browseAnswer: {
-          fontSize: 15,
-          fontWeight: '700',
+          fontSize: 14,
+          fontFamily: FONTS.bold,
           color: colors.accent,
           marginTop: 12,
         },
         browseCount: {
-          fontSize: 14,
+          fontSize: 13,
+          fontFamily: FONTS.regular,
           color: colors.textTertiary,
           marginHorizontal: 16,
           marginTop: 16,
@@ -607,7 +396,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           paddingTop: 8,
         },
         alreadyPlayedText: {
-          fontSize: 14,
+          fontSize: 13,
+          fontFamily: FONTS.regular,
           color: colors.textTertiary,
           fontStyle: 'italic',
         },
@@ -638,8 +428,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           opacity: 0.4,
         },
         sourceBtnText: {
-          fontSize: 13,
-          fontWeight: '600',
+          fontSize: 12,
+          fontFamily: FONTS.semiBold,
           color: colors.textSecondary,
         },
         sourceBtnTextActive: {
@@ -669,23 +459,25 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         onlineBadgeText: {
           fontSize: 11,
-          fontWeight: '600',
+          fontFamily: FONTS.semiBold,
           color: colors.textTertiary,
         },
         onlineQuestion: {
-          fontSize: 16,
+          fontSize: 15,
+          fontFamily: FONTS.regular,
           color: colors.textPrimary,
           fontStyle: 'italic',
           lineHeight: 24,
         },
         onlineAnswer: {
-          fontSize: 15,
-          fontWeight: '700',
+          fontSize: 14,
+          fontFamily: FONTS.bold,
           color: colors.accent,
           marginTop: 12,
         },
         onlineTapHint: {
-          fontSize: 13,
+          fontSize: 12,
+          fontFamily: FONTS.regular,
           color: colors.textTertiary,
           marginTop: 8,
           fontStyle: 'italic',
@@ -703,8 +495,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           borderColor: colors.accent,
         },
         loadMoreText: {
-          fontSize: 15,
-          fontWeight: '600',
+          fontSize: 14,
+          fontFamily: FONTS.semiBold,
           color: colors.accent,
         },
 
@@ -714,12 +506,14 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           paddingVertical: 40,
         },
         loadingText: {
-          fontSize: 14,
+          fontSize: 13,
+          fontFamily: FONTS.regular,
           color: colors.textTertiary,
           marginTop: 12,
         },
         errorText: {
-          fontSize: 14,
+          fontSize: 13,
+          fontFamily: FONTS.regular,
           color: colors.textTertiary,
           marginHorizontal: 16,
           marginTop: 16,
@@ -728,6 +522,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         noInternetText: {
           fontSize: 12,
+          fontFamily: FONTS.regular,
           color: colors.textTertiary,
           fontStyle: 'italic',
           marginHorizontal: 16,
@@ -776,7 +571,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
               {!hintShown ? (
                 <TouchableOpacity
                   style={[styles.hintBtn, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                  onPress={() => { hapticLight(); handleShowHint(); }}
+                  onPress={() => { hapticLight(); playGameSound('tap'); handleShowHint(); }}
                   activeOpacity={0.7}
                 >
                   <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
@@ -859,7 +654,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         {!revealed && !alreadyPlayedToday && (
           <TouchableOpacity
             style={styles.revealBtn}
-            onPress={() => { hapticLight(); handleReveal(); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); handleReveal(); }}
             activeOpacity={0.8}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -871,7 +666,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={styles.browseBtn}
-          onPress={() => { hapticLight(); setMode('browse'); }}
+          onPress={() => { hapticLight(); playGameSound('tap'); setMode('browse'); }}
           activeOpacity={0.7}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -911,7 +706,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             </Text>
           </View>
         </View>
-        <Text style={{ fontSize: 12, color: colors.textTertiary, fontStyle: 'italic', marginHorizontal: 16, marginTop: 4 }}>
+        <Text style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.textTertiary, fontStyle: 'italic', marginHorizontal: 16, marginTop: 4 }}>
           Online riddles coming soon
         </Text>
 
@@ -936,7 +731,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   styles.filterBtn,
                   selectedCategory === 'all' && styles.filterBtnActive,
                 ]}
-                onPress={() => { hapticLight(); setSelectedCategory('all'); }}
+                onPress={() => { hapticLight(); playGameSound('tap'); setSelectedCategory('all'); }}
                 activeOpacity={0.7}
               >
                 <Text
@@ -955,7 +750,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                     styles.filterBtn,
                     selectedCategory === cat && styles.filterBtnActive,
                   ]}
-                  onPress={() => { hapticLight(); setSelectedCategory(cat); }}
+                  onPress={() => { hapticLight(); playGameSound('tap'); setSelectedCategory(cat); }}
                   activeOpacity={0.7}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -988,6 +783,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   style={styles.browseCard}
                   onPress={() => {
                     hapticLight();
+                    playGameSound('tap');
                     setExpandedRiddleId(isExpanded ? null : riddle.id);
                   }}
                   activeOpacity={0.7}
@@ -1046,7 +842,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                 </Text>
                 <TouchableOpacity
                   style={styles.loadMoreBtn}
-                  onPress={() => { hapticLight(); handleFetchOnlineRiddles(); }}
+                  onPress={() => { hapticLight(); playGameSound('tap'); handleFetchOnlineRiddles(); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.loadMoreText}>Try Again</Text>
@@ -1066,6 +862,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                       style={styles.onlineCard}
                       onPress={() => {
                         hapticLight();
+                        playGameSound('tap');
                         setExpandedOnlineId(isExpanded ? null : riddle.id);
                       }}
                       activeOpacity={0.7}
@@ -1088,7 +885,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
 
                 <TouchableOpacity
                   style={styles.loadMoreBtn}
-                  onPress={() => { hapticLight(); handleFetchOnlineRiddles(); }}
+                  onPress={() => { hapticLight(); playGameSound('tap'); handleFetchOnlineRiddles(); }}
                   activeOpacity={0.7}
                   disabled={onlineLoading}
                 >
@@ -1159,7 +956,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       <View style={styles.modeToggle}>
         <TouchableOpacity
           style={[styles.modeBtn, mode === 'daily' && styles.modeBtnActive]}
-          onPress={() => { hapticLight(); setMode('daily'); }}
+          onPress={() => { hapticLight(); playGameSound('tap'); setMode('daily'); }}
           activeOpacity={0.7}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -1176,7 +973,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.modeBtn, mode === 'browse' && styles.modeBtnActive]}
-          onPress={() => { hapticLight(); setMode('browse'); }}
+          onPress={() => { hapticLight(); playGameSound('tap'); setMode('browse'); }}
           activeOpacity={0.7}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

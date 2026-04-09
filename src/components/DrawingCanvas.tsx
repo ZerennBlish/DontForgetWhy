@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { Image } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import APP_ICONS from '../data/appIconAssets';
 import DrawingPickerModal from './DrawingPickerModal';
 
@@ -419,8 +420,8 @@ export default function DrawingCanvas({
           borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
         },
         topBtnText: {
-          fontSize: 14,
-          fontWeight: '700',
+          fontSize: 13,
+          fontFamily: FONTS.bold,
           color: colors.textPrimary,
         },
         canvasWrapper: {
@@ -451,8 +452,8 @@ export default function DrawingCanvas({
           backgroundColor: colors.accent + '40',
         },
         toolBtnText: {
-          fontSize: 13,
-          fontWeight: '600',
+          fontSize: 12,
+          fontFamily: FONTS.semiBold,
           color: colors.textPrimary,
         },
         separator: {
@@ -497,7 +498,7 @@ export default function DrawingCanvas({
         },
         widthBtnText: {
           fontSize: 12,
-          fontWeight: '600',
+          fontFamily: FONTS.semiBold,
           color: colors.textPrimary,
         },
         bgBtnRow: {

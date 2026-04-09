@@ -6,6 +6,7 @@ import {
   Animated,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface UndoToastProps {
@@ -89,8 +90,8 @@ export default function UndoToast({ visible, message, onUndo, onDismiss }: UndoT
           zIndex: 999,
         },
         message: {
-          fontSize: 15,
-          fontWeight: '600',
+          fontSize: 14,
+          fontFamily: FONTS.semiBold,
           color: colors.textPrimary,
           flex: 1,
           marginRight: 16,
@@ -102,8 +103,8 @@ export default function UndoToast({ visible, message, onUndo, onDismiss }: UndoT
           backgroundColor: colors.accent,
         },
         undoText: {
-          fontSize: 14,
-          fontWeight: '700',
+          fontSize: 13,
+          fontFamily: FONTS.bold,
           color: colors.textPrimary,
         },
       }),

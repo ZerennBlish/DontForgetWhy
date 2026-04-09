@@ -3,6 +3,7 @@ import { View, Text, Image, StyleSheet, Switch, TouchableOpacity } from 'react-n
 import { Alarm, ALL_DAYS, WEEKDAYS, WEEKENDS, AlarmDay } from '../types/alarm';
 import { formatTime } from '../utils/time';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 
 const GUESS_WHY_RED = require('../../assets/icons/guess-why-red.webp');
 
@@ -88,8 +89,8 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
       alignItems: 'center',
     },
     time: {
-      fontSize: 28,
-      fontWeight: '700',
+      fontSize: 26,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       letterSpacing: -1,
     },
@@ -101,18 +102,21 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
       marginLeft: 6,
     },
     detail: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: colors.textSecondary,
       marginTop: 3,
     },
     mysteryText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: colors.accent,
       marginTop: 3,
       fontStyle: 'italic',
     },
     schedule: {
       fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -140,7 +144,7 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
     },
     pinBtnText: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
   }), [colors]);

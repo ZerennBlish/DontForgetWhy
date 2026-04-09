@@ -1,6 +1,6 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 18 (April 5, 2026)
+**Last updated:** Session 22 (April 8, 2026)
 
 ---
 
@@ -375,6 +375,24 @@ Rather than adding Ocean as a 7th theme, replaced the original Light theme entir
 
 ### homeBannerQuotes color field removed (Session 13)
 Dead field. HomeScreen resolves section colors via `bannerColorMap` from theme tokens. Hardcoded hex on each quote object was never used when the map had a match (which was always — all 7 sections mapped). Removed `color` from `BannerQuote` interface and all ~60 quote objects.
+
+### Montserrat Alternates over Nunito (Session 22)
+Nunito felt generic and soft — rounded sans-serif used by thousands of apps. Montserrat Alternates has alternate letterforms (especially 'a', 'g', 'l') that give it personality without being gimmicky. Premium feel that matches the app's "polished but not corporate" identity. Wider letterforms required a font size reduction pass.
+
+### Font size reduction after swap (Session 22)
+Montserrat Alternates renders wider than Nunito at same font sizes. Applied systematic reduction: fontSize 28+ → -2, 16-27 → -2, 13-15 → -1, 12 and below unchanged. Mechanical pass across all files rather than case-by-case fixes ensures consistency and prevents missed overflow spots.
+
+### fontWeight replaced with fontFamily (Session 22)
+On Android, setting both `fontWeight` and `fontFamily` causes double-bolding or crashes. The correct pattern is `fontFamily` only (e.g. `FONTS.bold` instead of `fontWeight: '700'`), with the weight encoded in the font file name. Exception: TextInput styles keep `fontWeight` because custom `fontFamily` renders inconsistently on Android TextInput components.
+
+### Quick Capture simplification (Session 22)
+Removed section title and icons from quick capture buttons. Wider font made them crowded. Renamed to Quick Note / Quick Record / Quick Timer for clarity. Buttons are pure text now — icon + text was redundant when the label is already descriptive.
+
+### Splash screen dark background (Session 22)
+Changed splash backgroundColor from white `#ffffff` to dark `#121220` to eliminate the jarring white flash between splash and app load. Matches the app's dark default theme. Needs EAS build to take effect (splash config is compile-time).
+
+### Dual brand identity concept (Session 22, noted)
+"Personality Mode" (character art, sarcastic roasts) as default, "Clean Mode" (silver chrome, helpful phrases) as toggle. Not scheduled yet — revisit after Pro tier. Would allow the app to appeal to both personality-loving and professional-use audiences.
 
 ---
 

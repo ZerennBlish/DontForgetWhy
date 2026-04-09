@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,95 +10,21 @@ import {
   ImageBackground,
   Image,
 } from 'react-native';
-import { kvGet, kvSet, kvRemove } from '../services/database';
-import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticLight, hapticMedium } from '../utils/haptics';
+import { hapticLight } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
+import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
-import {
-  generatePuzzle,
-  checkComplete,
-  type Difficulty,
-  type Grid,
-} from '../utils/sudoku';
+import type { Difficulty } from '../utils/sudoku';
+import { useSudoku, DIFFICULTY_CONFIG, formatTime, getStars, MAX_HINTS } from '../hooks/useSudoku';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Sudoku'>;
-type GamePhase = 'select' | 'playing' | 'paused' | 'won';
-
-interface SavedGame {
-  puzzle: Grid;
-  solution: Grid;
-  playerGrid: Grid;
-  notes: number[][][];
-  difficulty: Difficulty;
-  mistakes: number;
-  elapsed: number;
-  hintsUsed?: number;
-}
-
-interface DifficultyBest {
-  bestTime: number;
-  bestMistakes: number;
-  bestHints?: number;
-  gamesPlayed?: number;
-}
-
-interface BestScores {
-  easy?: DifficultyBest;
-  medium?: DifficultyBest;
-  hard?: DifficultyBest;
-}
-
-const GAME_KEY = 'sudokuCurrentGame';
-const SCORES_KEY = 'sudokuBestScores';
-
-const DIFFICULTY_CONFIG: Record<Difficulty, { label: string }> = {
-  easy: { label: 'Easy' },
-  medium: { label: 'Medium' },
-  hard: { label: 'Hard' },
-};
-
-const WIN_MESSAGES = [
-  "You actually finished it. We're impressed. Mildly.",
-  "Your brain cells deserve a vacation after that.",
-  "Sudoku master? Let's not get ahead of ourselves.",
-  "Zero mistakes? Are you sure you're the same person who forgets alarms?",
-  "Even the puzzle is shocked you solved it.",
-  "Quick, go set an alarm to remember this moment.",
-];
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-function getStars(mistakes: number, hints: number = 0): number {
-  let stars: number;
-  if (mistakes === 0) stars = 3;
-  else if (mistakes <= 3) stars = 2;
-  else stars = 1;
-
-  // Hint penalty
-  if (hints >= 3) stars = Math.max(1, stars - 1);
-  else if (hints >= 1) stars = Math.max(1, Math.floor(stars - 0.5));
-
-  return stars;
-}
-
-const MAX_HINTS = 5;
-
-function createEmptyNotes(): number[][][] {
-  return Array.from({ length: 9 }, () =>
-    Array.from({ length: 9 }, () => []),
-  );
-}
 
 // ---------- Main Screen ----------
 
@@ -106,421 +32,18 @@ export default function SudokuScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const [gamePhase, setGamePhase] = useState<GamePhase>('select');
-  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
-  const [bestScores, setBestScores] = useState<BestScores>({});
-  const [hasSavedGame, setHasSavedGame] = useState(false);
-
-  // Game state
-  const [puzzleGrid, setPuzzleGrid] = useState<Grid>([]);
-  const [solutionGrid, setSolutionGrid] = useState<Grid>([]);
-  const [playerGrid, setPlayerGrid] = useState<Grid>([]);
-  const [notes, setNotes] = useState<number[][][]>(createEmptyNotes());
-  const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
-  const [mistakes, setMistakes] = useState(0);
-  const [elapsed, setElapsed] = useState(0);
-  const [notesMode, setNotesMode] = useState(false);
-  const [winMessage, setWinMessage] = useState('');
-  const [finalTime, setFinalTime] = useState(0);
-  const [finalMistakes, setFinalMistakes] = useState(0);
-  const [hintsUsed, setHintsUsed] = useState(0);
-  const [finalHints, setFinalHints] = useState(0);
-
-  // Refs
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const elapsedRef = useRef(0);
-  const mistakesRef = useRef(0);
-  const hintsUsedRef = useRef(0);
-  const puzzleRef = useRef<Grid>([]);
-  const solutionRef = useRef<Grid>([]);
-  const playerRef = useRef<Grid>([]);
-  const notesRef = useRef<number[][][]>(createEmptyNotes());
-  const difficultyRef = useRef<Difficulty>('medium');
-
-  // Load best scores, settings, and check for saved game
-  useFocusEffect(
-    useCallback(() => {
-      const scoresData = kvGet(SCORES_KEY);
-      if (__DEV__) console.log('[Sudoku] loaded scores from storage:', scoresData);
-      if (scoresData) {
-        try { setBestScores(JSON.parse(scoresData)); } catch (e) {
-          console.error('[Sudoku] parse scores failed:', e);
-        }
-      }
-      setHasSavedGame(!!kvGet(GAME_KEY));
-    }, []),
-  );
-
-  // Cleanup timer
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
-  const startTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      elapsedRef.current += 1;
-      setElapsed(elapsedRef.current);
-    }, 1000);
-  }, []);
-
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
-
-  const saveGame = useCallback(() => {
-    const saved: SavedGame = {
-      puzzle: puzzleRef.current,
-      solution: solutionRef.current,
-      playerGrid: playerRef.current,
-      notes: notesRef.current,
-      difficulty: difficultyRef.current,
-      mistakes: mistakesRef.current,
-      elapsed: elapsedRef.current,
-      hintsUsed: hintsUsedRef.current,
-    };
-    try { kvSet(GAME_KEY, JSON.stringify(saved)); } catch {}
-  }, []);
-
-  const clearSavedGame = useCallback(() => {
-    try { kvRemove(GAME_KEY); } catch {}
-    setHasSavedGame(false);
-  }, []);
-
-  const startNewGame = useCallback((diff: Difficulty) => {
-    const { puzzle, solution } = generatePuzzle(diff);
-    const player = puzzle.map((row) => [...row]);
-
-    puzzleRef.current = puzzle;
-    solutionRef.current = solution;
-    playerRef.current = player;
-    notesRef.current = createEmptyNotes();
-    mistakesRef.current = 0;
-    elapsedRef.current = 0;
-    hintsUsedRef.current = 0;
-    difficultyRef.current = diff;
-
-    setPuzzleGrid(puzzle);
-    setSolutionGrid(solution);
-    setPlayerGrid(player);
-    setNotes(createEmptyNotes());
-    setSelectedCell(null);
-    setMistakes(0);
-    setElapsed(0);
-    setHintsUsed(0);
-    setDifficulty(diff);
-    setNotesMode(false);
-    setGamePhase('playing');
-    clearSavedGame();
-    startTimer();
-  }, [startTimer, clearSavedGame]);
-
-  const resumeGame = useCallback(async () => {
-    const data = kvGet(GAME_KEY);
-    if (!data) return;
-    try {
-      const saved: SavedGame = JSON.parse(data);
-      puzzleRef.current = saved.puzzle;
-      solutionRef.current = saved.solution;
-      playerRef.current = saved.playerGrid;
-      notesRef.current = saved.notes;
-      mistakesRef.current = saved.mistakes;
-      elapsedRef.current = saved.elapsed;
-      hintsUsedRef.current = saved.hintsUsed ?? 0;
-      difficultyRef.current = saved.difficulty;
-
-      setPuzzleGrid(saved.puzzle);
-      setSolutionGrid(saved.solution);
-      setPlayerGrid(saved.playerGrid);
-      setNotes(saved.notes);
-      setMistakes(saved.mistakes);
-      setElapsed(saved.elapsed);
-      setHintsUsed(saved.hintsUsed ?? 0);
-      setDifficulty(saved.difficulty);
-      setSelectedCell(null);
-      setNotesMode(false);
-      setGamePhase('playing');
-      startTimer();
-    } catch {
-      clearSavedGame();
-    }
-  }, [startTimer, clearSavedGame]);
-
-  const handlePause = useCallback(() => {
-    stopTimer();
-    saveGame();
-    setGamePhase('paused');
-  }, [stopTimer, saveGame]);
-
-  const handleResume = useCallback(() => {
-    startTimer();
-    setGamePhase('playing');
-  }, [startTimer]);
-
-  const handleBackFromGame = useCallback(() => {
-    stopTimer();
-    saveGame();
-    setHasSavedGame(true);
-    setGamePhase('select');
-  }, [stopTimer, saveGame]);
-
-  // Remove notes from row/col/box when a number is placed
-  const clearNotesForPlacement = useCallback((row: number, col: number, num: number) => {
-    const updated = notesRef.current.map((r) => r.map((c) => [...c]));
-    for (let c = 0; c < 9; c++) {
-      updated[row][c] = updated[row][c].filter((n) => n !== num);
-    }
-    for (let r = 0; r < 9; r++) {
-      updated[r][col] = updated[r][col].filter((n) => n !== num);
-    }
-    const boxRow = Math.floor(row / 3) * 3;
-    const boxCol = Math.floor(col / 3) * 3;
-    for (let r = boxRow; r < boxRow + 3; r++) {
-      for (let c = boxCol; c < boxCol + 3; c++) {
-        updated[r][c] = updated[r][c].filter((n) => n !== num);
-      }
-    }
-    updated[row][col] = [];
-    notesRef.current = updated;
-    setNotes(updated);
-  }, []);
-
-  const handleNumberPress = useCallback((num: number) => {
-    if (!selectedCell) return;
-    const [row, col] = selectedCell;
-    if (puzzleRef.current[row][col] !== 0) return;
-    hapticMedium();
-
-    if (notesMode) {
-      const updated = notesRef.current.map((r) => r.map((c) => [...c]));
-      const cellNotes = updated[row][col];
-      const idx = cellNotes.indexOf(num);
-      if (idx >= 0) {
-        cellNotes.splice(idx, 1);
-      } else {
-        cellNotes.push(num);
-        cellNotes.sort();
-      }
-      notesRef.current = updated;
-      setNotes(updated);
-      saveGame();
-      return;
-    }
-
-    // Place number
-    const correct = solutionRef.current[row][col];
-    const newGrid = playerRef.current.map((r) => [...r]);
-    newGrid[row][col] = num;
-    playerRef.current = newGrid;
-    setPlayerGrid(newGrid);
-
-    clearNotesForPlacement(row, col, num);
-
-    if (num !== correct) {
-      mistakesRef.current += 1;
-      setMistakes(mistakesRef.current);
-    }
-
-    // Check win
-    if (checkComplete(newGrid, solutionRef.current)) {
-      stopTimer();
-      const time = elapsedRef.current;
-      const mist = mistakesRef.current;
-      const hints = hintsUsedRef.current;
-      setFinalTime(time);
-      setFinalMistakes(mist);
-      setFinalHints(hints);
-      setWinMessage(WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)]);
-      clearSavedGame();
-
-      const diff = difficultyRef.current;
-      if (__DEV__) console.log('[Sudoku] game won — saving stats for', diff);
-      try {
-        const data = kvGet(SCORES_KEY);
-        if (__DEV__) console.log('[Sudoku] existing scores raw:', data);
-        const scores: BestScores = data ? JSON.parse(data) : {};
-        const current = scores[diff];
-        const gamesPlayed = (current?.gamesPlayed ?? 0) + 1;
-        const isBetter = !current
-          || time < current.bestTime
-          || (time === current.bestTime && mist < current.bestMistakes);
-        if (isBetter) {
-          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints, gamesPlayed };
-        } else {
-          scores[diff] = { ...current!, gamesPlayed };
-        }
-        if (__DEV__) console.log('[Sudoku] writing scores:', JSON.stringify(scores));
-        kvSet(SCORES_KEY, JSON.stringify(scores));
-        setBestScores({ ...scores });
-      } catch (e) { console.error('[Sudoku] save scores failed:', e); }
-
-      setTimeout(() => setGamePhase('won'), 400);
-      return;
-    }
-
-    saveGame();
-  }, [selectedCell, notesMode, stopTimer, saveGame, clearSavedGame, clearNotesForPlacement]);
-
-  const handleErase = useCallback(() => {
-    if (!selectedCell) return;
-    const [row, col] = selectedCell;
-    if (puzzleRef.current[row][col] !== 0) return;
-
-    const newGrid = playerRef.current.map((r) => [...r]);
-    newGrid[row][col] = 0;
-    playerRef.current = newGrid;
-    setPlayerGrid(newGrid);
-
-    const updated = notesRef.current.map((r) => r.map((c) => [...c]));
-    updated[row][col] = [];
-    notesRef.current = updated;
-    setNotes(updated);
-
-    saveGame();
-  }, [selectedCell, saveGame]);
-
-  const handleHint = useCallback(() => {
-    if (hintsUsedRef.current >= MAX_HINTS) return;
-
-    // Find all empty cells the player hasn't filled
-    const emptyCells: [number, number][] = [];
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        if (puzzleRef.current[r][c] === 0 && playerRef.current[r][c] === 0) {
-          emptyCells.push([r, c]);
-        }
-      }
-    }
-    if (emptyCells.length === 0) return;
-
-    // Pick a random empty cell
-    const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-    const correctNum = solutionRef.current[row][col];
-
-    try { hapticMedium(); } catch {}
-
-    // Place the correct number and mark cell as given
-    const newPuzzle = puzzleRef.current.map((r) => [...r]);
-    newPuzzle[row][col] = correctNum;
-    puzzleRef.current = newPuzzle;
-    setPuzzleGrid(newPuzzle);
-
-    const newGrid = playerRef.current.map((r) => [...r]);
-    newGrid[row][col] = correctNum;
-    playerRef.current = newGrid;
-    setPlayerGrid(newGrid);
-
-    clearNotesForPlacement(row, col, correctNum);
-
-    hintsUsedRef.current += 1;
-    setHintsUsed(hintsUsedRef.current);
-
-    // Check win after hint
-    if (checkComplete(newGrid, solutionRef.current)) {
-      stopTimer();
-      const time = elapsedRef.current;
-      const mist = mistakesRef.current;
-      const hints = hintsUsedRef.current;
-      setFinalTime(time);
-      setFinalMistakes(mist);
-      setFinalHints(hints);
-      setWinMessage(WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)]);
-      clearSavedGame();
-
-      const diff = difficultyRef.current;
-      if (__DEV__) console.log('[Sudoku] game won via hint — saving stats for', diff);
-      try {
-        const data = kvGet(SCORES_KEY);
-        if (__DEV__) console.log('[Sudoku] existing scores raw:', data);
-        const scores: BestScores = data ? JSON.parse(data) : {};
-        const current = scores[diff];
-        const gamesPlayed = (current?.gamesPlayed ?? 0) + 1;
-        const isBetter = !current
-          || time < current.bestTime
-          || (time === current.bestTime && mist < current.bestMistakes);
-        if (isBetter) {
-          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints, gamesPlayed };
-        } else {
-          scores[diff] = { ...current!, gamesPlayed };
-        }
-        if (__DEV__) console.log('[Sudoku] writing scores:', JSON.stringify(scores));
-        kvSet(SCORES_KEY, JSON.stringify(scores));
-        setBestScores({ ...scores });
-      } catch (e) { console.error('[Sudoku] save scores failed:', e); }
-
-      setTimeout(() => setGamePhase('won'), 400);
-      return;
-    }
-
-    setSelectedCell([row, col]);
-    saveGame();
-  }, [stopTimer, saveGame, clearSavedGame, clearNotesForPlacement]);
-
-  const handleNewGameConfirm = useCallback(() => {
-    Alert.alert('New Game', 'Start a new puzzle? Current progress will be lost.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'New Game',
-        onPress: () => {
-          stopTimer();
-          clearSavedGame();
-          setGamePhase('select');
-        },
-      },
-    ]);
-  }, [stopTimer, clearSavedGame]);
-
-  // Count remaining for each number (used on Easy only)
-  const remainingCounts = useMemo(() => {
-    const counts: Record<number, number> = {};
-    for (let n = 1; n <= 9; n++) counts[n] = 9;
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        const v = playerGrid[r]?.[c];
-        if (v && v >= 1 && v <= 9) counts[v]--;
-      }
-    }
-    return counts;
-  }, [playerGrid]);
-
-  // Difficulty-aware helpers
-  const showHighlighting = difficulty !== 'hard';
-  const showRemainingCounts = difficulty === 'easy';
-  const showMistakesDuringPlay = difficulty !== 'hard';
-
-  const hasEmptyCells = useMemo(() => {
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        if (puzzleGrid[r]?.[c] === 0 && playerGrid[r]?.[c] === 0) return true;
-      }
-    }
-    return false;
-  }, [puzzleGrid, playerGrid]);
-
-  const hintDisabled = hintsUsed >= MAX_HINTS || !hasEmptyCells;
-
-  const isHighlighted = useCallback((row: number, col: number): boolean => {
-    if (!showHighlighting) return false;
-    if (!selectedCell) return false;
-    const [sr, sc] = selectedCell;
-    if (row === sr || col === sc) return true;
-    if (Math.floor(row / 3) === Math.floor(sr / 3) && Math.floor(col / 3) === Math.floor(sc / 3)) return true;
-    return false;
-  }, [selectedCell, showHighlighting]);
-
-  const isSameNumber = useCallback((row: number, col: number): boolean => {
-    if (!showHighlighting) return false;
-    if (!selectedCell) return false;
-    const [sr, sc] = selectedCell;
-    const selVal = playerGrid[sr]?.[sc];
-    if (!selVal || selVal === 0) return false;
-    return playerGrid[row]?.[col] === selVal;
-  }, [selectedCell, playerGrid, showHighlighting]);
+  const {
+    gamePhase, setGamePhase,
+    difficulty, bestScores, hasSavedGame,
+    puzzleGrid, playerGrid, notes, selectedCell, setSelectedCell,
+    mistakes, elapsed, hintsUsed, notesMode, setNotesMode,
+    winMessage, finalTime, finalMistakes, finalHints,
+    remainingCounts, showRemainingCounts, showMistakesDuringPlay,
+    hintDisabled,
+    startNewGame, resumeGame, handlePause, handleResume, handleBackFromGame,
+    handleNumberPress, handleErase, handleHint, handleNewGameConfirm,
+    isHighlighted, isSameNumber, clearSavedGame,
+  } = useSudoku();
 
   // ---------- Styles ----------
 
@@ -555,10 +78,13 @@ export default function SudokuScreen({ navigation }: Props) {
         {hasSavedGame && (
           <TouchableOpacity
             style={[styles.difficultyBtn, { borderColor: colors.accent, borderWidth: 2 }]}
-            onPress={() => { hapticLight(); resumeGame(); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); resumeGame(); }}
             activeOpacity={0.7}
           >
-            <Text style={styles.difficultyLabel}>{'\u25B6\uFE0F'} Continue Game</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <GlowIcon source={MEDIA_ICONS.gamePlay} size={24} glowColor="#4CAF50" style={{ marginRight: 8 }} />
+              <Text style={styles.difficultyLabel}>Continue Game</Text>
+            </View>
             <Text style={styles.difficultyInfo}>Resume your saved puzzle</Text>
           </TouchableOpacity>
         )}
@@ -572,6 +98,7 @@ export default function SudokuScreen({ navigation }: Props) {
               style={styles.difficultyBtn}
               onPress={() => {
                 hapticLight();
+                playGameSound('tap');
                 if (hasSavedGame) {
                   Alert.alert(
                     'New Game',
@@ -613,15 +140,15 @@ export default function SudokuScreen({ navigation }: Props) {
       <ImageBackground source={require('../../assets/newspaper.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <View style={[styles.container, styles.centeredContent]}>
-        <Text style={styles.pauseEmoji}>{'\u23F8\uFE0F'}</Text>
+        <GlowIcon source={MEDIA_ICONS.pause} size={48} glowColor="#4CAF50" />
         <Text style={styles.pauseTitle}>Paused</Text>
         <Text style={styles.pauseSubtitle}>{formatTime(elapsed)}</Text>
-        <TouchableOpacity style={styles.resumeBtn} onPress={() => { hapticLight(); handleResume(); }} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.resumeBtn} onPress={() => { hapticLight(); playGameSound('tap'); handleResume(); }} activeOpacity={0.7}>
           <Text style={styles.resumeBtnText}>Resume</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.changeDifficultyBtn}
-          onPress={() => { hapticLight(); clearSavedGame(); setGamePhase('select'); }}
+          onPress={() => { hapticLight(); playGameSound('tap'); clearSavedGame(); setGamePhase('select'); }}
           activeOpacity={0.7}
         >
           <Text style={styles.changeDifficultyText}>Quit Game</Text>
@@ -697,14 +224,14 @@ export default function SudokuScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={styles.playAgainBtn}
-          onPress={() => { hapticLight(); startNewGame(difficulty); }}
+          onPress={() => { hapticLight(); playGameSound('tap'); startNewGame(difficulty); }}
           activeOpacity={0.7}
         >
           <Text style={styles.playAgainText}>Play Again</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.changeDifficultyBtn}
-          onPress={() => { hapticLight(); setGamePhase('select'); }}
+          onPress={() => { hapticLight(); playGameSound('tap'); setGamePhase('select'); }}
           activeOpacity={0.7}
         >
           <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
@@ -738,10 +265,10 @@ export default function SudokuScreen({ navigation }: Props) {
           ) : (
             <View style={styles.statPlaceholder} />
           )}
-          <TouchableOpacity onPress={() => { hapticLight(); handlePause(); }} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => { hapticLight(); playGameSound('tap'); handlePause(); }} activeOpacity={0.7}>
             <Text style={styles.timerText}>{'\u23F1\uFE0F'} {formatTime(elapsed)}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => { hapticLight(); handleNewGameConfirm(); }} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => { hapticLight(); playGameSound('tap'); handleNewGameConfirm(); }} activeOpacity={0.7}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Image source={require('../../assets/icons/icon-refresh.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
               <Text style={[styles.statText, { color: colors.accent }]}>New</Text>
@@ -796,7 +323,7 @@ export default function SudokuScreen({ navigation }: Props) {
                           styles.cellText,
                           {
                             color: isGiven ? '#000000' : '#1A1A44',
-                            fontWeight: isGiven ? '700' : '500',
+                            fontFamily: isGiven ? FONTS.bold : FONTS.semiBold,
                           },
                         ]}
                       >
@@ -853,14 +380,14 @@ export default function SudokuScreen({ navigation }: Props) {
         <View style={styles.toolRow}>
           <TouchableOpacity
             style={[styles.toolBtn, notesMode && { backgroundColor: colors.accent }]}
-            onPress={() => { hapticLight(); setNotesMode(!notesMode); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); setNotesMode(!notesMode); }}
             activeOpacity={0.7}
           >
             <Text style={[styles.toolBtnText, notesMode && { color: colors.overlayText }]}>
               {'\u270F\uFE0F'} Notes {notesMode ? 'ON' : 'OFF'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.toolBtn} onPress={() => { hapticLight(); handleErase(); }} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.toolBtn} onPress={() => { hapticLight(); playGameSound('tap'); handleErase(); }} activeOpacity={0.7}>
             <Text style={styles.toolBtnText}>{'\u232B'} Erase</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -924,7 +451,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       fontFamily: FONTS.gameHeader,
     },
     selectSubtitle: {
-      fontSize: 15,
+      fontSize: 14,
+      fontFamily: FONTS.regular,
       color: 'rgba(255,255,255,0.5)',
       marginTop: 6,
     },
@@ -939,13 +467,14 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       alignItems: 'center',
     },
     difficultyLabel: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 18,
+      fontFamily: FONTS.bold,
       color: colors.overlayText,
       textAlign: 'center',
     },
     difficultyInfo: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: 'rgba(255,255,255,0.5)',
       marginTop: 4,
       textAlign: 'center',
@@ -960,18 +489,15 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       alignSelf: 'center' as const,
       width: '100%' as const,
     },
-    pauseEmoji: {
-      fontSize: 64,
-      marginBottom: 12,
-    },
     pauseTitle: {
-      fontSize: 28,
-      fontWeight: '800',
+      fontSize: 26,
+      fontFamily: FONTS.extraBold,
       color: colors.overlayText,
       marginBottom: 8,
     },
     pauseSubtitle: {
-      fontSize: 18,
+      fontSize: 17,
+      fontFamily: FONTS.regular,
       color: 'rgba(255,255,255,0.7)',
       marginBottom: 32,
     },
@@ -985,8 +511,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       alignItems: 'center',
     },
     resumeBtnText: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.overlayText,
     },
 
@@ -1023,13 +549,14 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       marginBottom: 8,
     },
     winTitle: {
-      fontSize: 28,
-      fontWeight: '800',
+      fontSize: 26,
+      fontFamily: FONTS.extraBold,
       color: colors.textPrimary,
       marginBottom: 12,
     },
     hardRevealText: {
-      fontSize: 15,
+      fontSize: 14,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       fontStyle: 'italic',
       marginBottom: 12,
@@ -1054,12 +581,13 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       paddingVertical: 8,
     },
     winStatLabel: {
-      fontSize: 15,
+      fontSize: 14,
+      fontFamily: FONTS.regular,
       color: colors.textSecondary,
     },
     winStatValue: {
-      fontSize: 15,
-      fontWeight: '700',
+      fontSize: 14,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     winDivider: {
@@ -1068,7 +596,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       marginVertical: 4,
     },
     winMessage: {
-      fontSize: 15,
+      fontSize: 14,
+      fontFamily: FONTS.regular,
       color: colors.textSecondary,
       fontStyle: 'italic',
       textAlign: 'center',
@@ -1086,8 +615,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       alignItems: 'center',
     },
     playAgainText: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.overlayText,
     },
     changeDifficultyBtn: {
@@ -1099,8 +628,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       alignItems: 'center',
     },
     changeDifficultyText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
     },
 
@@ -1116,8 +645,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       alignItems: 'center',
     },
     gameDifficulty: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     statsRow: {
@@ -1127,16 +656,16 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       marginTop: 8,
     },
     statText: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
     },
     statPlaceholder: {
       width: 40,
     },
     timerText: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
     },
 
@@ -1164,6 +693,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     },
     cellText: {
       fontSize: cellSize * 0.5,
+      fontFamily: FONTS.regular,
     },
     notesGrid: {
       flexDirection: 'row',
@@ -1201,12 +731,13 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       borderRadius: 8,
     },
     numBtnText: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 18,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     numBtnCount: {
       fontSize: 10,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -1224,8 +755,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       borderColor: colors.border,
     },
     toolBtnText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
     },
   });

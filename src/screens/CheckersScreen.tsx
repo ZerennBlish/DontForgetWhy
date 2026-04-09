@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import { useCheckers } from '../hooks/useCheckers';
@@ -95,7 +96,7 @@ export default function CheckersScreen({ navigation }: Props) {
         title: { fontSize: 28, color: colors.overlayText, fontFamily: FONTS.gameHeader },
         body: { flex: 1, paddingHorizontal: BOARD_H_PADDING },
         centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-        loadingText: { color: colors.overlayText, fontSize: 15 },
+        loadingText: { color: colors.overlayText, fontSize: 14, fontFamily: FONTS.regular },
 
         // Pre-game modal
         preGameCard: {
@@ -112,8 +113,8 @@ export default function CheckersScreen({ navigation }: Props) {
           fontFamily: FONTS.gameHeader,
         },
         sectionLabel: {
-          fontSize: 13,
-          fontWeight: '600',
+          fontSize: 12,
+          fontFamily: FONTS.semiBold,
           color: colors.overlayText,
           marginBottom: 10,
           opacity: 0.8,
@@ -136,7 +137,7 @@ export default function CheckersScreen({ navigation }: Props) {
           borderColor: colors.accent,
         },
         colorPieceImg: { width: 60, height: 60, marginBottom: 6 },
-        colorLabel: { fontSize: 13, fontWeight: '600', color: colors.overlayText },
+        colorLabel: { fontSize: 12, fontFamily: FONTS.semiBold, color: colors.overlayText },
         pillsRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
@@ -155,15 +156,15 @@ export default function CheckersScreen({ navigation }: Props) {
           backgroundColor: colors.accent + '30',
           borderColor: colors.accent,
         },
-        pillText: { fontSize: 13, color: colors.textTertiary },
-        pillTextActive: { color: colors.accent, fontWeight: '600' },
+        pillText: { fontSize: 12, fontFamily: FONTS.regular, color: colors.textTertiary },
+        pillTextActive: { color: colors.accent, fontFamily: FONTS.semiBold },
         playButton: {
           backgroundColor: colors.accent,
           borderRadius: 12,
           paddingVertical: 14,
           alignItems: 'center',
         },
-        playButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
+        playButtonText: { color: '#FFFFFF', fontFamily: FONTS.bold, fontSize: 15 },
 
         // Active game
         gameHeader: {
@@ -172,7 +173,7 @@ export default function CheckersScreen({ navigation }: Props) {
           alignItems: 'center',
           paddingVertical: 8,
         },
-        gameHeaderText: { color: colors.overlayText, fontSize: 14 },
+        gameHeaderText: { color: colors.overlayText, fontSize: 13, fontFamily: FONTS.regular },
         pieceCountRow: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -182,7 +183,7 @@ export default function CheckersScreen({ navigation }: Props) {
           paddingHorizontal: 4,
         },
         pieceCountImg: { width: 18, height: 18 },
-        pieceCountText: { color: colors.overlayText, fontSize: 13, fontWeight: '600' },
+        pieceCountText: { color: colors.overlayText, fontSize: 12, fontFamily: FONTS.semiBold },
         pieceCountSep: { color: colors.overlayText, fontSize: 13, opacity: 0.4, marginHorizontal: 4 },
 
         // Board
@@ -226,7 +227,7 @@ export default function CheckersScreen({ navigation }: Props) {
           paddingVertical: 8,
           backgroundColor: colors.red + '30',
         },
-        resignText: { color: colors.red, fontSize: 13, fontWeight: '600' },
+        resignText: { color: colors.red, fontSize: 12, fontFamily: FONTS.semiBold },
 
         // Game over overlay
         overlayBackdrop: {
@@ -245,13 +246,14 @@ export default function CheckersScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         overlayTitle: {
-          fontSize: 24,
-          fontWeight: '800',
+          fontSize: 22,
+          fontFamily: FONTS.extraBold,
           color: colors.overlayText,
           marginBottom: 6,
         },
         overlaySubtitle: {
-          fontSize: 15,
+          fontSize: 14,
+          fontFamily: FONTS.regular,
           color: colors.overlayText,
           opacity: 0.8,
           marginBottom: 18,
@@ -273,7 +275,7 @@ export default function CheckersScreen({ navigation }: Props) {
               styles.colorButton,
               selectedColor === 'r' && styles.colorButtonSelected,
             ]}
-            onPress={() => { hapticLight(); setSelectedColor('r'); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); setSelectedColor('r'); }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Play as red (moves first)"
@@ -291,7 +293,7 @@ export default function CheckersScreen({ navigation }: Props) {
               styles.colorButton,
               selectedColor === 'b' && styles.colorButtonSelected,
             ]}
-            onPress={() => { hapticLight(); setSelectedColor('b'); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); setSelectedColor('b'); }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Play as black"
@@ -314,7 +316,7 @@ export default function CheckersScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={idx}
                 style={[styles.pill, active && styles.pillActive]}
-                onPress={() => { hapticLight(); setSelectedDifficulty(idx); }}
+                onPress={() => { hapticLight(); playGameSound('tap'); setSelectedDifficulty(idx); }}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={DIFFICULTY_LABELS[idx]}
@@ -334,6 +336,7 @@ export default function CheckersScreen({ navigation }: Props) {
           style={styles.playButton}
           onPress={() => {
             hapticLight();
+            playGameSound('tap');
             game.startGame(selectedColor, selectedDifficulty);
           }}
           activeOpacity={0.8}
@@ -466,7 +469,7 @@ export default function CheckersScreen({ navigation }: Props) {
         >
           {game.isAIThinking && (
             <Text
-              style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
+              style={{ color: '#FFFFFF', fontSize: 12, fontFamily: FONTS.semiBold }}
             >
               Thinking…
             </Text>
@@ -481,7 +484,11 @@ export default function CheckersScreen({ navigation }: Props) {
         <View style={styles.actionBar}>
           <TouchableOpacity
             style={styles.resignPill}
-            onPress={handleResignPress}
+            onPress={() => {
+              hapticLight();
+              playGameSound('tap');
+              handleResignPress();
+            }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Resign"
@@ -499,6 +506,7 @@ export default function CheckersScreen({ navigation }: Props) {
                 style={[styles.playButton, { alignSelf: 'stretch' }]}
                 onPress={() => {
                   hapticLight();
+                  playGameSound('tap');
                   game.newGame();
                 }}
                 activeOpacity={0.8}

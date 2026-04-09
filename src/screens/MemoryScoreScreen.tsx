@@ -14,8 +14,10 @@ import {
   type CompositeScore,
 } from '../services/memoryScore';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
@@ -720,7 +722,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
       {/* Reset All Scores */}
       <TouchableOpacity
         style={styles.resetAllBtn}
-        onPress={() => { hapticLight(); handleResetAll(); }}
+        onPress={() => { hapticLight(); playGameSound('tap'); handleResetAll(); }}
         activeOpacity={0.7}
       >
         <Text style={styles.resetAllBtnText}>Reset All Scores</Text>
@@ -761,8 +763,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       zIndex: 10,
     },
     title: {
-      fontSize: 28,
-      fontWeight: '800',
+      fontSize: 26,
+      fontFamily: FONTS.extraBold,
       color: colors.overlayText,
       textAlign: 'center',
       marginTop: 8,
@@ -789,14 +791,14 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       flex: 1,
     },
     summaryRank: {
-      fontSize: 18,
-      fontWeight: '700',
+      fontSize: 17,
+      fontFamily: FONTS.bold,
       color: colors.overlayText,
       lineHeight: 24,
     },
     summaryScore: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
       marginTop: 4,
     },
@@ -823,8 +825,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       marginRight: 8,
     },
     sectionTitle: {
-      fontSize: 18,
-      fontWeight: '700',
+      fontSize: 17,
+      fontFamily: FONTS.bold,
       color: colors.overlayText,
     },
 
@@ -862,12 +864,13 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       marginBottom: 8,
     },
     bigValue: {
-      fontSize: 40,
-      fontWeight: '800',
+      fontSize: 38,
+      fontFamily: FONTS.extraBold,
       color: colors.overlayText,
     },
     rankLabel: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: 'rgba(255,255,255,0.5)',
       marginTop: 2,
     },
@@ -898,12 +901,13 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       marginRight: 2,
     },
     statLabel: {
-      fontSize: 15,
+      fontSize: 14,
+      fontFamily: FONTS.regular,
       color: 'rgba(255,255,255,0.7)',
     },
     statValue: {
-      fontSize: 15,
-      fontWeight: '700',
+      fontSize: 14,
+      fontFamily: FONTS.bold,
       color: colors.overlayText,
     },
     divider: {
@@ -914,8 +918,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
 
     // Difficulty labels
     diffLabel: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
       marginTop: 4,
       marginBottom: 4,
@@ -923,7 +927,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
 
     // Not played
     notPlayed: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: 'rgba(255,255,255,0.5)',
       fontStyle: 'italic',
       paddingVertical: 6,
@@ -938,8 +943,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       alignItems: 'center',
     },
     sectionBtnText: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
     },
 
@@ -955,8 +960,8 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       borderColor: colors.red,
     },
     resetAllBtnText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.red,
     },
   });

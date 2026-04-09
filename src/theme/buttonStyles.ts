@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { ThemeColors } from './colors';
+import { FONTS } from './fonts';
 
 export function getButtonStyles(colors: ThemeColors) {
   return StyleSheet.create({
@@ -13,8 +14,8 @@ export function getButtonStyles(colors: ThemeColors) {
       justifyContent: 'center',
     },
     primaryText: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: '#FFFFFF',
     },
 
@@ -30,8 +31,8 @@ export function getButtonStyles(colors: ThemeColors) {
       borderColor: colors.accent,
     },
     secondaryText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
     },
 
@@ -47,8 +48,8 @@ export function getButtonStyles(colors: ThemeColors) {
       borderColor: colors.red,
     },
     destructiveText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.red,
     },
 
@@ -62,8 +63,8 @@ export function getButtonStyles(colors: ThemeColors) {
       justifyContent: 'center',
     },
     ghostText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
     },
 
@@ -77,8 +78,8 @@ export function getButtonStyles(colors: ThemeColors) {
       justifyContent: 'center',
     },
     primarySmallText: {
-      fontSize: 13,
-      fontWeight: '700',
+      fontSize: 12,
+      fontFamily: FONTS.bold,
       color: '#FFFFFF',
     },
 
@@ -93,8 +94,8 @@ export function getButtonStyles(colors: ThemeColors) {
       borderColor: colors.accent,
     },
     secondarySmallText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
     },
 
@@ -109,8 +110,8 @@ export function getButtonStyles(colors: ThemeColors) {
       borderColor: colors.red,
     },
     destructiveSmallText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
       color: colors.red,
     },
 
@@ -123,8 +124,8 @@ export function getButtonStyles(colors: ThemeColors) {
       justifyContent: 'center',
     },
     ghostSmallText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
     },
   });

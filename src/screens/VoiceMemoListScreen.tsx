@@ -279,7 +279,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       top: insets.top + 10,
     },
     title: {
-      fontSize: 28,
+      fontSize: 26,
       color: colors.textPrimary,
       fontFamily: FONTS.extraBold,
     },
@@ -298,7 +298,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     },
     filterToggleText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     filterDot: {
@@ -327,7 +327,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     },
     pillText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     pillTextActive: {
@@ -349,10 +349,11 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       marginBottom: 12,
     },
     emptyText: {
-      fontSize: 14,
+      fontSize: 13,
       color: colors.textTertiary,
       textAlign: 'center',
       lineHeight: 22,
+      fontFamily: FONTS.regular,
     },
     // Deleted item card (inline, not using VoiceMemoCard)
     card: {
@@ -385,8 +386,8 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       marginHorizontal: 12,
     },
     cardTitle: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
       opacity: 0.7,
     },
@@ -395,6 +396,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       color: colors.textTertiary,
       marginTop: 4,
       fontStyle: 'italic',
+      fontFamily: FONTS.regular,
     },
     cardActions: {
       flexDirection: 'row',
@@ -404,18 +406,17 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     fab: {
       position: 'absolute',
       bottom: 36 + insets.bottom,
-      right: 20,
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: colors.accent,
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      elevation: 8,
+      backgroundColor: colors.accent + '30',
       shadowColor: colors.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.4,
-      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.6,
+      shadowRadius: 12,
     },
   }), [colors, insets.bottom, insets.top]);
 
@@ -565,7 +566,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
           activeOpacity={0.8}
         >
-          <Image source={APP_ICONS.plus} style={{ width: 34, height: 34 }} resizeMode="contain" />
+          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast

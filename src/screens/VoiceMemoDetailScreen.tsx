@@ -14,6 +14,7 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { v4 as uuidv4 } from 'uuid';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
@@ -29,6 +30,7 @@ import { refreshWidgets } from '../widget/updateWidget';
 import APP_ICONS from '../data/appIconAssets';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import type { RootStackParamList } from '../navigation/types';
 import type { VoiceMemo } from '../types/voiceMemo';
 
@@ -393,21 +395,22 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           paddingTop: 40,
         },
         titleText: {
-          fontSize: 20,
-          fontWeight: '700',
+          fontSize: 18,
+          fontFamily: FONTS.bold,
           color: colors.textPrimary,
           paddingVertical: 8,
         },
         noteText: {
-          fontSize: 16,
+          fontSize: 15,
+          fontFamily: FONTS.regular,
           color: colors.textSecondary,
           paddingVertical: 8,
           marginTop: 8,
           lineHeight: 22,
         },
         titleInput: {
-          fontSize: 20,
-          fontWeight: '700',
+          fontSize: 18,
+          fontFamily: FONTS.bold,
           color: colors.textPrimary,
           paddingVertical: 8,
           paddingHorizontal: 0,
@@ -449,9 +452,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           marginTop: 8,
         },
         timeText: {
-          fontSize: 13,
+          fontSize: 12,
           color: colors.textTertiary,
-          fontWeight: '500',
+          fontFamily: FONTS.semiBold,
           fontVariant: ['tabular-nums'],
         },
         controlsRow: {
@@ -472,40 +475,17 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           alignItems: 'center',
         },
         skipText: {
-          fontSize: 14,
-          fontWeight: '700',
+          fontSize: 13,
+          fontFamily: FONTS.bold,
           color: colors.textSecondary,
         },
         playPauseBtn: {
           width: 64,
           height: 64,
           borderRadius: 32,
-          backgroundColor: '#4CAF50',
+          backgroundColor: 'transparent',
           justifyContent: 'center',
           alignItems: 'center',
-        },
-        playTriangle: {
-          width: 0,
-          height: 0,
-          borderLeftWidth: 16,
-          borderLeftColor: '#FFFFFF',
-          borderTopWidth: 11,
-          borderTopColor: 'transparent',
-          borderBottomWidth: 11,
-          borderBottomColor: 'transparent',
-          marginLeft: 4,
-        },
-        pauseBars: {
-          flexDirection: 'row',
-          gap: 4,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        pauseBar: {
-          width: 4,
-          height: 18,
-          backgroundColor: '#FFFFFF',
-          borderRadius: 1,
         },
         notFound: {
           flex: 1,
@@ -514,7 +494,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           paddingHorizontal: 32,
         },
         notFoundText: {
-          fontSize: 16,
+          fontSize: 15,
+          fontFamily: FONTS.regular,
           color: colors.textTertiary,
           textAlign: 'center',
         },
@@ -532,8 +513,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           alignItems: 'center',
         },
         saveBtnText: {
-          fontSize: 15,
-          fontWeight: '700',
+          fontSize: 14,
+          fontFamily: FONTS.bold,
           color: colors.background,
         },
         discardBtn: {
@@ -546,8 +527,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
         },
         discardBtnText: {
-          fontSize: 15,
-          fontWeight: '600',
+          fontSize: 14,
+          fontFamily: FONTS.semiBold,
           color: colors.textPrimary,
         },
       }),
@@ -655,7 +636,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 onPress={() => { hapticLight(); setIsViewMode(false); }}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.overlayText }}>Edit</Text>
+                <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>Edit</Text>
               </TouchableOpacity>
             ) : hasUnsavedChanges ? (
               <TouchableOpacity
@@ -663,7 +644,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 onPress={handleSaveExisting}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.overlayText }}>Save</Text>
+                <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>Save</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -764,12 +745,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               activeOpacity={0.7}
             >
               {playerStatus.playing ? (
-                <View style={styles.pauseBars}>
-                  <View style={styles.pauseBar} />
-                  <View style={styles.pauseBar} />
-                </View>
+                <GlowIcon source={MEDIA_ICONS.pause} size={32} glowColor="#4CAF50" />
               ) : (
-                <View style={styles.playTriangle} />
+                <GlowIcon source={MEDIA_ICONS.play} size={32} glowColor="#4CAF50" />
               )}
             </TouchableOpacity>
 

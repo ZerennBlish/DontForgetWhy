@@ -2,14 +2,14 @@
   "expo": {
     "name": "DontForgetWhy",
     "slug": "DontForgetWhy",
-    "version": "1.17.0",
+    "version": "1.18.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#121220"
     },
     "ios": {
       "supportsTablet": true
@@ -20,7 +20,7 @@
         "backgroundColor": "#121220"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 34,
+      "versionCode": 35,
       "package": "com.zerennblish.DontForgetWhy",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",

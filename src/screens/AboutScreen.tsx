@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
@@ -45,8 +46,8 @@ export default function AboutScreen({ navigation }: Props) {
       top: insets.top + 10,
     },
     headerTitle: {
-      fontSize: 28,
-      fontWeight: '800',
+      fontSize: 26,
+      fontFamily: FONTS.extraBold,
       color: colors.textPrimary,
     },
     content: {
@@ -81,19 +82,21 @@ export default function AboutScreen({ navigation }: Props) {
       fontSize: 40,
     },
     appName: {
-      fontSize: 24,
-      fontWeight: '800',
+      fontSize: 22,
+      fontFamily: FONTS.extraBold,
       color: colors.textPrimary,
       textAlign: 'center',
       marginBottom: 4,
     },
     version: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginBottom: 16,
     },
     tagline: {
-      fontSize: 15,
+      fontSize: 14,
+      fontFamily: FONTS.regular,
       color: colors.textSecondary,
       fontStyle: 'italic',
       textAlign: 'center',
@@ -102,26 +105,28 @@ export default function AboutScreen({ navigation }: Props) {
       marginBottom: 40,
     },
     sectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
+      fontSize: 12,
+      fontFamily: FONTS.bold,
       color: colors.textTertiary,
       textTransform: 'uppercase',
       letterSpacing: 1,
       marginBottom: 8,
     },
     primaryText: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       marginBottom: 2,
     },
     secondaryText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: colors.textSecondary,
       marginBottom: 24,
     },
     easterEgg: {
-      fontSize: 13,
+      fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.accent,
       fontStyle: 'italic',
       textAlign: 'center',

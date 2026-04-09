@@ -1,13 +1,13 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 18 (April 5, 2026)
+**Last updated:** Session 22 (April 8, 2026)
 
 ---
 
 ## 1. App Features — Current State
 
 ### Core Utility
-- **Home Screen** — app entry point (v1.9.0). 2×3 icon grid: Alarms (sectionAlarm), Reminders (sectionReminder), Calendar (sectionCalendar), Notepad (sectionNotepad), Voice (sectionVoice), Games (sectionGames). Section colors defined per theme. Quick Capture row: New Note, Record Memo, Set Timer (one-tap actions). Personality banner: 63 rotating sarcastic quotes across 7 sections (homeBannerQuotes.ts, section colors resolved via `bannerColorMap` from theme tokens). Today section: scrollable container showing today's alarms and reminders. Settings gear in title bar. All overlay text bgUri-aware (Session 13).
+- **Home Screen** — app entry point (v1.9.0). 2×3 icon grid: Alarms (sectionAlarm), Reminders (sectionReminder), Calendar (sectionCalendar), Notepad (sectionNotepad), Voice (sectionVoice), Games (sectionGames). Section colors defined per theme. Quick Capture row: Quick Note, Quick Record, Quick Timer (one-tap actions, no icons). Personality banner: 63 rotating sarcastic quotes across 7 sections (homeBannerQuotes.ts, section colors resolved via `bannerColorMap` from theme tokens). Today section: scrollable container showing today's alarms and reminders. Settings gear in title bar. All overlay text bgUri-aware (Session 13).
 - **Alarms** — standalone AlarmListScreen (AlarmsTab deleted and absorbed, Session 9). Reason field ("why"), 7 sound presets + custom system sounds (listed via native `AlarmChannelModule.getSystemAlarmSounds` using `RingtoneManager.TYPE_ALARM` — replaced third-party `react-native-notification-sounds` in v1.8.1), snooze (1/3/5/10/15 min), recurring (daily/weekly/monthly/yearly) + one-time, emoji icon from keyboard, per-alarm Guess Why toggle, private mode (completely blank card)
   - Notification action buttons: "Snooze" and "Dismiss" buttons on alarm notification banners for in-app dismissal without opening fire screen
 - **Reminders** — standalone ReminderScreen with own route (`Reminders`), header, background, nav (Session 9). Due dates, 5 recurring patterns (daily/weekly/monthly/yearly/one-time), 6-hour completion window, date-only mode, completion history, sound mode (sound/vibrate/silent), emoji icon
@@ -62,6 +62,10 @@
 - **Checkers** (Session 18) — vs CPU, 5 difficulty levels (Beginner through Expert), American rules (forced captures, promotion ends turn). Pure JS engine: minimax with alpha-beta, transposition table, killer moves, iterative deepening. No external deps. Checker piece PNGs (red, red-king, black, black-king) + weathered wood table background (WebP). Player picks color + difficulty. No blunder roasts, no take-back. Game state persists to SQLite. Memory Score: same point scale as chess.
 - **Memory Score** (now 7 games — Chess added Session 16, Checkers added Session 18. Max 140 points. Ranks from "Who Are You Again?" to "The One Who Remembers"). Header text-only (emoji stripped Session 12). Breakdown bars and detailed stat sections for all 7 games ordered: Guess Why, Daily Riddle, Chess, Checkers, Trivia, Sudoku, Memory Match.
 
+### Play Store Listing (Session 22)
+- 8 screenshots: Home, Alarms/Reminders/Calendar, Chess/Checkers/Memory, Notes, Timers, Settings, Widgets, Alarm Fire
+- Description updated with Chess, backup section, corrected theme count to 6
+
 ### Home Screen Widgets (4)
 - **Memory's Timeline (DetailedWidget):** Header "Memory's Timeline", two-column timers/alarms, reminder bars, nav capsules colored per section (sectionAlarm/sectionTimer/sectionReminder), footer "Don't Forget Why". Themed with section colors (Session 11).
 - **Forget Me Notes (NotepadWidget):** Header redesigned (Session 9): mic icon (RECORD_VOICE), "Voice" capsule (OPEN_VOICE_MEMOS, sectionVoice), centered title "Forget Me Notes" (OPEN_NOTES), "Notes" capsule (OPEN_NOTES, sectionNotepad), note icon (ADD_NOTE). Size increased from 180×180dp to 300×280dp. Mixed notes + voice memos with pinned-first sort (`isPinned` field), sliced to 4. VoiceMemoCell uses theme colors. Footer "Don't Forget Why". Deep-link click actions for notes, voice memos, and recording. Header capsules use section colors (Session 11).
@@ -87,6 +91,14 @@
 - Brand title: `colors.brandTitle` — per-theme title color on HomeScreen
 - SettingsScreen theme grid: 3×2 layout with centered justification
 - Migration from all old theme names (midnight→dark, frost→light, etc.)
+
+### Font System (Sessions 21-22)
+- Three-tier font system: Satisfy (app title "Don't Forget Why"), LilitaOne (game screen headers), Montserrat Alternates (everything else)
+- Phase 1 (Session 21, headers): Satisfy for app title, LilitaOne for game headers, Montserrat Alternates ExtraBold for core screen headers
+- Phase 2 (Session 22, body): Montserrat Alternates Regular/SemiBold/Bold/ExtraBold for all body text, labels, buttons, descriptions across 25 screens + 16 components + buttonStyles.ts
+- Font swap (Session 22): originally Nunito, changed to Montserrat Alternates for more premium feel
+- `fontWeight` replaced with `fontFamily` throughout — required for Android custom font rendering
+- Font size reduction pass applied after swap to compensate for wider letterforms
 
 ### Swipe-to-Delete (Session 10)
 - SwipeableRow component: swipe both directions (left or right) to reveal delete action

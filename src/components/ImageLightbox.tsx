@@ -1,4 +1,5 @@
 import React from 'react';
+import { FONTS } from '../theme/fonts';
 import {
   Text,
   StyleSheet,
@@ -59,6 +60,6 @@ const styles = StyleSheet.create({
   closeText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: FONTS.bold,
   },
 });

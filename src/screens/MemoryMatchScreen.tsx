@@ -18,6 +18,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import type { RootStackParamList } from '../navigation/types';
@@ -283,6 +284,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     const card = cardsRef.current[index];
     if (!card || card.isFlipped || card.isMatched) return;
     hapticMedium();
+    playGameSound('cardFlip');
 
     // Start timer on first card flip
     if (!timerStartedRef.current) {
@@ -331,6 +333,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             clearInterval(timerRef.current);
             timerRef.current = null;
           }
+          playGameSound('memoryWin');
 
           const diff = difficultyRef.current;
           const par = DIFFICULTY_CONFIG[diff].par;
@@ -446,7 +449,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           fontFamily: FONTS.gameHeader,
         },
         selectSubtitle: {
-          fontSize: 15,
+          fontSize: 13,
+          fontFamily: FONTS.regular,
           color: 'rgba(255,255,255,0.5)',
           marginTop: 6,
         },
@@ -461,21 +465,22 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         difficultyLabel: {
-          fontSize: 20,
-          fontWeight: '700',
+          fontSize: 18,
+          fontFamily: FONTS.bold,
           color: colors.overlayText,
           textAlign: 'center',
         },
         difficultyInfo: {
-          fontSize: 14,
+          fontSize: 13,
+          fontFamily: FONTS.regular,
           color: 'rgba(255,255,255,0.5)',
           marginTop: 4,
           textAlign: 'center',
         },
         bestScoreText: {
-          fontSize: 13,
+          fontSize: 12,
           color: colors.accent,
-          fontWeight: '600',
+          fontFamily: FONTS.semiBold,
           marginTop: 8,
         },
 
@@ -491,8 +496,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         gameDifficulty: {
-          fontSize: 16,
-          fontWeight: '700',
+          fontSize: 15,
+          fontFamily: FONTS.bold,
           color: colors.overlayText,
         },
         statsRow: {
@@ -502,8 +507,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           marginTop: 8,
         },
         statText: {
-          fontSize: 16,
-          fontWeight: '600',
+          fontSize: 15,
+          fontFamily: FONTS.semiBold,
           color: 'rgba(255,255,255,0.7)',
         },
         gridContainer: {
@@ -541,8 +546,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           top: insets.top + 10,
         },
         winTitle: {
-          fontSize: 28,
-          fontWeight: '800',
+          fontSize: 26,
+          fontFamily: FONTS.extraBold,
           color: colors.overlayText,
           marginBottom: 12,
         },
@@ -566,12 +571,13 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           paddingVertical: 8,
         },
         winStatLabel: {
-          fontSize: 15,
+          fontSize: 14,
+          fontFamily: FONTS.regular,
           color: colors.textSecondary,
         },
         winStatValue: {
-          fontSize: 15,
-          fontWeight: '700',
+          fontSize: 14,
+          fontFamily: FONTS.bold,
           color: colors.textPrimary,
         },
         winDivider: {
@@ -580,7 +586,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           marginVertical: 4,
         },
         winMessage: {
-          fontSize: 15,
+          fontSize: 14,
+          fontFamily: FONTS.regular,
           color: 'rgba(255,255,255,0.7)',
           fontStyle: 'italic',
           textAlign: 'center',
@@ -598,8 +605,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         playAgainText: {
-          fontSize: 16,
-          fontWeight: '700',
+          fontSize: 15,
+          fontFamily: FONTS.bold,
           color: colors.overlayText,
         },
         changeDifficultyBtn: {
@@ -611,8 +618,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         changeDifficultyText: {
-          fontSize: 16,
-          fontWeight: '600',
+          fontSize: 15,
+          fontFamily: FONTS.semiBold,
           color: colors.accent,
         },
       }),
@@ -645,7 +652,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
                 <TouchableOpacity
                   key={diff}
                   style={styles.difficultyBtn}
-                  onPress={() => { hapticLight(); startGame(diff); }}
+                  onPress={() => { hapticLight(); playGameSound('tap'); startGame(diff); }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.difficultyLabel}>{config.label}</Text>
@@ -732,7 +739,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
             <TouchableOpacity
               style={styles.playAgainBtn}
-              onPress={() => { hapticLight(); startGame(difficulty); }}
+              onPress={() => { hapticLight(); playGameSound('tap'); startGame(difficulty); }}
               activeOpacity={0.7}
             >
               <Text style={styles.playAgainText}>Play Again</Text>
@@ -740,7 +747,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
 
             <TouchableOpacity
               style={styles.changeDifficultyBtn}
-              onPress={() => { hapticLight(); setGamePhase('select'); }}
+              onPress={() => { hapticLight(); playGameSound('tap'); setGamePhase('select'); }}
               activeOpacity={0.7}
             >
               <Text style={styles.changeDifficultyText}>Change Difficulty</Text>

@@ -16,6 +16,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WEEKDAYS, WEEKENDS, ALL_DAYS } from '../types/alarm';
 import { useTheme } from '../theme/ThemeContext';
 import { getButtonStyles } from '../theme/buttonStyles';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import BackButton from '../components/BackButton';
@@ -132,8 +133,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       paddingBottom: 60 + insets.bottom,
     },
     heading: {
-      fontSize: 28,
-      fontWeight: '800',
+      fontSize: 26,
+      fontFamily: FONTS.extraBold,
       color: colors.textPrimary,
     },
     timeContainer: {
@@ -143,8 +144,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       marginBottom: 32,
     },
     hourInput: {
-      fontSize: 56,
-      fontWeight: '700',
+      fontSize: 54,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       backgroundColor: cardBg,
       borderRadius: 16,
@@ -155,14 +156,14 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       borderColor: colors.border,
     },
     timeColon: {
-      fontSize: 56,
-      fontWeight: '700',
+      fontSize: 54,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       marginHorizontal: 4,
     },
     minuteInput: {
-      fontSize: 56,
-      fontWeight: '700',
+      fontSize: 54,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       backgroundColor: cardBg,
       borderRadius: 16,
@@ -190,8 +191,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       borderColor: colors.accent,
     },
     ampmText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     ampmTextActive: {
@@ -209,18 +210,19 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       alignSelf: 'center',
     },
     timeDisplayText: {
-      fontSize: 48,
-      fontWeight: '700',
+      fontSize: 46,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     timeDisplayHint: {
       fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 4,
     },
     timeDisplayInput: {
-      fontSize: 48,
-      fontWeight: '700',
+      fontSize: 46,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       textAlign: 'center',
       minWidth: 60,
@@ -242,8 +244,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       borderColor: colors.border,
     },
     timeModalTitle: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 18,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       textAlign: 'center',
     },
@@ -253,8 +255,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       marginTop: 8,
     },
     label: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
       marginBottom: 10,
     },
@@ -278,8 +280,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       backgroundColor: colors.accent,
     },
     modeBtnText: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     modeBtnTextActive: {
@@ -298,8 +300,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       marginBottom: 8,
     },
     setDateText: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
     },
     setDateChevron: {
@@ -328,8 +330,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       color: colors.accent,
     },
     calTitle: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     calWeekRow: {
@@ -340,7 +342,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       flex: 1,
       textAlign: 'center',
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     calGrid: {
@@ -364,7 +366,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       backgroundColor: colors.accent,
     },
     calDayText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: colors.textPrimary,
     },
     calDayTextDisabled: {
@@ -373,14 +376,14 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     },
     calDayTextSelected: {
       color: colors.textPrimary,
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
     },
     selectedDateText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
       textAlign: 'center',
       marginBottom: 24,
-      fontWeight: '600',
     },
     textInput: {
       backgroundColor: cardBg,
@@ -394,6 +397,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     },
     charCount: {
       fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       textAlign: 'right',
       marginTop: 4,
@@ -461,8 +465,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       marginBottom: 24,
     },
     toggleLabel: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
       flex: 1,
       marginRight: 12,
@@ -788,7 +792,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 style={[styles.quickEmojiBtn, { borderColor: colors.red + '40' }]}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 14, color: colors.red, fontWeight: '600' }}>{'\u2715'}</Text>
+                <Text style={{ fontSize: 13, color: colors.red, fontFamily: FONTS.semiBold }}>{'\u2715'}</Text>
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
@@ -822,9 +826,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             thumbColor={form.selectedPrivate ? colors.textPrimary : colors.textTertiary}
           />
         </View>
-        <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: -22, marginBottom: form.selectedPrivate ? 2 : 20, paddingLeft: 16 }}>Hides text and details from the reminder list</Text>
+        <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textTertiary, marginTop: -22, marginBottom: form.selectedPrivate ? 2 : 20, paddingLeft: 16 }}>Hides text and details from the reminder list</Text>
         {form.selectedPrivate && (
-          <Text style={{ fontSize: 10, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{form.privateHint}</Text>
+          <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{form.privateHint}</Text>
         )}
 
 

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { getButtonStyles } from '../theme/buttonStyles';
 import { formatDeletedAgo } from '../utils/time';
 import type { Note } from '../types/note';
@@ -50,13 +51,14 @@ function DeletedNoteCard({ note, onRestore, onPermanentDelete }: DeletedNoteCard
       marginHorizontal: 12,
     },
     cardTitle: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
       opacity: 0.7,
     },
     deletedAgo: {
       fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 4,
       fontStyle: 'italic',

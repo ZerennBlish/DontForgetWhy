@@ -367,15 +367,16 @@ export default function ReminderScreen({ navigation }: Props) {
       top: insets.top + 10,
     },
     screenTitle: {
-      fontSize: 22,
+      fontSize: 20,
       color: colors.textPrimary,
       marginBottom: 8,
       fontFamily: FONTS.extraBold,
     },
     subtitleText: {
-      fontSize: 13,
+      fontSize: 12,
       color: colors.textTertiary,
       paddingHorizontal: 2,
+      fontFamily: FONTS.regular,
     },
     list: {
       paddingHorizontal: 16,
@@ -388,23 +389,25 @@ export default function ReminderScreen({ navigation }: Props) {
       paddingBottom: 80 + insets.bottom,
     },
     emptyText: {
-      fontSize: 20,
-      fontWeight: '600',
+      fontSize: 18,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     emptySubtext: {
-      fontSize: 14,
+      fontSize: 13,
       color: colors.textTertiary,
       marginTop: 6,
+      fontFamily: FONTS.regular,
     },
     quoteText: {
-      fontSize: 13,
+      fontSize: 12,
       color: colors.textSecondary,
       fontStyle: 'italic',
       opacity: 0.7,
       textAlign: 'center',
       paddingHorizontal: 20,
       marginBottom: 4,
+      fontFamily: FONTS.regular,
     },
     card: {
       backgroundColor: colors.mode === 'dark' ? colors.sectionReminder + '20' : colors.sectionReminder + '15',
@@ -467,8 +470,8 @@ export default function ReminderScreen({ navigation }: Props) {
       marginRight: 12,
     },
     reminderText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
     },
     reminderTextDone: {
@@ -476,14 +479,14 @@ export default function ReminderScreen({ navigation }: Props) {
       color: colors.textTertiary,
     },
     privateText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
       fontStyle: 'italic',
     },
     reminderSecondaryText: {
-      fontSize: 13,
-      fontWeight: '400',
+      fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -494,12 +497,13 @@ export default function ReminderScreen({ navigation }: Props) {
       gap: 6,
     },
     dueText: {
-      fontSize: 13,
+      fontSize: 12,
       color: colors.textTertiary,
+      fontFamily: FONTS.regular,
     },
     dueOverdue: {
       color: colors.red,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
     },
     pinDot: {
       width: 6,
@@ -529,24 +533,23 @@ export default function ReminderScreen({ navigation }: Props) {
     },
     pinBtnText: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     fab: {
       position: 'absolute',
       bottom: 36 + insets.bottom,
       right: 24,
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: colors.accent,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      elevation: 8,
+      backgroundColor: colors.accent + '30',
       shadowColor: colors.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.4,
-      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.6,
+      shadowRadius: 12,
     },
     sortFilterRow: {
       flexDirection: 'row',
@@ -569,7 +572,7 @@ export default function ReminderScreen({ navigation }: Props) {
     },
     pillText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     pillTextActive: {
@@ -577,7 +580,7 @@ export default function ReminderScreen({ navigation }: Props) {
     },
     sortFilterLabel: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
       paddingHorizontal: 16,
       paddingTop: 8,
@@ -598,7 +601,7 @@ export default function ReminderScreen({ navigation }: Props) {
     },
     sortFilterToggleText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     sortFilterDot: {
@@ -612,6 +615,7 @@ export default function ReminderScreen({ navigation }: Props) {
       color: colors.textTertiary,
       marginTop: 4,
       fontStyle: 'italic',
+      fontFamily: FONTS.regular,
     },
     clearBtn: {
       paddingHorizontal: 12,
@@ -623,13 +627,14 @@ export default function ReminderScreen({ navigation }: Props) {
     },
     clearHistoryText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: '#EF4444',
     },
     historyText: {
       fontSize: 12,
       color: colors.textTertiary,
       marginTop: 4,
+      fontFamily: FONTS.regular,
     },
   }), [colors, insets.bottom]);
 
@@ -941,7 +946,7 @@ export default function ReminderScreen({ navigation }: Props) {
         accessibilityLabel="Create new reminder"
         accessibilityRole="button"
       >
-        <Image source={APP_ICONS.plus} style={{ width: 34, height: 34 }} resizeMode="contain" />
+        <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </TouchableOpacity>
 
       <UndoToast

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import { hapticLight } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 import { ChevronRightIcon } from '../components/Icons';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -71,7 +72,8 @@ export default function GamesScreen({ navigation }: Props) {
           fontFamily: FONTS.gameHeader,
         },
         subtitle: {
-          fontSize: 15,
+          fontSize: 14,
+          fontFamily: FONTS.regular,
           color: 'rgba(255,255,255,0.75)',
           marginTop: 6,
           fontStyle: 'italic',
@@ -104,16 +106,17 @@ export default function GamesScreen({ navigation }: Props) {
           fontFamily: FONTS.gameHeader,
         },
         gameDesc: {
-          fontSize: 14,
+          fontSize: 13,
+          fontFamily: FONTS.regular,
           color: colors.textSecondary,
           marginTop: 4,
           lineHeight: 20,
           textAlign: 'center',
         },
         streakText: {
-          fontSize: 13,
+          fontSize: 12,
           color: colors.orange,
-          fontWeight: '700',
+          fontFamily: FONTS.bold,
         },
       }),
     [colors, insets.bottom],
@@ -138,7 +141,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Daily Riddle */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); navigation.navigate('DailyRiddle'); }}
+        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('DailyRiddle'); }}
         activeOpacity={0.7}
         accessibilityLabel="Daily Riddle"
         accessibilityRole="button"
@@ -166,7 +169,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Chess */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); navigation.navigate('Chess'); }}
+        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Chess'); }}
         activeOpacity={0.7}
         accessibilityLabel="Chess, play against CPU"
         accessibilityRole="button"
@@ -186,7 +189,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Checkers */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); navigation.navigate('Checkers'); }}
+        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Checkers'); }}
         activeOpacity={0.7}
         accessibilityLabel="Checkers, play against CPU"
         accessibilityRole="button"
@@ -206,7 +209,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Trivia */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); navigation.navigate('Trivia'); }}
+        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Trivia'); }}
         activeOpacity={0.7}
         accessibilityLabel="Trivia"
         accessibilityRole="button"
@@ -228,7 +231,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Sudoku */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); navigation.navigate('Sudoku'); }}
+        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Sudoku'); }}
         activeOpacity={0.7}
         accessibilityLabel="Sudoku"
         accessibilityRole="button"
@@ -248,7 +251,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Memory Guy Match */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); navigation.navigate('MemoryMatch'); }}
+        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('MemoryMatch'); }}
         activeOpacity={0.7}
         accessibilityLabel="Memory Guy Match"
         accessibilityRole="button"
@@ -268,7 +271,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Trophies */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); navigation.navigate('MemoryScore'); }}
+        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('MemoryScore'); }}
         activeOpacity={0.7}
         accessibilityLabel="Trophies"
         accessibilityRole="button"

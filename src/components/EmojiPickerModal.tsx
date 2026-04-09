@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { emojiCategories, EmojiItem } from '../data/emojiData';
 
@@ -60,8 +61,8 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
       paddingBottom: 12,
     },
     title: {
-      fontSize: 18,
-      fontWeight: '700',
+      fontSize: 17,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     closeBtn: {
@@ -75,7 +76,7 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
     closeBtnText: {
       fontSize: 16,
       color: colors.textTertiary,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
     },
     tabBar: {
       flexDirection: 'row',
@@ -104,7 +105,7 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
     },
     tabLabel: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     tabLabelActive: {
@@ -127,6 +128,7 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
     },
     emojiLabel: {
       fontSize: 9,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 2,
     },

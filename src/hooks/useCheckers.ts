@@ -19,6 +19,7 @@ import {
 } from '../services/checkersStorage';
 import { recordCheckersResult } from '../services/memoryScore';
 import { hapticLight } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 
 const AI_DELAY_MS = 400;
 
@@ -140,10 +141,9 @@ export function useCheckers(): UseCheckersReturn {
     setWinner(status === 'red_wins' ? 'r' : 'b');
     void clearCheckersGame();
     const win = status === 'red_wins' ? 'r' : 'b';
-    void recordCheckersResult(
-      win === playerColorRef.current ? 'win' : 'loss',
-      difficultyRef.current,
-    );
+    const outcome = win === playerColorRef.current ? 'win' : 'loss';
+    playGameSound(outcome === 'win' ? 'gameWin' : 'gameLoss');
+    void recordCheckersResult(outcome, difficultyRef.current);
     return true;
   }, []);
 
@@ -184,6 +184,9 @@ export function useCheckers(): UseCheckersReturn {
         console.log('Checkers AI move took:', Date.now() - t0, 'ms');
         if (aiMove) {
           boardRef.current = applyMove(b2, aiMove);
+          if (aiMove.captured.length > 0) playGameSound('capture');
+          else if (aiMove.crowned) playGameSound('promote');
+          else playGameSound('checkersMove');
           const nextTurn: PieceColor = aiTurn === 'r' ? 'b' : 'r';
           setTurn(nextTurn);
           setMoveCount(moveCountRef.current + 1);
@@ -203,6 +206,9 @@ export function useCheckers(): UseCheckersReturn {
       const b = boardRef.current;
       if (!b) return;
       boardRef.current = applyMove(b, move);
+      if (move.captured.length > 0) playGameSound('capture');
+      else if (move.crowned) playGameSound('promote');
+      else playGameSound('checkersMove');
       const nextTurn: PieceColor = turnRef.current === 'r' ? 'b' : 'r';
       setTurn(nextTurn);
       setMoveCount(moveCountRef.current + 1);
@@ -282,6 +288,7 @@ export function useCheckers(): UseCheckersReturn {
     setIsAIThinking(false);
     setGameResult('resigned');
     setWinner(playerColorRef.current === 'r' ? 'b' : 'r');
+    playGameSound('gameLoss');
     void clearCheckersGame();
     void recordCheckersResult('loss', difficultyRef.current);
   }, [gameResult, clearTimers]);

@@ -14,6 +14,7 @@ import APP_ICONS from '../data/appIconAssets';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { hapticLight } from '../utils/haptics';
+import { FONTS } from '../theme/fonts';
 
 interface ShareNoteModalProps {
   visible: boolean;
@@ -60,8 +61,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontFamily: FONTS.bold,
     color: '#FFFFFF',
     marginBottom: 16,
     textAlign: 'center',
@@ -75,8 +76,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   optionText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 15,
+    fontFamily: FONTS.semiBold,
     color: '#FFFFFF',
   },
   cancelBtn: {
@@ -87,8 +88,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: FONTS.semiBold,
     color: 'rgba(255, 255, 255, 0.5)',
   },
 });

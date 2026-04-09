@@ -12,23 +12,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Linking,
   Image,
   AppState,
-  type StyleProp,
-  type TextStyle,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAudioRecorder, useAudioRecorderState, useAudioPlayer, useAudioPlayerStatus, requestRecordingPermissionsAsync, RecordingPresets } from 'expo-audio';
 import { deleteVoiceMemo } from '../services/noteVoiceMemoStorage';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { getTextColor } from '../utils/noteColors';
 import { NOTE_COLORS, NOTE_FONT_COLORS } from '../types/note';
 import type { Note } from '../types/note';
-import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
-import type { ColorFormatsObject } from 'reanimated-color-picker';
 import BackButton from './BackButton';
 import APP_ICONS from '../data/appIconAssets';
 import { useNavigation } from '@react-navigation/native';
@@ -36,200 +32,13 @@ import DrawingCanvas from './DrawingCanvas';
 import type { StrokeData } from './DrawingCanvas';
 import ShareNoteModal from './ShareNoteModal';
 import ImageLightbox from './ImageLightbox';
-import { getButtonStyles } from '../theme/buttonStyles';
 import { loadDrawingData } from '../services/noteImageStorage';
 import { EDITOR_PLACEHOLDERS } from '../data/placeholders';
+import { renderLinkedText } from '../utils/linkedText';
+import { RecordingControls, MemoCard, voiceMemoStyles } from './NoteVoiceMemo';
+import ColorPickerModal from './ColorPickerModal';
 
 const MAX_NOTE_LENGTH = 999;
-
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-const voiceMemoStyles = StyleSheet.create({
-  recordingControls: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  recordingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  recordingBtnRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  pauseBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stopBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FF3B30',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playTriangle: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderLeftColor: '#FFFFFF',
-    borderTopWidth: 7,
-    borderTopColor: 'transparent',
-    borderBottomWidth: 7,
-    borderBottomColor: 'transparent',
-    marginLeft: 2,
-  },
-  pauseBars: {
-    flexDirection: 'row',
-    gap: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pauseBar: {
-    width: 3,
-    height: 14,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-  },
-  stopSquare: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
-    backgroundColor: '#FFFFFF',
-  },
-  recordingText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FF4444',
-  },
-  memoRow: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 8,
-  },
-  memoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(20, 20, 30, 0.85)',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    gap: 10,
-  },
-  memoPlayBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  memoProgress: {
-    flex: 1,
-    gap: 4,
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  memoTime: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontWeight: '500',
-  },
-  memoDeleteBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  memoDeleteText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontWeight: '700',
-  },
-});
-
-const LINK_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)|([\w.-]+@[\w.-]+\.\w{2,})|((\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
-
-function renderLinkedText(
-  text: string,
-  baseStyle: StyleProp<TextStyle>,
-  linkColor: string,
-): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match;
-  const regex = new RegExp(LINK_REGEX.source, 'g');
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(
-        <Text key={`t-${lastIndex}`} style={baseStyle}>
-          {text.substring(lastIndex, match.index)}
-        </Text>,
-      );
-    }
-
-    let matched = match[0];
-    let url: string;
-    if (match[1]) {
-      const trimmed = matched.replace(/[.,!?)\]]+$/, '');
-      if (trimmed.length < matched.length) {
-        regex.lastIndex -= matched.length - trimmed.length;
-        matched = trimmed;
-      }
-      url = /^https?:\/\//i.test(matched) ? matched : `https://${matched}`;
-    } else if (match[2]) {
-      url = `mailto:${matched}`;
-    } else {
-      url = `tel:${matched.replace(/[^\d+]/g, '')}`;
-    }
-
-    parts.push(
-      <Text
-        key={`l-${match.index}`}
-        style={[baseStyle, { color: linkColor, textDecorationLine: 'underline' as const }]}
-        onPress={() => Linking.openURL(url).catch(() => {})}
-      >
-        {matched}
-      </Text>,
-    );
-    lastIndex = regex.lastIndex;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(
-      <Text key={`t-${lastIndex}`} style={baseStyle}>
-        {text.substring(lastIndex)}
-      </Text>,
-    );
-  }
-
-  return parts.length > 0 ? parts : [<Text key="full" style={baseStyle}>{text}</Text>];
-}
 
 interface NoteEditorModalProps {
   visible: boolean;
@@ -256,7 +65,6 @@ export default function NoteEditorModal({
 }: NoteEditorModalProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const btn = getButtonStyles(colors);
   const navigation = useNavigation<any>();
 
   const [editorText, setEditorText] = useState('');
@@ -667,6 +475,7 @@ export default function NoteEditorModal({
     },
     charCount: {
       fontSize: 11,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       textAlign: 'right',
       paddingHorizontal: 20,
@@ -682,8 +491,8 @@ export default function NoteEditorModal({
       maxHeight: 280,
     },
     pickerTitle: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
       marginBottom: 10,
     },
@@ -706,7 +515,7 @@ export default function NoteEditorModal({
     colorCheck: {
       fontSize: 16,
       color: '#FFFFFF',
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
     },
     fontColorRow: {
       flexDirection: 'row',
@@ -727,42 +536,12 @@ export default function NoteEditorModal({
     },
     fontColorCheck: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
     },
     pickerRowLabel: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
       marginBottom: 6,
-    },
-    cpOverlay: {
-      flex: 1,
-      backgroundColor: colors.modalOverlay,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 24,
-    },
-    cpCard: {
-      backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 24,
-      width: '100%',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    cpTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.textPrimary,
-      textAlign: 'center',
-      marginBottom: 20,
-    },
-    cpWrapper: {
-      gap: 16,
-    },
-    cpBtns: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 20,
     },
     dropdownMenu: {
       position: 'absolute',
@@ -794,8 +573,8 @@ export default function NoteEditorModal({
       borderRadius: 9,
     },
     dropdownText: {
-      fontSize: 15,
-      fontWeight: '500',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
     },
     thumbnailRow: {
@@ -827,7 +606,7 @@ export default function NoteEditorModal({
     thumbnailRemoveText: {
       color: '#FFFFFF',
       fontSize: 10,
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
     },
   }), [colors, insets.top, insets.bottom]);
 
@@ -872,7 +651,7 @@ export default function NoteEditorModal({
                     onPress={() => { hapticLight(); setIsViewMode(false); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Edit</Text>
+                    <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: '#FFFFFF' }}>Edit</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.topBarRight}>
@@ -928,7 +707,7 @@ export default function NoteEditorModal({
                       onPress={handleSave}
                       activeOpacity={0.7}
                     >
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Save</Text>
+                      <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: '#FFFFFF' }}>Save</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -1037,29 +816,12 @@ export default function NoteEditorModal({
           <View style={styles.topBarContentPad} />
 
           {isRecording && (
-            <View style={voiceMemoStyles.recordingControls}>
-              <View style={voiceMemoStyles.recordingInfo}>
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isPaused ? '#FFA500' : '#FF4444' }} />
-                <Text style={voiceMemoStyles.recordingText}>
-                  {isPaused ? 'Paused' : 'Recording'} {formatDuration((recorderState.durationMillis ?? 0) / 1000)}
-                </Text>
-              </View>
-              <View style={voiceMemoStyles.recordingBtnRow}>
-                <TouchableOpacity onPress={handlePauseToggle} style={voiceMemoStyles.pauseBtn} activeOpacity={0.7}>
-                  {isPaused ? (
-                    <View style={voiceMemoStyles.playTriangle} />
-                  ) : (
-                    <View style={voiceMemoStyles.pauseBars}>
-                      <View style={voiceMemoStyles.pauseBar} />
-                      <View style={voiceMemoStyles.pauseBar} />
-                    </View>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleMicPress} style={voiceMemoStyles.stopBtn} activeOpacity={0.7}>
-                  <View style={voiceMemoStyles.stopSquare} />
-                </TouchableOpacity>
-              </View>
-            </View>
+            <RecordingControls
+              isPaused={isPaused}
+              durationMillis={recorderState.durationMillis ?? 0}
+              onPauseToggle={handlePauseToggle}
+              onStop={handleMicPress}
+            />
           )}
 
           {/* Hero text area */}
@@ -1144,57 +906,27 @@ export default function NoteEditorModal({
             <View style={[voiceMemoStyles.memoRow, { paddingBottom: 8 + insets.bottom }]}>
               {editorVoiceMemos.map((memoUri, idx) => {
                 const isActive = activePlayerUri === memoUri;
-                const isThisPlaying = isActive && playerStatus.playing;
-                const currentTime = isActive ? playerStatus.currentTime : 0;
-                const duration = isActive && playerStatus.duration > 0 ? playerStatus.duration : 0;
-                const progress = duration > 0 ? currentTime / duration : 0;
                 return (
-                  <View key={`memo-${idx}`} style={voiceMemoStyles.memoCard}>
-                    <TouchableOpacity
-                      style={voiceMemoStyles.memoPlayBtn}
-                      onPress={() => handlePlayMemo(memoUri)}
-                      activeOpacity={0.7}
-                    >
-                      {isThisPlaying ? (
-                        <View style={{ flexDirection: 'row', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
-                          <View style={{ width: 3, height: 12, backgroundColor: '#FFFFFF', borderRadius: 1 }} />
-                          <View style={{ width: 3, height: 12, backgroundColor: '#FFFFFF', borderRadius: 1 }} />
-                        </View>
-                      ) : (
-                        <View style={{ width: 0, height: 0, borderLeftWidth: 9, borderLeftColor: '#FFFFFF', borderTopWidth: 6, borderTopColor: 'transparent', borderBottomWidth: 6, borderBottomColor: 'transparent', marginLeft: 2 }} />
-                      )}
-                    </TouchableOpacity>
-                    <View style={voiceMemoStyles.memoProgress}>
-                      <View
-                        style={voiceMemoStyles.progressTrack}
-                        onLayout={(e) => { progressBarWidthRef.current = e.nativeEvent.layout.width; }}
-                        onStartShouldSetResponder={() => isActive && duration > 0}
-                        onResponderGrant={(e) => handleSeek(e, duration)}
-                        onResponderMove={(e) => handleSeek(e, duration)}
-                      >
-                        <View style={[voiceMemoStyles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.accent }]} />
-                      </View>
-                      <Text style={voiceMemoStyles.memoTime}>
-                        {formatDuration(currentTime)} / {formatDuration(duration)}
-                      </Text>
-                    </View>
-                    {!isViewMode && (
-                      <TouchableOpacity
-                        style={voiceMemoStyles.memoDeleteBtn}
-                        onPress={() => {
-                          hapticLight();
-                          if (isActive) {
-                            try { player.pause(); } catch { /* */ }
-                            setActivePlayerUri(null);
-                          }
-                          setEditorVoiceMemos(prev => prev.filter((_, i) => i !== idx));
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={voiceMemoStyles.memoDeleteText}>{'\u2715'}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  <MemoCard
+                    key={`memo-${idx}`}
+                    isActive={isActive}
+                    isPlaying={isActive && playerStatus.playing}
+                    currentTime={isActive ? playerStatus.currentTime : 0}
+                    duration={isActive && playerStatus.duration > 0 ? playerStatus.duration : 0}
+                    accentColor={colors.accent}
+                    isViewMode={isViewMode}
+                    onPlay={() => handlePlayMemo(memoUri)}
+                    onSeek={(e, dur) => handleSeek(e, dur)}
+                    onDelete={() => {
+                      hapticLight();
+                      if (activePlayerUri === memoUri) {
+                        try { player.pause(); } catch { /* */ }
+                        setActivePlayerUri(null);
+                      }
+                      setEditorVoiceMemos(prev => prev.filter((_, i) => i !== idx));
+                    }}
+                    onProgressLayout={(w) => { progressBarWidthRef.current = w; }}
+                  />
                 );
               })}
             </View>
@@ -1348,87 +1080,29 @@ export default function NoteEditorModal({
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Custom BG Color Picker Modal */}
-      <Modal transparent visible={showBgPicker} animationType="fade">
-        <View style={styles.cpOverlay}>
-          <View style={styles.cpCard}>
-            <Text style={styles.cpTitle}>Pick Background Color</Text>
-            <ColorPicker
-              value={pickedBgRef.current}
-              onCompleteJS={(result: ColorFormatsObject) => { pickedBgRef.current = result.hex; }}
-            >
-              <View style={styles.cpWrapper}>
-                <Preview hideInitialColor />
-                <Panel1 />
-                <HueSlider />
-              </View>
-            </ColorPicker>
-            <View style={styles.cpBtns}>
-              <TouchableOpacity
-                onPress={() => { hapticLight(); setShowBgPicker(false); }}
-                style={[btn.secondary, { flex: 1 }]}
-                activeOpacity={0.7}
-              >
-                <Text style={btn.secondaryText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  hapticMedium();
-                  const hex = pickedBgRef.current;
-                  onCustomBgColorChange(hex);
-                  setEditorColor(hex);
-                  setShowBgPicker(false);
-                }}
-                style={[btn.primary, { flex: 1 }]}
-                activeOpacity={0.7}
-              >
-                <Text style={btn.primaryText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <ColorPickerModal
+        visible={showBgPicker}
+        title="Pick Background Color"
+        initialColor={pickedBgRef.current}
+        onApply={(hex) => {
+          onCustomBgColorChange(hex);
+          setEditorColor(hex);
+          setShowBgPicker(false);
+        }}
+        onCancel={() => setShowBgPicker(false)}
+      />
 
-      {/* Custom Font Color Picker Modal */}
-      <Modal transparent visible={showFontPicker} animationType="fade">
-        <View style={styles.cpOverlay}>
-          <View style={styles.cpCard}>
-            <Text style={styles.cpTitle}>Pick Text Color</Text>
-            <ColorPicker
-              value={pickedFontRef.current}
-              onCompleteJS={(result: ColorFormatsObject) => { pickedFontRef.current = result.hex; }}
-            >
-              <View style={styles.cpWrapper}>
-                <Preview hideInitialColor />
-                <Panel1 />
-                <HueSlider />
-              </View>
-            </ColorPicker>
-            <View style={styles.cpBtns}>
-              <TouchableOpacity
-                onPress={() => { hapticLight(); setShowFontPicker(false); }}
-                style={[btn.secondary, { flex: 1 }]}
-                activeOpacity={0.7}
-              >
-                <Text style={btn.secondaryText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  hapticMedium();
-                  const hex = pickedFontRef.current;
-                  onCustomFontColorChange(hex);
-                  setEditorFontColor(hex);
-                  setShowFontPicker(false);
-                }}
-                style={[btn.primary, { flex: 1 }]}
-                activeOpacity={0.7}
-              >
-                <Text style={btn.primaryText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <ColorPickerModal
+        visible={showFontPicker}
+        title="Pick Text Color"
+        initialColor={pickedFontRef.current}
+        onApply={(hex) => {
+          onCustomFontColorChange(hex);
+          setEditorFontColor(hex);
+          setShowFontPicker(false);
+        }}
+        onCancel={() => setShowFontPicker(false)}
+      />
 
       {/* Image Lightbox */}
       <ImageLightbox

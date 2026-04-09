@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { getButtonStyles } from '../theme/buttonStyles';
 import { formatTime, formatDeletedAgo } from '../utils/time';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
@@ -38,18 +39,20 @@ function DeletedAlarmCard({ alarm, timeFormat, onRestore, onPermanentDelete }: D
     },
     left: { flex: 1, marginRight: 12 },
     time: {
-      fontSize: 24,
-      fontWeight: '700',
+      fontSize: 22,
+      fontFamily: FONTS.bold,
       color: colors.textTertiary,
       letterSpacing: -1,
     },
     detail: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 4,
     },
     deletedAgo: {
       fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 4,
       fontStyle: 'italic',

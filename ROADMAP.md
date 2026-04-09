@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 21 (April 7, 2026)
+### Source of Truth · Updated: Session 22 (April 8, 2026)
 
 ---
 
@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.16.0 (versionCode 33) — Chess overhaul + custom fonts + art refresh |
+| **Current Version** | v1.17.0 (versionCode 34) — Montserrat Alternates font rollout + hook extractions + audit fixes |
 | **Branch** | `dev` |
 | **Production Status** | v1.16.0 submitted to Google Play |
-| **Current Focus** | Session 21: Chess features (review mode, check indication, training mode, haptic tiers), custom fonts (Satisfy/Lilita One/Nunito), calendar empty state art, chess piece art, plus icon sizing, color picker alignment. Production build v1.16.0. |
+| **Current Focus** | Session 22: Phase 2 font rollout (Montserrat Alternates to all body text), hook extractions (useSudoku, useTimerScreen, useDailyRiddle, useSettings), NoteEditorModal cleanup (linkedText, NoteVoiceMemo, ColorPickerModal), font swap Nunito→Montserrat Alternates, font size adjustment, Quick Capture rename, splash dark bg, Play Store refresh, dual audit (11 fixes). |
 | **Blocked By** | Nothing |
-| **Next Action** | Play Store listing refresh (screenshots, description), Sound FX pass, Phase 2 font rollout (Nunito to all body text). |
+| **Next Action** | Sound FX pass (Universal Sound FX library), splash screen icon replacement (needs build), P5.5 Premium Foundation (expo-iap, entitlement system, ProGate). |
 | **EAS Credits** | ~27 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — 68 clips shipped |
@@ -222,7 +222,7 @@
 
 **Shipped in:** v1.16.0 (versionCode 33)
 **Branch:** `dev`
-**New deps:** `expo-font`, `expo-splash-screen`, `@expo-google-fonts/satisfy`, `@expo-google-fonts/lilita-one`, `@expo-google-fonts/nunito`
+**New deps:** `expo-font`, `expo-splash-screen`, `@expo-google-fonts/satisfy`, `@expo-google-fonts/lilita-one`
 **Build cost:** 1 production build
 
 ### Chess Features
@@ -245,13 +245,47 @@
 - [x] Lilita One — game screen headers (GamesScreen, Chess, Checkers, Sudoku, Trivia, MemoryMatch, GuessWhy, DailyRiddle)
 - [x] Nunito — core screen headers (AlarmList, Reminders, Timer, Notes, VoiceMemos, Calendar, Settings)
 - [x] Font loading with expo-font + expo-splash-screen, error fallback to system fonts
-- [ ] Phase 2: Nunito to all body text, labels, buttons (deferred)
+- [x] Phase 2: Montserrat Alternates applied to all body text, labels, buttons, descriptions (Session 22)
 
 ### Audit Gate
 - [x] Dual audit (Codex + Gemini) — 3 rounds
 - [x] Round 1 (chess features): P1 isInCheck false on checkmate, duplicate FEN on resign, double haptic. P2 review captures, CHECK! priority. All fixed.
 - [x] Round 2 (polish): accessibility on review squares, live regions on CHECK!/Your Move, "Move 0"→"Start", threatened/lastMove in labels, training data persist through game-over. All fixed.
 - [x] Round 3 (production): P1 font loading hang, P2 double AI delay, P2 accessibility on color picker buttons, P3 console.log cleanup. All fixed.
+- [x] `npx tsc --noEmit` — 0 errors
+- [x] `npx jest` — 9 suites, 283 tests passing
+
+---
+
+## SESSION 22 — FONT ROLLOUT + HOOK EXTRACTIONS (v1.17.0)
+
+**Version:** v1.17.0 (versionCode 34)
+**Branch:** `dev`
+**New deps:** `@expo-google-fonts/montserrat-alternates` (replaced `@expo-google-fonts/nunito`)
+**Build cost:** 0 (no native changes — font swap is JS-only)
+
+### File Cleanup
+- [x] NoteEditorModal extraction — linkedText.tsx (link detection), NoteVoiceMemo.tsx (recording/playback cards), ColorPickerModal.tsx (reusable color picker)
+- [x] SudokuScreen → useSudoku.ts hook (1232 → 753 lines)
+- [x] TimerScreen → useTimerScreen.ts hook (1270 → 728 lines)
+- [x] DailyRiddleScreen → useDailyRiddle.ts hook (1201 → 983 lines)
+- [x] SettingsScreen → useSettings.ts hook (1054 → 673 lines), background picker deduplicated, handleSendFeedback extracted
+
+### Font Rollout
+- [x] Phase 2 Part 1: fontFamily applied to all 25 screen files + buttonStyles.ts (fontWeight replaced with fontFamily throughout)
+- [x] Phase 2 Part 2: fontFamily applied to all 16 component/modal files
+- [x] Font swap: Nunito → Montserrat Alternates (wider, more premium feel)
+- [x] Font size reduction pass: 28+ → -2, 16-27 → -2, 13-15 → -1, 12 and below unchanged
+- [x] Three-tier font system complete: Satisfy (app title), LilitaOne (game headers), Montserrat Alternates (everything else)
+
+### Visual / Store
+- [x] HomeScreen Quick Capture: removed section title and icons, renamed to Quick Note / Quick Record / Quick Timer
+- [x] Splash screen backgroundColor → #121220 (dark, eliminates white flash)
+- [x] Play Store refresh: 8 new screenshots, updated description (Chess, backup section, corrected theme count to 6)
+
+### Audit Gate
+- [x] Dual audit (Codex + Gemini) — 11 findings, all fixed
+- [x] Dead solutionGrid state, ColorPickerModal stale ref, dead MemoCard uri prop, fontWeight leftovers, dead styles, stale comments, unused dependency
 - [x] `npx tsc --noEmit` — 0 errors
 - [x] `npx jest` — 9 suites, 283 tests passing
 
@@ -317,11 +351,9 @@
 - Pin toggle inside edit/detail screens
 - iOS port (P9+)
 - Optional AES-256 backup encryption
-- NoteEditorModal voiceMemoStyles theming
 - DrawingCanvas dark rgba values
 
 ### Store / Marketing
-- Play Store listing update for home screen, voice memos, backup
 - Widget preview screenshots
 - App size audit
 
@@ -433,3 +465,4 @@
 | Apr 6 | Session 19 visual art overhaul. Memory Match → Memory Guy Match with 22 custom card images + card back + felt background. 10 trivia category icons + library background. 9 rank tier images with new titles (The Rock → The Elephant). Score screen emoji → custom art. GamesScreen icons → custom art. P5.5 roadmap revised: no grandfathering, expo-iap, revised Pro/Free split. Dual audit clean (0 P0/P1). |
 | Apr 7 | Session 20 silver metallic icon set. 25+ silver/chrome utility icons replacing View-based CSS geometry + emoji. Two-tier visual language (silver core, anthropomorphic games). Screen headers on 7 core screens. Sound mode icons. ShareNoteModal icons. FAB plus buttons. Guess Why art. Checker pieces (4 WebP). Icons.tsx pruned. Jest webp moduleNameMapper. Accessibility labels. TimerScreen header absolute positioning. |
 | Apr 7 | Session 21 chess overhaul + custom fonts. v1.16.0 (versionCode 33). Chess: post-game move review (FEN history, step-through), check/checkmate indication (red king, CHECK! banner, red border, haptic tiers), training mode (threatened red, last move gold, toggle for difficulty 0-2). 12 anthropomorphic chess pieces. 3 calendar empty state illustrations. Calendar icon refresh. Plus icon sizes. Color picker alignment. Fonts: Satisfy (title), Lilita One (games), Nunito (core headers). 3 audit rounds (9 findings, all fixed). 283 tests passing. |
+| Apr 8 | Session 22 font rollout + hook extractions. v1.17.0 (versionCode 34). Phase 2 font: Montserrat Alternates applied to all body text across 25 screens + 16 components + buttonStyles. Font swap Nunito→Montserrat Alternates. Font size reduction pass. Hook extractions: useSudoku, useTimerScreen, useDailyRiddle, useSettings. NoteEditorModal cleanup: linkedText, NoteVoiceMemo, ColorPickerModal extracted. Quick Capture renamed. Splash bg dark. Play Store refresh. Dual audit (11 fixes). |

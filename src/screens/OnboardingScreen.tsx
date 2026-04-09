@@ -21,6 +21,7 @@ import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from '
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../theme/ThemeContext';
 import { themes, type ThemeName } from '../theme/colors';
+import { FONTS } from '../theme/fonts';
 import { setOnboardingComplete } from '../services/settings';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
@@ -663,14 +664,15 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       justifyContent: 'center',
     },
     title: {
-      fontSize: 22,
-      fontWeight: '800',
+      fontSize: 20,
+      fontFamily: FONTS.extraBold,
       color: displayColors.textPrimary,
       textAlign: 'center',
       marginBottom: 16,
     },
     body: {
-      fontSize: 16,
+      fontSize: 15,
+      fontFamily: FONTS.regular,
       color: displayColors.textSecondary,
       textAlign: 'center',
       lineHeight: 24,
@@ -692,12 +694,13 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       borderColor: displayColors.border,
     },
     buttonText: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: displayColors.textPrimary,
     },
     note: {
-      fontSize: 13,
+      fontSize: 12,
+      fontFamily: FONTS.regular,
       color: displayColors.textTertiary,
       textAlign: 'center',
       marginTop: 12,
@@ -710,13 +713,15 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       marginBottom: 24,
     },
     instructionStep: {
-      fontSize: 15,
+      fontSize: 14,
+      fontFamily: FONTS.regular,
       color: displayColors.textSecondary,
       lineHeight: 22,
       marginBottom: 10,
     },
     secondaryText: {
-      fontSize: 13,
+      fontSize: 12,
+      fontFamily: FONTS.regular,
       color: displayColors.textTertiary,
       textAlign: 'center',
       marginTop: 16,
@@ -729,7 +734,8 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       paddingVertical: 8,
     },
     skipText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: displayColors.textTertiary,
       textAlign: 'center',
     },
@@ -754,7 +760,8 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       backgroundColor: displayColors.border,
     },
     skippedNote: {
-      fontSize: 13,
+      fontSize: 12,
+      fontFamily: FONTS.regular,
       color: displayColors.orange,
       textAlign: 'center',
       maxWidth: CONTENT_MAX_WIDTH - 20,
@@ -762,13 +769,13 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       lineHeight: 18,
     },
     batteryWarning: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: displayColors.red,
       textAlign: 'center',
       maxWidth: CONTENT_MAX_WIDTH,
       marginBottom: 16,
       lineHeight: 20,
-      fontWeight: '600',
     },
   }), [displayColors, insets.bottom]);
 

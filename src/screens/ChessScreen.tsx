@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import { useChess } from '../hooks/useChess';
@@ -185,7 +186,7 @@ export default function ChessScreen({ navigation }: Props) {
         title: { fontSize: 28, color: colors.overlayText, fontFamily: FONTS.gameHeader },
         body: { flex: 1, paddingHorizontal: BOARD_H_PADDING },
         centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-        loadingText: { color: colors.overlayText, fontSize: 15 },
+        loadingText: { color: colors.overlayText, fontSize: 14, fontFamily: FONTS.regular },
 
         // Pre-game modal
         preGameCard: {
@@ -196,15 +197,15 @@ export default function ChessScreen({ navigation }: Props) {
         },
         preGameTitle: {
           fontSize: 20,
-          color: colors.overlayText,
+          color: colors.textPrimary,
           textAlign: 'center',
           marginBottom: 18,
           fontFamily: FONTS.gameHeader,
         },
         sectionLabel: {
-          fontSize: 13,
-          fontWeight: '600',
-          color: colors.overlayText,
+          fontSize: 12,
+          fontFamily: FONTS.semiBold,
+          color: colors.textSecondary,
           marginBottom: 10,
           opacity: 0.8,
         },
@@ -226,7 +227,7 @@ export default function ChessScreen({ navigation }: Props) {
           borderColor: colors.accent,
         },
         colorPieceImg: { width: 60, height: 60, marginBottom: 6 },
-        colorLabel: { fontSize: 13, fontWeight: '600', color: colors.overlayText },
+        colorLabel: { fontSize: 12, fontFamily: FONTS.semiBold, color: colors.textSecondary },
         pillsRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
@@ -245,15 +246,15 @@ export default function ChessScreen({ navigation }: Props) {
           backgroundColor: colors.accent + '30',
           borderColor: colors.accent,
         },
-        pillText: { fontSize: 13, color: colors.textTertiary },
-        pillTextActive: { color: colors.accent, fontWeight: '600' },
+        pillText: { fontSize: 12, fontFamily: FONTS.regular, color: colors.textTertiary },
+        pillTextActive: { color: colors.accent, fontFamily: FONTS.semiBold },
         playButton: {
           backgroundColor: colors.accent,
           borderRadius: 12,
           paddingVertical: 14,
           alignItems: 'center',
         },
-        playButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
+        playButtonText: { color: '#FFFFFF', fontFamily: FONTS.bold, fontSize: 15 },
 
         // Active game
         gameHeader: {
@@ -262,7 +263,7 @@ export default function ChessScreen({ navigation }: Props) {
           alignItems: 'center',
           paddingVertical: 8,
         },
-        gameHeaderText: { color: colors.overlayText, fontSize: 14 },
+        gameHeaderText: { color: colors.overlayText, fontSize: 13, fontFamily: FONTS.regular },
         capturesRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
@@ -327,9 +328,9 @@ export default function ChessScreen({ navigation }: Props) {
           paddingVertical: 8,
           backgroundColor: colors.background,
         },
-        actionPillText: { fontSize: 13, fontWeight: '600', color: colors.overlayText },
+        actionPillText: { fontSize: 12, fontFamily: FONTS.semiBold, color: colors.overlayText },
         resignPill: { backgroundColor: colors.red + '30' },
-        resignText: { color: colors.red, fontSize: 13, fontWeight: '600' },
+        resignText: { color: colors.red, fontSize: 12, fontFamily: FONTS.semiBold },
 
         // Roast toast
         roastToast: {
@@ -341,7 +342,8 @@ export default function ChessScreen({ navigation }: Props) {
         },
         roastText: {
           color: colors.overlayText,
-          fontSize: 13,
+          fontSize: 12,
+          fontFamily: FONTS.regular,
           textAlign: 'center',
         },
 
@@ -362,14 +364,15 @@ export default function ChessScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         overlayTitle: {
-          fontSize: 24,
-          fontWeight: '800',
-          color: colors.overlayText,
+          fontSize: 22,
+          fontFamily: FONTS.extraBold,
+          color: colors.textPrimary,
           marginBottom: 6,
         },
         overlaySubtitle: {
-          fontSize: 15,
-          color: colors.overlayText,
+          fontSize: 14,
+          fontFamily: FONTS.regular,
+          color: colors.textSecondary,
           opacity: 0.8,
           marginBottom: 18,
         },
@@ -391,14 +394,14 @@ export default function ChessScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         reviewBtnText: {
-          color: colors.overlayText,
-          fontSize: 20,
-          fontWeight: '700',
+          color: colors.textPrimary,
+          fontSize: 18,
+          fontFamily: FONTS.bold,
         },
         reviewCounter: {
-          color: colors.overlayText,
-          fontSize: 14,
-          fontWeight: '600',
+          color: colors.textSecondary,
+          fontSize: 13,
+          fontFamily: FONTS.semiBold,
           marginHorizontal: 8,
           minWidth: 100,
           textAlign: 'center',
@@ -420,7 +423,7 @@ export default function ChessScreen({ navigation }: Props) {
               styles.colorButton,
               selectedColor === 'w' && styles.colorButtonSelected,
             ]}
-            onPress={() => { hapticLight(); setSelectedColor('w'); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); setSelectedColor('w'); }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Play as white"
@@ -438,7 +441,7 @@ export default function ChessScreen({ navigation }: Props) {
               styles.colorButton,
               selectedColor === 'b' && styles.colorButtonSelected,
             ]}
-            onPress={() => { hapticLight(); setSelectedColor('b'); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); setSelectedColor('b'); }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Play as black"
@@ -461,7 +464,7 @@ export default function ChessScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={idx}
                 style={[styles.pill, active && styles.pillActive]}
-                onPress={() => { hapticLight(); setSelectedDifficulty(idx); }}
+                onPress={() => { hapticLight(); playGameSound('tap'); setSelectedDifficulty(idx); }}
                 activeOpacity={0.7}
                 accessibilityRole="tab"
                 accessibilityLabel={DIFFICULTY_LABELS[idx]}
@@ -493,6 +496,7 @@ export default function ChessScreen({ navigation }: Props) {
             }}
             onPress={() => {
               hapticLight();
+              playGameSound('tap');
               setTeachingEnabled(!teachingEnabled);
             }}
             activeOpacity={0.7}
@@ -500,7 +504,7 @@ export default function ChessScreen({ navigation }: Props) {
             accessibilityLabel="Training mode"
             accessibilityState={{ checked: teachingEnabled }}
           >
-            <Text style={{ color: teachingEnabled ? colors.accent : colors.overlayText, fontSize: 14, fontWeight: '600' }}>
+            <Text style={{ color: teachingEnabled ? colors.accent : colors.overlayText, fontSize: 13, fontFamily: FONTS.semiBold }}>
               Training Mode
             </Text>
             <View
@@ -532,6 +536,7 @@ export default function ChessScreen({ navigation }: Props) {
           style={styles.playButton}
           onPress={() => {
             hapticLight();
+            playGameSound('tap');
             chess.startGame(selectedColor, selectedDifficulty);
             chess.setTeachingMode(teachingEnabled && selectedDifficulty <= 2);
           }}
@@ -732,8 +737,8 @@ export default function ChessScreen({ navigation }: Props) {
               accessibilityRole="alert"
               style={{
                 color: '#EF4444',
-                fontSize: 18,
-                fontWeight: '800',
+                fontSize: 17,
+                fontFamily: FONTS.extraBold,
                 opacity: chess.isPlayerTurn ? turnPulse : 1,
               }}
             >
@@ -741,7 +746,7 @@ export default function ChessScreen({ navigation }: Props) {
             </Animated.Text>
           ) : chess.isAIThinking ? (
             <Text
-              style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
+              style={{ color: '#FFFFFF', fontSize: 12, fontFamily: FONTS.semiBold }}
             >
               Thinking…
             </Text>
@@ -750,8 +755,8 @@ export default function ChessScreen({ navigation }: Props) {
               accessibilityLiveRegion="polite"
               style={{
                 color: colors.accent,
-                fontSize: 20,
-                fontWeight: '800',
+                fontSize: 18,
+                fontFamily: FONTS.extraBold,
                 opacity: turnPulse,
               }}
             >
@@ -774,6 +779,7 @@ export default function ChessScreen({ navigation }: Props) {
             onPress={() => {
               if (!chess.takeBackAvailable) return;
               hapticLight();
+              playGameSound('tap');
               chess.takeBack();
             }}
             disabled={!chess.takeBackAvailable}
@@ -790,7 +796,11 @@ export default function ChessScreen({ navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionPill, styles.resignPill]}
-            onPress={handleResignPress}
+            onPress={() => {
+              hapticLight();
+              playGameSound('tap');
+              handleResignPress();
+            }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Resign"
@@ -826,6 +836,7 @@ export default function ChessScreen({ navigation }: Props) {
                 style={[styles.playButton, { alignSelf: 'stretch' }]}
                 onPress={() => {
                   hapticLight();
+                  playGameSound('tap');
                   chess.enterReview();
                 }}
                 activeOpacity={0.8}
@@ -838,13 +849,14 @@ export default function ChessScreen({ navigation }: Props) {
                 style={[styles.playButton, { alignSelf: 'stretch', marginTop: 10, backgroundColor: colors.background }]}
                 onPress={() => {
                   hapticLight();
+                  playGameSound('tap');
                   chess.newGame();
                 }}
                 activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityLabel="New game"
               >
-                <Text style={[styles.playButtonText, { color: colors.overlayText }]}>New Game</Text>
+                <Text style={[styles.playButtonText, { color: colors.textPrimary }]}>New Game</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -866,7 +878,7 @@ export default function ChessScreen({ navigation }: Props) {
         <View style={styles.reviewNav}>
           <TouchableOpacity
             style={[styles.reviewBtn, atStart && { opacity: 0.3 }]}
-            onPress={() => { hapticLight(); chess.reviewGoToStart(); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); chess.reviewGoToStart(); }}
             disabled={atStart}
             activeOpacity={0.7}
             accessibilityRole="button"
@@ -877,7 +889,7 @@ export default function ChessScreen({ navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.reviewBtn, atStart && { opacity: 0.3 }]}
-            onPress={() => { hapticLight(); chess.reviewStepBack(); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); chess.reviewStepBack(); }}
             disabled={atStart}
             activeOpacity={0.7}
             accessibilityRole="button"
@@ -893,7 +905,7 @@ export default function ChessScreen({ navigation }: Props) {
 
           <TouchableOpacity
             style={[styles.reviewBtn, atEnd && { opacity: 0.3 }]}
-            onPress={() => { hapticLight(); chess.reviewStepForward(); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); chess.reviewStepForward(); }}
             disabled={atEnd}
             activeOpacity={0.7}
             accessibilityRole="button"
@@ -904,7 +916,7 @@ export default function ChessScreen({ navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.reviewBtn, atEnd && { opacity: 0.3 }]}
-            onPress={() => { hapticLight(); chess.reviewGoToEnd(); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); chess.reviewGoToEnd(); }}
             disabled={atEnd}
             activeOpacity={0.7}
             accessibilityRole="button"
@@ -919,6 +931,7 @@ export default function ChessScreen({ navigation }: Props) {
           style={[styles.playButton, { marginTop: 16 }]}
           onPress={() => {
             hapticLight();
+            playGameSound('tap');
             chess.newGame();
           }}
           activeOpacity={0.8}

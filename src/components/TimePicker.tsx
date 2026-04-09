@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, useWindowDimensions } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { hapticSelection } from '../utils/haptics';
 
 export interface TimePickerProps {
@@ -59,10 +60,10 @@ export default function TimePicker({
 
   // --- Font styles by distance from selected ---
   function getItemStyle(dist: number) {
-    if (dist === 0) return { fontSize: Math.round(34 * fontScale), fontWeight: '700' as const, color: colors.accent, opacity: 1 };
-    if (dist === 1) return { fontSize: Math.round(20 * fontScale), fontWeight: '500' as const, color: colors.textSecondary, opacity: 0.7 };
-    if (dist === 2) return { fontSize: Math.round(15 * fontScale), fontWeight: '400' as const, color: colors.textTertiary, opacity: 0.4 };
-    return { fontSize: Math.round(12 * fontScale), fontWeight: '400' as const, color: colors.textTertiary, opacity: 0.2 };
+    if (dist === 0) return { fontSize: Math.round(32 * fontScale), fontFamily: FONTS.bold, color: colors.accent, opacity: 1 };
+    if (dist === 1) return { fontSize: Math.round(18 * fontScale), fontFamily: FONTS.semiBold, color: colors.textSecondary, opacity: 0.7 };
+    if (dist === 2) return { fontSize: Math.round(14 * fontScale), fontFamily: FONTS.regular, color: colors.textTertiary, opacity: 0.4 };
+    return { fontSize: Math.round(12 * fontScale), fontFamily: FONTS.regular, color: colors.textTertiary, opacity: 0.2 };
   }
 
   // --- Infinite-scroll data arrays ---
@@ -234,7 +235,7 @@ export default function TimePicker({
       const s = getItemStyle(dist);
       return (
         <View style={{ height: rowHeight, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: s.fontSize, fontWeight: s.fontWeight, color: s.color, opacity: s.opacity, textAlignVertical: 'center' }}>
+          <Text style={{ fontSize: s.fontSize, fontFamily: s.fontFamily, color: s.color, opacity: s.opacity, textAlignVertical: 'center' }}>
             {padHours ? String(item).padStart(2, '0') : item}
           </Text>
         </View>
@@ -250,7 +251,7 @@ export default function TimePicker({
       const s = getItemStyle(dist);
       return (
         <View style={{ height: rowHeight, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: s.fontSize, fontWeight: s.fontWeight, color: s.color, opacity: s.opacity, textAlignVertical: 'center' }}>
+          <Text style={{ fontSize: s.fontSize, fontFamily: s.fontFamily, color: s.color, opacity: s.opacity, textAlignVertical: 'center' }}>
             {padMinutes ? String(item).padStart(2, '0') : item}
           </Text>
         </View>
@@ -266,7 +267,7 @@ export default function TimePicker({
       const s = getItemStyle(dist);
       return (
         <View style={{ height: rowHeight, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: s.fontSize, fontWeight: s.fontWeight, color: s.color, opacity: s.opacity, textAlignVertical: 'center' }}>
+          <Text style={{ fontSize: s.fontSize, fontFamily: s.fontFamily, color: s.color, opacity: s.opacity, textAlignVertical: 'center' }}>
             {String(item).padStart(2, '0')}
           </Text>
         </View>
@@ -346,8 +347,8 @@ export default function TimePicker({
       </View>
       <Text
         style={{
-          fontSize: 14,
-          fontWeight: '600',
+          fontSize: 13,
+          fontFamily: FONTS.semiBold,
           color: colors.textTertiary,
           marginLeft: 4,
           ...(isLast ? {} : { marginRight: 12 }),

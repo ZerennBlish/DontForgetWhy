@@ -63,7 +63,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
       top: insets.top + 10,
     },
     title: {
-      fontSize: 28,
+      fontSize: 26,
       color: colors.textPrimary,
       fontFamily: FONTS.extraBold,
     },
@@ -82,7 +82,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     },
     filterToggleText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     filterDot: {
@@ -111,7 +111,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
     },
     pillText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     pillTextActive: {
@@ -129,32 +129,32 @@ export default function NotepadScreen({ navigation, route }: Props) {
       paddingHorizontal: 32,
     },
     emptyTitle: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: 17,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
       marginBottom: 4,
     },
     emptyText: {
-      fontSize: 14,
+      fontSize: 13,
       color: colors.textTertiary,
       textAlign: 'center',
       lineHeight: 22,
+      fontFamily: FONTS.regular,
     },
     fab: {
       position: 'absolute',
       bottom: 36 + insets.bottom,
-      right: 20,
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: colors.accent,
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      elevation: 8,
+      backgroundColor: colors.accent + '30',
       shadowColor: colors.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.4,
-      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.6,
+      shadowRadius: 12,
     },
   }), [colors, insets.bottom, insets.top]);
 
@@ -294,7 +294,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
           accessibilityLabel="Create new note"
           accessibilityRole="button"
         >
-          <Image source={APP_ICONS.plus} style={{ width: 34, height: 34 }} resizeMode="contain" />
+          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast

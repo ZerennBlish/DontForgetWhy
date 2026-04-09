@@ -25,6 +25,7 @@ import { deleteAlarm, updateSingleAlarm } from '../services/storage';
 import { loadActiveTimers, saveActiveTimers } from '../services/timerStorage';
 import { loadSettings, getSilenceAll } from '../services/settings';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticHeavy } from '../utils/haptics';
 import { getSnoozeMessage } from '../data/snoozeMessages';
@@ -519,8 +520,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       justifyContent: 'center',
     },
     time: {
-      fontSize: 64,
-      fontWeight: '800',
+      fontSize: 62,
+      fontFamily: FONTS.extraBold,
       color: '#FFFFFF',
       letterSpacing: -2,
     },
@@ -530,8 +531,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       marginBottom: 8,
     },
     label: {
-      fontSize: 26,
-      fontWeight: '600',
+      fontSize: 24,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
       textAlign: 'center',
       marginTop: 8,
@@ -539,15 +540,15 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       lineHeight: 34,
     },
     soundName: {
-      fontSize: 16,
-      fontWeight: '500',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
       textAlign: 'center',
       marginTop: 8,
     },
     noteText: {
-      fontSize: 18,
-      fontWeight: '500',
+      fontSize: 17,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
       textAlign: 'center',
       marginTop: 12,
@@ -568,8 +569,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       justifyContent: 'center',
     },
     guessWhyBtnText: {
-      fontSize: 22,
-      fontWeight: '600',
+      fontSize: 20,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
     },
     snoozeBtn: {
@@ -583,8 +584,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       justifyContent: 'center',
     },
     snoozeBtnText: {
-      fontSize: 22,
-      fontWeight: '600',
+      fontSize: 20,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
     },
     dismissBtn: {
@@ -596,8 +597,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       justifyContent: 'center',
     },
     dismissBtnText: {
-      fontSize: 24,
-      fontWeight: '700',
+      fontSize: 22,
+      fontFamily: FONTS.bold,
       color: '#FFFFFF',
     },
     shameOverlay: {
@@ -608,8 +609,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       paddingHorizontal: 32,
     },
     shameMessage: {
-      fontSize: 22,
-      fontWeight: '600',
+      fontSize: 20,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
       textAlign: 'center',
       lineHeight: 32,
@@ -619,15 +620,15 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       marginBottom: 20,
     },
     skipHint: {
-      fontSize: 18,
-      fontWeight: '500',
+      fontSize: 17,
+      fontFamily: FONTS.semiBold,
       color: 'rgba(255,255,255,0.6)',
       textAlign: 'center',
       marginTop: 24,
     },
     silencedIndicator: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: '#FFA500',
       textAlign: 'center',
       marginBottom: 12,

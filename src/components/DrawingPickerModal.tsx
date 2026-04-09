@@ -4,6 +4,7 @@ import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker
 import type { ColorFormatsObject } from 'reanimated-color-picker';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { getButtonStyles } from '../theme/buttonStyles';
 
 interface DrawingPickerModalProps {
@@ -35,7 +36,7 @@ export default function DrawingPickerModal({
     <Modal transparent visible={visible} animationType="fade">
       <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'center', alignItems: 'center' }}>
         <View style={{ backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.95)' : 'rgba(245, 245, 250, 0.98)', borderRadius: 16, padding: 20, marginHorizontal: 32, width: '85%' }}>
-          <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' }}>{title}</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 15, fontFamily: FONTS.bold, marginBottom: 16, textAlign: 'center' }}>{title}</Text>
           <ColorPicker
             value={pickedRef.current}
             onCompleteJS={(result: ColorFormatsObject) => { pickedRef.current = result.hex; }}

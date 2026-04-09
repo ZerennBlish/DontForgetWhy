@@ -248,8 +248,8 @@ const dayCellStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   numText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontFamily: FONTS.semiBold,
   },
   dotRow: {
     flexDirection: 'row',
@@ -527,7 +527,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
           top: insets.top + 10,
         },
         title: {
-          fontSize: 28,
+          fontSize: 26,
           color: colors.textPrimary,
           fontFamily: FONTS.extraBold,
         },
@@ -554,7 +554,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         legendText: {
           fontSize: 12,
           color: colors.textSecondary,
-          fontWeight: '600',
+          fontFamily: FONTS.semiBold,
         },
         tabRow: {
           flexDirection: 'row',
@@ -577,8 +577,8 @@ export default function CalendarScreen({ navigation, route }: Props) {
           borderColor: colors.accent,
         },
         tabText: {
-          fontSize: 14,
-          fontWeight: '700',
+          fontSize: 13,
+          fontFamily: FONTS.bold,
           color: colors.textPrimary,
         },
         tabTextActive: {
@@ -604,7 +604,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         },
         filterText: {
           fontSize: 12,
-          fontWeight: '600',
+          fontFamily: FONTS.semiBold,
           color: colors.textPrimary,
         },
         filterTextActive: {
@@ -626,21 +626,21 @@ export default function CalendarScreen({ navigation, route }: Props) {
           backgroundColor: colors.accent,
         },
         createBtnText: {
-          fontSize: 13,
-          fontWeight: '700',
+          fontSize: 12,
+          fontFamily: FONTS.bold,
           color: colors.background,
         },
         sectionHeader: {
-          fontSize: 16,
-          fontWeight: '700',
+          fontSize: 15,
+          fontFamily: FONTS.bold,
           color: colors.textPrimary,
           paddingHorizontal: 16,
           paddingTop: 4,
           paddingBottom: 8,
         },
         groupHeader: {
-          fontSize: 13,
-          fontWeight: '700',
+          fontSize: 12,
+          fontFamily: FONTS.bold,
           color: colors.textSecondary,
           paddingTop: 12,
           paddingBottom: 6,
@@ -673,18 +673,19 @@ export default function CalendarScreen({ navigation, route }: Props) {
           flex: 1,
         },
         cardTitle: {
-          fontSize: 15,
-          fontWeight: '600',
+          fontSize: 14,
+          fontFamily: FONTS.semiBold,
           color: colors.textPrimary,
         },
         cardSub: {
           fontSize: 12,
           color: colors.textSecondary,
           marginTop: 2,
+          fontFamily: FONTS.regular,
         },
         cardLabel: {
           fontSize: 11,
-          fontWeight: '700',
+          fontFamily: FONTS.bold,
           borderRadius: 4,
           overflow: 'hidden',
           paddingHorizontal: 6,
@@ -694,9 +695,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
         emptyText: {
           textAlign: 'center',
           color: colors.textSecondary,
-          fontSize: 14,
+          fontSize: 13,
           paddingVertical: 32,
           paddingHorizontal: 24,
+          fontFamily: FONTS.regular,
         },
       }),
     [colors, insets],

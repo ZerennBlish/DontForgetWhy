@@ -3,7 +3,7 @@
  *
  * Two-tier system:
  * - Games section: Satisfy (app title), LilitaOne (game headers)
- * - Core utility: Nunito (everything else)
+ * - Core utility: Montserrat Alternates (everything else)
  */
 
 export const FONTS = {
@@ -14,8 +14,8 @@ export const FONTS = {
   gameHeader: 'LilitaOne_400Regular',
 
   // Core app — body and UI
-  regular: 'Nunito_400Regular',
-  semiBold: 'Nunito_600SemiBold',
-  bold: 'Nunito_700Bold',
-  extraBold: 'Nunito_800ExtraBold',
+  regular: 'MontserratAlternates_400Regular',
+  semiBold: 'MontserratAlternates_600SemiBold',
+  bold: 'MontserratAlternates_700Bold',
+  extraBold: 'MontserratAlternates_800ExtraBold',
 } as const;

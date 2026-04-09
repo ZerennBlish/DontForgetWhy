@@ -16,6 +16,7 @@ import {
 import { getRoastForMove, getTakeBackRoast } from '../services/blunderRoast';
 import { recordChessResult } from '../services/memoryScore';
 import { hapticLight, hapticHeavy, hapticError } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 
 type Cell = { square: Square; type: PieceSymbol; color: Color } | null;
 
@@ -192,6 +193,7 @@ export function useChess(): UseChessReturn {
       win = g.turn() === 'w' ? 'b' : 'w';
       outcome = win === playerColorRef.current ? 'win' : 'loss';
       hapticError();
+      playGameSound(outcome === 'win' ? 'gameWin' : 'gameLoss');
     } else if (g.isStalemate()) {
       result = 'stalemate';
       outcome = 'draw';
@@ -273,8 +275,13 @@ export function useChess(): UseChessReturn {
         if (__DEV__) console.log('AI move took:', Date.now() - t2, 'ms');
         if (aiSan) {
           try {
-            c2.move(aiSan);
+            const aiApplied = c2.move(aiSan);
             fenHistoryRef.current.push(c2.fen());
+            if (aiApplied) {
+              if (aiApplied.captured) playGameSound('capture');
+              else if (aiApplied.flags.includes('p')) playGameSound('promote');
+              else playGameSound('chessPlace');
+            }
             if (c2.isCheck() && !c2.isCheckmate()) {
               hapticHeavy();
             }
@@ -308,6 +315,9 @@ export function useChess(): UseChessReturn {
         return;
       }
       if (!applied) return;
+      if (applied.captured) playGameSound('capture');
+      else if (applied.flags.includes('p')) playGameSound('promote');
+      else playGameSound('chessPlace');
       const moveSan = applied.san;
       fenHistoryRef.current.push(g.fen());
       if (g.isCheck() && !g.isCheckmate()) {
@@ -454,6 +464,7 @@ export function useChess(): UseChessReturn {
     setAiThinkStart(0);
     setGameResult('resigned');
     setWinner(playerColorRef.current === 'w' ? 'b' : 'w');
+    playGameSound('gameLoss');
     void clearChessGame();
     if (!teachingModeRef.current) {
       void recordChessResult('loss', difficultyRef.current);

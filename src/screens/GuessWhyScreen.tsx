@@ -21,6 +21,7 @@ import {
 } from '../data/guessWhyMessages';
 import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -109,14 +110,14 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       marginBottom: 12,
     },
     time: {
-      fontSize: 56,
-      fontWeight: '800',
+      fontSize: 54,
+      fontFamily: FONTS.extraBold,
       color: '#FFFFFF',
       letterSpacing: -2,
     },
     categoryLabel: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
       letterSpacing: 2,
       marginTop: 8,
@@ -149,16 +150,16 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       opacity: 0.35,
     },
     modeBtnText: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     modeBtnTextActive: {
       color: colors.textPrimary,
     },
     prompt: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
       textAlign: 'center',
       marginBottom: 12,
@@ -186,6 +187,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     },
     iconLabel: {
       fontSize: 10,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 4,
     },
@@ -214,8 +216,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       opacity: 0.4,
     },
     submitBtnText: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     overlay: {
@@ -226,8 +228,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       padding: 24,
     },
     overlayMessage: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: 17,
+      fontFamily: FONTS.semiBold,
       color: colors.overlayText,
       textAlign: 'center',
       lineHeight: 26,
@@ -240,8 +242,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       paddingHorizontal: 40,
     },
     overlayBtnText: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.overlayText,
     },
     bottom: {
@@ -250,8 +252,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       gap: 10,
     },
     attemptsText: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     skipBtn: {
@@ -266,8 +268,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
       opacity: 0.4,
     },
     skipBtnText: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
     },
   }), [colors, insets.bottom]);

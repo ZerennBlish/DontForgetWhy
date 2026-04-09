@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import type { AlarmDay } from '../types/alarm';
+import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 
 const DAY_LABELS: { key: AlarmDay; short: string }[] = [
@@ -145,8 +146,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dayBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: FONTS.bold,
   },
   quickDayRow: {
     flexDirection: 'row',
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   quickDayText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontFamily: FONTS.semiBold,
   },
 });

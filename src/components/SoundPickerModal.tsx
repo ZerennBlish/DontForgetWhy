@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Modal,
   TouchableOpacity,
@@ -12,8 +13,10 @@ import {
   Platform,
   NativeModules,
 } from 'react-native';
+import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import { previewSystemSound, cancelSoundPreview } from '../services/notifications';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 
 export interface SystemSound {
   title: string;
@@ -157,8 +160,8 @@ export default function SoundPickerModal({
       paddingBottom: 12,
     },
     title: {
-      fontSize: 18,
-      fontWeight: '700',
+      fontSize: 17,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     closeBtn: {
@@ -172,7 +175,7 @@ export default function SoundPickerModal({
     closeBtnText: {
       fontSize: 16,
       color: colors.textTertiary,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
     },
     searchBox: {
       marginHorizontal: 16,
@@ -199,18 +202,18 @@ export default function SoundPickerModal({
       marginRight: 10,
     },
     rowTitle: {
-      fontSize: 15,
-      fontWeight: '500',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
     },
     rowTitleSelected: {
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
       color: colors.accent,
     },
     check: {
       fontSize: 16,
       color: colors.accent,
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
       marginRight: 10,
     },
     playBtn: {
@@ -242,13 +245,15 @@ export default function SoundPickerModal({
       alignItems: 'center',
     },
     errorText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: colors.red,
       textAlign: 'center',
       paddingHorizontal: 20,
     },
     emptyText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
     },
     defaultIcon: {
@@ -283,14 +288,11 @@ export default function SoundPickerModal({
           onPress={() => handlePlay(item)}
           activeOpacity={0.7}
         >
-          <Text
-            style={[
-              styles.playIcon,
-              isPlaying ? styles.playIconActive : styles.playIconIdle,
-            ]}
-          >
-            {isPlaying ? '\u25A0' : '\u25B6'}
-          </Text>
+          <GlowIcon
+            source={isPlaying ? MEDIA_ICONS.stop : MEDIA_ICONS.play}
+            size={20}
+            glowColor={isPlaying ? '#FF3B30' : colors.accent}
+          />
         </TouchableOpacity>
       </TouchableOpacity>
     );

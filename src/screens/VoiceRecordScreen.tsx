@@ -15,12 +15,14 @@ import {
 } from 'expo-audio';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import { deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VoiceRecord'>;
@@ -259,8 +261,8 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           top: insets.top + 10,
         },
         title: {
-          fontSize: 28,
-          fontWeight: '800',
+          fontSize: 26,
+          fontFamily: FONTS.extraBold,
           color: colors.textPrimary,
         },
         content: {
@@ -287,32 +289,9 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           width: 70,
           height: 70,
           borderRadius: 35,
-          backgroundColor: '#4CAF50',
+          backgroundColor: 'transparent',
           justifyContent: 'center',
           alignItems: 'center',
-        },
-        pauseTriangle: {
-          width: 0,
-          height: 0,
-          borderLeftWidth: 12,
-          borderLeftColor: '#FFFFFF',
-          borderTopWidth: 8,
-          borderTopColor: 'transparent',
-          borderBottomWidth: 8,
-          borderBottomColor: 'transparent',
-          marginLeft: 3,
-        },
-        pauseBtnBars: {
-          flexDirection: 'row',
-          gap: 3,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        pauseBtnBar: {
-          width: 3,
-          height: 14,
-          backgroundColor: '#FFFFFF',
-          borderRadius: 1,
         },
         recordBtn: {
           width: 70,
@@ -321,35 +300,24 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           justifyContent: 'center',
           alignItems: 'center',
         },
-        stopIcon: {
-          width: 24,
-          height: 24,
-          borderRadius: 4,
-          backgroundColor: '#FFFFFF',
-        },
-        recordDot: {
-          width: 28,
-          height: 28,
-          borderRadius: 14,
-          backgroundColor: '#FFFFFF',
-        },
         recordingLabel: {
-          fontSize: 14,
-          fontWeight: '600',
+          fontSize: 13,
+          fontFamily: FONTS.semiBold,
           color: colors.red,
           opacity: 0.8,
           marginTop: -32,
           marginBottom: 32,
         },
         pausedLabel: {
-          fontSize: 14,
-          fontWeight: '600',
+          fontSize: 13,
+          fontFamily: FONTS.semiBold,
           color: colors.textTertiary,
           marginTop: -32,
           marginBottom: 32,
         },
         hint: {
-          fontSize: 13,
+          fontSize: 12,
+          fontFamily: FONTS.regular,
           color: colors.textTertiary,
           textAlign: 'center',
           marginTop: 12,
@@ -412,20 +380,17 @@ export default function VoiceRecordScreen({ navigation }: Props) {
                 activeOpacity={0.7}
               >
                 {isPaused ? (
-                  <View style={styles.pauseTriangle} />
+                  <GlowIcon source={MEDIA_ICONS.play} size={56} glowColor="#4CAF50" />
                 ) : (
-                  <View style={styles.pauseBtnBars}>
-                    <View style={styles.pauseBtnBar} />
-                    <View style={styles.pauseBtnBar} />
-                  </View>
+                  <GlowIcon source={MEDIA_ICONS.pause} size={56} glowColor="#4CAF50" />
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.recordBtn, { backgroundColor: '#FF3B30' }]}
+                style={styles.recordBtn}
                 onPress={handleRecordPress}
                 activeOpacity={0.7}
               >
-                <View style={styles.stopIcon} />
+                <GlowIcon source={MEDIA_ICONS.stop} size={56} glowColor="#FF3B30" />
               </TouchableOpacity>
             </View>
             {isPaused ? (
@@ -437,11 +402,11 @@ export default function VoiceRecordScreen({ navigation }: Props) {
         ) : (
           <>
             <TouchableOpacity
-              style={[styles.recordBtn, { backgroundColor: colors.red, marginBottom: 48 }]}
+              style={[styles.recordBtn, { marginBottom: 48 }]}
               onPress={handleRecordPress}
               activeOpacity={0.7}
             >
-              <View style={styles.recordDot} />
+              <GlowIcon source={MEDIA_ICONS.record} size={56} glowColor="#FF3B30" />
             </TouchableOpacity>
             <Text style={styles.hint}>{idleHint}</Text>
           </>

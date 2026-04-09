@@ -329,24 +329,18 @@ export default function HomeScreen({ navigation }: Props) {
     },
     bannerHeader: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
       letterSpacing: 1,
       marginBottom: 4,
     },
     bannerQuote: {
-      fontSize: 13,
+      fontSize: 12,
+      fontFamily: FONTS.regular,
       fontStyle: 'italic',
       color: colors.textSecondary,
       lineHeight: 18,
     },
     // Quick Capture
-    quickCaptureHeader: {
-      fontSize: 11,
-      fontWeight: '500',
-      color: colors.textTertiary,
-      letterSpacing: 0.5,
-      marginBottom: 8,
-    },
     quickCaptureRow: {
       flexDirection: 'row',
       gap: 10,
@@ -362,8 +356,8 @@ export default function HomeScreen({ navigation }: Props) {
       borderRadius: 12,
     },
     quickCaptureLabel: {
-      fontSize: 13,
-      fontWeight: '500',
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
     },
     // Grid
@@ -394,13 +388,14 @@ export default function HomeScreen({ navigation }: Props) {
     },
     gridSubtitle: {
       fontSize: 10,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       textAlign: 'center',
     },
     // Today section
     todayHeader: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
       color: colors.textTertiary,
       letterSpacing: 1,
       marginBottom: 10,
@@ -434,17 +429,20 @@ export default function HomeScreen({ navigation }: Props) {
       borderRadius: 3,
     },
     eventTitle: {
-      fontSize: 13,
+      fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textPrimary,
       flex: 1,
     },
     eventSub: {
       fontSize: 11,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
     },
     emptyToday: {
       flex: 1,
-      fontSize: 13,
+      fontSize: 12,
+      fontFamily: FONTS.regular,
       fontStyle: 'italic',
       color: colors.textTertiary,
       textAlign: 'center',
@@ -494,37 +492,33 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* C. Quick Capture */}
-        <Text style={[styles.quickCaptureHeader, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>QUICK CAPTURE</Text>
         <View style={styles.quickCaptureRow}>
           <TouchableOpacity
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionNotepad + (bgUri ? '90' : '45') }]}
             onPress={() => { hapticLight(); navigation.navigate('Notepad', { newNote: true }); }}
             activeOpacity={0.7}
-            accessibilityLabel="New Note"
+            accessibilityLabel="Quick Note"
             accessibilityRole="button"
           >
-            <Image source={APP_ICONS.notepad} style={{ width: 20, height: 20 }} resizeMode="contain" />
-            <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>New Note</Text>
+            <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>Quick Note</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionVoice + (bgUri ? '90' : '45') }]}
             onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
             activeOpacity={0.7}
-            accessibilityLabel="Record Memo"
+            accessibilityLabel="Quick Record"
             accessibilityRole="button"
           >
-            <Image source={APP_ICONS.microphone} style={{ width: 20, height: 20 }} resizeMode="contain" />
-            <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>Record Memo</Text>
+            <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>Quick Record</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionTimer + (bgUri ? '90' : '45') }]}
             onPress={() => { hapticLight(); navigation.navigate('Timers'); }}
             activeOpacity={0.7}
-            accessibilityLabel="Set Timer"
+            accessibilityLabel="Quick Timer"
             accessibilityRole="button"
           >
-            <Image source={APP_ICONS.stopwatch} style={{ width: 20, height: 20 }} resizeMode="contain" />
-            <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>Set Timer</Text>
+            <Text style={[styles.quickCaptureLabel, bgUri && { color: colors.overlayText }]}>Quick Timer</Text>
           </TouchableOpacity>
         </View>
 

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ToastAndroid } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import APP_ICONS from '../data/appIconAssets';
 import { getRelativeTime } from '../utils/time';
@@ -55,12 +56,13 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
       marginHorizontal: 12,
     },
     cardTitle: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
     },
     cardSubtitle: {
       fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textSecondary,
       marginTop: 2,
     },
@@ -82,7 +84,7 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
     },
     pinBtnText: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     pinnedDot: {

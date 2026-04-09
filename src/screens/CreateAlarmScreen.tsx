@@ -22,6 +22,7 @@ import SoundPickerModal from '../components/SoundPickerModal';
 import type { SystemSound } from '../components/SoundPickerModal';
 import { useTheme } from '../theme/ThemeContext';
 import { getButtonStyles } from '../theme/buttonStyles';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
@@ -144,8 +145,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       paddingBottom: 60 + insets.bottom,
     },
     heading: {
-      fontSize: 28,
-      fontWeight: '800',
+      fontSize: 26,
+      fontFamily: FONTS.extraBold,
       color: colors.textPrimary,
     },
     timeContainer: {
@@ -155,8 +156,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       marginBottom: 32,
     },
     hourInput: {
-      fontSize: 56,
-      fontWeight: '700',
+      fontSize: 54,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       backgroundColor: cardBg,
       borderRadius: 16,
@@ -167,14 +168,14 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       borderColor: colors.border,
     },
     timeColon: {
-      fontSize: 56,
-      fontWeight: '700',
+      fontSize: 54,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       marginHorizontal: 4,
     },
     minuteInput: {
-      fontSize: 56,
-      fontWeight: '700',
+      fontSize: 54,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       backgroundColor: cardBg,
       borderRadius: 16,
@@ -185,8 +186,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       borderColor: colors.border,
     },
     label: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
       marginBottom: 10,
     },
@@ -219,6 +220,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     },
     charCount: {
       fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       textAlign: 'right',
       marginTop: 4,
@@ -269,8 +271,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       marginBottom: 24,
     },
     toggleLabel: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
       flex: 1,
       marginRight: 12,
@@ -293,8 +295,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       borderColor: colors.accent,
     },
     ampmText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     ampmTextActive: {
@@ -312,18 +314,19 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       alignSelf: 'center',
     },
     timeDisplayText: {
-      fontSize: 48,
-      fontWeight: '700',
+      fontSize: 46,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     timeDisplayHint: {
       fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.textTertiary,
       marginTop: 4,
     },
     timeDisplayInput: {
-      fontSize: 48,
-      fontWeight: '700',
+      fontSize: 46,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       textAlign: 'center',
       minWidth: 60,
@@ -345,8 +348,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       borderColor: colors.border,
     },
     timeModalTitle: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 18,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
       textAlign: 'center',
     },
@@ -372,8 +375,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       backgroundColor: colors.accent,
     },
     modeBtnText: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     modeBtnTextActive: {
@@ -392,8 +395,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       marginBottom: 8,
     },
     setDateText: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
     },
     setDateChevron: {
@@ -422,8 +425,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       color: colors.accent,
     },
     calTitle: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     calWeekRow: {
@@ -434,7 +437,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       flex: 1,
       textAlign: 'center',
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
     },
     calGrid: {
@@ -458,7 +461,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       backgroundColor: colors.accent,
     },
     calDayText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.regular,
       color: colors.textPrimary,
     },
     calDayTextDisabled: {
@@ -467,14 +471,14 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
     },
     calDayTextSelected: {
       color: colors.textPrimary,
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
     },
     selectedDateText: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: colors.accent,
       textAlign: 'center',
       marginBottom: 24,
-      fontWeight: '600',
     },
     scheduleSection: {
       marginBottom: 8,
@@ -814,7 +818,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 style={[styles.quickEmojiBtn, { borderColor: colors.red + '40' }]}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 14, color: colors.red, fontWeight: '600' }}>{'\u2715'}</Text>
+                <Text style={{ fontSize: 14, color: colors.red, fontFamily: FONTS.semiBold }}>{'\u2715'}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -840,7 +844,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         <Text style={styles.charCount}>{form.note.length}/200</Text>
 
         <Text style={styles.label}>Wake-up Photo</Text>
-        <Text style={{ fontSize: 12, color: colors.textTertiary, marginBottom: 10, marginTop: -6 }}>Shows when this alarm fires</Text>
+        <Text style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.textTertiary, marginBottom: 10, marginTop: -6 }}>Shows when this alarm fires</Text>
         {form.photoUri ? (
           <View style={{ marginBottom: 24, position: 'relative' as const }}>
             <TouchableOpacity onPress={form.pickPhoto} activeOpacity={0.8}>
@@ -860,7 +864,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               }}
               activeOpacity={0.7}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>{'\u2715'}</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: FONTS.bold }}>{'\u2715'}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -870,7 +874,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             style={{ borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', borderStyle: 'dashed' as const, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)', height: 120, justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}
           >
             <Image source={APP_ICONS.camera} style={{ width: 28, height: 28, marginBottom: 4 }} />
-            <Text style={{ fontSize: 14, color: colors.textTertiary }}>Tap to add photo</Text>
+            <Text style={{ fontSize: 13, fontFamily: FONTS.regular, color: colors.textTertiary }}>Tap to add photo</Text>
           </TouchableOpacity>
         )}
 
@@ -885,7 +889,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                   activeOpacity={0.7}
                   style={{ marginLeft: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center', marginRight: 'auto' }}
                 >
-                  <Text style={{ fontSize: 12, color: colors.textTertiary, fontWeight: '700' }}>i</Text>
+                  <Text style={{ fontSize: 12, color: colors.textTertiary, fontFamily: FONTS.bold }}>i</Text>
                 </TouchableOpacity>
                 <Switch
                   value={form.guessWhy}
@@ -895,7 +899,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                   disabled={guessWhyDisabled}
                 />
               </View>
-              <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: -22, marginBottom: 20, paddingLeft: 16 }}>
+              <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textTertiary, marginTop: -22, marginBottom: 20, paddingLeft: 16 }}>
                 {guessWhyDisabled ? 'Add a nickname, note, or icon first' : 'Play a guessing game when this alarm fires'}
               </Text>
             </>
@@ -911,9 +915,9 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             thumbColor={form.selectedPrivate ? colors.textPrimary : colors.textTertiary}
           />
         </View>
-        <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: -22, marginBottom: form.selectedPrivate ? 2 : 20, paddingLeft: 16 }}>Hides name and details from the alarm list</Text>
+        <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textTertiary, marginTop: -22, marginBottom: form.selectedPrivate ? 2 : 20, paddingLeft: 16 }}>Hides name and details from the alarm list</Text>
         {form.selectedPrivate && (
-          <Text style={{ fontSize: 10, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{form.privateHint}</Text>
+          <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textTertiary, opacity: 0.6, marginBottom: 20, paddingLeft: 16, fontStyle: 'italic' }}>{form.privateHint}</Text>
         )}
 
         <View style={styles.soundRow}>
@@ -935,7 +939,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             >
               <Image source={getSoundModeIcon(form.soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
             </TouchableOpacity>
-            <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
+            <Text style={{ fontSize: 11, fontFamily: FONTS.regular, color: colors.textTertiary, marginTop: 4 }}>
               {getSoundModeLabel(form.soundMode)}
             </Text>
           </View>
@@ -946,11 +950,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 activeOpacity={0.7}
                 style={{ backgroundColor: colors.accent + '20', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 }}
               >
-                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent }} numberOfLines={1}>
+                <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.accent }} numberOfLines={1}>
                   {form.selectedSoundName || 'Default Sound'}
                 </Text>
               </TouchableOpacity>
-              <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>Select Sound</Text>
+              <Text style={{ fontSize: 11, fontFamily: FONTS.regular, color: colors.textTertiary, marginTop: 4 }}>Select Sound</Text>
             </View>
           )}
         </View>

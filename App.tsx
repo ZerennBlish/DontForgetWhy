@@ -5,11 +5,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts, Satisfy_400Regular } from '@expo-google-fonts/satisfy';
 import { LilitaOne_400Regular } from '@expo-google-fonts/lilita-one';
 import {
-  Nunito_400Regular,
-  Nunito_600SemiBold,
-  Nunito_700Bold,
-  Nunito_800ExtraBold,
-} from '@expo-google-fonts/nunito';
+  MontserratAlternates_400Regular,
+  MontserratAlternates_600SemiBold,
+  MontserratAlternates_700Bold,
+  MontserratAlternates_800ExtraBold,
+} from '@expo-google-fonts/montserrat-alternates';
 import * as SplashScreen from 'expo-splash-screen';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -44,6 +44,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { migrateFromAsyncStorage } from './src/services/database';
 import { useNotificationRouting } from './src/hooks/useNotificationRouting';
 import type { RootStackParamList } from './src/navigation/types';
+import { FONTS } from './src/theme/fonts';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -281,10 +282,10 @@ export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     Satisfy_400Regular,
     LilitaOne_400Regular,
-    Nunito_400Regular,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-    Nunito_800ExtraBold,
+    MontserratAlternates_400Regular,
+    MontserratAlternates_600SemiBold,
+    MontserratAlternates_700Bold,
+    MontserratAlternates_800ExtraBold,
   });
   const [dbReady, setDbReady] = useState(false);
   const [migrationFailed, setMigrationFailed] = useState(false);
@@ -323,7 +324,7 @@ export default function App() {
   if (migrationFailed) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0A12', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700', marginBottom: 12, textAlign: 'center' }}>
+        <Text style={{ color: '#FFFFFF', fontSize: 18, fontFamily: FONTS.bold, marginBottom: 12, textAlign: 'center' }}>
           Something went wrong
         </Text>
         <Text style={{ color: '#AAAAAA', fontSize: 14, textAlign: 'center', marginBottom: 24 }}>
@@ -333,7 +334,7 @@ export default function App() {
           onPress={attemptMigration}
           style={{ backgroundColor: '#5B9EE6', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
         >
-          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Retry</Text>
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontFamily: FONTS.semiBold }}>Retry</Text>
         </TouchableOpacity>
       </View>
     );

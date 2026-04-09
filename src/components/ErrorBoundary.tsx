@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { FONTS } from '../theme/fonts';
 
 const BG = '#121220';
 const TEXT = '#EAEAFF';
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: FONTS.extraBold,
     color: TEXT,
     textAlign: 'center',
     marginBottom: 12,
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: FONTS.bold,
     color: TEXT,
   },
   hint: {

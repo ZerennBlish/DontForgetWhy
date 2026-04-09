@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 18 (April 5, 2026)
+**Last updated:** Session 22 (April 8, 2026)
 
 ---
 
@@ -112,11 +112,15 @@ VoiceMemoDetailScreen and NoteEditorModal both use `isViewMode` state for existi
 ### Brand Title Token
 `brandTitle` field in ThemeColors: per-theme title color for "Don't Forget Why" on HomeScreen. Dark: `#2563EB` (blue), Light: `#1E3A8A` (navy), High Contrast: `#00D4FF` (cyan), Vivid: `#00FF88` (green), Sunset: `#9A3412` (brown), Ruby: `#9F1239` (deep red).
 
-### Font System (Session 21)
-- `FONTS` constant in `src/theme/fonts.ts` — exports `appTitle` (Satisfy), `gameHeader` (LilitaOne), `screenHeader` (Nunito)
-- Font loading in App.tsx: `useFonts` hook from `expo-font` loads all three families; `expo-splash-screen` held until ready
+### Font System (Sessions 21-22)
+- Three-tier system: Satisfy (app title), LilitaOne (game headers), Montserrat Alternates (everything else)
+- `FONTS` constant in `src/theme/fonts.ts` — exports `title` (Satisfy), `gameHeader` (LilitaOne), `regular`/`semiBold`/`bold`/`extraBold` (Montserrat Alternates)
+- Font loading in App.tsx: `useFonts` hook from `expo-font` loads all families; `expo-splash-screen` held until ready
 - Error fallback: if fonts fail, app proceeds with system fonts — `FONTS` values are just font family strings
-- Android `fontWeight` restriction: custom `fontFamily` ignores `fontWeight` on Android — must use weight-specific font files and remove `fontWeight` from styles
+- Android `fontWeight` restriction: custom `fontFamily` ignores `fontWeight` on Android — must use weight-specific font files. All `fontWeight` properties replaced with `fontFamily` throughout (Phase 2, Session 22)
+- Phase 1 (Session 21): fonts applied to screen headers only (Nunito originally, swapped to Montserrat Alternates in Session 22)
+- Phase 2 (Session 22): fontFamily applied to ALL body text, labels, buttons, descriptions across 25 screens, 16 components, and buttonStyles.ts. Font size reduction pass applied to compensate for wider letterforms (28+ → -2, 16-27 → -2, 13-15 → -1)
+- Font swap: originally Nunito, changed to Montserrat Alternates for more premium, distinctive feel. `@expo-google-fonts/nunito` removed.
 
 ### Haptics (Session 21)
 - `hapticLight()` — standard UI feedback (button taps, player's turn notification)
@@ -325,6 +329,19 @@ Voice roasts use the native `AlarmChannelModule` on ALARM stream because they pl
 - HomeButton component on all screens for direct Home navigation
 - Widget deep links: `pendingAlarmListAction` and `pendingReminderListAction` (split from `pendingTabAction`)
 - Deep links all route through Home as base
+
+### Screen → Hook Extraction Pattern (Sessions 15, 22)
+Large screens decomposed into thin render shells + state/logic hooks:
+- AlarmListScreen → useAlarmList (Session 15)
+- NotepadScreen → useNotepad (Session 15)
+- ChessScreen → useChess (Session 16)
+- CheckersScreen → useCheckers (Session 18)
+- SudokuScreen → useSudoku (Session 22)
+- TimerScreen → useTimerScreen (Session 22)
+- DailyRiddleScreen → useDailyRiddle (Session 22)
+- SettingsScreen → useSettings (Session 22, navigation passed as parameter for handleImport)
+
+NoteEditorModal cleanup (Session 22): extracted linkedText.tsx (link detection + rendering), NoteVoiceMemo.tsx (recording controls + playback cards + voiceMemoStyles), ColorPickerModal.tsx (reusable color picker modal).
 
 ### Icon System (Session 9)
 - `src/components/Icons.tsx`: 29+ View-based icons replacing emoji throughout app

@@ -18,6 +18,7 @@ import type { ThemeColors } from '../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { EdgeInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 import { TRIVIA_QUESTIONS, TRIVIA_CATEGORIES } from '../data/triviaQuestions';
 import { fetchOnlineQuestions, checkOnlineAvailable } from '../services/triviaAI';
 import {
@@ -394,7 +395,7 @@ export default function TriviaScreen({ navigation }: Props) {
             <TouchableOpacity
               key={cat.id}
               style={[styles.categoryCard, selectedCategory === cat.id && styles.categoryCardActive]}
-              onPress={() => { hapticLight(); setSelectedCategory(cat.id); }}
+              onPress={() => { hapticLight(); playGameSound('tap'); setSelectedCategory(cat.id); }}
               activeOpacity={0.7}
             >
               <Image source={CATEGORY_IMAGES[cat.id]} style={styles.categoryImage} resizeMode="contain" />
@@ -411,7 +412,7 @@ export default function TriviaScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={d}
                 style={[styles.pill, difficultyFilter === d && styles.pillActive]}
-                onPress={() => { hapticLight(); setDifficultyFilter(d); }}
+                onPress={() => { hapticLight(); playGameSound('tap'); setDifficultyFilter(d); }}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.pillText, difficultyFilter === d && styles.pillTextActive]}>
@@ -428,7 +429,7 @@ export default function TriviaScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={s}
                 style={[styles.pill, speedOption === s && styles.pillActive]}
-                onPress={() => { hapticLight(); setSpeedOption(s); }}
+                onPress={() => { hapticLight(); playGameSound('tap'); setSpeedOption(s); }}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.pillText, speedOption === s && styles.pillTextActive]}>
@@ -440,7 +441,7 @@ export default function TriviaScreen({ navigation }: Props) {
         </View>
         <TouchableOpacity
           style={styles.startBtn}
-          onPress={() => { hapticLight(); startRound(selectedCategory); }}
+          onPress={() => { hapticLight(); playGameSound('tap'); startRound(selectedCategory); }}
           activeOpacity={0.7}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -505,7 +506,7 @@ export default function TriviaScreen({ navigation }: Props) {
 
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => { hapticLight(); startRound(selectedCategory); }}
+            onPress={() => { hapticLight(); playGameSound('tap'); startRound(selectedCategory); }}
             activeOpacity={0.7}
           >
             <Text style={styles.primaryBtnText}>Play Again</Text>
@@ -515,6 +516,7 @@ export default function TriviaScreen({ navigation }: Props) {
             style={styles.secondaryBtn}
             onPress={() => {
               hapticLight();
+              playGameSound('tap');
               setPhase('category');
               setAllSeenMessage(null);
             }}
@@ -682,12 +684,13 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       fontSize: 16,
     },
     modeText: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
     },
     seenNote: {
-      fontSize: 13,
+      fontSize: 12,
+      fontFamily: FONTS.regular,
       color: colors.orange,
       fontStyle: 'italic',
       marginHorizontal: 20,
@@ -718,8 +721,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       height: 56,
     },
     categoryLabel: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
       color: colors.overlayText,
       textAlign: 'center',
     },
@@ -747,7 +750,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
     },
     panelLabel: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bold,
       color: colors.textTertiary,
       width: 62,
     },
@@ -770,8 +773,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       borderColor: colors.accent,
     },
     pillText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
     },
     pillTextActive: {
@@ -785,8 +788,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       alignItems: 'center',
     },
     startBtnText: {
-      fontSize: 18,
-      fontWeight: '700',
+      fontSize: 17,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     // Top bar
@@ -804,8 +807,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       gap: 8,
     },
     topBarCategory: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: 'rgba(255,255,255,0.8)',
     },
     topBarRight: {
@@ -814,13 +817,13 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       gap: 12,
     },
     topBarCounter: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.overlayText,
     },
     topBarStreak: {
-      fontSize: 15,
-      fontWeight: '700',
+      fontSize: 14,
+      fontFamily: FONTS.bold,
       color: colors.orange,
     },
 
@@ -852,8 +855,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       borderRadius: 3,
     },
     timerText: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 13,
+      fontFamily: FONTS.bold,
       textAlign: 'center',
       marginTop: 6,
       textShadowColor: 'rgba(0, 0, 0, 0.8)',
@@ -869,8 +872,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       paddingVertical: 20,
     },
     questionText: {
-      fontSize: 22,
-      fontWeight: 'bold',
+      fontSize: 20,
+      fontFamily: FONTS.bold,
       color: '#FFFFFF',
       textAlign: 'center',
       lineHeight: 32,
@@ -907,8 +910,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       minHeight: 64,
     },
     answerText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
       textAlign: 'center',
     },
@@ -930,8 +933,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       opacity: 0.3,
     },
     timeoutText: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 15,
+      fontFamily: FONTS.bold,
       color: colors.red,
       textAlign: 'center',
       marginBottom: insets.bottom + 16,
@@ -943,18 +946,19 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       paddingHorizontal: 24,
     },
     resultsTitle: {
-      fontSize: 28,
-      fontWeight: '800',
+      fontSize: 26,
+      fontFamily: FONTS.extraBold,
       color: colors.textPrimary,
       marginBottom: 16,
     },
     resultsScore: {
-      fontSize: 56,
-      fontWeight: '800',
+      fontSize: 54,
+      fontFamily: FONTS.extraBold,
       color: colors.accent,
     },
     resultsStars: {
-      fontSize: 32,
+      fontSize: 30,
+      fontFamily: FONTS.regular,
       marginTop: 8,
       marginBottom: 24,
     },
@@ -971,8 +975,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       marginBottom: 24,
     },
     resultsBadgeText: {
-      fontSize: 15,
-      fontWeight: '600',
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
     },
     resultsStatsCard: {
@@ -990,13 +994,13 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       alignItems: 'center',
     },
     resultsStatValue: {
-      fontSize: 22,
-      fontWeight: '800',
+      fontSize: 20,
+      fontFamily: FONTS.extraBold,
       color: colors.textPrimary,
     },
     resultsStatLabel: {
       fontSize: 12,
-      fontWeight: '500',
+      fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
       marginTop: 4,
     },
@@ -1013,8 +1017,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       marginBottom: 12,
     },
     primaryBtnText: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontSize: 16,
+      fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
     secondaryBtn: {
@@ -1028,8 +1032,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       marginBottom: 12,
     },
     secondaryBtnText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
     },
   });

@@ -2,6 +2,7 @@ import React, { useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 
 interface SwipeableRowProps {
   children: React.ReactNode;
@@ -97,6 +98,6 @@ const styles = StyleSheet.create({
   deleteText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.bold,
   },
 });

@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import MEDIA_ICONS from '../assets/mediaIcons';
+import { FONTS } from '../theme/fonts';
 import type { VoiceMemo } from '../types/voiceMemo';
 
 function formatDuration(seconds: number): string {
@@ -76,40 +78,18 @@ function VoiceMemoCard({
           justifyContent: 'center',
           alignItems: 'center',
         },
-        playTriangle: {
-          width: 0,
-          height: 0,
-          borderLeftWidth: 10,
-          borderLeftColor: '#FFFFFF',
-          borderTopWidth: 7,
-          borderTopColor: 'transparent',
-          borderBottomWidth: 7,
-          borderBottomColor: 'transparent',
-          marginLeft: 3,
-        },
-        pauseBars: {
-          flexDirection: 'row',
-          gap: 3,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        pauseBar: {
-          width: 3,
-          height: 12,
-          backgroundColor: '#FFFFFF',
-          borderRadius: 1,
-        },
         center: {
           flex: 1,
           marginHorizontal: 12,
         },
         title: {
-          fontSize: 15,
-          fontWeight: '600',
+          fontSize: 14,
+          fontFamily: FONTS.semiBold,
           color: colors.textPrimary,
         },
         subtitle: {
           fontSize: 12,
+          fontFamily: FONTS.regular,
           color: colors.textSecondary,
           marginTop: 2,
         },
@@ -143,7 +123,7 @@ function VoiceMemoCard({
         },
         pinBtnText: {
           fontSize: 11,
-          fontWeight: '600',
+          fontFamily: FONTS.semiBold,
           color: colors.textTertiary,
         },
       }),
@@ -158,12 +138,9 @@ function VoiceMemoCard({
         activeOpacity={0.7}
       >
         {isPlaying ? (
-          <View style={styles.pauseBars}>
-            <View style={styles.pauseBar} />
-            <View style={styles.pauseBar} />
-          </View>
+          <Image source={MEDIA_ICONS.pause} style={{ width: 18, height: 18 }} resizeMode="contain" />
         ) : (
-          <View style={styles.playTriangle} />
+          <Image source={MEDIA_ICONS.play} style={{ width: 18, height: 18 }} resizeMode="contain" />
         )}
       </TouchableOpacity>
 

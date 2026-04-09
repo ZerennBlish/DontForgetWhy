@@ -1,12 +1,12 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 18 (April 5, 2026)
+**Last updated:** Session 22 (April 8, 2026)
 
 ---
 
 ## 1. Summary Statistics
 
-- **~105+ unique bugs** found and fixed across the project lifetime
+- **~115+ unique bugs** found and fixed across the project lifetime
 - **Found by Zerenn:** ~30 (manual testing, device observation)
 - **Found by auditors (Codex/Gemini):** ~60
 - **Found by Opus/TypeScript:** ~10
@@ -540,3 +540,16 @@
 - **P3: console.log in production** — AI move timing `console.log` in triggerAIMove shipped to production. Fixed: wrapped in `__DEV__` guard.
 
 **53 audits total.**
+
+### Session 22 — Font Rollout + Hook Extractions Audit Findings
+
+**Dual audit (Codex + Gemini) — 11 findings, all fixed:**
+- **Dead solutionGrid state in useSudoku:** `useState<Grid>([])` for solutionGrid was set but never read — hook already uses `solutionRef.current` everywhere. Removed useState and all setSolutionGrid calls.
+- **ColorPickerModal stale ref on reopen:** `pickedRef.current` retained previous session's color when modal reopened. The existing useEffect reset the ref, but the ColorPicker component didn't re-render with the new value. Fixed: added `key={visible ? initialColor : 'closed'}` to force remount.
+- **Dead uri prop on MemoCard:** `uri: string` in MemoCardProps was passed but never used inside the component. Removed from interface, destructured props, and NoteEditorModal call site.
+- **fontWeight leftovers (8 files):** Remaining `fontWeight` properties on Text styles in NoteEditorModal (colorCheck, fontColorCheck, thumbnailRemoveText), NoteVoiceMemo (memoDeleteText), EmojiPickerModal (closeBtnText), SoundPickerModal (closeBtnText, check), SwipeableRow (deleteText), SettingsScreen (close glyph), CreateAlarmScreen (close/info glyphs), App.tsx (migration failure UI). All replaced with `fontFamily: FONTS.xxx`. Also fixed ErrorBoundary and ImageLightbox (missed in Phase 2).
+- **Stale Nunito comment in fonts.ts:** File header still referenced "Nunito" after swap to Montserrat Alternates. Updated.
+- **Dead quickCaptureHeader style in HomeScreen:** Style definition remained after JSX was removed. Deleted.
+- **Unused @expo-google-fonts/nunito dependency:** Package still in package.json after font swap. Uninstalled.
+
+**54 audits total.**
