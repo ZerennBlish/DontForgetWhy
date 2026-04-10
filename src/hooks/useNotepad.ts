@@ -110,6 +110,12 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadResult 
   const [bgOpacity, setBgOpacity] = useState(0.5);
 
   const handledActionRef = useRef('');
+  // Tracks the routeParams object that handledActionRef was set against.
+  // The routeParams effect re-runs whenever editorVisible flips (e.g.,
+  // user dismisses the editor) — without this guard the stale params
+  // would re-trigger and immediately reopen the editor, trapping the
+  // user in an unclosable modal.
+  const handledRouteParamsRef = useRef<typeof routeParams>(undefined);
   // NoteEditorModal writes to this whenever its content diverges from
   // the loaded baseline. Read it (not editorVisible alone) when deciding
   // whether a pending widget action is safe to preempt the editor.
@@ -190,13 +196,24 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadResult 
   const closeEditor = useCallback(() => {
     setEditorVisible(false);
     setEditingNote(null);
-    handledActionRef.current = '';
+    // NOTE: do not reset handledActionRef here — the routeParams effect
+    // re-runs when editorVisible flips, and a reset here would let stale
+    // params reopen the editor immediately. The ref is now reset only
+    // when routeParams actually changes (see effect below).
     cleanupTempDrawings();
   }, []);
 
   // Handle route params and pending actions
   useEffect(() => {
     const params = routeParams;
+
+    // Reset the handled marker only when routeParams actually changes
+    // (a fresh navigation), not when editorVisible flips.
+    if (handledRouteParamsRef.current !== params) {
+      handledRouteParamsRef.current = params;
+      handledActionRef.current = '';
+    }
+
     const actionKey = params?.noteId
       ? `edit:${params.noteId}`
       : params?.newNote

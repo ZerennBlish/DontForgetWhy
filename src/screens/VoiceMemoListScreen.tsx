@@ -607,7 +607,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Record new voice memo"
         >
-          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40, tintColor: colors.accent }} resizeMode="contain" />
+          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast

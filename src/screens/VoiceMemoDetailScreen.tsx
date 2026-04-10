@@ -286,7 +286,18 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       exitingRef.current = true;
       savingRef.current = false;
       setSaving(false);
-      navigation.goBack();
+      // After saving a quick recording, land the user on VoiceMemoList.
+      // For users who came from VoiceMemoList (the list is already in the
+      // stack), goBack pops back to it. For quick-record entries from Home
+      // or a widget (VoiceMemoList not in stack), replace the current
+      // detail screen with the list so back goes to Home, not detail.
+      const navState = navigation.getState();
+      const prevRoute = navState.routes[navState.routes.length - 2];
+      if (prevRoute?.name === 'VoiceMemoList') {
+        navigation.goBack();
+      } else {
+        navigation.replace('VoiceMemoList');
+      }
     } catch (e) {
       console.error('Save failed:', e);
       ToastAndroid.show('Failed to save recording', ToastAndroid.SHORT);

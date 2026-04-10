@@ -66,6 +66,8 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Skip prompt if we're navigating away because save succeeded
+      if (form.savedRef.current) return;
       if (!form.isDirty) return;
       e.preventDefault();
       Alert.alert(
@@ -78,7 +80,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       );
     });
     return unsubscribe;
-  }, [navigation, form.isDirty]);
+  }, [navigation, form.isDirty, form.savedRef]);
 
   const cardBg = colors.card + 'BF';
 
