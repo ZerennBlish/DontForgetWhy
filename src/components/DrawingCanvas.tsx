@@ -56,16 +56,6 @@ interface DrawingCanvasProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function buildPathFromPoints(points: { x: number; y: number }[]): SkPath | null {
-  if (points.length === 0) return null;
-  const path = Skia.Path.Make();
-  path.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length; i++) {
-    path.lineTo(points[i].x, points[i].y);
-  }
-  return path;
-}
-
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -80,6 +70,24 @@ const PALETTE = [
   '#6C5CE7', // purple
   '#FD79A8', // pink
 ];
+
+const PALETTE_NAMES: Record<string, string> = {
+  '#1A1A2E': 'Black',
+  '#FFFFFF': 'White',
+  '#FF4444': 'Red',
+  '#4A90D9': 'Blue',
+  '#2D9B72': 'Green',
+  '#FF9F43': 'Orange',
+  '#6C5CE7': 'Purple',
+  '#FD79A8': 'Pink',
+};
+
+const WIDTH_ACCESSIBILITY_LABELS: Record<string, string> = {
+  XS: 'Extra small brush',
+  S: 'Small brush',
+  M: 'Medium brush',
+  L: 'Large brush',
+};
 
 const WIDTHS: { label: string; value: number }[] = [
   { label: 'XS', value: 1 },
@@ -124,8 +132,15 @@ export default function DrawingCanvas({
   // Render-tick forces Canvas to re-draw the in-progress stroke
   const [, setRenderTick] = useState(0);
 
-  // In-progress stroke stored as coordinate array (no native SkPath in state)
+  // Throttle the move-time renderTick to ~60fps. Pan events arrive faster
+  // than the screen can repaint; without this, every event triggers a
+  // React render even though the visible result is the same. The grant
+  // (stroke-start) tick is NOT throttled — first feedback must be instant.
+  const lastTickAtRef = useRef(0);
+
+  // In-progress stroke: coordinate array for finalization + live SkPath for rendering
   const currentPointsRef = useRef<{ x: number; y: number }[]>([]);
+  const currentSkPathRef = useRef<SkPath | null>(null);
   const currentStrokeWidthRef = useRef(activeWidth);
   const currentColorRef = useRef(activeColor);
 
@@ -183,36 +198,47 @@ export default function DrawingCanvas({
           );
 
           currentPointsRef.current = [{ x: locationX, y: locationY }];
+          const skPath = Skia.Path.Make();
+          skPath.moveTo(locationX, locationY);
+          currentSkPathRef.current = skPath;
           currentStrokeWidthRef.current = finalWidth;
           currentColorRef.current =
             tool === 'eraser' ? canvasBgColorRef.current : activeColorRef.current;
+          lastTickAtRef.current = Date.now();
           setRenderTick((t) => t + 1);
         },
 
         onPanResponderMove: (evt: GestureResponderEvent) => {
-          if (currentPointsRef.current.length === 0) return;
+          if (!currentSkPathRef.current) return;
           const { locationX, locationY } = evt.nativeEvent;
           currentPointsRef.current.push({ x: locationX, y: locationY });
-          setRenderTick((t) => t + 1);
+          currentSkPathRef.current.lineTo(locationX, locationY);
+          // Cap React renders at ~60fps so a fast pan doesn't queue
+          // dozens of redundant renders per frame. The path keeps
+          // growing in the ref between ticks; the next tick paints all
+          // accumulated segments at once.
+          const now = Date.now();
+          if (now - lastTickAtRef.current >= 16) {
+            lastTickAtRef.current = now;
+            setRenderTick((t) => t + 1);
+          }
         },
 
         onPanResponderRelease: () => {
-          const pts = currentPointsRef.current;
-          if (pts.length === 0) return;
+          const path = currentSkPathRef.current;
+          if (!path) return;
 
-          const path = buildPathFromPoints(pts);
-          if (path) {
-            const svgStr = path.toSVGString();
-            setStrokes((prev) => [
-              ...prev,
-              {
-                pathSvg: svgStr,
-                color: currentColorRef.current,
-                strokeWidth: currentStrokeWidthRef.current,
-              },
-            ]);
-          }
+          const svgStr = path.toSVGString();
+          setStrokes((prev) => [
+            ...prev,
+            {
+              pathSvg: svgStr,
+              color: currentColorRef.current,
+              strokeWidth: currentStrokeWidthRef.current,
+            },
+          ]);
           currentPointsRef.current = [];
+          currentSkPathRef.current = null;
         },
       }),
     [],
@@ -225,6 +251,7 @@ export default function DrawingCanvas({
   const resetCanvas = useCallback(() => {
     setStrokes([]);
     currentPointsRef.current = [];
+    currentSkPathRef.current = null;
     setActiveColor('#1A1A2E');
     setActiveWidth(3);
     setActiveTool('pen');
@@ -246,6 +273,7 @@ export default function DrawingCanvas({
           hapticMedium();
           setStrokes([]);
           currentPointsRef.current = [];
+          currentSkPathRef.current = null;
         },
       },
     ]);
@@ -388,9 +416,6 @@ export default function DrawingCanvas({
   // Derived values for current in-progress stroke rendering
   // -----------------------------------------------------------------------
 
-  const currentColor =
-    activeTool === 'eraser' ? canvasBgColor : activeColor;
-
   // -----------------------------------------------------------------------
   // Styles (depend on insets)
   // -----------------------------------------------------------------------
@@ -477,11 +502,6 @@ export default function DrawingCanvas({
         colorDotActive: {
           borderColor: colors.accent,
         },
-        widthRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 10,
-        },
         widthBtn: {
           minWidth: 40,
           paddingHorizontal: 12,
@@ -529,13 +549,15 @@ export default function DrawingCanvas({
       animationType="slide"
       onRequestClose={handleCancel}
     >
-      <View style={styles.container}>
+      <View style={styles.container} accessibilityViewIsModal={true}>
         {/* ---- Top bar ---- */}
         <View style={styles.topBar}>
           <TouchableOpacity
             style={styles.topBtn}
             onPress={handleCancel}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel drawing"
           >
             <Text style={styles.topBtnText}>Cancel</Text>
           </TouchableOpacity>
@@ -544,6 +566,8 @@ export default function DrawingCanvas({
             style={styles.topBtn}
             onPress={handleDone}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Save drawing"
           >
             <Text style={styles.topBtnText}>Done</Text>
           </TouchableOpacity>
@@ -586,11 +610,9 @@ export default function DrawingCanvas({
               />
             ))}
 
-            {/* In-progress stroke — SkPath built at render time from points */}
+            {/* In-progress stroke — incrementally built SkPath from ref */}
             {(() => {
-              const pts = currentPointsRef.current;
-              if (pts.length === 0) return null;
-              const path = buildPathFromPoints(pts);
+              const path = currentSkPathRef.current;
               if (!path) return null;
               return (
                 <Path
@@ -620,6 +642,9 @@ export default function DrawingCanvas({
                 setActiveTool('pen');
               }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Pen tool"
+              accessibilityState={{ selected: activeTool === 'pen' }}
             >
               <Text style={styles.toolBtnText}>{'\u270F\uFE0F'} Pen</Text>
             </TouchableOpacity>
@@ -639,6 +664,9 @@ export default function DrawingCanvas({
                 setActiveTool('eraser');
               }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Eraser tool"
+              accessibilityState={{ selected: activeTool === 'eraser' }}
             >
               <Text style={styles.toolBtnText}>
                 {'\u{1FA79}'} Eraser
@@ -651,6 +679,8 @@ export default function DrawingCanvas({
               style={styles.toolBtn}
               onPress={handleUndo}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Undo"
             >
               <Text style={styles.toolBtnText}>{'\u21A9\uFE0F'} Undo</Text>
             </TouchableOpacity>
@@ -659,6 +689,8 @@ export default function DrawingCanvas({
               style={styles.toolBtn}
               onPress={handleClear}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Clear canvas"
             >
               <Text style={styles.toolBtnText}>{'\u{1F5D1}\uFE0F'} Clear</Text>
             </TouchableOpacity>
@@ -685,6 +717,9 @@ export default function DrawingCanvas({
                   setActiveTool('pen');
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${PALETTE_NAMES[color] || color} color`}
+                accessibilityState={{ selected: activeColor === color && activeTool === 'pen' }}
               />
             ))}
             {/* Custom color slot */}
@@ -704,6 +739,9 @@ export default function DrawingCanvas({
                   setActiveTool('pen');
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Custom color ${customColor}`}
+                accessibilityState={{ selected: activeColor === customColor && activeTool === 'pen' && !PALETTE.includes(activeColor) }}
               />
             )}
             {/* "+" picker button */}
@@ -723,6 +761,8 @@ export default function DrawingCanvas({
                 setShowColorPicker(true);
               }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Choose custom color"
             >
               <Image source={APP_ICONS.plus} style={{ width: 20, height: 20 }} resizeMode="contain" />
             </TouchableOpacity>
@@ -742,6 +782,9 @@ export default function DrawingCanvas({
                   setActiveWidth(w.value);
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={WIDTH_ACCESSIBILITY_LABELS[w.label] || `${w.label} brush`}
+                accessibilityState={{ selected: activeWidth === w.value }}
               >
                 <Text style={styles.widthBtnText}>{w.label}</Text>
               </TouchableOpacity>
@@ -758,6 +801,8 @@ export default function DrawingCanvas({
                     setShowBgPicker(true);
                   }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Change canvas background"
                 >
                   <View style={[styles.bgPreview, { backgroundColor: canvasBgColor }]} />
                   <Text style={styles.toolBtnText}>BG</Text>

@@ -3,7 +3,7 @@ export interface BannerQuote {
   text: string;
 }
 
-export const HOME_BANNER_QUOTES: BannerQuote[] = [
+const HOME_BANNER_QUOTES: BannerQuote[] = [
   { section: 'alarms', text: "Snooze to hear my wonderful voice, or double tap to shut me up." },
   { section: 'alarms', text: "Set recurring alarms for when your life is stuck on repeat. Set recurring alarms for when your life is stuck on repeat." },
   { section: 'alarms', text: "Alarms have silent, vibrate, and custom sounds. For that person who's picky about what annoys them." },

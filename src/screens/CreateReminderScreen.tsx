@@ -58,6 +58,30 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
+  useEffect(() => {
+    if (form.notFound) {
+      Alert.alert('Reminder not found', 'This reminder may have been deleted.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [form.notFound, navigation]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!form.isDirty) return;
+      e.preventDefault();
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Are you sure you want to leave?',
+        [
+          { text: 'Keep editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation, form.isDirty]);
+
   const navigateBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -136,47 +160,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       fontSize: 26,
       fontFamily: FONTS.extraBold,
       color: colors.textPrimary,
-    },
-    timeContainer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 32,
-    },
-    hourInput: {
-      fontSize: 54,
-      fontFamily: FONTS.bold,
-      color: colors.textPrimary,
-      backgroundColor: cardBg,
-      borderRadius: 16,
-      width: 90,
-      textAlign: 'center',
-      paddingVertical: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    timeColon: {
-      fontSize: 54,
-      fontFamily: FONTS.bold,
-      color: colors.textPrimary,
-      marginHorizontal: 4,
-    },
-    minuteInput: {
-      fontSize: 54,
-      fontFamily: FONTS.bold,
-      color: colors.textPrimary,
-      backgroundColor: cardBg,
-      borderRadius: 16,
-      width: 90,
-      textAlign: 'center',
-      paddingVertical: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    ampmContainer: {
-      flexDirection: 'column',
-      marginLeft: 12,
-      gap: 4,
     },
     ampmBtn: {
       paddingVertical: 8,
@@ -346,7 +329,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       flexWrap: 'wrap',
     },
     calCell: {
-      width: '14.28%' as unknown as number,
+      width: '14.28%',
       aspectRatio: 1,
       justifyContent: 'center',
       alignItems: 'center',
@@ -497,7 +480,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           {form.existing ? 'Edit Reminder' : 'New Reminder'}
         </Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={[btn.primarySmall, !form.editReady && { opacity: 0.4 }]} onPress={form.editReady ? handleSave : undefined} activeOpacity={0.8} disabled={!form.editReady}>
+          <TouchableOpacity style={[btn.primarySmall, !form.editReady && { opacity: 0.4 }]} onPress={form.editReady ? handleSave : undefined} activeOpacity={0.8} disabled={!form.editReady} accessibilityRole="button" accessibilityLabel="Save reminder">
             <Text style={btn.primarySmallText}>{form.existing ? 'Update' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
@@ -532,6 +515,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                     style={[styles.ampmBtn, form.ampm === 'AM' && styles.ampmBtnActive]}
                     onPress={() => { hapticLight(); form.setAmpm('AM'); }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="AM"
+                    accessibilityState={{ selected: form.ampm === 'AM' }}
                   >
                     <Text style={[styles.ampmText, form.ampm === 'AM' && styles.ampmTextActive]}>AM</Text>
                   </TouchableOpacity>
@@ -539,6 +525,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                     style={[styles.ampmBtn, form.ampm === 'PM' && styles.ampmBtnActive]}
                     onPress={() => { hapticLight(); form.setAmpm('PM'); }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="PM"
+                    accessibilityState={{ selected: form.ampm === 'PM' }}
                   >
                     <Text style={[styles.ampmText, form.ampm === 'PM' && styles.ampmTextActive]}>PM</Text>
                   </TouchableOpacity>
@@ -550,6 +539,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 onPress={() => { hapticLight(); Keyboard.dismiss(); }}
                 activeOpacity={0.7}
                 style={[btn.primarySmall, { alignSelf: 'stretch', marginHorizontal: 40, marginTop: 10 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Done"
               >
                 <Text style={btn.primarySmallText}>Done</Text>
               </TouchableOpacity>
@@ -573,7 +564,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       {/* Time Picker Modal */}
       <Modal transparent visible={timeModalVisible} animationType="fade">
         <View style={styles.timeModalOverlay}>
-          <View style={styles.timeModalCard}>
+          <View style={styles.timeModalCard} accessibilityViewIsModal={true}>
             <Text style={styles.timeModalTitle}>Set Time</Text>
             <View style={{ alignItems: 'center', marginVertical: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -594,6 +585,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                       style={[styles.ampmBtn, form.modalAmpm === 'AM' && styles.ampmBtnActive]}
                       onPress={() => { hapticLight(); form.setModalAmpm('AM'); }}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="AM"
+                      accessibilityState={{ selected: form.modalAmpm === 'AM' }}
                     >
                       <Text style={[styles.ampmText, form.modalAmpm === 'AM' && styles.ampmTextActive]}>AM</Text>
                     </TouchableOpacity>
@@ -601,6 +595,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                       style={[styles.ampmBtn, form.modalAmpm === 'PM' && styles.ampmBtnActive]}
                       onPress={() => { hapticLight(); form.setModalAmpm('PM'); }}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="PM"
+                      accessibilityState={{ selected: form.modalAmpm === 'PM' }}
                     >
                       <Text style={[styles.ampmText, form.modalAmpm === 'PM' && styles.ampmTextActive]}>PM</Text>
                     </TouchableOpacity>
@@ -609,10 +606,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               </View>
             </View>
             <View style={styles.timeModalBtns}>
-              <TouchableOpacity onPress={handleTimeModalCancel} style={[btn.secondary, { flex: 1 }]} activeOpacity={0.7}>
+              <TouchableOpacity onPress={handleTimeModalCancel} style={[btn.secondary, { flex: 1 }]} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Cancel">
                 <Text style={btn.secondaryText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleTimeModalDone} style={[btn.primary, { flex: 1 }]} activeOpacity={0.7}>
+              <TouchableOpacity onPress={handleTimeModalDone} style={[btn.primary, { flex: 1 }]} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Done">
                 <Text style={btn.primaryText}>Done</Text>
               </TouchableOpacity>
             </View>
@@ -627,6 +624,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               style={[styles.modeBtn, form.mode === 'one-time' && styles.modeBtnActive]}
               onPress={() => { hapticLight(); form.switchMode('one-time'); }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="One-time schedule"
+              accessibilityState={{ selected: form.mode === 'one-time' }}
             >
               <Text style={[styles.modeBtnText, form.mode === 'one-time' && styles.modeBtnTextActive]}>
                 One-time
@@ -636,6 +636,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               style={[styles.modeBtn, form.mode === 'recurring' && styles.modeBtnActive]}
               onPress={() => { hapticLight(); form.switchMode('recurring'); }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Recurring schedule"
+              accessibilityState={{ selected: form.mode === 'recurring' }}
             >
               <Text style={[styles.modeBtnText, form.mode === 'recurring' && styles.modeBtnTextActive]}>
                 Recurring
@@ -667,6 +670,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                   <TouchableOpacity
                     onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                     style={styles.clearDateBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear selected date"
                   >
                     <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
                   </TouchableOpacity>
@@ -681,6 +686,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 style={{ flex: 1 }}
                 onPress={() => { hapticLight(); form.toggleCalendar(); }}
                 activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={form.selectedDate ? `Selected date: ${formatDateDisplay(form.selectedDate)}` : 'Set date'}
               >
                 <Text style={styles.setDateText}>
                   <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 4 }} /> {form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}
@@ -690,6 +697,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 <TouchableOpacity
                   onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                   style={styles.clearDateBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear selected date"
                 >
                   <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 </TouchableOpacity>
@@ -702,11 +711,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           {form.showCalendar && (
             <>
               <View style={styles.calHeader}>
-                <TouchableOpacity onPress={() => { hapticLight(); form.handleCalPrev(); }} style={styles.calNav}>
+                <TouchableOpacity onPress={() => { hapticLight(); form.handleCalPrev(); }} style={styles.calNav} accessibilityRole="button" accessibilityLabel="Previous month">
                   <Text style={styles.calNavText}>{'\u2039'}</Text>
                 </TouchableOpacity>
                 <Text style={styles.calTitle}>{form.MONTH_NAMES[form.calMonth]} {form.calYear}</Text>
-                <TouchableOpacity onPress={() => { hapticLight(); form.handleCalNext(); }} style={styles.calNav}>
+                <TouchableOpacity onPress={() => { hapticLight(); form.handleCalNext(); }} style={styles.calNav} accessibilityRole="button" accessibilityLabel="Next month">
                   <Text style={styles.calNavText}>{'\u203A'}</Text>
                 </TouchableOpacity>
               </View>
@@ -733,6 +742,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                         onPress={() => { hapticLight(); form.handleSelectDate(day); }}
                         disabled={isPast}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${form.MONTH_NAMES[form.calMonth]} ${day}, ${form.calYear}`}
+                        accessibilityState={{ selected: isSelected, disabled: isPast }}
                       >
                         <Text style={[
                           styles.calDayText,
@@ -767,6 +779,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             style={styles.emojiCircle}
             onPress={() => { hapticLight(); setEmojiPickerOpen((o) => !o); }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Choose reminder icon"
           >
             <Text style={styles.emojiCircleText}>{form.selectedIcon !== '' ? (form.selectedIcon || '\u{1F4DD}') : ''}</Text>
           </TouchableOpacity>
@@ -778,6 +792,9 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 key={emoji}
                 onPress={() => { hapticLight(); form.setSelectedIcon(form.selectedIcon === emoji ? '' : emoji); setEmojiPickerOpen(false); }}
                 style={[styles.quickEmojiBtn, form.selectedIcon === emoji && styles.quickEmojiBtnActive]}
+                accessibilityRole="button"
+                accessibilityLabel={emoji}
+                accessibilityState={{ selected: form.selectedIcon === emoji }}
               >
                 <Text style={{ fontSize: 18 }}>{emoji}</Text>
               </TouchableOpacity>
@@ -787,6 +804,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 onPress={() => { hapticLight(); form.setSelectedIcon(''); setEmojiPickerOpen(false); }}
                 style={[styles.quickEmojiBtn, { borderColor: colors.red + '40' }]}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Clear reminder icon"
               >
                 <Image source={APP_ICONS.closeX} style={{ width: 13, height: 13 }} resizeMode="contain" />
               </TouchableOpacity>
@@ -794,6 +813,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             <TouchableOpacity
               onPress={() => { hapticLight(); setEmojiModalVisible(true); }}
               style={styles.quickEmojiBtn}
+              accessibilityRole="button"
+              accessibilityLabel="More icons"
             >
               <Image source={APP_ICONS.plus} style={{ width: 22, height: 22 }} resizeMode="contain" />
             </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -150,21 +150,22 @@ export default function NotepadScreen({ navigation, route }: Props) {
       borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.accent + '30',
+      backgroundColor: colors.accent + '15',
       shadowColor: colors.accent,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.6,
       shadowRadius: 12,
+      elevation: 8,
     },
   }), [colors, insets.bottom, insets.top]);
 
-  const renderItem = ({ item }: { item: Note }) => {
+  const renderItem = useCallback(({ item }: { item: Note }) => {
     if (item.deletedAt) {
       return (
         <DeletedNoteCard
           note={item}
-          onRestore={() => notepad.handleRestore(item.id)}
-          onPermanentDelete={() => notepad.handlePermanentDelete(item.id)}
+          onRestore={notepad.handleRestore}
+          onPermanentDelete={notepad.handlePermanentDelete}
         />
       );
     }
@@ -172,12 +173,14 @@ export default function NotepadScreen({ navigation, route }: Props) {
       <NoteCard
         note={item}
         isPinned={notepad.pinnedIds.includes(item.id)}
-        onPress={() => notepad.openEditorWithNote(item)}
-        onDelete={() => notepad.handleDeleteFromList(item.id)}
-        onTogglePin={() => notepad.handleTogglePin(item.id)}
+        onPress={notepad.openEditorWithNote}
+        onDelete={notepad.handleDeleteFromList}
+        onTogglePin={notepad.handleTogglePin}
       />
     );
-  };
+  }, [notepad.handleRestore, notepad.handlePermanentDelete, notepad.pinnedIds, notepad.openEditorWithNote, notepad.handleDeleteFromList, notepad.handleTogglePin]);
+
+  const keyExtractor = useCallback((item: Note) => item.id, []);
 
   const renderEmpty = () => {
     if (notepad.filter === 'deleted') {
@@ -276,7 +279,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
         ) : (
           <FlatList
             data={notepad.sorted}
-            keyExtractor={(item) => item.id}
+            keyExtractor={keyExtractor}
             renderItem={renderItem}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
@@ -294,7 +297,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
           accessibilityLabel="Create new note"
           accessibilityRole="button"
         >
-          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
+          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40, tintColor: colors.accent }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast
@@ -316,6 +319,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
         onClose={notepad.closeEditor}
         onCustomBgColorChange={notepad.onCustomBgColorChange}
         onCustomFontColorChange={notepad.onCustomFontColorChange}
+        dirtyRef={notepad.editorDirtyRef}
       />
     </View>
   );

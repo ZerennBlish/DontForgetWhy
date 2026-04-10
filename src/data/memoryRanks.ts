@@ -1,13 +1,13 @@
 import { ImageSourcePropType } from 'react-native';
 
-export interface RankTier {
+interface RankTier {
   min: number;
   max: number;
   title: string;
   imageSource: ImageSourcePropType;
 }
 
-export const RANK_THRESHOLDS: RankTier[] = [
+const RANK_THRESHOLDS: RankTier[] = [
   { min: 137, max: 140, title: 'The Elephant', imageSource: require('../../assets/ranks/rank-elephant.webp') },
   { min: 125, max: 136, title: 'The Steel Trap', imageSource: require('../../assets/ranks/rank-steeltrap.webp') },
   { min: 106, max: 124, title: 'The Show-Off', imageSource: require('../../assets/ranks/rank-showoff.webp') },

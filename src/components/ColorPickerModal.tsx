@@ -28,8 +28,12 @@ export default function ColorPickerModal({ visible, title, initialColor, onApply
 
   return (
     <Modal transparent visible={visible} animationType="fade">
-      <View style={[styles.overlay, { backgroundColor: colors.modalOverlay }]}>
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View
+        style={[styles.overlay, { backgroundColor: colors.modalOverlay }]}
+        accessibilityRole="button"
+        accessibilityLabel="Cancel color selection"
+      >
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} accessibilityViewIsModal={true}>
           <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
           <ColorPicker
             key={visible ? initialColor : 'closed'}
@@ -47,6 +51,8 @@ export default function ColorPickerModal({ visible, title, initialColor, onApply
               onPress={() => { hapticLight(); onCancel(); }}
               style={[btn.secondary, { flex: 1 }]}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel color selection"
             >
               <Text style={btn.secondaryText}>Cancel</Text>
             </TouchableOpacity>
@@ -54,6 +60,8 @@ export default function ColorPickerModal({ visible, title, initialColor, onApply
               onPress={() => { hapticMedium(); onApply(pickedRef.current); }}
               style={[btn.primary, { flex: 1 }]}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Apply selected color"
             >
               <Text style={btn.primaryText}>Apply</Text>
             </TouchableOpacity>

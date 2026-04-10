@@ -1,7 +1,9 @@
+import type { ImageSourcePropType } from 'react-native';
+
 // Map of piece key (e.g. "wK", "bP") to the required image source.
 // chess.js uses lowercase type letters: p, n, b, r, q, k
 // and single-character colors: 'w' (white) | 'b' (black).
-const PIECE_IMAGES: Record<string, any> = {
+const PIECE_IMAGES: Record<string, ImageSourcePropType> = {
   wK: require('../../assets/chess/wK.webp'),
   wQ: require('../../assets/chess/wQ.webp'),
   wR: require('../../assets/chess/wR.webp'),
@@ -16,8 +18,8 @@ const PIECE_IMAGES: Record<string, any> = {
   bP: require('../../assets/chess/bP.webp'),
 };
 
-export function getPieceImage(piece: { type: string; color: string }): any {
-  if (!piece || !piece.type || !piece.color) return null;
+export function getPieceImage(piece: { type: string; color: string }): ImageSourcePropType | undefined {
+  if (!piece || !piece.type || !piece.color) return undefined;
   const key = `${piece.color}${piece.type.toUpperCase()}`;
-  return PIECE_IMAGES[key] ?? null;
+  return PIECE_IMAGES[key];
 }

@@ -47,7 +47,7 @@ const skipMessages = [
   'Giving up already? Your alarms expected more.',
 ];
 
-export function getRandomPromptMessage(): string {
+function getRandomPromptMessage(): string {
   return promptMessages[Math.floor(Math.random() * promptMessages.length)];
 }
 
@@ -63,4 +63,4 @@ export function getRandomSkipMessage(): string {
   return skipMessages[Math.floor(Math.random() * skipMessages.length)];
 }
 
-export { promptMessages, winMessages, loseMessages, skipMessages };
+

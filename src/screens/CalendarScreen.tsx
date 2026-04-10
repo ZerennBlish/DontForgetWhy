@@ -656,12 +656,12 @@ export default function CalendarScreen({ navigation, route }: Props) {
           marginBottom: 8,
           borderWidth: 1,
           borderColor: colors.border,
-          borderLeftWidth: 4,
-          elevation: 1,
+          borderLeftWidth: 3,
+          elevation: 2,
           shadowColor: '#000000',
           shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.1,
-          shadowRadius: 2,
+          shadowOpacity: 0.15,
+          shadowRadius: 3,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
@@ -735,6 +735,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
       const isDisabled = state === 'disabled' || state === 'inactive';
       const dots: { key?: string; color: string }[] = marking?.dots ?? [];
 
+      const monthName = new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { month: 'long' });
+      const eventCount = dots.length;
+      const dayLabel = `${monthName} ${date.day}${eventCount > 0 ? `, ${eventCount} event${eventCount > 1 ? 's' : ''}` : ''}`;
+
       let textColor = colors.textPrimary;
       let opacity = 1;
 
@@ -754,6 +758,9 @@ export default function CalendarScreen({ navigation, route }: Props) {
           onPress={() => onPress?.(date)}
           activeOpacity={0.6}
           style={dayCellStyles.cell}
+          accessibilityRole="button"
+          accessibilityLabel={dayLabel}
+          accessibilityState={{ selected: isSelected }}
         >
           <View
             style={[
@@ -792,7 +799,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       if (item.type === 'alarm') {
         const a = item.data;
         return (
-          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateAlarm', { alarm: item.data }); }} style={[styles.card, { borderLeftColor: DOT_ALARM, backgroundColor: colors.mode === 'dark' ? colors.card : DOT_ALARM + '15' }]}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateAlarm', { alarm: item.data }); }} style={[styles.card, { borderColor: DOT_ALARM, borderLeftColor: DOT_ALARM, backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : DOT_ALARM + '15' }]} accessibilityRole="button" accessibilityLabel={`Alarm: ${a.nickname || a.category}, ${formatTime(a.time, timeFormat)}${a.mode === 'recurring' ? `, ${a.days.join(', ')}` : ''}`}>
             <Text style={styles.cardIcon}>{a.icon || '\u23F0'}</Text>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -818,7 +825,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       if (item.type === 'reminder') {
         const r = item.data;
         return (
-          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateReminder', { reminderId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_REMINDER, backgroundColor: colors.mode === 'dark' ? colors.card : DOT_REMINDER + '15' }]}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateReminder', { reminderId: item.data.id }); }} style={[styles.card, { borderColor: DOT_REMINDER, borderLeftColor: DOT_REMINDER, backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : DOT_REMINDER + '15' }]} accessibilityRole="button" accessibilityLabel={`Reminder: ${r.text}${r.dueTime ? `, ${formatTime(r.dueTime, timeFormat)}` : ''}`}>
             <Text style={styles.cardIcon}>{r.icon}</Text>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -848,7 +855,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         const memo = item.data;
         const dur = `${Math.floor(memo.duration / 60)}:${String(Math.floor(memo.duration % 60)).padStart(2, '0')}`;
         return (
-          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_VOICE, backgroundColor: colors.mode === 'dark' ? colors.card : DOT_VOICE + '15' }]}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.data.id }); }} style={[styles.card, { borderColor: DOT_VOICE, borderLeftColor: DOT_VOICE, backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : DOT_VOICE + '15' }]} accessibilityRole="button" accessibilityLabel={`Voice memo: ${memo.title || 'Voice Memo'}, ${dur}`}>
             <Text style={styles.cardIcon}>{'\u{1F399}\uFE0F'}</Text>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -872,7 +879,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       const line = n.text.split('\n')[0];
       const firstLine = line.length > 50 ? line.slice(0, 50) + '\u2026' : line;
       return (
-        <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('Notepad', { noteId: item.data.id }); }} style={[styles.card, { borderLeftColor: DOT_NOTE, backgroundColor: colors.mode === 'dark' ? colors.card : DOT_NOTE + '15' }]}>
+        <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('Notepad', { noteId: item.data.id }); }} style={[styles.card, { borderColor: DOT_NOTE, borderLeftColor: DOT_NOTE, backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : DOT_NOTE + '15' }]} accessibilityRole="button" accessibilityLabel={`Note: ${firstLine}`}>
           <Text style={styles.cardIcon}>{n.icon}</Text>
           <View style={styles.cardBody}>
             <Text style={styles.cardTitle} numberOfLines={1}>
@@ -911,9 +918,9 @@ export default function CalendarScreen({ navigation, route }: Props) {
   );
 
   const rowKeyExtractor = useCallback(
-    (item: ListRow, index: number) => {
-      if (item.rowType === 'dateHeader') return `header-${item.dateStr}-${index}`;
-      return `${item.item.type}-${item.item.data.id}-${index}`;
+    (item: ListRow) => {
+      if (item.rowType === 'dateHeader') return `header-${item.dateStr}`;
+      return `${item.item.type}-${item.item.data.id}`;
     },
     [],
   );
@@ -942,6 +949,11 @@ export default function CalendarScreen({ navigation, route }: Props) {
             markedDates={markedDates}
             theme={calendarTheme}
             dayComponent={renderDay}
+            renderArrow={(direction: 'left' | 'right') => (
+              <Text accessibilityRole="button" accessibilityLabel={direction === 'left' ? 'Previous month' : 'Next month'} style={{ color: colors.accent, fontSize: 18 }}>
+                {direction === 'left' ? '\u276E' : '\u276F'}
+              </Text>
+            )}
             onDayPress={(day: { dateString: string }) => {
               setSelectedDate(day.dateString);
               if (viewMode === 'week') {
@@ -984,6 +996,8 @@ export default function CalendarScreen({ navigation, route }: Props) {
               }}
               activeOpacity={0.7}
               style={styles.createBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Create alarm for this date"
             >
               <Text style={styles.createBtnText}>{'\uFF0B'} Alarm</Text>
             </TouchableOpacity>
@@ -994,6 +1008,8 @@ export default function CalendarScreen({ navigation, route }: Props) {
               }}
               activeOpacity={0.7}
               style={styles.createBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Create reminder for this date"
             >
               <Text style={styles.createBtnText}>{'\uFF0B'} Reminder</Text>
             </TouchableOpacity>
@@ -1010,6 +1026,9 @@ export default function CalendarScreen({ navigation, route }: Props) {
               }}
               activeOpacity={0.7}
               style={[styles.tab, viewMode === mode && styles.tabActive]}
+              accessibilityRole="button"
+              accessibilityLabel={`${mode.charAt(0).toUpperCase() + mode.slice(1)} view`}
+              accessibilityState={{ selected: viewMode === mode }}
             >
               <Text
                 style={[
@@ -1034,6 +1053,9 @@ export default function CalendarScreen({ navigation, route }: Props) {
                 }}
                 activeOpacity={0.7}
                 style={[styles.filter, filterType === f && styles.filterActive]}
+                accessibilityRole="button"
+                accessibilityLabel={`Show ${f}`}
+                accessibilityState={{ selected: filterType === f }}
               >
                 <Text
                   style={[
@@ -1053,8 +1075,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
     [
       styles,
       colors.background,
+      colors.accent,
       markedDates,
       calendarTheme,
+      renderDay,
       viewMode,
       filterType,
       sectionTitle,

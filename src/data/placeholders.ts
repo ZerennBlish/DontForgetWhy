@@ -41,4 +41,4 @@ export function getRandomPlaceholder(): string {
   return placeholders[Math.floor(Math.random() * placeholders.length)];
 }
 
-export default placeholders;
+

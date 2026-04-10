@@ -16,7 +16,9 @@ export interface ThemeColors {
   overlaySkip: string;
   overlayButton: string;
   overlayText: string;
+  overlaySecondary: string;
   modalOverlay: string;
+  success: string;
   // Section colors — every theme defines its own palette
   sectionAlarm: string;
   sectionReminder: string;
@@ -46,7 +48,9 @@ const dark: ThemeColors = {
   overlaySkip: 'rgba(180, 150, 30, 0.85)',
   overlayButton: 'rgba(255, 255, 255, 0.25)',
   overlayText: '#FFFFFF',
+  overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(0, 0, 0, 0.7)',
+  success: '#4CAF50',
   sectionAlarm: '#FF6B6B',
   sectionReminder: '#4A90D9',
   sectionCalendar: '#E17055',
@@ -75,7 +79,9 @@ const light: ThemeColors = {
   overlaySkip: 'rgba(180, 150, 30, 0.85)',
   overlayButton: 'rgba(255, 255, 255, 0.25)',
   overlayText: '#FFFFFF',
+  overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
+  success: '#16A34A',
   sectionAlarm: '#EF4444',
   sectionReminder: '#3B82F6',
   sectionCalendar: '#E17055',
@@ -104,7 +110,9 @@ const highContrast: ThemeColors = {
   overlaySkip: 'rgba(200, 160, 30, 0.90)',
   overlayButton: 'rgba(255, 255, 255, 0.35)',
   overlayText: '#FFFFFF',
+  overlaySecondary: 'rgba(255,255,255,0.85)',
   modalOverlay: 'rgba(0, 0, 0, 0.85)',
+  success: '#44FF44',
   sectionAlarm: '#FF4444',
   sectionReminder: '#4DA6FF',
   sectionCalendar: '#FF7733',
@@ -133,7 +141,9 @@ const vivid: ThemeColors = {
   overlaySkip: 'rgba(255, 217, 61, 0.85)',
   overlayButton: 'rgba(255, 255, 255, 0.25)',
   overlayText: '#FFFFFF',
+  overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(4, 8, 4, 0.85)',
+  success: '#00FF88',
   sectionAlarm: '#FF6B9D',
   sectionReminder: '#7C5CFC',
   sectionCalendar: '#FF8C42',
@@ -162,7 +172,9 @@ const sunset: ThemeColors = {
   overlaySkip: 'rgba(180, 150, 30, 0.85)',
   overlayButton: 'rgba(255, 255, 255, 0.25)',
   overlayText: '#FFFFFF',
+  overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
+  success: '#16A34A',
   sectionAlarm: '#E04545',
   sectionReminder: '#2E94AB',
   sectionCalendar: '#D45A0A',
@@ -191,7 +203,9 @@ const ruby: ThemeColors = {
   overlaySkip: 'rgba(180, 150, 30, 0.85)',
   overlayButton: 'rgba(255, 255, 255, 0.25)',
   overlayText: '#FFFFFF',
+  overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
+  success: '#16A34A',
   sectionAlarm: '#E11D48',
   sectionReminder: '#3B82F6',
   sectionCalendar: '#F97316',

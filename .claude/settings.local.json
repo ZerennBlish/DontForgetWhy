@@ -75,7 +75,11 @@
       "Bash(mkdir -p @expo-google-fonts/satisfy)",
       "Bash(mkdir -p @expo-google-fonts/lilita-one)",
       "Bash(head -5 ls /mnt/c/DontForgetWhy/node_modules/@expo-google-fonts/lilita-one/*.ttf)",
-      "Bash(head -5 ls /mnt/c/DontForgetWhy/node_modules/@expo-google-fonts/nunito/*.ttf)"
+      "Bash(head -5 ls /mnt/c/DontForgetWhy/node_modules/@expo-google-fonts/nunito/*.ttf)",
+      "Bash(npx -y tsc --noEmit --pretty src/components/DrawingCanvas.tsx)",
+      "Bash(xargs -I{} basename {})",
+      "Bash(echo \"exit=$?\")",
+      "Bash(echo \"tsc=$?\")"
     ]
   }
 }

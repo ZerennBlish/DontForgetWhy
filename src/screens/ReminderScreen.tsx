@@ -410,7 +410,7 @@ export default function ReminderScreen({ navigation }: Props) {
       fontFamily: FONTS.regular,
     },
     card: {
-      backgroundColor: colors.mode === 'dark' ? colors.sectionReminder + '20' : colors.sectionReminder + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionReminder + '15',
       borderRadius: 12,
       padding: 12,
       flexDirection: 'row',
@@ -524,7 +524,7 @@ export default function ReminderScreen({ navigation }: Props) {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
       borderWidth: 1,
       borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
@@ -545,11 +545,12 @@ export default function ReminderScreen({ navigation }: Props) {
       borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.accent + '30',
+      backgroundColor: colors.accent + '15',
       shadowColor: colors.accent,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.6,
       shadowRadius: 12,
+      elevation: 8,
     },
     sortFilterRow: {
       flexDirection: 'row',
@@ -621,14 +622,14 @@ export default function ReminderScreen({ navigation }: Props) {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
       borderWidth: 1,
       borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     clearHistoryText: {
       fontSize: 12,
       fontFamily: FONTS.semiBold,
-      color: '#EF4444',
+      color: colors.red,
     },
     historyText: {
       fontSize: 12,
@@ -638,15 +639,16 @@ export default function ReminderScreen({ navigation }: Props) {
     },
   }), [colors, insets.bottom]);
 
-  const isOverdue = (dateStr: string): boolean => {
+  const isOverdue = useCallback((dateStr: string): boolean => {
     const [y, m, d] = dateStr.split('-').map(Number);
     const due = new Date(y, m - 1, d);
     due.setHours(23, 59, 59, 999);
     return due.getTime() < Date.now();
-  };
+  }, []);
 
+  const keyExtractor = useCallback((item: Reminder) => item.id, []);
 
-  const renderItem = ({ item }: { item: Reminder }) => {
+  const renderItem = useCallback(({ item }: { item: Reminder }) => {
     if (item.deletedAt) {
       const deletedPrimary = item.private
         ? (item.nickname || '\u{1F512} Private')
@@ -811,7 +813,7 @@ export default function ReminderScreen({ navigation }: Props) {
         </View>
         </SwipeableRow>
     );
-  };
+  }, [styles, colors, btn, pinnedIds, reminderFilter, timeFormat, navigation, isOverdue, handleRestore, handlePermanentDelete, handleDelete, handleClearHistory, handleToggleComplete, handleTogglePin]);
 
   const nonDeletedReminderCount = reminders.filter(r => !r.deletedAt).length;
 
@@ -928,7 +930,7 @@ export default function ReminderScreen({ navigation }: Props) {
       ) : (
         <FlatList
           data={sorted}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
@@ -946,7 +948,7 @@ export default function ReminderScreen({ navigation }: Props) {
         accessibilityLabel="Create new reminder"
         accessibilityRole="button"
       >
-        <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        <Image source={APP_ICONS.plus} style={{ width: 40, height: 40, tintColor: colors.accent }} resizeMode="contain" />
       </TouchableOpacity>
 
       <UndoToast

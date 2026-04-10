@@ -67,4 +67,4 @@ export function getRandomAppOpenQuote(): string {
   return appOpenQuotes[Math.floor(Math.random() * appOpenQuotes.length)];
 }
 
-export { appOpenQuotes };
+

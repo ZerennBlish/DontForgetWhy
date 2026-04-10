@@ -7,6 +7,7 @@ import {
   ToastAndroid,
   Image,
   AppState,
+  Alert,
 } from 'react-native';
 import {
   useAudioRecorder,
@@ -99,22 +100,34 @@ export default function VoiceRecordScreen({ navigation }: Props) {
       if (navigatedRef.current) return;
       if (!isRecordingRef.current) return;
       e.preventDefault();
-      isRecordingRef.current = false;
-      isPausedRef.current = false;
-      setIsRecording(false);
-      setIsPaused(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      (async () => {
-        try {
-          await recorder.stop();
-          const status = recorder.getStatus();
-          if (status.url) deleteVoiceMemoFile(status.url).catch(() => {});
-        } catch { /* */ }
-        navigation.dispatch(e.data.action);
-      })();
+      Alert.alert(
+        'Discard recording?',
+        'Your recording will be lost if you leave now.',
+        [
+          { text: 'Keep recording', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: async () => {
+              navigatedRef.current = true;
+              isRecordingRef.current = false;
+              isPausedRef.current = false;
+              setIsRecording(false);
+              setIsPaused(false);
+              if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+              }
+              try {
+                await recorder.stop();
+                const status = recorder.getStatus();
+                if (status.url) deleteVoiceMemoFile(status.url).catch(() => {});
+              } catch { /* */ }
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ]
+      );
     });
     return unsubscribe;
   }, [navigation, recorder]);
@@ -367,7 +380,7 @@ export default function VoiceRecordScreen({ navigation }: Props) {
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={[styles.timer, isPaused ? { color: bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary } : bgUri ? { color: colors.overlayText } : undefined]}>
+        <Text style={[styles.timer, isPaused ? { color: bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary } : bgUri ? { color: colors.overlayText } : undefined]} accessibilityLiveRegion="polite">
           {formatTime(elapsedSeconds)}
         </Text>
 
@@ -378,26 +391,32 @@ export default function VoiceRecordScreen({ navigation }: Props) {
                 style={styles.pauseBtn}
                 onPress={handlePauseResume}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={isPaused ? "Resume recording" : "Pause recording"}
               >
                 {isPaused ? (
-                  <GlowIcon source={MEDIA_ICONS.play} size={56} glowColor="#4CAF50" />
+                  <GlowIcon source={MEDIA_ICONS.play} size={56} glowColor={colors.success} />
                 ) : (
-                  <GlowIcon source={MEDIA_ICONS.pause} size={56} glowColor="#4CAF50" />
+                  <GlowIcon source={MEDIA_ICONS.pause} size={56} glowColor={colors.success} />
                 )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.recordBtn}
                 onPress={handleRecordPress}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Stop recording"
               >
-                <GlowIcon source={MEDIA_ICONS.stop} size={56} glowColor="#FF3B30" />
+                <GlowIcon source={MEDIA_ICONS.stop} size={56} glowColor={colors.red} />
               </TouchableOpacity>
             </View>
-            {isPaused ? (
-              <Text style={styles.pausedLabel}>Paused</Text>
-            ) : (
-              <Text style={styles.recordingLabel}>Recording...</Text>
-            )}
+            <View accessibilityLiveRegion="polite">
+              {isPaused ? (
+                <Text style={styles.pausedLabel}>Paused</Text>
+              ) : (
+                <Text style={styles.recordingLabel}>Recording...</Text>
+              )}
+            </View>
           </>
         ) : (
           <>
@@ -405,8 +424,10 @@ export default function VoiceRecordScreen({ navigation }: Props) {
               style={[styles.recordBtn, { marginBottom: 48 }]}
               onPress={handleRecordPress}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Start recording"
             >
-              <GlowIcon source={MEDIA_ICONS.record} size={56} glowColor="#FF3B30" />
+              <GlowIcon source={MEDIA_ICONS.record} size={56} glowColor={colors.red} />
             </TouchableOpacity>
             <Text style={styles.hint}>{idleHint}</Text>
           </>

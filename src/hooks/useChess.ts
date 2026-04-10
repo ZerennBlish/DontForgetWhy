@@ -24,7 +24,7 @@ const AI_DELAY_MS = 400;
 const ROAST_DURATION_MS = 4000;
 const ANALYSIS_DEPTH = 2;
 
-export interface UseChessReturn {
+interface UseChessReturn {
   // Game state
   game: Chess | null;
   board: Cell[][];

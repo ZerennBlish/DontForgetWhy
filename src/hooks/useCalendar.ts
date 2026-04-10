@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -20,7 +20,23 @@ interface UseCalendarOptions {
   onSelectDate: (dateStr: string) => void;
 }
 
-export function useCalendar({ initialMonth, initialYear, onSelectDate }: UseCalendarOptions) {
+interface UseCalendarResult {
+  calendarMonth: number;
+  calendarYear: number;
+  showCalendar: boolean;
+  setCalendarMonth: React.Dispatch<React.SetStateAction<number>>;
+  setCalendarYear: React.Dispatch<React.SetStateAction<number>>;
+  handleCalPrev: () => void;
+  handleCalNext: () => void;
+  handleSelectDate: (day: number) => void;
+  toggleCalendar: () => void;
+  calendarDays: (number | null)[];
+  calDays: number;
+  calFirstDay: number;
+  MONTH_NAMES: string[];
+}
+
+export function useCalendar({ initialMonth, initialYear, onSelectDate }: UseCalendarOptions): UseCalendarResult {
   const [calendarMonth, setCalendarMonth] = useState(initialMonth ?? new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(initialYear ?? new Date().getFullYear());
   const [showCalendar, setShowCalendar] = useState(false);

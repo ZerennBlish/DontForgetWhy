@@ -1,4 +1,6 @@
 import { kvGet, kvSet, kvRemove } from './database';
+import { safeParse } from '../utils/safeParse';
+import { withLock } from '../utils/asyncMutex';
 
 const STORAGE_KEY = 'appSettings';
 
@@ -18,7 +20,7 @@ export async function loadSettings(): Promise<AppSettings> {
   const raw = await kvGet(STORAGE_KEY);
   if (!raw) return { ...defaultSettings };
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = safeParse<Partial<AppSettings>>(raw, {});
     return {
       guessWhyEnabled:
         typeof parsed.guessWhyEnabled === 'boolean'
@@ -39,9 +41,11 @@ export async function loadSettings(): Promise<AppSettings> {
 }
 
 export async function saveSettings(partial: Partial<AppSettings>): Promise<void> {
-  const current = await loadSettings();
-  const updated = { ...current, ...partial };
-  await kvSet(STORAGE_KEY, JSON.stringify(updated));
+  return withLock('app-settings', async () => {
+    const current = await loadSettings();
+    const updated = { ...current, ...partial };
+    await kvSet(STORAGE_KEY, JSON.stringify(updated));
+  });
 }
 
 const ONBOARDING_KEY = 'onboardingComplete';
@@ -73,7 +77,7 @@ export async function getDefaultTimerSound(): Promise<TimerSoundSetting> {
   try {
     const raw = await kvGet(DEFAULT_TIMER_SOUND_KEY);
     if (!raw) return { uri: null, name: null, soundID: null };
-    const parsed = JSON.parse(raw);
+    const parsed = safeParse(raw, { uri: null, name: null, soundID: null });
     return {
       uri: typeof parsed.uri === 'string' ? parsed.uri : null,
       name: typeof parsed.name === 'string' ? parsed.name : null,
@@ -103,7 +107,7 @@ export async function getSilenceAll(): Promise<boolean> {
   try {
     const raw = await kvGet(SILENCE_ALL_KEY);
     if (!raw) return false;
-    const data: SilenceAllData = JSON.parse(raw);
+    const data: SilenceAllData = safeParse(raw, { enabled: false, expiresAt: null });
     if (!data.enabled) return false;
     if (data.expiresAt) {
       if (new Date(data.expiresAt).getTime() <= Date.now()) {
@@ -118,21 +122,23 @@ export async function getSilenceAll(): Promise<boolean> {
 }
 
 export async function setSilenceAll(enabled: boolean, durationMinutes?: number | null): Promise<void> {
-  if (!enabled) {
-    await kvRemove(SILENCE_ALL_KEY);
-    return;
-  }
-  const expiresAt = durationMinutes
-    ? new Date(Date.now() + durationMinutes * 60 * 1000).toISOString()
-    : null;
-  await kvSet(SILENCE_ALL_KEY, JSON.stringify({ enabled: true, expiresAt }));
+  return withLock('silence-settings', async () => {
+    if (!enabled) {
+      await kvRemove(SILENCE_ALL_KEY);
+      return;
+    }
+    const expiresAt = durationMinutes
+      ? new Date(Date.now() + durationMinutes * 60 * 1000).toISOString()
+      : null;
+    await kvSet(SILENCE_ALL_KEY, JSON.stringify({ enabled: true, expiresAt }));
+  });
 }
 
 export async function getSilenceExpiry(): Promise<number | null> {
   try {
     const raw = await kvGet(SILENCE_ALL_KEY);
     if (!raw) return null;
-    const data: SilenceAllData = JSON.parse(raw);
+    const data: SilenceAllData = safeParse(raw, { enabled: false, expiresAt: null });
     if (!data.enabled || !data.expiresAt) return null;
     const remaining = Math.max(0, new Date(data.expiresAt).getTime() - Date.now());
     if (remaining === 0) {

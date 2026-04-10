@@ -17,7 +17,7 @@ import {
   loadUserTimers,
 } from '../services/timerStorage';
 import { getPinnedPresets, getPinnedAlarms } from '../services/widgetPins';
-import type { ActiveTimer, UserTimer } from '../types/timer';
+import type { ActiveTimer } from '../types/timer';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import { ALL_DAYS, WEEKDAYS, WEEKENDS } from '../types/alarm';
@@ -26,7 +26,7 @@ import { DetailedWidget } from './DetailedWidget';
 import type { DetailedAlarm, DetailedPreset, DetailedReminder } from './DetailedWidget';
 import { NotepadWidget } from './NotepadWidget';
 import { MicWidget } from './MicWidget';
-import type { WidgetNote, WidgetVoiceMemo, WidgetTheme } from './NotepadWidget';
+import type { WidgetNote, WidgetTheme } from './NotepadWidget';
 import { CalendarWidget } from './CalendarWidget';
 import type { CalendarDayData } from './CalendarWidget';
 import { themes } from '../theme/colors';
@@ -35,7 +35,6 @@ import { getPinnedNotes } from '../services/widgetPins';
 import { setPendingNoteAction } from '../services/noteStorage';
 
 const RECENT_KEY = 'recentPresets';
-const ALARMS_KEY = 'alarms';
 
 const DAY_INDEX: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
@@ -329,8 +328,6 @@ export async function getDetailedPresets(): Promise<DetailedPreset[]> {
 
 // ── Detailed widget reminders ──
 
-const REMINDERS_KEY = 'reminders';
-
 async function loadWidgetReminders(): Promise<Reminder[]> {
   try {
     const db = getDb();
@@ -501,14 +498,14 @@ export async function getWidgetVoiceMemos(): Promise<{ id: string; title: string
     } catch { /* */ }
     const pinnedSet = new Set(pinnedIds);
 
-    const pinned = active.filter((m: any) => pinnedSet.has(m.id));
-    const unpinned = active.filter((m: any) => !pinnedSet.has(m.id));
-    pinned.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    unpinned.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const pinned = active.filter((m) => pinnedSet.has(m.id));
+    const unpinned = active.filter((m) => !pinnedSet.has(m.id));
+    pinned.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    unpinned.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return [...pinned, ...unpinned]
       .slice(0, 4)
-      .map((m: any) => ({ id: m.id, title: m.title || '', duration: m.duration || 0, createdAt: m.createdAt, isPinned: pinnedSet.has(m.id) }));
+      .map((m) => ({ id: m.id, title: m.title || '', duration: m.duration || 0, createdAt: m.createdAt, isPinned: pinnedSet.has(m.id) }));
   } catch {
     return [];
   }

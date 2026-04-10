@@ -46,6 +46,12 @@ export async function getAllVoiceMemos(): Promise<VoiceMemo[]> {
   return db.getAllSync<VoiceMemoRow>('SELECT * FROM voice_memos').map(rowToMemo);
 }
 
+export function getVoiceMemoById(id: string): VoiceMemo | null {
+  const db = getDb();
+  const row = db.getFirstSync<VoiceMemoRow>('SELECT * FROM voice_memos WHERE id = ?', [id]);
+  return row ? rowToMemo(row) : null;
+}
+
 export async function addVoiceMemo(memo: VoiceMemo): Promise<void> {
   const db = getDb();
   db.runSync(

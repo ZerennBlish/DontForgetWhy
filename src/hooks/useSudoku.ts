@@ -1,6 +1,8 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { kvGet, kvSet, kvRemove } from '../services/database';
+import { safeParse } from '../utils/safeParse';
+import { withLock } from '../utils/asyncMutex';
 import { useFocusEffect } from '@react-navigation/native';
 import { hapticMedium } from '../utils/haptics';
 import {
@@ -21,6 +23,21 @@ interface SavedGame {
   mistakes: number;
   elapsed: number;
   hintsUsed?: number;
+}
+
+function isValidSavedGame(obj: unknown): obj is SavedGame {
+  if (typeof obj !== 'object' || !obj) return false;
+  const g = obj as Record<string, unknown>;
+  return (
+    Array.isArray(g.puzzle) &&
+    g.puzzle.length === 9 &&
+    Array.isArray(g.solution) &&
+    g.solution.length === 9 &&
+    Array.isArray(g.playerGrid) &&
+    g.playerGrid.length === 9 &&
+    typeof g.difficulty === 'string' &&
+    typeof g.elapsed === 'number'
+  );
 }
 
 interface DifficultyBest {
@@ -81,7 +98,67 @@ function createEmptyNotes(): number[][][] {
   );
 }
 
-export function useSudoku() {
+export interface SudokuCellFlags {
+  isHighlighted: boolean;
+  isSameNumber: boolean;
+}
+
+interface UseSudokuResult {
+  // Game phase
+  gamePhase: GamePhase;
+  setGamePhase: React.Dispatch<React.SetStateAction<GamePhase>>;
+  saveGameState: () => void;
+
+  // Difficulty & scores
+  difficulty: Difficulty;
+  bestScores: BestScores;
+  hasSavedGame: boolean;
+
+  // Grid state
+  puzzleGrid: Grid;
+  playerGrid: Grid;
+  notes: number[][][];
+  selectedCell: [number, number] | null;
+  setSelectedCell: React.Dispatch<React.SetStateAction<[number, number] | null>>;
+
+  // Stats
+  mistakes: number;
+  elapsed: number;
+  hintsUsed: number;
+  notesMode: boolean;
+  setNotesMode: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Win state
+  winMessage: string;
+  finalTime: number;
+  finalMistakes: number;
+  finalHints: number;
+
+  // Computed
+  remainingCounts: Record<number, number>;
+  showHighlighting: boolean;
+  showRemainingCounts: boolean;
+  showMistakesDuringPlay: boolean;
+  hasEmptyCells: boolean;
+  hintDisabled: boolean;
+  cellFlags: SudokuCellFlags[][];
+
+  // Callbacks
+  startNewGame: (diff: Difficulty) => void;
+  resumeGame: () => Promise<void>;
+  handlePause: () => void;
+  handleResume: () => void;
+  handleBackFromGame: () => void;
+  handleNumberPress: (num: number) => void;
+  handleErase: () => void;
+  handleHint: () => void;
+  handleNewGameConfirm: () => void;
+  isHighlighted: (row: number, col: number) => boolean;
+  isSameNumber: (row: number, col: number) => boolean;
+  clearSavedGame: () => void;
+}
+
+export function useSudoku(): UseSudokuResult {
   const [gamePhase, setGamePhase] = useState<GamePhase>('select');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [bestScores, setBestScores] = useState<BestScores>({});
@@ -118,7 +195,7 @@ export function useSudoku() {
       const scoresData = kvGet(SCORES_KEY);
       if (__DEV__) console.log('[Sudoku] loaded scores from storage:', scoresData);
       if (scoresData) {
-        try { setBestScores(JSON.parse(scoresData)); } catch (e) {
+        try { setBestScores(safeParse(scoresData, {})); } catch (e) {
           console.error('[Sudoku] parse scores failed:', e);
         }
       }
@@ -167,6 +244,32 @@ export function useSudoku() {
     setHasSavedGame(false);
   }, []);
 
+  // Serialized read-modify-write against the sudokuBestScores KV value.
+  // Without the lock, two concurrent win callbacks could both read the
+  // same baseline and one write could overwrite the other's stats bump.
+  const recordWin = useCallback(async (diff: Difficulty, time: number, mist: number, hints: number) => {
+    await withLock('sudoku-scores', async () => {
+      try {
+        const data = kvGet(SCORES_KEY);
+        const scores: BestScores = safeParse(data, {});
+        const current = scores[diff];
+        const gamesPlayed = (current?.gamesPlayed ?? 0) + 1;
+        const isBetter = !current
+          || time < current.bestTime
+          || (time === current.bestTime && mist < current.bestMistakes);
+        if (isBetter) {
+          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints, gamesPlayed };
+        } else {
+          scores[diff] = { ...current!, gamesPlayed };
+        }
+        kvSet(SCORES_KEY, JSON.stringify(scores));
+        setBestScores({ ...scores });
+      } catch (e) {
+        console.error('[Sudoku] save scores failed:', e);
+      }
+    });
+  }, []);
+
   const startNewGame = useCallback((diff: Difficulty) => {
     const { puzzle, solution } = generatePuzzle(diff);
     const player = puzzle.map((row) => [...row]);
@@ -198,7 +301,11 @@ export function useSudoku() {
     const data = kvGet(GAME_KEY);
     if (!data) return;
     try {
-      const saved: SavedGame = JSON.parse(data);
+      const saved = safeParse<SavedGame | null>(data, null);
+      if (!saved || !isValidSavedGame(saved)) {
+        console.warn('[Sudoku] Invalid saved game, starting fresh');
+        return;
+      }
       puzzleRef.current = saved.puzzle;
       solutionRef.current = saved.solution;
       playerRef.current = saved.playerGrid;
@@ -240,6 +347,15 @@ export function useSudoku() {
     saveGame();
     setHasSavedGame(true);
     setGamePhase('select');
+  }, [stopTimer, saveGame]);
+
+  // Persist game state without touching React state. Callable from a
+  // beforeRemove handler that's letting navigation through (e.g. Home
+  // button), where triggering state updates on an unmounting screen
+  // is wasteful.
+  const saveGameState = useCallback(() => {
+    stopTimer();
+    saveGame();
   }, [stopTimer, saveGame]);
 
   // Remove notes from row/col/box when a number is placed
@@ -313,31 +429,14 @@ export function useSudoku() {
 
       const diff = difficultyRef.current;
       if (__DEV__) console.log('[Sudoku] game won — saving stats for', diff);
-      try {
-        const data = kvGet(SCORES_KEY);
-        if (__DEV__) console.log('[Sudoku] existing scores raw:', data);
-        const scores: BestScores = data ? JSON.parse(data) : {};
-        const current = scores[diff];
-        const gamesPlayed = (current?.gamesPlayed ?? 0) + 1;
-        const isBetter = !current
-          || time < current.bestTime
-          || (time === current.bestTime && mist < current.bestMistakes);
-        if (isBetter) {
-          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints, gamesPlayed };
-        } else {
-          scores[diff] = { ...current!, gamesPlayed };
-        }
-        if (__DEV__) console.log('[Sudoku] writing scores:', JSON.stringify(scores));
-        kvSet(SCORES_KEY, JSON.stringify(scores));
-        setBestScores({ ...scores });
-      } catch (e) { console.error('[Sudoku] save scores failed:', e); }
+      recordWin(diff, time, mist, hints);
 
       setTimeout(() => setGamePhase('won'), 400);
       return;
     }
 
     saveGame();
-  }, [selectedCell, notesMode, stopTimer, saveGame, clearSavedGame, clearNotesForPlacement]);
+  }, [selectedCell, notesMode, stopTimer, saveGame, clearSavedGame, clearNotesForPlacement, recordWin]);
 
   const handleErase = useCallback(() => {
     if (!selectedCell) return;
@@ -407,24 +506,7 @@ export function useSudoku() {
 
       const diff = difficultyRef.current;
       if (__DEV__) console.log('[Sudoku] game won via hint — saving stats for', diff);
-      try {
-        const data = kvGet(SCORES_KEY);
-        if (__DEV__) console.log('[Sudoku] existing scores raw:', data);
-        const scores: BestScores = data ? JSON.parse(data) : {};
-        const current = scores[diff];
-        const gamesPlayed = (current?.gamesPlayed ?? 0) + 1;
-        const isBetter = !current
-          || time < current.bestTime
-          || (time === current.bestTime && mist < current.bestMistakes);
-        if (isBetter) {
-          scores[diff] = { bestTime: time, bestMistakes: mist, bestHints: hints, gamesPlayed };
-        } else {
-          scores[diff] = { ...current!, gamesPlayed };
-        }
-        if (__DEV__) console.log('[Sudoku] writing scores:', JSON.stringify(scores));
-        kvSet(SCORES_KEY, JSON.stringify(scores));
-        setBestScores({ ...scores });
-      } catch (e) { console.error('[Sudoku] save scores failed:', e); }
+      recordWin(diff, time, mist, hints);
 
       setTimeout(() => setGamePhase('won'), 400);
       return;
@@ -432,7 +514,7 @@ export function useSudoku() {
 
     setSelectedCell([row, col]);
     saveGame();
-  }, [stopTimer, saveGame, clearSavedGame, clearNotesForPlacement]);
+  }, [stopTimer, saveGame, clearSavedGame, clearNotesForPlacement, recordWin]);
 
   const handleNewGameConfirm = useCallback(() => {
     Alert.alert('New Game', 'Start a new puzzle? Current progress will be lost.', [
@@ -495,10 +577,31 @@ export function useSudoku() {
     return playerGrid[row]?.[col] === selVal;
   }, [selectedCell, playerGrid, showHighlighting]);
 
+  // Pre-compute the highlight flags for every cell once per
+  // (selectedCell, playerGrid, showHighlighting) change. The screen
+  // reads from this 9×9 array instead of calling isHighlighted/isSameNumber
+  // 162 times on every render — critical because the timer ticks every
+  // second and would otherwise re-run those helpers across the whole grid.
+  const cellFlags = useMemo<SudokuCellFlags[][]>(() => {
+    const flags: SudokuCellFlags[][] = [];
+    for (let r = 0; r < 9; r++) {
+      const row: SudokuCellFlags[] = [];
+      for (let c = 0; c < 9; c++) {
+        row.push({
+          isHighlighted: isHighlighted(r, c),
+          isSameNumber: isSameNumber(r, c),
+        });
+      }
+      flags.push(row);
+    }
+    return flags;
+  }, [isHighlighted, isSameNumber]);
+
   return {
     // Game phase
     gamePhase,
     setGamePhase,
+    saveGameState,
 
     // Difficulty & scores
     difficulty,
@@ -532,6 +635,7 @@ export function useSudoku() {
     showMistakesDuringPlay,
     hasEmptyCells,
     hintDisabled,
+    cellFlags,
 
     // Callbacks
     startNewGame,

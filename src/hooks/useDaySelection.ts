@@ -1,8 +1,18 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import type { AlarmDay } from '../types/alarm';
 import { WEEKDAYS, WEEKENDS, ALL_DAYS } from '../types/alarm';
 
-export function useDaySelection(initialDays: AlarmDay[]) {
+interface UseDaySelectionResult {
+  selectedDays: AlarmDay[];
+  setSelectedDays: React.Dispatch<React.SetStateAction<AlarmDay[]>>;
+  handleToggleDay: (day: AlarmDay, mode: 'one-time' | 'recurring', clearDate?: () => void) => void;
+  handleQuickDays: (preset: AlarmDay[], clearDate?: () => void) => void;
+  isWeekdaysSelected: boolean;
+  isWeekendsSelected: boolean;
+  isEverydaySelected: boolean;
+}
+
+export function useDaySelection(initialDays: AlarmDay[]): UseDaySelectionResult {
   const [selectedDays, setSelectedDays] = useState<AlarmDay[]>(initialDays);
 
   const handleToggleDay = (day: AlarmDay, mode: 'one-time' | 'recurring', clearDate?: () => void) => {

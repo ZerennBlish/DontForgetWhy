@@ -10,7 +10,8 @@ import {
   deleteNote,
   restoreNote,
   permanentlyDeleteNote,
-  getPendingNoteAction,
+  peekPendingNoteAction,
+  clearPendingNoteAction,
 } from '../services/noteStorage';
 import { saveNoteImage, deleteNoteImage, cleanupTempDrawings } from '../services/noteImageStorage';
 import { saveVoiceMemo, deleteVoiceMemo, deleteAllVoiceMemos } from '../services/noteVoiceMemoStorage';
@@ -40,7 +41,7 @@ const SAVE_TOASTS = [
   'Done. See? That wasn\'t so hard.',
 ];
 
-export interface EditorSaveData {
+interface EditorSaveData {
   text: string;
   color: string;
   fontColor: string | null;
@@ -55,7 +56,7 @@ interface UseNotepadParams {
   routeParams: { noteId?: string; newNote?: boolean } | undefined;
 }
 
-interface UseNotepadReturn {
+interface UseNotepadResult {
   notes: Note[];
   pinnedIds: string[];
   filter: 'active' | 'deleted';
@@ -69,6 +70,7 @@ interface UseNotepadReturn {
   bgUri: string | null;
   bgOpacity: number;
   sorted: Note[];
+  editorDirtyRef: React.MutableRefObject<boolean>;
   setBgUri: React.Dispatch<React.SetStateAction<string | null>>;
 
   setFilter: (f: 'active' | 'deleted') => void;
@@ -89,7 +91,7 @@ interface UseNotepadReturn {
   onCustomFontColorChange: (c: string) => void;
 }
 
-export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn {
+export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadResult {
   const [notes, setNotes] = useState<Note[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [filter, setFilter] = useState<'active' | 'deleted'>('active');
@@ -108,6 +110,10 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
   const [bgOpacity, setBgOpacity] = useState(0.5);
 
   const handledActionRef = useRef('');
+  // NoteEditorModal writes to this whenever its content diverges from
+  // the loaded baseline. Read it (not editorVisible alone) when deciding
+  // whether a pending widget action is safe to preempt the editor.
+  const editorDirtyRef = useRef(false);
 
   // Custom bg/font color migration
   useEffect(() => {
@@ -203,11 +209,19 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
 
     const handle = async () => {
       if (params?.newNote) {
+        if (editorVisible && editorDirtyRef.current) {
+          // Editor has unsaved work — don't interrupt
+          return;
+        }
         handledActionRef.current = 'new';
         openNewEditor();
         return;
       }
       if (params?.noteId) {
+        if (editorVisible && editorDirtyRef.current) {
+          // Editor has unsaved work — don't interrupt
+          return;
+        }
         handledActionRef.current = `edit:${params.noteId}`;
         const all = await getNotes();
         const found = all.find((n) => n.id === params.noteId);
@@ -216,9 +230,17 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
       }
 
       if (!isInitial) return;
-      handledActionRef.current = '__init__';
-      const action = await getPendingNoteAction();
+      // Peek at the pending action — don't remove it yet. That way a
+      // dirty editor can skip this check and the action survives for
+      // the next foreground/mount pass.
+      const action = peekPendingNoteAction();
       if (!action) return;
+      if (editorVisible && editorDirtyRef.current) {
+        // Leave the action in storage for the next check
+        return;
+      }
+      handledActionRef.current = '__init__';
+      clearPendingNoteAction();
       if (action.type === 'new') {
         openNewEditor();
       } else if ((action.type === 'edit' || action.type === 'open') && action.noteId) {
@@ -229,21 +251,31 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
     };
 
     handle();
-  }, [routeParams, openNewEditor, openEditorWithNote]);
+  }, [routeParams, editorVisible, openNewEditor, openEditorWithNote]);
 
   // Check pending widget actions when app foregrounds while already mounted
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (state) => {
       if (state !== 'active') return;
-      const action = await getPendingNoteAction();
+      const action = peekPendingNoteAction();
       if (!action) return;
+      if (editorVisible && editorDirtyRef.current) {
+        // Editor has unsaved work — leave the action in storage
+        return;
+      }
       const actionKey =
         action.type === 'new'
           ? 'new'
           : action.type === 'edit' || action.type === 'open'
             ? `edit:${action.noteId}`
             : '';
-      if (actionKey && actionKey === handledActionRef.current) return;
+      if (actionKey && actionKey === handledActionRef.current) {
+        // Already handled; drop the stale pending entry so it doesn't
+        // keep triggering dirty checks on subsequent resumes.
+        clearPendingNoteAction();
+        return;
+      }
+      clearPendingNoteAction();
       if (action.type === 'new') {
         handledActionRef.current = 'new';
         openNewEditor();
@@ -255,7 +287,7 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
       }
     });
     return () => sub.remove();
-  }, [openNewEditor, openEditorWithNote]);
+  }, [editorVisible, openNewEditor, openEditorWithNote]);
 
   const handleEditorSave = async (data: EditorSaveData) => {
     const now = new Date().toISOString();
@@ -385,7 +417,7 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
     setShowUndo(true);
   };
 
-  const handleDeleteFromList = async (id: string) => {
+  const handleDeleteFromList = useCallback(async (id: string) => {
     hapticHeavy();
     const note = notes.find((n) => n.id === id);
     if (!note) return;
@@ -398,7 +430,7 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
     refreshWidgets();
     setUndoKey((k) => k + 1);
     setShowUndo(true);
-  };
+  }, [notes, pinnedIds, loadData]);
 
   const handleUndoDelete = async () => {
     setShowUndo(false);
@@ -417,14 +449,14 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
     setDeletedNote(null);
   };
 
-  const handleRestore = async (id: string) => {
+  const handleRestore = useCallback(async (id: string) => {
     hapticLight();
     await restoreNote(id);
     await loadData();
     refreshWidgets();
-  };
+  }, [loadData]);
 
-  const handlePermanentDelete = async (id: string) => {
+  const handlePermanentDelete = useCallback(async (id: string) => {
     hapticHeavy();
     const targetNote = notes.find(n => n.id === id);
     if (targetNote?.voiceMemos?.length) {
@@ -433,9 +465,9 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
     await permanentlyDeleteNote(id);
     await loadData();
     refreshWidgets();
-  };
+  }, [notes, loadData]);
 
-  const handleTogglePin = async (id: string) => {
+  const handleTogglePin = useCallback(async (id: string) => {
     hapticMedium();
     const currentlyPinned = isNotePinned(id, pinnedIds);
     if (!currentlyPinned && pinnedIds.length >= MAX_NOTE_PINS) {
@@ -450,7 +482,7 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
       currentlyPinned ? 'Unpinned from widget' : 'Pinned to widget',
       ToastAndroid.SHORT,
     );
-  };
+  }, [pinnedIds]);
 
   const onCustomBgColorChange = useCallback((c: string) => {
     setCustomBgColor(c);
@@ -491,6 +523,7 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadReturn 
     bgUri,
     bgOpacity,
     sorted,
+    editorDirtyRef,
     setBgUri,
 
     setFilter,

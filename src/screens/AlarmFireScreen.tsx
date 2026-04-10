@@ -114,7 +114,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   const isSnoozingRef = useRef(false);
   const dismissTimeRef = useRef(0);
   const snoozeTimeRef = useRef(0);
-  const [isDismissing, setIsDismissing] = useState(false);
+
 
   useEffect(() => {
     loadSettings().then((s) => setTimeFormat(s.timeFormat)).catch(() => {});
@@ -316,7 +316,6 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
       return;
     }
     isDismissingRef.current = true;
-    setIsDismissing(true);
     dismissTimeRef.current = Date.now();
     try {
       await cancelAllNotifications();
@@ -522,7 +521,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     time: {
       fontSize: 62,
       fontFamily: FONTS.extraBold,
-      color: '#FFFFFF',
+      color: colors.overlayText,
       letterSpacing: -2,
     },
     emoji: {
@@ -533,7 +532,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     label: {
       fontSize: 24,
       fontFamily: FONTS.semiBold,
-      color: colors.textSecondary,
+      color: colors.overlaySecondary,
       textAlign: 'center',
       marginTop: 8,
       paddingHorizontal: 16,
@@ -542,14 +541,14 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     soundName: {
       fontSize: 15,
       fontFamily: FONTS.semiBold,
-      color: colors.textTertiary,
+      color: colors.overlaySecondary,
       textAlign: 'center',
       marginTop: 8,
     },
     noteText: {
       fontSize: 17,
       fontFamily: FONTS.semiBold,
-      color: colors.textSecondary,
+      color: colors.overlaySecondary,
       textAlign: 'center',
       marginTop: 12,
       paddingHorizontal: 16,
@@ -599,7 +598,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     dismissBtnText: {
       fontSize: 22,
       fontFamily: FONTS.bold,
-      color: '#FFFFFF',
+      color: colors.overlayText,
     },
     shameOverlay: {
       ...StyleSheet.absoluteFillObject,
@@ -611,7 +610,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     shameMessage: {
       fontSize: 20,
       fontFamily: FONTS.semiBold,
-      color: colors.textPrimary,
+      color: colors.overlayText,
       textAlign: 'center',
       lineHeight: 32,
     },
@@ -622,7 +621,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
     skipHint: {
       fontSize: 17,
       fontFamily: FONTS.semiBold,
-      color: 'rgba(255,255,255,0.6)',
+      color: colors.overlaySecondary,
       textAlign: 'center',
       marginTop: 24,
     },
@@ -644,9 +643,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   if (dismissMessage) {
     return (
       <ImageBackground source={bgSource} style={{ flex: 1 }} resizeMode="cover" onError={hasAlarmPhoto ? () => setPhotoFailed(true) : undefined}>
-        <TouchableOpacity activeOpacity={1} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }} onPress={() => { stopVoice(); exitToLockScreen(); }}>
+        <TouchableOpacity activeOpacity={1} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }} onPress={() => { stopVoice(); exitToLockScreen(); }} accessibilityRole="button" accessibilityLabel="Skip message">
           <View style={styles.container}>
-            <View style={styles.shameOverlay}>
+            <View style={styles.shameOverlay} accessibilityLiveRegion="polite">
               <Text style={styles.shameEmoji}>{'\u2714\uFE0F'}</Text>
               <Text style={styles.shameMessage}>{dismissMessage}</Text>
               <Text style={styles.skipHint}>{'\u{1F446}'} Tap anywhere to skip</Text>
@@ -661,9 +660,9 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
   if (snoozeShameMessage) {
     return (
       <ImageBackground source={bgSource} style={{ flex: 1 }} resizeMode="cover" onError={hasAlarmPhoto ? () => setPhotoFailed(true) : undefined}>
-        <TouchableOpacity activeOpacity={1} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }} onPress={() => { stopVoice(); exitToLockScreen(); }}>
+        <TouchableOpacity activeOpacity={1} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }} onPress={() => { stopVoice(); exitToLockScreen(); }} accessibilityRole="button" accessibilityLabel="Skip message">
           <View style={styles.container}>
-            <Animated.View style={[styles.shameOverlay, { opacity: snoozeShameOpacity }]}>
+            <Animated.View style={[styles.shameOverlay, { opacity: snoozeShameOpacity }]} accessibilityLiveRegion="polite">
               <Text style={styles.shameEmoji}>{'\u{1F634}'}</Text>
               <Text style={styles.shameMessage}>{snoozeShameMessage}</Text>
               <Text style={styles.skipHint}>{'\u{1F446}'} Tap anywhere to skip</Text>
@@ -682,7 +681,7 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
             {globalSilenced && (
               <Text style={styles.silencedIndicator}>{'\u{1F507}'} All alarms silenced</Text>
             )}
-            <Text style={styles.time}>{displayTime}</Text>
+            <Text style={styles.time} accessibilityLiveRegion="polite">{displayTime}</Text>
             <Text style={styles.emoji}>{displayIcon}</Text>
             <Text style={styles.label}>{displayLabel}</Text>
             {displaySoundName && (
@@ -699,6 +698,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
                 style={styles.guessWhyBtn}
                 onPress={handleGuessWhy}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Play Guess Why to dismiss"
               >
                 <Text style={styles.guessWhyBtnText}>{'\u{1F9E0}'} Guess Why</Text>
               </TouchableOpacity>
@@ -709,6 +710,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
                 style={[styles.snoozeBtn, isSnoozing && { opacity: 0.5 }]}
                 onPress={handleSnooze}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Snooze alarm"
               >
                 <Text style={styles.snoozeBtnText}>Snooze 5 min</Text>
               </TouchableOpacity>
@@ -718,6 +721,8 @@ export default function AlarmFireScreen({ route, navigation }: Props) {
               style={styles.dismissBtn}
               onPress={handleDismiss}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss alarm"
             >
               <Text style={styles.dismissBtnText}>Dismiss</Text>
             </TouchableOpacity>

@@ -724,6 +724,8 @@ export default function MemoryScoreScreen({ navigation }: Props) {
         style={styles.resetAllBtn}
         onPress={() => { hapticLight(); playGameSound('tap'); handleResetAll(); }}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Reset all scores"
       >
         <Text style={styles.resetAllBtnText}>Reset All Scores</Text>
       </TouchableOpacity>
@@ -932,20 +934,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       color: 'rgba(255,255,255,0.5)',
       fontStyle: 'italic',
       paddingVertical: 6,
-    },
-
-    // Buttons inside sections
-    sectionBtn: {
-      marginTop: 16,
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    sectionBtnText: {
-      fontSize: 14,
-      fontFamily: FONTS.semiBold,
-      color: colors.accent,
     },
 
     // Reset All Scores

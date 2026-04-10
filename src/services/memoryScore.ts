@@ -1,4 +1,5 @@
 import { kvGet, kvSet, kvRemove } from './database';
+import { withLock } from '../utils/asyncMutex';
 
 export interface ScoreBreakdown {
   guessWhy: number;
@@ -202,25 +203,27 @@ export async function recordChessResult(
   result: 'win' | 'loss' | 'draw',
   difficultyIndex: number,
 ): Promise<void> {
-  const base =
-    difficultyIndex >= 0 && difficultyIndex < CHESS_WIN_POINTS.length
-      ? CHESS_WIN_POINTS[difficultyIndex]
-      : 0;
+  return withLock('memory-scores', async () => {
+    const base =
+      difficultyIndex >= 0 && difficultyIndex < CHESS_WIN_POINTS.length
+        ? CHESS_WIN_POINTS[difficultyIndex]
+        : 0;
 
-  let gamePoints = 0;
-  if (result === 'win') gamePoints = base;
-  else if (result === 'draw') gamePoints = base / 2;
-  // loss = 0
+    let gamePoints = 0;
+    if (result === 'win') gamePoints = base;
+    else if (result === 'draw') gamePoints = base / 2;
+    // loss = 0
 
-  const existing = safeParseJSON(kvGet('chessStats')) || {};
-  const updated = {
-    gamesPlayed: num(existing.gamesPlayed) + 1,
-    wins: num(existing.wins) + (result === 'win' ? 1 : 0),
-    losses: num(existing.losses) + (result === 'loss' ? 1 : 0),
-    draws: num(existing.draws) + (result === 'draw' ? 1 : 0),
-    totalPoints: num(existing.totalPoints) + gamePoints,
-  };
-  kvSet('chessStats', JSON.stringify(updated));
+    const existing = safeParseJSON(kvGet('chessStats')) || {};
+    const updated = {
+      gamesPlayed: num(existing.gamesPlayed) + 1,
+      wins: num(existing.wins) + (result === 'win' ? 1 : 0),
+      losses: num(existing.losses) + (result === 'loss' ? 1 : 0),
+      draws: num(existing.draws) + (result === 'draw' ? 1 : 0),
+      totalPoints: num(existing.totalPoints) + gamePoints,
+    };
+    kvSet('chessStats', JSON.stringify(updated));
+  });
 }
 
 // --- Checkers result recording ---
@@ -229,26 +232,28 @@ export async function recordCheckersResult(
   result: 'win' | 'loss',
   difficultyIndex: number,
 ): Promise<void> {
-  const base =
-    difficultyIndex >= 0 && difficultyIndex < CHECKERS_WIN_POINTS.length
-      ? CHECKERS_WIN_POINTS[difficultyIndex]
-      : 0;
+  return withLock('memory-scores', async () => {
+    const base =
+      difficultyIndex >= 0 && difficultyIndex < CHECKERS_WIN_POINTS.length
+        ? CHECKERS_WIN_POINTS[difficultyIndex]
+        : 0;
 
-  let gamePoints = 0;
-  if (result === 'win') gamePoints = base;
-  // loss = 0 (no draws in checkers)
+    let gamePoints = 0;
+    if (result === 'win') gamePoints = base;
+    // loss = 0 (no draws in checkers)
 
-  const existing = safeParseJSON(kvGet('checkersStats')) || {};
-  const updated = {
-    gamesPlayed: num(existing.gamesPlayed) + 1,
-    wins: num(existing.wins) + (result === 'win' ? 1 : 0),
-    losses: num(existing.losses) + (result === 'loss' ? 1 : 0),
-    totalPoints: num(existing.totalPoints) + gamePoints,
-  };
-  kvSet('checkersStats', JSON.stringify(updated));
+    const existing = safeParseJSON(kvGet('checkersStats')) || {};
+    const updated = {
+      gamesPlayed: num(existing.gamesPlayed) + 1,
+      wins: num(existing.wins) + (result === 'win' ? 1 : 0),
+      losses: num(existing.losses) + (result === 'loss' ? 1 : 0),
+      totalPoints: num(existing.totalPoints) + gamePoints,
+    };
+    kvSet('checkersStats', JSON.stringify(updated));
+  });
 }
 
-export const ALL_STATS_KEYS = [
+const ALL_STATS_KEYS = [
   'guessWhyStats',
   'streakCount',
   'memoryMatchScores',
@@ -262,7 +267,9 @@ export const ALL_STATS_KEYS = [
 ];
 
 export async function resetAllScores(): Promise<void> {
-  for (const key of ALL_STATS_KEYS) {
-    kvRemove(key);
-  }
+  return withLock('memory-scores', async () => {
+    for (const key of ALL_STATS_KEYS) {
+      kvRemove(key);
+    }
+  });
 }

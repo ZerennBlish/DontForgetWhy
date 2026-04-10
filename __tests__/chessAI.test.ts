@@ -162,12 +162,12 @@ describe('getPieceImage', () => {
     }
   });
 
-  it('returns null for an invalid piece type', () => {
-    expect(getPieceImage({ type: 'x', color: 'w' })).toBeNull();
+  it('returns undefined for an invalid piece type', () => {
+    expect(getPieceImage({ type: 'x', color: 'w' })).toBeUndefined();
   });
 
-  it('returns null for an invalid color', () => {
-    expect(getPieceImage({ type: 'p', color: 'z' })).toBeNull();
+  it('returns undefined for an invalid color', () => {
+    expect(getPieceImage({ type: 'p', color: 'z' })).toBeUndefined();
   });
 });
 

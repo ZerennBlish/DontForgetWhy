@@ -9,7 +9,7 @@ import { pruneAlarmPins, isAlarmPinned, togglePinAlarm, unpinAlarm } from '../se
 import { refreshWidgets } from '../widget/updateWidget';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { getRandomAppOpenQuote } from '../data/appOpenQuotes';
-import { hapticLight, hapticHeavy } from '../utils/haptics';
+import { hapticHeavy } from '../utils/haptics';
 
 interface UseAlarmListReturn {
   alarms: Alarm[];
@@ -107,13 +107,13 @@ export function useAlarmList(): UseAlarmListReturn {
 
   const nonDeletedAlarmCount = alarms.filter(a => !a.deletedAt).length;
 
-  const handleToggle = async (id: string) => {
+  const handleToggle = useCallback(async (id: string) => {
     const updated = await toggleAlarm(id);
     setAlarms(updated);
     refreshWidgets();
-  };
+  }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     hapticHeavy();
     const alarm = alarms.find(a => a.id === id);
     if (!alarm) return;
@@ -127,9 +127,9 @@ export function useAlarmList(): UseAlarmListReturn {
     refreshWidgets();
     setUndoKey((k) => k + 1);
     setShowUndo(true);
-  };
+  }, [alarms, pinnedAlarmIds]);
 
-  const handleUndoDelete = async () => {
+  const handleUndoDelete = useCallback(async () => {
     setShowUndo(false);
     if (!deletedAlarm) return;
     await restoreAlarm(deletedAlarm.id);
@@ -140,25 +140,25 @@ export function useAlarmList(): UseAlarmListReturn {
     }
     refreshWidgets();
     setDeletedAlarm(null);
-  };
+  }, [deletedAlarm, deletedAlarmPinned]);
 
-  const handleUndoDismiss = () => {
+  const handleUndoDismiss = useCallback(() => {
     setShowUndo(false);
     setDeletedAlarm(null);
-  };
+  }, []);
 
-  const handleRestore = async (id: string) => {
+  const handleRestore = useCallback(async (id: string) => {
     await restoreAlarm(id);
     setAlarms(await loadAlarms(true));
     refreshWidgets();
-  };
+  }, []);
 
-  const handlePermanentDelete = async (id: string) => {
+  const handlePermanentDelete = useCallback(async (id: string) => {
     await permanentlyDeleteAlarm(id);
     setAlarms(await loadAlarms(true));
-  };
+  }, []);
 
-  const handleTogglePin = async (id: string) => {
+  const handleTogglePin = useCallback(async (id: string) => {
     const currentlyPinned = isAlarmPinned(id, pinnedAlarmIds);
     if (!currentlyPinned && pinnedAlarmIds.length >= 3) {
       ToastAndroid.show('Widget full \u2014 unpin one first', ToastAndroid.SHORT);
@@ -171,7 +171,7 @@ export function useAlarmList(): UseAlarmListReturn {
       isAlarmPinned(id, updated) ? 'Pinned to widget' : 'Unpinned from widget',
       ToastAndroid.SHORT,
     );
-  };
+  }, [pinnedAlarmIds]);
 
   return {
     alarms,

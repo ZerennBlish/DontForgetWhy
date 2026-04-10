@@ -25,7 +25,7 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
-export function isValidPlacement(
+function isValidPlacement(
   grid: Grid,
   row: number,
   col: number,

@@ -3,7 +3,7 @@ import type { AlarmDay } from '../types/alarm';
 const DAY_INDEX: Record<AlarmDay, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
 /** Returns the next occurrence of the given weekday (always in the future, 1–7 days out). */
-export function getNextDayDate(dayKey: AlarmDay): Date {
+function getNextDayDate(dayKey: AlarmDay): Date {
   const target = DAY_INDEX[dayKey];
   const now = new Date();
   let daysUntil = target - now.getDay();
@@ -36,7 +36,7 @@ export function formatTime(time: string, format: '12h' | '24h' = '12h'): string 
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
-export function getCurrentTime(): string {
+function getCurrentTime(): string {
   const now = new Date();
   return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 }

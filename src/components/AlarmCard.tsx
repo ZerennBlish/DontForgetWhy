@@ -54,12 +54,12 @@ function getDetailLine(alarm: Alarm): string {
   return alarm.note;
 }
 
-export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdit, onTogglePin }: AlarmCardProps) {
+function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdit, onTogglePin }: AlarmCardProps) {
   const { colors } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
-      backgroundColor: colors.mode === 'dark' ? colors.sectionAlarm + '20' : colors.sectionAlarm + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionAlarm + '15',
       borderRadius: 12,
       padding: 12,
       marginBottom: 8,
@@ -135,7 +135,7 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
       borderWidth: 1,
       borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
@@ -174,7 +174,7 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
         onValueChange={() => onToggle(alarm.id)}
         trackColor={{ false: colors.border, true: colors.sectionAlarm }}
         thumbColor={alarm.enabled ? colors.textPrimary : colors.textTertiary}
-        accessibilityLabel={`${alarm.enabled ? 'Disable' : 'Enable'} alarm`}
+        accessibilityLabel={alarm.enabled ? 'Alarm enabled' : 'Alarm disabled'}
       />
       <View style={styles.left}>
         <View style={styles.timeRow}>
@@ -209,7 +209,7 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
             onPress={() => onTogglePin(alarm.id)}
             style={[styles.pinBtn, isPinned && styles.pinBtnActive]}
             activeOpacity={0.6}
-            accessibilityLabel={isPinned ? 'Unpin from widget' : 'Pin to widget'}
+            accessibilityLabel={isPinned ? 'Unpin alarm' : 'Pin alarm'}
             accessibilityRole="button"
           >
             <Text style={[styles.pinBtnText, isPinned && { color: colors.accent }]}>
@@ -221,3 +221,5 @@ export default function AlarmCard({ alarm, timeFormat, isPinned, onToggle, onEdi
     </TouchableOpacity>
   );
 }
+
+export default React.memo(AlarmCard);

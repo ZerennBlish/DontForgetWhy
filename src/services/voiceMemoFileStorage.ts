@@ -35,6 +35,6 @@ export async function deleteVoiceMemoFile(uri: string): Promise<void> {
   }
 }
 
-export async function deleteAllVoiceMemoFiles(uris: string[]): Promise<void> {
+async function deleteAllVoiceMemoFiles(uris: string[]): Promise<void> {
   await Promise.allSettled(uris.map((uri) => deleteVoiceMemoFile(uri)));
 }

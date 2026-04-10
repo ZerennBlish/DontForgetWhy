@@ -106,7 +106,7 @@ export async function deleteAllNoteImages(imageUris: string[]): Promise<void> {
   await Promise.allSettled(imageUris.map((uri) => deleteNoteImage(uri)));
 }
 
-export function getDrawingJsonUri(imageUri: string): string {
+function getDrawingJsonUri(imageUri: string): string {
   return imageUri.replace(/\.png$/i, '.json');
 }
 

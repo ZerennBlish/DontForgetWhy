@@ -9,7 +9,8 @@ import { zip, unzip } from 'react-native-zip-archive';
 import * as Sharing from 'expo-sharing';
 import Constants from 'expo-constants';
 import { defaultDatabaseDirectory } from 'expo-sqlite';
-import { closeDb, reopenDb, kvGet, kvSet } from './database';
+import { closeDb, reopenDb, kvGet, kvSet, setRestoreInProgress } from './database';
+import { withLock } from '../utils/asyncMutex';
 import { loadAlarms, updateSingleAlarm } from './storage';
 import { getReminders, updateReminder } from './reminderStorage';
 import { scheduleAlarm, scheduleReminderNotification, cancelAllAlarms } from './notifications';
@@ -28,6 +29,11 @@ const AUTO_BACKUP_FREQUENCY_KEY = 'autoBackupFrequency';
 const LAST_AUTO_BACKUP_KEY = 'lastAutoBackupDate';
 const AUTO_BACKUP_FOLDER_URI_KEY = 'autoBackupFolderUri';
 const AUTO_BACKUP_FOLDER_NAME_KEY = 'autoBackupFolderName';
+
+function uniqueCacheDir(prefix: string): Directory {
+  const name = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return new Directory(Paths.cache, name);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,66 +91,67 @@ export function getLastBackupDate(): string | null {
  * Export all app data (database + media) into a single .dfw zip file.
  * Returns a file:// URI to the backup file, ready for sharing.
  */
-export async function exportBackup(): Promise<string> {
-  const appVersion = Constants.expoConfig?.version ?? 'unknown';
+async function exportBackup(): Promise<string> {
+  return withLock('backup-operation', async () => {
+    const appVersion = Constants.expoConfig?.version ?? 'unknown';
 
-  // 1. Prepare staging directory
-  const stagingDir = new Directory(Paths.cache, 'backup-staging');
-  if (stagingDir.exists) stagingDir.delete();
-  stagingDir.create();
+    // 1. Prepare staging directory
+    const stagingDir = uniqueCacheDir('backup-staging');
+    stagingDir.create();
 
-  try {
-    // 2. Close DB, copy database file, then reopen immediately
-    //    so the app keeps working even if the user cancels sharing.
-    closeDb();
     try {
-      const dbDir = getDbDirectory();
-      const srcDb = new File(dbDir, DB_FILENAME);
-      srcDb.copy(stagingDir);
-    } finally {
-      reopenDb();
-    }
-
-    // 3. Copy each media folder that exists
-    const includedFolders: string[] = [];
-    for (const folder of MEDIA_FOLDERS) {
-      const dir = new Directory(Paths.document, folder);
-      if (dir.exists) {
-        dir.copy(stagingDir);
-        includedFolders.push(folder);
+      // 2. Close DB, copy database file, then reopen immediately
+      //    so the app keeps working even if the user cancels sharing.
+      closeDb();
+      try {
+        const dbDir = getDbDirectory();
+        const srcDb = new File(dbDir, DB_FILENAME);
+        srcDb.copy(stagingDir);
+      } finally {
+        reopenDb();
       }
+
+      // 3. Copy each media folder that exists
+      const includedFolders: string[] = [];
+      for (const folder of MEDIA_FOLDERS) {
+        const dir = new Directory(Paths.document, folder);
+        if (dir.exists) {
+          dir.copy(stagingDir);
+          includedFolders.push(folder);
+        }
+      }
+
+      // 4. Write backup metadata with content counts
+      const meta: BackupMeta = {
+        appVersion,
+        backupVersion: BACKUP_VERSION,
+        createdAt: new Date().toISOString(),
+        contents: {
+          database: true,
+          voiceMemos: countFilesInDir('voice-memos'),
+          noteImages: countFilesInDir('note-images'),
+          alarmPhotos: countFilesInDir('alarm-photos'),
+          backgrounds: countFilesInDir('backgrounds'),
+        },
+      };
+      const metaFile = new File(stagingDir, META_FILENAME);
+      metaFile.write(JSON.stringify(meta, null, 2));
+
+      // 5. Zip staging directory → .dfw file
+      const targetFile = new File(Paths.cache, 'dfw-backup.dfw');
+      if (targetFile.exists) targetFile.delete();
+      const zipPath = await zip(uriToPath(stagingDir.uri), uriToPath(targetFile.uri));
+
+      // 6. Record last backup date
+      kvSet(LAST_BACKUP_KEY, meta.createdAt);
+
+      return `file://${zipPath}`;
+    } finally {
+      try {
+        if (stagingDir.exists) stagingDir.delete();
+      } catch { /* best-effort cleanup */ }
     }
-
-    // 4. Write backup metadata with content counts
-    const meta: BackupMeta = {
-      appVersion,
-      backupVersion: BACKUP_VERSION,
-      createdAt: new Date().toISOString(),
-      contents: {
-        database: true,
-        voiceMemos: countFilesInDir('voice-memos'),
-        noteImages: countFilesInDir('note-images'),
-        alarmPhotos: countFilesInDir('alarm-photos'),
-        backgrounds: countFilesInDir('backgrounds'),
-      },
-    };
-    const metaFile = new File(stagingDir, META_FILENAME);
-    metaFile.write(JSON.stringify(meta, null, 2));
-
-    // 5. Zip staging directory → .dfw file
-    const targetFile = new File(Paths.cache, 'dfw-backup.dfw');
-    if (targetFile.exists) targetFile.delete();
-    const zipPath = await zip(uriToPath(stagingDir.uri), uriToPath(targetFile.uri));
-
-    // 6. Record last backup date
-    kvSet(LAST_BACKUP_KEY, meta.createdAt);
-
-    return `file://${zipPath}`;
-  } finally {
-    try {
-      if (stagingDir.exists) stagingDir.delete();
-    } catch { /* best-effort cleanup */ }
-  }
+  });
 }
 
 /**
@@ -163,7 +170,7 @@ export async function shareBackup(): Promise<void> {
  * Validate a .dfw backup file. Returns parsed metadata on success, throws on failure.
  */
 export async function validateBackup(fileUri: string): Promise<BackupMeta> {
-  const validateDir = new Directory(Paths.cache, 'backup-validate');
+  const validateDir = uniqueCacheDir('backup-validate');
   try {
     if (validateDir.exists) validateDir.delete();
     validateDir.create();
@@ -226,109 +233,110 @@ export async function validateBackup(fileUri: string): Promise<BackupMeta> {
  * is fully extracted and verified.
  */
 export async function importBackup(fileUri: string): Promise<void> {
-  const meta = await validateBackup(fileUri);
+  return withLock('backup-operation', async () => {
+    const meta = await validateBackup(fileUri);
 
-  // Cancel all existing notifications before replacing the database
-  await cancelAllAlarms();
-  closeDb();
+    const tempDir = uniqueCacheDir('backup-restore-temp');
+    const rollbackDir = uniqueCacheDir('backup-rollback');
 
-  const tempDir = new Directory(Paths.cache, 'backup-restore-temp');
-  const rollbackDir = new Directory(Paths.cache, 'backup-rollback');
+    let liveDataMoved = false;
 
-  // Clean any leftover dirs from previous failed attempts
-  try { if (tempDir.exists) tempDir.delete(); } catch {}
-  try { if (rollbackDir.exists) rollbackDir.delete(); } catch {}
-
-  let liveDataMoved = false;
-
-  try {
-    // Step 1: Unzip backup to temp
-    tempDir.create();
-    await unzip(uriToPath(fileUri), uriToPath(tempDir.uri));
-
-    // Step 2: Verify temp has dfw.db
-    const tempDb = new File(tempDir, DB_FILENAME);
-    if (!tempDb.exists) {
-      throw new Error('Backup is missing database file');
-    }
-
-    // Step 3: Move current live data to rollback
-    rollbackDir.create();
-
-    const dbDir = getDbDirectory();
-    for (const name of [DB_FILENAME, `${DB_FILENAME}-wal`, `${DB_FILENAME}-shm`]) {
-      const f = new File(dbDir, name);
-      if (f.exists) f.move(rollbackDir);
-    }
-    for (const folder of MEDIA_FOLDERS) {
-      const dir = new Directory(Paths.document, folder);
-      if (dir.exists) dir.move(rollbackDir);
-    }
-    liveDataMoved = true;
-
-    // Step 4: Move restored data from temp to document
-    const restoredDb = new File(tempDir, DB_FILENAME);
-    if (!dbDir.exists) dbDir.create({ intermediates: true });
-    restoredDb.move(dbDir);
-
-    for (const folder of MEDIA_FOLDERS) {
-      const restoredFolder = new Directory(tempDir, folder);
-      if (restoredFolder.exists) {
-        restoredFolder.move(Paths.document);
-      }
-    }
-
-    // Remove backup-meta.json if it landed in Paths.document
     try {
-      const strayMeta = new File(Paths.document, META_FILENAME);
-      if (strayMeta.exists) strayMeta.delete();
-    } catch {}
+      setRestoreInProgress(true);
+      closeDb();
 
-    // Step 5: Reopen DB and reschedule
-    reopenDb();
-    await rescheduleAllNotifications();
+      // Step 1: Unzip backup to temp
+      tempDir.create();
+      await unzip(uriToPath(fileUri), uriToPath(tempDir.uri));
 
-    // Step 6: Update last backup date
-    kvSet(LAST_BACKUP_KEY, meta.createdAt);
-
-  } catch (e) {
-    // ROLLBACK: if we moved live data away, put it back
-    if (liveDataMoved) {
-      try {
-        // Delete any partially-restored files in Paths.document
-        const dbDir = getDbDirectory();
-        for (const name of [DB_FILENAME, `${DB_FILENAME}-wal`, `${DB_FILENAME}-shm`]) {
-          const f = new File(dbDir, name);
-          if (f.exists) f.delete();
-        }
-        for (const folder of MEDIA_FOLDERS) {
-          const dir = new Directory(Paths.document, folder);
-          if (dir.exists) dir.delete();
-        }
-
-        // Move rollback data back
-        for (const entry of rollbackDir.list()) {
-          if (entry instanceof Directory) {
-            entry.move(Paths.document);
-          } else {
-            // DB files go back to the sqlite directory
-            entry.move(dbDir);
-          }
-        }
-      } catch (rollbackError) {
-        console.error('[restore] Rollback also failed:', rollbackError);
+      // Step 2: Verify temp has dfw.db
+      const tempDb = new File(tempDir, DB_FILENAME);
+      if (!tempDb.exists) {
+        throw new Error('Backup is missing database file');
       }
+
+      // Step 3: Move current live data to rollback
+      rollbackDir.create();
+
+      const dbDir = getDbDirectory();
+      for (const name of [DB_FILENAME, `${DB_FILENAME}-wal`, `${DB_FILENAME}-shm`]) {
+        const f = new File(dbDir, name);
+        if (f.exists) f.move(rollbackDir);
+      }
+      for (const folder of MEDIA_FOLDERS) {
+        const dir = new Directory(Paths.document, folder);
+        if (dir.exists) dir.move(rollbackDir);
+      }
+      liveDataMoved = true;
+
+      // Step 4: Move restored data from temp to document
+      const restoredDb = new File(tempDir, DB_FILENAME);
+      if (!dbDir.exists) dbDir.create({ intermediates: true });
+      restoredDb.move(dbDir);
+
+      for (const folder of MEDIA_FOLDERS) {
+        const restoredFolder = new Directory(tempDir, folder);
+        if (restoredFolder.exists) {
+          restoredFolder.move(Paths.document);
+        }
+      }
+
+      // Remove backup-meta.json if it landed in Paths.document
+      try {
+        const strayMeta = new File(Paths.document, META_FILENAME);
+        if (strayMeta.exists) strayMeta.delete();
+      } catch {}
+
+      // Step 5: Files are in place. Clear the file-swap guard so reopenDb
+      // and the reschedule loop can access the DB. This happens INSIDE try
+      // so any failure during reschedule still lands in catch/finally.
+      setRestoreInProgress(false);
+      reopenDb();
+      await cancelAllAlarms();
+      await rescheduleAllNotifications();
+
+      // Step 6: Update last backup date
+      kvSet(LAST_BACKUP_KEY, meta.createdAt);
+    } catch (e) {
+      // ROLLBACK: if we moved live data away, put it back. File operations
+      // only — no DB access required. Do NOT touch the restore flag here;
+      // the finally block handles it so an unexpected throw can't leave
+      // the flag stuck.
+      if (liveDataMoved) {
+        try {
+          const dbDir = getDbDirectory();
+          for (const name of [DB_FILENAME, `${DB_FILENAME}-wal`, `${DB_FILENAME}-shm`]) {
+            const f = new File(dbDir, name);
+            if (f.exists) f.delete();
+          }
+          for (const folder of MEDIA_FOLDERS) {
+            const dir = new Directory(Paths.document, folder);
+            if (dir.exists) dir.delete();
+          }
+
+          // Move rollback data back
+          for (const entry of rollbackDir.list()) {
+            if (entry instanceof Directory) {
+              entry.move(Paths.document);
+            } else {
+              // DB files go back to the sqlite directory
+              entry.move(dbDir);
+            }
+          }
+        } catch (rollbackError) {
+          console.error('[restore] Rollback also failed:', rollbackError);
+        }
+      }
+      throw e;
+    } finally {
+      // Safety net: always clear the guard on every exit path (success,
+      // handled exception, or unexpected throw). The next getDb() call
+      // will transparently reopen a fresh connection if needed.
+      setRestoreInProgress(false);
+      try { if (tempDir.exists) tempDir.delete(); } catch {}
+      try { if (rollbackDir.exists) rollbackDir.delete(); } catch {}
     }
-
-    // Always try to reopen DB (might be the original or the rollback)
-    try { reopenDb(); } catch {}
-
-    throw e;
-  } finally {
-    // Clean up temp and rollback dirs
-    try { if (tempDir.exists) tempDir.delete(); } catch {}
-    try { if (rollbackDir.exists) rollbackDir.delete(); } catch {}
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------

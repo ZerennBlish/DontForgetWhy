@@ -69,6 +69,7 @@ export function wasNotifHandled(notifId: string | undefined): boolean {
 // so cold-start dedupe works across process restarts.
 
 import { kvGet, kvSet } from './database';
+import { safeParseArray } from '../utils/safeParse';
 
 const HANDLED_NOTIFS_KEY = 'handledNotifIds';
 
@@ -81,7 +82,7 @@ export async function persistNotifHandled(notifId: string): Promise<void> {
   markNotifHandled(notifId); // keep in-memory Map in sync
   try {
     const raw = kvGet(HANDLED_NOTIFS_KEY);
-    let entries: PersistedNotifEntry[] = raw ? JSON.parse(raw) : [];
+    let entries: PersistedNotifEntry[] = safeParseArray<PersistedNotifEntry>(raw);
     const now = Date.now();
     // Remove any existing entry for this ID, then add fresh
     entries = entries.filter((e) => e.id !== notifId);
@@ -99,7 +100,7 @@ export async function wasNotifHandledPersistent(notifId: string | undefined): Pr
   try {
     const raw = kvGet(HANDLED_NOTIFS_KEY);
     if (!raw) return false;
-    const entries: PersistedNotifEntry[] = JSON.parse(raw);
+    const entries: PersistedNotifEntry[] = safeParseArray<PersistedNotifEntry>(raw);
     const now = Date.now();
     const entry = entries.find((e) => e.id === notifId);
     if (entry && now - entry.ts <= HANDLED_TTL) {

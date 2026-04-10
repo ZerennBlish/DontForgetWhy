@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import MEDIA_ICONS from '../assets/mediaIcons';
@@ -31,11 +31,17 @@ function formatRelativeTime(isoDate: string): string {
 
 interface VoiceMemoCardProps {
   memo: VoiceMemo;
-  onPress: () => void;
-  onPlayToggle: () => void;
+  // Callbacks take the memo (or its id) so the parent can pass stable
+  // useCallback references and React.memo can skip re-renders.
+  onPress: (memo: VoiceMemo) => void;
+  onPlayToggle: (memo: VoiceMemo) => void;
   isPlaying: boolean;
-  playbackProgress: number;
-  onPin?: () => void;
+  // Progress is read from a parent-owned ref, NOT prop state. The parent
+  // updates the ref every 500ms without re-rendering itself; only the
+  // currently-playing card subscribes to those updates via a local
+  // interval, so non-playing cards never re-render during playback.
+  progressRef?: React.MutableRefObject<number>;
+  onPin?: (id: string) => void;
   isPinned?: boolean;
 }
 
@@ -44,11 +50,43 @@ function VoiceMemoCard({
   onPress,
   onPlayToggle,
   isPlaying,
-  playbackProgress,
+  progressRef,
   onPin,
   isPinned,
 }: VoiceMemoCardProps) {
   const { colors } = useTheme();
+
+  // Local progress state — only updated when this card is the playing
+  // card. The interval polls the parent's ref so the parent never has
+  // to re-render to push progress through props.
+  const [localProgress, setLocalProgress] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (!isPlaying || !progressRef) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setLocalProgress(0);
+      return;
+    }
+    setLocalProgress(progressRef.current);
+    intervalRef.current = setInterval(() => {
+      if (progressRef.current !== undefined) {
+        setLocalProgress(progressRef.current);
+      }
+    }, 250);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [isPlaying, progressRef]);
+
+  const handlePlayPress = () => onPlayToggle(memo);
+  const handleCenterPress = () => onPress(memo);
+  const handlePinPress = onPin ? () => onPin(memo.id) : undefined;
 
   const styles = useMemo(
     () =>
@@ -56,7 +94,7 @@ function VoiceMemoCard({
         card: {
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: colors.mode === 'dark' ? colors.sectionVoice + '20' : colors.sectionVoice + '15',
+          backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionVoice + '15',
           borderRadius: 12,
           padding: 12,
           borderWidth: 1,
@@ -114,7 +152,7 @@ function VoiceMemoCard({
           paddingHorizontal: 12,
           paddingVertical: 6,
           borderRadius: 20,
-          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
           borderWidth: 1,
           borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
         },
@@ -134,8 +172,10 @@ function VoiceMemoCard({
     <View style={styles.card}>
       <TouchableOpacity
         style={styles.playBtn}
-        onPress={onPlayToggle}
+        onPress={handlePlayPress}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={isPlaying ? 'Pause memo' : 'Play memo'}
       >
         {isPlaying ? (
           <Image source={MEDIA_ICONS.pause} style={{ width: 18, height: 18 }} resizeMode="contain" />
@@ -146,44 +186,46 @@ function VoiceMemoCard({
 
       <TouchableOpacity
         style={styles.center}
-        onPress={onPress}
+        onPress={handleCenterPress}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`Voice memo: ${memo.title || 'Untitled'}, ${formatDuration(memo.duration)}`}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Text style={styles.title} numberOfLines={1}>
             {memo.title || 'Voice Memo'}
           </Text>
-          {isPinned && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.sectionVoice, marginLeft: 6 }} />}
+          {isPinned && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent, marginLeft: 6 }} />}
         </View>
         <Text style={styles.subtitle} numberOfLines={1}>
           {formatDuration(memo.duration)} {'\u00B7'}{' '}
           {formatRelativeTime(memo.createdAt)}
         </Text>
-        {playbackProgress > 0 && (
+        {localProgress > 0 && (
           <View style={styles.miniTrack}>
             <View
               style={[
                 styles.miniFill,
-                { width: `${playbackProgress * 100}%` },
+                { width: `${localProgress * 100}%` },
               ]}
             />
           </View>
         )}
       </TouchableOpacity>
 
-      {onPin && (
+      {handlePinPress && (
         <View style={styles.actions}>
-          {onPin && (
-            <TouchableOpacity
-              style={[styles.pinBtn, isPinned && styles.pinBtnActive]}
-              onPress={onPin}
-              activeOpacity={0.6}
-            >
-              <Text style={[styles.pinBtnText, isPinned && { color: colors.accent }]}>
-                {isPinned ? 'Pinned' : 'Pin'}
-              </Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.pinBtn, isPinned && styles.pinBtnActive]}
+            onPress={handlePinPress}
+            activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel={isPinned ? 'Unpin voice memo' : 'Pin voice memo'}
+          >
+            <Text style={[styles.pinBtnText, isPinned && { color: colors.accent }]}>
+              {isPinned ? 'Pinned' : 'Pin'}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>

@@ -1,6 +1,20 @@
 import { getDb, kvGet, kvSet } from './database';
 import type { TimerPreset, ActiveTimer, UserTimer } from '../types/timer';
 import { defaultPresets } from '../data/timerPresets';
+import { withLock } from '../utils/asyncMutex';
+import { safeParse, safeParseArray } from '../utils/safeParse';
+
+function parsePresetOverrides(json: string | null): Record<string, number> {
+  const parsed = safeParse(json, {});
+  if (typeof parsed !== 'object' || !parsed || Array.isArray(parsed)) return {};
+  const result: Record<string, number> = {};
+  for (const [key, val] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof val === 'number' && val > 0) {
+      result[key] = val;
+    }
+  }
+  return result;
+}
 
 const PRESETS_KEY = 'timerPresets';
 const RECENT_KEY = 'recentPresets';
@@ -11,15 +25,7 @@ const RECENT_KEY = 'recentPresets';
 
 export async function loadPresets(): Promise<TimerPreset[]> {
   const raw = kvGet(PRESETS_KEY);
-  let customDurations: Record<string, number> = {};
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        customDurations = parsed;
-      }
-    } catch {}
-  }
+  const customDurations = parsePresetOverrides(raw);
   return defaultPresets.map((p) => ({
     ...p,
     customSeconds: customDurations[p.id],
@@ -30,18 +36,12 @@ export async function saveCustomDuration(
   presetId: string,
   seconds: number,
 ): Promise<void> {
-  const raw = kvGet(PRESETS_KEY);
-  let customDurations: Record<string, number> = {};
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        customDurations = parsed;
-      }
-    } catch {}
-  }
-  customDurations[presetId] = seconds;
-  kvSet(PRESETS_KEY, JSON.stringify(customDurations));
+  return withLock('timer-presets', async () => {
+    const raw = kvGet(PRESETS_KEY);
+    const customDurations = parsePresetOverrides(raw);
+    customDurations[presetId] = seconds;
+    kvSet(PRESETS_KEY, JSON.stringify(customDurations));
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ export async function addActiveTimer(timer: ActiveTimer): Promise<ActiveTimer[]>
   return loadActiveTimers();
 }
 
-export async function removeActiveTimer(id: string): Promise<ActiveTimer[]> {
+async function removeActiveTimer(id: string): Promise<ActiveTimer[]> {
   const db = getDb();
   db.runSync('DELETE FROM active_timers WHERE id=?', [id]);
   return loadActiveTimers();
@@ -123,27 +123,22 @@ interface RecentEntry {
 }
 
 export async function recordPresetUsage(presetId: string): Promise<void> {
-  const raw = kvGet(RECENT_KEY);
-  let entries: RecentEntry[] = [];
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) entries = parsed;
-    } catch {}
-  }
-  entries = entries.filter((e) => e.presetId !== presetId);
-  entries.unshift({ presetId, timestamp: Date.now() });
-  if (entries.length > 20) entries = entries.slice(0, 20);
-  kvSet(RECENT_KEY, JSON.stringify(entries));
+  return withLock('timer-presets', async () => {
+    const raw = kvGet(RECENT_KEY);
+    let entries: RecentEntry[] = safeParseArray<RecentEntry>(raw);
+    entries = entries.filter((e) => e.presetId !== presetId);
+    entries.unshift({ presetId, timestamp: Date.now() });
+    if (entries.length > 20) entries = entries.slice(0, 20);
+    kvSet(RECENT_KEY, JSON.stringify(entries));
+  });
 }
 
 export async function loadRecentPresetIds(): Promise<string[]> {
   const raw = kvGet(RECENT_KEY);
   if (!raw) return [];
   try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const entries = parsed as RecentEntry[];
+    const entries = safeParseArray<RecentEntry>(raw);
+    if (entries.length === 0) return [];
     const validIds = new Set(defaultPresets.map((p) => p.id));
     try {
       const userTimers = await loadUserTimers();

@@ -1,4 +1,5 @@
 import { kvGet, kvSet, kvRemove } from './database';
+import { withLock } from '../utils/asyncMutex';
 import type {
   TriviaStats,
   TriviaCategory,
@@ -92,39 +93,41 @@ export async function getTriviaStats(): Promise<TriviaStats> {
   }
 }
 
-export async function saveTriviaStats(stats: TriviaStats): Promise<void> {
+async function saveTriviaStats(stats: TriviaStats): Promise<void> {
   try {
     await kvSet(STATS_KEY, JSON.stringify(stats));
   } catch {}
 }
 
 export async function recordTriviaRound(result: TriviaRoundResult): Promise<TriviaStats> {
-  const stats = await getTriviaStats();
+  return withLock('trivia-stats', async () => {
+    const stats = await getTriviaStats();
 
-  stats.totalRoundsPlayed += 1;
-  stats.totalQuestionsAnswered += result.totalQuestions;
-  stats.totalCorrect += result.correctAnswers;
+    stats.totalRoundsPlayed += 1;
+    stats.totalQuestionsAnswered += result.totalQuestions;
+    stats.totalCorrect += result.correctAnswers;
 
-  if (result.correctAnswers > stats.bestRoundScore) {
-    stats.bestRoundScore = result.correctAnswers;
-    stats.bestRoundCategory = result.category;
-  }
+    if (result.correctAnswers > stats.bestRoundScore) {
+      stats.bestRoundScore = result.correctAnswers;
+      stats.bestRoundCategory = result.category;
+    }
 
-  if (result.longestStreak > stats.longestStreak) {
-    stats.longestStreak = result.longestStreak;
-  }
+    if (result.longestStreak > stats.longestStreak) {
+      stats.longestStreak = result.longestStreak;
+    }
 
-  // Update category stats
-  const cat = stats.categoryStats[result.category];
-  cat.roundsPlayed += 1;
-  cat.questionsAnswered += result.totalQuestions;
-  cat.correct += result.correctAnswers;
-  if (result.correctAnswers > cat.bestScore) {
-    cat.bestScore = result.correctAnswers;
-  }
+    // Update category stats
+    const cat = stats.categoryStats[result.category];
+    cat.roundsPlayed += 1;
+    cat.questionsAnswered += result.totalQuestions;
+    cat.correct += result.correctAnswers;
+    if (result.correctAnswers > cat.bestScore) {
+      cat.bestScore = result.correctAnswers;
+    }
 
-  await saveTriviaStats(stats);
-  return stats;
+    await saveTriviaStats(stats);
+    return stats;
+  });
 }
 
 type SeenData = Record<string, string[]>;
@@ -161,30 +164,34 @@ export async function getSeenQuestionIds(category: string): Promise<string[]> {
 }
 
 export async function addSeenQuestionIds(category: string, ids: string[]): Promise<void> {
-  try {
-    const data = await loadSeenData();
-    const current = Array.isArray(data[category]) ? data[category] : [];
-    const set = new Set(current);
-    for (const id of ids) set.add(id);
-    data[category] = [...set];
-    await saveSeenData(data);
-  } catch {}
+  return withLock('trivia-seen', async () => {
+    try {
+      const data = await loadSeenData();
+      const current = Array.isArray(data[category]) ? data[category] : [];
+      const set = new Set(current);
+      for (const id of ids) set.add(id);
+      data[category] = [...set];
+      await saveSeenData(data);
+    } catch {}
+  });
 }
 
-export async function resetSeenQuestions(): Promise<void> {
+async function resetSeenQuestions(): Promise<void> {
   try {
     await kvRemove(SEEN_KEY);
   } catch {}
 }
 
 export async function resetSeenQuestionsForCategory(category: string): Promise<void> {
-  try {
-    const data = await loadSeenData();
-    delete data[category];
-    if (Object.keys(data).length === 0) {
-      await kvRemove(SEEN_KEY);
-    } else {
-      await saveSeenData(data);
-    }
-  } catch {}
+  return withLock('trivia-seen', async () => {
+    try {
+      const data = await loadSeenData();
+      delete data[category];
+      if (Object.keys(data).length === 0) {
+        await kvRemove(SEEN_KEY);
+      } else {
+        await saveSeenData(data);
+      }
+    } catch {}
+  });
 }

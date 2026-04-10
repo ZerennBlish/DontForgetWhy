@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -47,6 +47,83 @@ function isDarkSquare(row: number, col: number): boolean {
   return (row + col) % 2 === 1;
 }
 
+// ── Memoized board square ───────────────────────────────────────
+// Each square is React.memo'd so a parent re-render (e.g. AI thinking
+// flag toggling) doesn't reconcile all 64 squares. Light squares are
+// non-interactive and rendered as a separate variant.
+interface CheckerSquareProps {
+  logRow: number;
+  logCol: number;
+  cellPiece: { color: PieceColor; king: boolean } | null;
+  isSelected: boolean;
+  isValidTarget: boolean;
+  isDark: boolean;
+  accessibilityLabel: string;
+  accentColor: string;
+  squareStyle: object;
+  pieceImgStyle: object;
+  moveDotStyle: object;
+  captureRingStyle: object;
+  onPress: (logRow: number, logCol: number) => void;
+}
+
+const CheckerSquare = React.memo(function CheckerSquare({
+  logRow,
+  logCol,
+  cellPiece,
+  isSelected,
+  isValidTarget,
+  isDark,
+  accessibilityLabel,
+  accentColor,
+  squareStyle,
+  pieceImgStyle,
+  moveDotStyle,
+  captureRingStyle,
+  onPress,
+}: CheckerSquareProps) {
+  const handlePress = useCallback(() => {
+    hapticLight();
+    onPress(logRow, logCol);
+  }, [onPress, logRow, logCol]);
+
+  const bg = isSelected
+    ? accentColor + '90'
+    : isDark
+    ? accentColor + 'CC'
+    : accentColor + '60';
+
+  if (!isDark) {
+    // Light squares are non-interactive, never have pieces
+    return (
+      <View
+        style={[squareStyle, { backgroundColor: bg }]}
+        accessibilityLabel={accessibilityLabel}
+      />
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      style={[squareStyle, { backgroundColor: bg }]}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      {cellPiece && (
+        <Image
+          source={getCheckerImage(cellPiece)}
+          style={pieceImgStyle}
+          resizeMode="contain"
+        />
+      )}
+      {isValidTarget && !cellPiece && <View style={moveDotStyle} />}
+      {isValidTarget && cellPiece && <View style={captureRingStyle} />}
+    </TouchableOpacity>
+  );
+});
+
 export default function CheckersScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -54,6 +131,30 @@ export default function CheckersScreen({ navigation }: Props) {
 
   const [selectedColor, setSelectedColor] = useState<PieceColor>('r');
   const [selectedDifficulty, setSelectedDifficulty] = useState(2);
+
+  // Intercept hardware back during active game
+  useEffect(() => {
+    if (!game.board.length || game.isGameOver) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      e.preventDefault();
+      Alert.alert(
+        'Quit game?',
+        'Your game progress is saved automatically.',
+        [
+          { text: 'Keep playing', style: 'cancel' },
+          { text: 'Quit', onPress: () => navigation.dispatch(e.data.action) },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation, game.board.length, game.isGameOver]);
+
+  // Stable square-press handler. Each CheckerSquare wraps this in its
+  // own useCallback so a re-render of CheckersScreen doesn't churn the
+  // onPress identity for all 64 squares.
+  const handleSquarePress = useCallback((logRow: number, logCol: number) => {
+    game.selectSquare(logRow, logCol);
+  }, [game]);
 
   const handleResignPress = () => {
     Alert.alert('Resign?', 'Are you sure you want to resign this game?', [
@@ -107,7 +208,7 @@ export default function CheckersScreen({ navigation }: Props) {
         },
         preGameTitle: {
           fontSize: 20,
-          color: colors.overlayText,
+          color: colors.textPrimary,
           textAlign: 'center',
           marginBottom: 18,
           fontFamily: FONTS.gameHeader,
@@ -115,7 +216,7 @@ export default function CheckersScreen({ navigation }: Props) {
         sectionLabel: {
           fontSize: 12,
           fontFamily: FONTS.semiBold,
-          color: colors.overlayText,
+          color: colors.textSecondary,
           marginBottom: 10,
           opacity: 0.8,
         },
@@ -137,7 +238,7 @@ export default function CheckersScreen({ navigation }: Props) {
           borderColor: colors.accent,
         },
         colorPieceImg: { width: 60, height: 60, marginBottom: 6 },
-        colorLabel: { fontSize: 12, fontFamily: FONTS.semiBold, color: colors.overlayText },
+        colorLabel: { fontSize: 12, fontFamily: FONTS.semiBold, color: colors.textSecondary },
         pillsRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
@@ -248,13 +349,13 @@ export default function CheckersScreen({ navigation }: Props) {
         overlayTitle: {
           fontSize: 22,
           fontFamily: FONTS.extraBold,
-          color: colors.overlayText,
+          color: colors.textPrimary,
           marginBottom: 6,
         },
         overlaySubtitle: {
           fontSize: 14,
           fontFamily: FONTS.regular,
-          color: colors.overlayText,
+          color: colors.textSecondary,
           opacity: 0.8,
           marginBottom: 18,
         },
@@ -355,7 +456,7 @@ export default function CheckersScreen({ navigation }: Props) {
     const kings = color === 'r' ? game.redKings : game.blackKings;
     const regulars = count - kings;
     return (
-      <View style={styles.pieceCountRow}>
+      <View style={styles.pieceCountRow} accessibilityLiveRegion="polite">
         <Image
           source={getCheckerImage({ color, king: false })}
           style={styles.pieceCountImg}
@@ -394,51 +495,29 @@ export default function CheckersScreen({ navigation }: Props) {
               const isValidTarget = validMoveTargets.some(
                 ([r, c]) => r === logRow && c === logCol,
               );
-
-              const bg = isSelected
-                ? colors.accent + '90'
-                : dark
-                ? colors.accent + 'CC'
-                : colors.accent + '60';
-
               const pieceName = cell
                 ? `${cell.color === 'r' ? 'red' : 'black'} ${cell.king ? 'king' : 'piece'}`
                 : 'empty';
-              const label = `row ${logRow}, column ${logCol}, ${pieceName}`;
-
-              if (!dark) {
-                // Light squares are non-interactive, never have pieces
-                return (
-                  <View
-                    key={colIdx}
-                    style={[styles.square, { backgroundColor: bg }]}
-                    accessibilityLabel={`row ${logRow}, column ${logCol}, empty`}
-                  />
-                );
-              }
-
+              const label = dark
+                ? `row ${logRow}, column ${logCol}, ${pieceName}`
+                : `row ${logRow}, column ${logCol}, empty`;
               return (
-                <TouchableOpacity
+                <CheckerSquare
                   key={colIdx}
-                  style={[styles.square, { backgroundColor: bg }]}
-                  onPress={() => {
-                    hapticLight();
-                    game.selectSquare(logRow, logCol);
-                  }}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
+                  logRow={logRow}
+                  logCol={logCol}
+                  cellPiece={cell}
+                  isSelected={isSelected}
+                  isValidTarget={isValidTarget}
+                  isDark={dark}
                   accessibilityLabel={label}
-                >
-                  {cell && (
-                    <Image
-                      source={getCheckerImage(cell)}
-                      style={styles.pieceImg}
-                      resizeMode="contain"
-                    />
-                  )}
-                  {isValidTarget && !cell && <View style={styles.moveDot} />}
-                  {isValidTarget && cell && <View style={styles.captureRing} />}
-                </TouchableOpacity>
+                  accentColor={colors.accent}
+                  squareStyle={styles.square}
+                  pieceImgStyle={styles.pieceImg}
+                  moveDotStyle={styles.moveDot}
+                  captureRingStyle={styles.captureRing}
+                  onPress={handleSquarePress}
+                />
               );
             })}
           </View>
@@ -454,11 +533,12 @@ export default function CheckersScreen({ navigation }: Props) {
 
     return (
       <View style={styles.body}>
-        <View style={styles.gameHeader}>
+        <View style={styles.gameHeader} accessibilityLiveRegion="polite">
           <Text style={styles.gameHeaderText}>{diffName}</Text>
           <Text style={styles.gameHeaderText}>Move {game.moveCount}</Text>
         </View>
         <View
+          accessibilityLiveRegion="polite"
           style={{
             height: 24,
             marginHorizontal: 16,

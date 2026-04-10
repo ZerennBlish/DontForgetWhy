@@ -4,14 +4,16 @@ import type { AlarmDay } from '../types/alarm';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 
-const DAY_LABELS: { key: AlarmDay; short: string }[] = [
-  { key: 'Sun', short: 'S' },
-  { key: 'Mon', short: 'M' },
-  { key: 'Tue', short: 'T' },
-  { key: 'Wed', short: 'W' },
-  { key: 'Thu', short: 'T' },
-  { key: 'Fri', short: 'F' },
-  { key: 'Sat', short: 'S' },
+const HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 } as const;
+
+const DAY_LABELS: { key: AlarmDay; short: string; full: string }[] = [
+  { key: 'Sun', short: 'S', full: 'Sunday' },
+  { key: 'Mon', short: 'M', full: 'Monday' },
+  { key: 'Tue', short: 'T', full: 'Tuesday' },
+  { key: 'Wed', short: 'W', full: 'Wednesday' },
+  { key: 'Thu', short: 'T', full: 'Thursday' },
+  { key: 'Fri', short: 'F', full: 'Friday' },
+  { key: 'Sat', short: 'S', full: 'Saturday' },
 ];
 
 interface DayPickerRowProps {
@@ -56,26 +58,33 @@ export default function DayPickerRow({
   return (
     <>
       <View style={styles.dayRow}>
-        {DAY_LABELS.map(({ key, short }) => (
-          <TouchableOpacity
-            key={key}
-            style={[
-              styles.dayBtn,
-              { backgroundColor: colors.border, borderColor: colors.border },
-              selectedDays.includes(key) && { backgroundColor: colors.accent, borderColor: colors.accent },
-            ]}
-            onPress={() => { hapticLight(); onToggleDay(key); }}
-            activeOpacity={0.7}
-          >
-            <Text style={[
-              styles.dayBtnText,
-              { color: colors.textTertiary },
-              selectedDays.includes(key) && { color: colors.textPrimary },
-            ]}>
-              {short}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {DAY_LABELS.map(({ key, short, full }) => {
+          const isSelected = selectedDays.includes(key);
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[
+                styles.dayBtn,
+                { backgroundColor: colors.border, borderColor: colors.border },
+                isSelected && { backgroundColor: colors.accent, borderColor: colors.accent },
+              ]}
+              onPress={() => { hapticLight(); onToggleDay(key); }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={full}
+              accessibilityState={{ selected: isSelected }}
+              hitSlop={HIT_SLOP}
+            >
+              <Text style={[
+                styles.dayBtnText,
+                { color: colors.textTertiary },
+                isSelected && { color: colors.textPrimary },
+              ]}>
+                {short}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
       {showQuickDays && (
         <View style={styles.quickDayRow}>
@@ -87,6 +96,8 @@ export default function DayPickerRow({
             ]}
             onPress={() => { hapticLight(); onSelectWeekdays(); }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Select weekdays"
           >
             <Text style={[styles.quickDayText, { color: colors.textSecondary }]}>Weekdays</Text>
           </TouchableOpacity>
@@ -98,6 +109,8 @@ export default function DayPickerRow({
             ]}
             onPress={() => { hapticLight(); onSelectWeekends(); }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Select weekends"
           >
             <Text style={[styles.quickDayText, { color: colors.textSecondary }]}>Weekends</Text>
           </TouchableOpacity>
@@ -109,6 +122,8 @@ export default function DayPickerRow({
             ]}
             onPress={() => { hapticLight(); onSelectEveryday(); }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Select every day"
           >
             <Text style={[styles.quickDayText, { color: colors.textSecondary }]}>Everyday</Text>
           </TouchableOpacity>
@@ -121,6 +136,8 @@ export default function DayPickerRow({
               ]}
               onPress={() => { hapticLight(); onToggleCalendar(); }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Open date picker"
             >
               <Text style={[styles.quickDayText, { color: colors.textSecondary }]}>{'\u{1F4C5}'}</Text>
             </TouchableOpacity>

@@ -19,7 +19,7 @@ export default function ImageLightbox({ visible, imageUri, onClose }: ImageLight
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close image viewer" accessibilityViewIsModal={true}>
         {imageUri && (
           <Image source={{ uri: imageUri }} style={styles.image} resizeMode="contain" />
         )}
@@ -27,6 +27,8 @@ export default function ImageLightbox({ visible, imageUri, onClose }: ImageLight
           style={[styles.closeBtn, { top: insets.top + 16 }]}
           onPress={onClose}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Close image viewer"
         >
           <Image source={APP_ICONS.closeX} style={{ width: 18, height: 18 }} resizeMode="contain" />
         </TouchableOpacity>

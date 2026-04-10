@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, GestureResponderEvent } from 'react-native';
 import { FONTS } from '../theme/fonts';
+import { useTheme } from '../theme/ThemeContext';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import APP_ICONS from '../data/appIconAssets';
 
@@ -106,27 +107,44 @@ interface RecordingControlsProps {
   durationMillis: number;
   onPauseToggle: () => void;
   onStop: () => void;
+  recordingColor?: string;
+  successColor?: string;
 }
 
-export function RecordingControls({ isPaused, durationMillis, onPauseToggle, onStop }: RecordingControlsProps) {
+export function RecordingControls({ isPaused, durationMillis, onPauseToggle, onStop, recordingColor, successColor }: RecordingControlsProps) {
+  const { colors } = useTheme();
+  const effectiveRed = recordingColor ?? colors.red;
+  const effectiveGreen = successColor ?? colors.success;
   return (
     <View style={voiceMemoStyles.recordingControls}>
       <View style={voiceMemoStyles.recordingInfo}>
-        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isPaused ? '#FFA500' : '#FF4444' }} />
-        <Text style={voiceMemoStyles.recordingText}>
+        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isPaused ? '#FFA500' : effectiveRed }} />
+        <Text style={[voiceMemoStyles.recordingText, { color: effectiveRed }]}>
           {isPaused ? 'Paused' : 'Recording'} {formatDuration(durationMillis / 1000)}
         </Text>
       </View>
       <View style={voiceMemoStyles.recordingBtnRow}>
-        <TouchableOpacity onPress={onPauseToggle} style={voiceMemoStyles.pauseBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={onPauseToggle}
+          style={voiceMemoStyles.pauseBtn}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={isPaused ? "Resume recording" : "Pause recording"}
+        >
           {isPaused ? (
-            <GlowIcon source={MEDIA_ICONS.play} size={26} glowColor="#4CAF50" />
+            <GlowIcon source={MEDIA_ICONS.play} size={26} glowColor={effectiveGreen} />
           ) : (
-            <GlowIcon source={MEDIA_ICONS.pause} size={26} glowColor="#4CAF50" />
+            <GlowIcon source={MEDIA_ICONS.pause} size={26} glowColor={effectiveGreen} />
           )}
         </TouchableOpacity>
-        <TouchableOpacity onPress={onStop} style={voiceMemoStyles.stopBtn} activeOpacity={0.7}>
-          <GlowIcon source={MEDIA_ICONS.stop} size={26} glowColor="#FF3B30" />
+        <TouchableOpacity
+          onPress={onStop}
+          style={voiceMemoStyles.stopBtn}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Stop recording"
+        >
+          <GlowIcon source={MEDIA_ICONS.stop} size={26} glowColor={effectiveRed} />
         </TouchableOpacity>
       </View>
     </View>
@@ -141,12 +159,13 @@ interface MemoCardProps {
   accentColor: string;
   isViewMode: boolean;
   onPlay: () => void;
-  onSeek: (e: any, duration: number) => void;
+  onSeek: (e: GestureResponderEvent, duration: number) => void;
   onDelete: () => void;
   onProgressLayout: (width: number) => void;
 }
 
 export function MemoCard({ isActive, isPlaying, currentTime, duration, accentColor, isViewMode, onPlay, onSeek, onDelete, onProgressLayout }: MemoCardProps) {
+  const { colors } = useTheme();
   const progress = duration > 0 ? currentTime / duration : 0;
   return (
     <View style={voiceMemoStyles.memoCard}>
@@ -154,9 +173,11 @@ export function MemoCard({ isActive, isPlaying, currentTime, duration, accentCol
         style={voiceMemoStyles.memoPlayBtn}
         onPress={onPlay}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={isPlaying ? "Pause voice memo" : "Play voice memo"}
       >
         {isPlaying ? (
-          <GlowIcon source={MEDIA_ICONS.pause} size={20} glowColor="#4CAF50" />
+          <GlowIcon source={MEDIA_ICONS.pause} size={20} glowColor={colors.success} />
         ) : (
           <GlowIcon source={MEDIA_ICONS.play} size={20} glowColor={accentColor} />
         )}
@@ -180,6 +201,8 @@ export function MemoCard({ isActive, isPlaying, currentTime, duration, accentCol
           style={voiceMemoStyles.memoDeleteBtn}
           onPress={onDelete}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Remove voice memo from note"
         >
           <Image source={APP_ICONS.closeX} style={{ width: 12, height: 12 }} resizeMode="contain" />
         </TouchableOpacity>

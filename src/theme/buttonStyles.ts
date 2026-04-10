@@ -16,7 +16,7 @@ export function getButtonStyles(colors: ThemeColors) {
     primaryText: {
       fontSize: 15,
       fontFamily: FONTS.bold,
-      color: '#FFFFFF',
+      color: colors.overlayText,
     },
 
     // Transparent + accent border — Cancel, Keep Drawing, alternate actions
@@ -80,7 +80,7 @@ export function getButtonStyles(colors: ThemeColors) {
     primarySmallText: {
       fontSize: 12,
       fontFamily: FONTS.bold,
-      color: '#FFFFFF',
+      color: colors.overlayText,
     },
 
     secondarySmall: {

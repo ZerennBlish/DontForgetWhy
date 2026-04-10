@@ -2,10 +2,15 @@ import React, { Component } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { FONTS } from '../theme/fonts';
 
-const BG = '#121220';
-const TEXT = '#EAEAFF';
-const TEXT_SEC = '#B0B0CC';
-const ACCENT = '#4A90D9';
+// Hardcoded to dark theme — class component cannot access ThemeContext,
+// and theme may be unavailable during a crash. Values mirror the dark
+// theme entries in src/theme/colors.ts so the fallback stays consistent
+// with the rest of the app if those ever change.
+const BG = '#0A0A12';          // dark.background
+const TEXT = '#ECEDF0';         // dark.textPrimary
+const TEXT_SEC = '#9498AC';     // dark.textSecondary
+const ACCENT = '#5B9EE6';       // dark.accent
+const BUTTON_TEXT = '#FFFFFF';  // overlayText — always white for contrast on ACCENT
 
 interface Props {
   children: React.ReactNode;
@@ -98,7 +103,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontFamily: FONTS.bold,
-    color: TEXT,
+    color: BUTTON_TEXT,
   },
   hint: {
     fontSize: 13,

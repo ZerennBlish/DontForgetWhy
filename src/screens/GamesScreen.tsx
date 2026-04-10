@@ -74,7 +74,7 @@ export default function GamesScreen({ navigation }: Props) {
         subtitle: {
           fontSize: 14,
           fontFamily: FONTS.regular,
-          color: 'rgba(255,255,255,0.75)',
+          color: colors.overlaySecondary,
           marginTop: 6,
           fontStyle: 'italic',
         },
@@ -171,7 +171,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Chess'); }}
         activeOpacity={0.7}
-        accessibilityLabel="Chess, play against CPU"
+        accessibilityLabel="Play Chess"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -191,7 +191,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Checkers'); }}
         activeOpacity={0.7}
-        accessibilityLabel="Checkers, play against CPU"
+        accessibilityLabel="Play Checkers"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -211,7 +211,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Trivia'); }}
         activeOpacity={0.7}
-        accessibilityLabel="Trivia"
+        accessibilityLabel="Play Trivia"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -233,7 +233,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Sudoku'); }}
         activeOpacity={0.7}
-        accessibilityLabel="Sudoku"
+        accessibilityLabel="Play Sudoku"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -253,7 +253,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('MemoryMatch'); }}
         activeOpacity={0.7}
-        accessibilityLabel="Memory Guy Match"
+        accessibilityLabel="Play Memory Match"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -273,7 +273,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('MemoryScore'); }}
         activeOpacity={0.7}
-        accessibilityLabel="Trophies"
+        accessibilityLabel="Memory Score"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>

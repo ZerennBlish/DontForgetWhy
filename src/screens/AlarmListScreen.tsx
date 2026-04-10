@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -31,9 +31,9 @@ export default function AlarmListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const al = useAlarmList();
 
-  const handleEdit = (alarm: Alarm) => {
+  const handleEdit = useCallback((alarm: Alarm) => {
     navigation.navigate('CreateAlarm', { alarm });
-  };
+  }, [navigation]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
@@ -186,13 +186,41 @@ export default function AlarmListScreen({ navigation }: Props) {
       borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.accent + '30',
+      backgroundColor: colors.accent + '15',
       shadowColor: colors.accent,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.6,
       shadowRadius: 12,
+      elevation: 8,
     },
   }), [colors, insets.bottom, insets.top]);
+
+  const keyExtractor = useCallback((item: Alarm) => item.id, []);
+
+  const renderItem = useCallback(({ item }: { item: Alarm }) => {
+    if (item.deletedAt) {
+      return (
+        <DeletedAlarmCard
+          alarm={item}
+          timeFormat={al.timeFormat}
+          onRestore={() => al.handleRestore(item.id)}
+          onPermanentDelete={() => al.handlePermanentDelete(item.id)}
+        />
+      );
+    }
+    return (
+      <SwipeableRow onDelete={() => al.handleDelete(item.id)} enabled={!item.deletedAt}>
+        <AlarmCard
+          alarm={item}
+          timeFormat={al.timeFormat}
+          isPinned={isAlarmPinned(item.id, al.pinnedAlarmIds)}
+          onToggle={al.handleToggle}
+          onEdit={handleEdit}
+          onTogglePin={al.handleTogglePin}
+        />
+      </SwipeableRow>
+    );
+  }, [al.timeFormat, al.handleRestore, al.handlePermanentDelete, al.handleDelete, al.pinnedAlarmIds, al.handleToggle, handleEdit, al.handleTogglePin]);
 
   return (
     <View style={styles.container}>
@@ -321,35 +349,12 @@ export default function AlarmListScreen({ navigation }: Props) {
       ) : (
         <FlatList
           data={al.filteredAlarms}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           removeClippedSubviews={true}
           windowSize={5}
           maxToRenderPerBatch={8}
           initialNumToRender={8}
-          renderItem={({ item }) => {
-            if (item.deletedAt) {
-              return (
-                <DeletedAlarmCard
-                  alarm={item}
-                  timeFormat={al.timeFormat}
-                  onRestore={() => al.handleRestore(item.id)}
-                  onPermanentDelete={() => al.handlePermanentDelete(item.id)}
-                />
-              );
-            }
-            return (
-              <SwipeableRow onDelete={() => al.handleDelete(item.id)} enabled={!item.deletedAt}>
-                <AlarmCard
-                  alarm={item}
-                  timeFormat={al.timeFormat}
-                  isPinned={isAlarmPinned(item.id, al.pinnedAlarmIds)}
-                  onToggle={al.handleToggle}
-                  onEdit={handleEdit}
-                  onTogglePin={al.handleTogglePin}
-                />
-              </SwipeableRow>
-            );
-          }}
+          renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -362,7 +367,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         accessibilityLabel="Create new alarm"
         accessibilityRole="button"
       >
-        <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        <Image source={APP_ICONS.plus} style={{ width: 40, height: 40, tintColor: colors.accent }} resizeMode="contain" />
       </TouchableOpacity>
 
       <UndoToast

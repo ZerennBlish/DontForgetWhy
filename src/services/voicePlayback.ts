@@ -22,7 +22,7 @@ const INTRO_PLAYED_KEY = 'voiceIntroPlayed';
 let _playing = false;
 let _playId = 0;
 
-export function isVoicePlaying(): boolean {
+function isVoicePlaying(): boolean {
   return _playing;
 }
 
@@ -47,12 +47,12 @@ export async function setVoiceEnabled(enabled: boolean): Promise<void> {
   await kvSet(VOICE_ENABLED_KEY, String(enabled));
 }
 
-export async function hasIntroPlayed(): Promise<boolean> {
+async function hasIntroPlayed(): Promise<boolean> {
   const raw = await kvGet(INTRO_PLAYED_KEY);
   return raw === 'true';
 }
 
-export async function markIntroPlayed(): Promise<void> {
+async function markIntroPlayed(): Promise<void> {
   await kvSet(INTRO_PLAYED_KEY, 'true');
 }
 

@@ -1,10 +1,10 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, useWindowDimensions } from 'react-native';
+import { View, Text, FlatList, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, ListRenderItem } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticSelection } from '../utils/haptics';
 
-export interface TimePickerProps {
+interface TimePickerProps {
   hours: number;
   minutes: number;
   onHoursChange: (h: number) => void;
@@ -148,7 +148,7 @@ export default function TimePicker({
 
   // --- Layout helper ---
   const getItemLayout = useCallback(
-    (_: any, index: number) => ({ length: rowHeight, offset: index * rowHeight, index }),
+    (_: ArrayLike<number> | null | undefined, index: number) => ({ length: rowHeight, offset: index * rowHeight, index }),
     [rowHeight],
   );
 
@@ -159,7 +159,7 @@ export default function TimePicker({
 
   // --- Scroll handlers ---
   const handleHoursScroll = useCallback(
-    (e: any) => {
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const idx = Math.round(e.nativeEvent.contentOffset.y / rowHeight);
       const value = hoursData[Math.max(0, Math.min(idx, hoursData.length - 1))];
       setLocalHours(value);
@@ -168,7 +168,7 @@ export default function TimePicker({
   );
 
   const handleHoursSnap = useCallback(
-    (e: any) => {
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const idx = Math.round(e.nativeEvent.contentOffset.y / rowHeight);
       const value = hoursData[Math.max(0, Math.min(idx, hoursData.length - 1))];
       setLocalHours(value);
@@ -182,7 +182,7 @@ export default function TimePicker({
   );
 
   const handleMinutesScroll = useCallback(
-    (e: any) => {
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const idx = Math.round(e.nativeEvent.contentOffset.y / rowHeight);
       const value = minutesData[Math.max(0, Math.min(idx, minutesData.length - 1))];
       setLocalMinutes(value);
@@ -191,7 +191,7 @@ export default function TimePicker({
   );
 
   const handleMinutesSnap = useCallback(
-    (e: any) => {
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const idx = Math.round(e.nativeEvent.contentOffset.y / rowHeight);
       const value = minutesData[Math.max(0, Math.min(idx, minutesData.length - 1))];
       setLocalMinutes(value);
@@ -205,7 +205,7 @@ export default function TimePicker({
   );
 
   const handleSecondsScroll = useCallback(
-    (e: any) => {
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const idx = Math.round(e.nativeEvent.contentOffset.y / rowHeight);
       const value = secondsData[Math.max(0, Math.min(idx, secondsData.length - 1))];
       setLocalSeconds(value);
@@ -214,7 +214,7 @@ export default function TimePicker({
   );
 
   const handleSecondsSnap = useCallback(
-    (e: any) => {
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const idx = Math.round(e.nativeEvent.contentOffset.y / rowHeight);
       const value = secondsData[Math.max(0, Math.min(idx, secondsData.length - 1))];
       setLocalSeconds(value);
@@ -282,9 +282,9 @@ export default function TimePicker({
     ref: React.RefObject<FlatList<number> | null>,
     data: number[],
     localValue: number,
-    onScroll: (e: any) => void,
-    onSnap: (e: any) => void,
-    renderItem: any,
+    onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void,
+    onSnap: (e: NativeSyntheticEvent<NativeScrollEvent>) => void,
+    renderItem: ListRenderItem<number>,
     label: string,
     isLast: boolean,
     keyExtractorFn: (_: number, i: number) => string,
@@ -329,7 +329,7 @@ export default function TimePicker({
           pointerEvents="none"
         />
         <FlatList
-          ref={ref as any}
+          ref={ref}
           data={data}
           keyExtractor={keyExtractorFn}
           extraData={localValue}
@@ -343,6 +343,9 @@ export default function TimePicker({
           onMomentumScrollEnd={onSnap}
           nestedScrollEnabled={true}
           renderItem={renderItem}
+          windowSize={5}
+          maxToRenderPerBatch={8}
+          initialNumToRender={8}
         />
       </View>
       <Text

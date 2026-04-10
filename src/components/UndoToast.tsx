@@ -115,6 +115,7 @@ export default function UndoToast({ visible, message, onUndo, onDismiss }: UndoT
 
   return (
     <Animated.View
+      accessibilityLiveRegion="polite"
       style={[
         styles.container,
         {

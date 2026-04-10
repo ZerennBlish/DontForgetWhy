@@ -18,7 +18,7 @@ import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import { playChirp } from '../utils/soundFeedback';
-import { cycleSoundMode, getSoundModeIcon } from '../utils/soundModeUtils';
+import { cycleSoundMode, getSoundModeIcon, getSoundModeLabel } from '../utils/soundModeUtils';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import APP_ICONS from '../data/appIconAssets';
@@ -41,7 +41,7 @@ export default function TimerScreen({ navigation }: Props) {
     bgUri, setBgUri, bgOpacity,
     recentPresets, restPresets, customPreset, pinnedPresets, pinnedIds,
     userTimers,
-    customModal, setCustomModal,
+    customModal,
     customHours, setCustomHours,
     customMinutes, setCustomMinutes,
     customSeconds, setCustomSeconds,
@@ -57,7 +57,7 @@ export default function TimerScreen({ navigation }: Props) {
     handleStartTimer, handleLongPress,
     handleRemoveTimer, handleTogglePause,
     handlePinToggle,
-    handleStartUserTimer, handleUserTimerLongPress,
+    handleStartUserTimer,
     handleModalSave, handleTimerSoundSelect,
     closeModal,
   } = useTimerScreen();
@@ -86,7 +86,7 @@ export default function TimerScreen({ navigation }: Props) {
       marginBottom: 8,
     },
     activeCard: {
-      backgroundColor: colors.mode === 'dark' ? colors.sectionTimer + '20' : colors.sectionTimer + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionTimer + '15',
       borderRadius: 12,
       padding: 14,
       marginBottom: 10,
@@ -138,9 +138,6 @@ export default function TimerScreen({ navigation }: Props) {
     actionBtn: {
       padding: 6,
     },
-    actionBtnText: {
-      fontSize: 16,
-    },
     cancelBtn: {
       padding: 6,
     },
@@ -151,8 +148,8 @@ export default function TimerScreen({ navigation }: Props) {
     },
     presetCard: {
       width: presetCardWidth,
-      backgroundColor: colors.mode === 'dark' ? colors.sectionTimer + '20' : colors.sectionTimer + '15',
-      borderRadius: 10,
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionTimer + '15',
+      borderRadius: 12,
       padding: 10,
       alignItems: 'center',
       borderWidth: 1,
@@ -186,21 +183,14 @@ export default function TimerScreen({ navigation }: Props) {
       left: 3,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 10,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30,30,40,0.7)' : 'rgba(0,0,0,0.12)',
+      borderRadius: 20,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30,30,40,0.7)' : 'rgba(0,0,0,0.15)',
       zIndex: 1,
     },
     cardPinOverlayText: {
       fontSize: 8,
       fontFamily: FONTS.semiBold,
       color: colors.textTertiary,
-    },
-    hint: {
-      fontSize: 11,
-      fontFamily: FONTS.regular,
-      color: colors.textSecondary,
-      fontStyle: 'italic',
-      marginBottom: 8,
     },
     modalOverlay: {
       flex: 1,
@@ -358,12 +348,16 @@ export default function TimerScreen({ navigation }: Props) {
         onPress={() => openModal ? handleLongPress(preset) : handleStartTimer(preset)}
         onLongPress={() => { hapticLight(); handlePinToggle(preset); }}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`Start ${preset.label} timer, ${preset.id === 'custom' ? 'Custom' : openModal ? 'Set' : formatDuration(preset.customSeconds || preset.seconds)}`}
       >
         <TouchableOpacity
           onPress={() => { hapticLight(); handlePinToggle(preset); }}
           style={styles.cardPinOverlay}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={pinned ? 'Unpin timer' : 'Pin timer'}
         >
           <Text style={[styles.cardPinOverlayText, pinned && { color: colors.accent }]}>
             {pinned ? 'Pinned' : 'Pin'}
@@ -425,6 +419,7 @@ export default function TimerScreen({ navigation }: Props) {
                     styles.activeCountdown,
                     timer.remainingSeconds <= 0 && styles.activeDone,
                   ]}
+                  accessibilityLiveRegion="polite"
                 >
                   {timer.remainingSeconds <= 0
                     ? '\u23F0 Done!'
@@ -436,11 +431,13 @@ export default function TimerScreen({ navigation }: Props) {
                       onPress={() => { hapticLight(); handleTogglePause(timer.id); }}
                       style={styles.actionBtn}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={timer.isRunning ? 'Pause timer' : 'Resume timer'}
                     >
                       <GlowIcon
                         source={timer.isRunning ? MEDIA_ICONS.pause : MEDIA_ICONS.play}
                         size={20}
-                        glowColor={timer.isRunning ? '#4CAF50' : colors.accent}
+                        glowColor={timer.isRunning ? colors.success : colors.accent}
                       />
                     </TouchableOpacity>
                   )}
@@ -448,6 +445,8 @@ export default function TimerScreen({ navigation }: Props) {
                     onPress={() => { hapticHeavy(); handleRemoveTimer(timer.id); }}
                     style={styles.cancelBtn}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel timer"
                   >
                     <GlowIcon source={APP_ICONS.closeX} size={20} glowColor={colors.red} />
                   </TouchableOpacity>
@@ -470,12 +469,16 @@ export default function TimerScreen({ navigation }: Props) {
                 onPress={() => handleStartUserTimer(ut)}
                 onLongPress={() => { hapticLight(); handlePinToggle({ id: ut.id, icon: ut.icon, label: ut.label, seconds: ut.seconds }); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Start ${ut.label} timer, ${formatDuration(ut.seconds)}`}
               >
                 <TouchableOpacity
                   onPress={() => { hapticLight(); handlePinToggle({ id: ut.id, icon: ut.icon, label: ut.label, seconds: ut.seconds }); }}
                   style={styles.cardPinOverlay}
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={isPinned(ut.id, pinnedIds) ? 'Unpin timer' : 'Pin timer'}
                 >
                   <Text style={[styles.cardPinOverlayText, isPinned(ut.id, pinnedIds) && { color: colors.accent }]}>
                     {isPinned(ut.id, pinnedIds) ? 'Pinned' : 'Pin'}
@@ -495,12 +498,16 @@ export default function TimerScreen({ navigation }: Props) {
                 onPress={() => handleStartTimer(p)}
                 onLongPress={() => { hapticLight(); handlePinToggle(p); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Start ${p.label} timer, ${formatDuration(p.customSeconds || p.seconds)}`}
               >
                 <TouchableOpacity
                   onPress={() => { hapticLight(); handlePinToggle(p); }}
                   style={styles.cardPinOverlay}
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Unpin timer"
                 >
                   <Text style={[styles.cardPinOverlayText, { color: colors.accent }]}>Pinned</Text>
                 </TouchableOpacity>
@@ -551,7 +558,7 @@ export default function TimerScreen({ navigation }: Props) {
       {/* Custom Duration / New Timer / Edit Timer Modal */}
       <Modal transparent visible={!!customModal} animationType="fade" onRequestClose={() => { hapticLight(); closeModal(); }}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={styles.modalCard} accessibilityViewIsModal={true}>
             {isCreatingNew || editingUserTimer ? (
               <>
                 <View style={styles.newTimerHeaderRow}>
@@ -582,6 +589,8 @@ export default function TimerScreen({ navigation }: Props) {
                     }}
                     style={styles.headerSoundBtn}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Sound mode: ${getSoundModeLabel(soundMode)}`}
                   >
                     <Image source={getSoundModeIcon(soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
                   </TouchableOpacity>
@@ -621,6 +630,8 @@ export default function TimerScreen({ navigation }: Props) {
                     }}
                     style={styles.soundModeIconBtn}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Sound mode: ${getSoundModeLabel(soundMode)}`}
                   >
                     <Image source={getSoundModeIcon(soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
                   </TouchableOpacity>

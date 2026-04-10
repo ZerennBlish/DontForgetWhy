@@ -6,8 +6,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ---------------------------------------------------------------------------
 
 let _db: SQLite.SQLiteDatabase | null = null;
+let _restoreInProgress = false;
+
+export function setRestoreInProgress(active: boolean): void {
+  _restoreInProgress = active;
+}
 
 export function getDb(): SQLite.SQLiteDatabase {
+  if (_restoreInProgress) {
+    throw new Error('Database unavailable during restore');
+  }
   if (!_db) {
     const db = SQLite.openDatabaseSync('dfw.db');
     _initSchema(db);
@@ -303,157 +311,197 @@ function jsonOrNull(v: unknown): string | null {
 
 // ---- Per-entity insert helpers -------------------------------------------
 
-function _insertAlarms(db: SQLite.SQLiteDatabase, items: any[]): void {
-  for (const a of items) {
-    db.runSync(
-      `INSERT OR IGNORE INTO alarms
-        (id, time, note, quote, enabled, mode, days, date, category, icon,
-         nickname, guessWhy, "private", soundId, soundUri, soundName, nativeSoundId,
-         photoUri, notificationIds, createdAt, deletedAt)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [
-        a.id,
-        a.time,
-        a.note,
-        a.quote ?? '',
-        boolInt(a.enabled),
-        a.mode ?? 'recurring',
-        jsonOrNull(a.days),
-        a.date ?? null,
-        a.category,
-        a.icon ?? null,
-        a.nickname ?? null,
-        boolInt(a.guessWhy),
-        boolInt(a.private),
-        a.soundId ?? 'default',
-        a.soundUri ?? null,
-        a.soundName ?? null,
-        a.soundID ?? null,
-        a.photoUri ?? null,
-        jsonOrNull(a.notificationIds),
-        a.createdAt,
-        a.deletedAt ?? null,
-      ],
-    );
+function isRecord(obj: unknown): obj is Record<string, unknown> {
+  return typeof obj === 'object' && obj !== null;
+}
+
+function _insertAlarms(db: SQLite.SQLiteDatabase, items: unknown[]): void {
+  for (const item of items) {
+    if (!isRecord(item)) continue;
+    const a = item as Record<string, any>;
+    try {
+      db.runSync(
+        `INSERT OR IGNORE INTO alarms
+          (id, time, note, quote, enabled, mode, days, date, category, icon,
+           nickname, guessWhy, "private", soundId, soundUri, soundName, nativeSoundId,
+           photoUri, notificationIds, createdAt, deletedAt)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          a.id,
+          a.time,
+          a.note,
+          a.quote ?? '',
+          boolInt(a.enabled),
+          a.mode ?? 'recurring',
+          jsonOrNull(a.days),
+          a.date ?? null,
+          a.category,
+          a.icon ?? null,
+          a.nickname ?? null,
+          boolInt(a.guessWhy),
+          boolInt(a.private),
+          a.soundId ?? 'default',
+          a.soundUri ?? null,
+          a.soundName ?? null,
+          a.soundID ?? null,
+          a.photoUri ?? null,
+          jsonOrNull(a.notificationIds),
+          a.createdAt,
+          a.deletedAt ?? null,
+        ],
+      );
+    } catch (e) {
+      console.warn('[migration] Skipping malformed alarm row:', e);
+    }
   }
 }
 
-function _insertReminders(db: SQLite.SQLiteDatabase, items: any[]): void {
-  for (const r of items) {
-    db.runSync(
-      `INSERT OR IGNORE INTO reminders
-        (id, text, icon, nickname, completed, completedAt, "private", recurring,
-         dueDate, dueTime, days, soundId, pinned, notificationId,
-         notificationIds, completionHistory, createdAt, deletedAt)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [
-        r.id,
-        r.text,
-        r.icon,
-        r.nickname ?? null,
-        boolInt(r.completed),
-        r.completedAt ?? null,
-        boolInt(r.private),
-        boolInt(r.recurring),
-        r.dueDate ?? null,
-        r.dueTime ?? null,
-        jsonOrNull(r.days),
-        r.soundId ?? null,
-        boolInt(r.pinned),
-        r.notificationId ?? null,
-        jsonOrNull(r.notificationIds),
-        jsonOrNull(r.completionHistory),
-        r.createdAt,
-        r.deletedAt ?? null,
-      ],
-    );
+function _insertReminders(db: SQLite.SQLiteDatabase, items: unknown[]): void {
+  for (const item of items) {
+    if (!isRecord(item)) continue;
+    const r = item as Record<string, any>;
+    try {
+      db.runSync(
+        `INSERT OR IGNORE INTO reminders
+          (id, text, icon, nickname, completed, completedAt, "private", recurring,
+           dueDate, dueTime, days, soundId, pinned, notificationId,
+           notificationIds, completionHistory, createdAt, deletedAt)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          r.id,
+          r.text,
+          r.icon,
+          r.nickname ?? null,
+          boolInt(r.completed),
+          r.completedAt ?? null,
+          boolInt(r.private),
+          boolInt(r.recurring),
+          r.dueDate ?? null,
+          r.dueTime ?? null,
+          jsonOrNull(r.days),
+          r.soundId ?? null,
+          boolInt(r.pinned),
+          r.notificationId ?? null,
+          jsonOrNull(r.notificationIds),
+          jsonOrNull(r.completionHistory),
+          r.createdAt,
+          r.deletedAt ?? null,
+        ],
+      );
+    } catch (e) {
+      console.warn('[migration] Skipping malformed reminder row:', e);
+    }
   }
 }
 
-function _insertNotes(db: SQLite.SQLiteDatabase, items: any[]): void {
-  for (const n of items) {
-    db.runSync(
-      `INSERT OR IGNORE INTO notes
-        (id, text, color, icon, fontColor, pinned, images, voiceMemos,
-         createdAt, updatedAt, deletedAt)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [
-        n.id,
-        n.text,
-        n.color ?? '#FFFFFF',
-        n.icon ?? '',
-        n.fontColor ?? null,
-        boolInt(n.pinned),
-        jsonOrNull(n.images),
-        jsonOrNull(n.voiceMemos),
-        n.createdAt,
-        n.updatedAt,
-        n.deletedAt ?? null,
-      ],
-    );
+function _insertNotes(db: SQLite.SQLiteDatabase, items: unknown[]): void {
+  for (const item of items) {
+    if (!isRecord(item)) continue;
+    const n = item as Record<string, any>;
+    try {
+      db.runSync(
+        `INSERT OR IGNORE INTO notes
+          (id, text, color, icon, fontColor, pinned, images, voiceMemos,
+           createdAt, updatedAt, deletedAt)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          n.id,
+          n.text,
+          n.color ?? '#FFFFFF',
+          n.icon ?? '',
+          n.fontColor ?? null,
+          boolInt(n.pinned),
+          jsonOrNull(n.images),
+          jsonOrNull(n.voiceMemos),
+          n.createdAt,
+          n.updatedAt,
+          n.deletedAt ?? null,
+        ],
+      );
+    } catch (e) {
+      console.warn('[migration] Skipping malformed note row:', e);
+    }
   }
 }
 
-function _insertVoiceMemos(db: SQLite.SQLiteDatabase, items: any[]): void {
-  for (const v of items) {
-    db.runSync(
-      `INSERT OR IGNORE INTO voice_memos
-        (id, uri, title, note, duration, noteId,
-         createdAt, updatedAt, deletedAt)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      [
-        v.id,
-        v.uri,
-        v.title,
-        v.note ?? '',
-        v.duration ?? 0,
-        v.noteId ?? null,
-        v.createdAt,
-        v.updatedAt,
-        v.deletedAt ?? null,
-      ],
-    );
+function _insertVoiceMemos(db: SQLite.SQLiteDatabase, items: unknown[]): void {
+  for (const item of items) {
+    if (!isRecord(item)) continue;
+    const v = item as Record<string, any>;
+    try {
+      db.runSync(
+        `INSERT OR IGNORE INTO voice_memos
+          (id, uri, title, note, duration, noteId,
+           createdAt, updatedAt, deletedAt)
+         VALUES (?,?,?,?,?,?,?,?,?)`,
+        [
+          v.id,
+          v.uri,
+          v.title,
+          v.note ?? '',
+          v.duration ?? 0,
+          v.noteId ?? null,
+          v.createdAt,
+          v.updatedAt,
+          v.deletedAt ?? null,
+        ],
+      );
+    } catch (e) {
+      console.warn('[migration] Skipping malformed voice memo row:', e);
+    }
   }
 }
 
-function _insertActiveTimers(db: SQLite.SQLiteDatabase, items: any[]): void {
-  for (const t of items) {
-    db.runSync(
-      `INSERT OR IGNORE INTO active_timers
-        (id, presetId, label, icon, totalSeconds, remainingSeconds,
-         startedAt, isRunning, notificationId, soundId)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [
-        t.id,
-        t.presetId,
-        t.label,
-        t.icon,
-        t.totalSeconds,
-        t.remainingSeconds,
-        t.startedAt,
-        boolInt(t.isRunning),
-        t.notificationId ?? null,
-        t.soundId ?? null,
-      ],
-    );
+function _insertActiveTimers(db: SQLite.SQLiteDatabase, items: unknown[]): void {
+  for (const item of items) {
+    if (!isRecord(item)) continue;
+    const t = item as Record<string, any>;
+    try {
+      db.runSync(
+        `INSERT OR IGNORE INTO active_timers
+          (id, presetId, label, icon, totalSeconds, remainingSeconds,
+           startedAt, isRunning, notificationId, soundId)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        [
+          t.id,
+          t.presetId,
+          t.label,
+          t.icon,
+          t.totalSeconds,
+          t.remainingSeconds,
+          t.startedAt,
+          boolInt(t.isRunning),
+          t.notificationId ?? null,
+          t.soundId ?? null,
+        ],
+      );
+    } catch (e) {
+      console.warn('[migration] Skipping malformed active timer row:', e);
+    }
   }
 }
 
-function _insertUserTimers(db: SQLite.SQLiteDatabase, items: any[]): void {
-  for (const t of items) {
-    db.runSync(
-      `INSERT OR IGNORE INTO user_timers
-        (id, icon, label, seconds, soundId, createdAt)
-       VALUES (?,?,?,?,?,?)`,
-      [
-        t.id,
-        t.icon,
-        t.label,
-        t.seconds,
-        t.soundId ?? null,
-        t.createdAt,
-      ],
-    );
+function _insertUserTimers(db: SQLite.SQLiteDatabase, items: unknown[]): void {
+  for (const item of items) {
+    if (!isRecord(item)) continue;
+    const t = item as Record<string, any>;
+    try {
+      db.runSync(
+        `INSERT OR IGNORE INTO user_timers
+          (id, icon, label, seconds, soundId, createdAt)
+         VALUES (?,?,?,?,?,?)`,
+        [
+          t.id,
+          t.icon,
+          t.label,
+          t.seconds,
+          t.soundId ?? null,
+          t.createdAt,
+        ],
+      );
+    } catch (e) {
+      console.warn('[migration] Skipping malformed user timer row:', e);
+    }
   }
 }
 
@@ -461,7 +509,7 @@ function _insertUserTimers(db: SQLite.SQLiteDatabase, items: any[]): void {
 
 const ENTITY_INSERTERS: Record<
   (typeof ENTITY_KEYS)[number],
-  (db: SQLite.SQLiteDatabase, items: any[]) => void
+  (db: SQLite.SQLiteDatabase, items: unknown[]) => void
 > = {
   alarms: _insertAlarms,
   reminders: _insertReminders,
@@ -476,12 +524,30 @@ const ENTITY_INSERTERS: Record<
 export async function migrateFromAsyncStorage(): Promise<void> {
   const db = getDb();
 
-  // Already migrated?
+  // Already fully migrated?
   const migrated = db.getFirstSync<{ value: string }>(
     'SELECT value FROM kv_store WHERE key = ?',
     ['_migrated'],
   );
   if (migrated) return;
+
+  // Detect previous partial-failure retry list. If present, we only retry
+  // the entities that failed last time; entities that succeeded are skipped.
+  const partialFailed = db.getFirstSync<{ value: string }>(
+    'SELECT value FROM kv_store WHERE key = ?',
+    ['_migrated_failed'],
+  );
+  let retryKeys: Set<string> | null = null;
+  if (partialFailed) {
+    try {
+      const parsed = JSON.parse(partialFailed.value);
+      if (Array.isArray(parsed)) {
+        retryKeys = new Set(parsed.filter((k): k is string => typeof k === 'string'));
+      }
+    } catch {
+      retryKeys = null;
+    }
+  }
 
   try {
     // Read all keys we care about from AsyncStorage (async)
@@ -494,10 +560,14 @@ export async function migrateFromAsyncStorage(): Promise<void> {
       if (value != null) data.set(key, value);
     }
 
+    const failedKeys: string[] = [];
+
     // Write everything inside a single transaction (sync)
     db.withTransactionSync(() => {
       // Entity tables
       for (const key of ENTITY_KEYS) {
+        // On retry, skip entities that succeeded last time
+        if (retryKeys && !retryKeys.has(key)) continue;
         const raw = data.get(key);
         if (!raw) continue;
         try {
@@ -507,10 +577,11 @@ export async function migrateFromAsyncStorage(): Promise<void> {
           }
         } catch {
           console.warn(`[migration] Failed to parse entity key "${key}"`);
+          failedKeys.push(key);
         }
       }
 
-      // KV keys
+      // KV keys — idempotent via INSERT OR IGNORE, safe to re-run on retry
       for (const key of KV_KEYS) {
         const raw = data.get(key);
         if (raw != null) {
@@ -521,14 +592,27 @@ export async function migrateFromAsyncStorage(): Promise<void> {
         }
       }
 
-      // Mark migration complete
-      db.runSync(
-        'INSERT OR REPLACE INTO kv_store (key, value) VALUES (?, ?)',
-        ['_migrated', '1'],
-      );
+      // Completion tracking: only mark _migrated=1 if all entities succeeded.
+      // Otherwise record the failed keys so next launch retries only those.
+      if (failedKeys.length === 0) {
+        db.runSync(
+          'INSERT OR REPLACE INTO kv_store (key, value) VALUES (?, ?)',
+          ['_migrated', '1'],
+        );
+        db.runSync('DELETE FROM kv_store WHERE key = ?', ['_migrated_failed']);
+      } else {
+        db.runSync(
+          'INSERT OR REPLACE INTO kv_store (key, value) VALUES (?, ?)',
+          ['_migrated_failed', JSON.stringify(failedKeys)],
+        );
+      }
     });
 
-    console.log('[migration] AsyncStorage → SQLite migration complete');
+    if (failedKeys.length === 0) {
+      console.log('[migration] AsyncStorage → SQLite migration complete');
+    } else {
+      console.warn('[migration] Migration partially complete. Failed keys:', failedKeys);
+    }
   } catch (e) {
     console.error('[migration] Migration failed:', e);
     // Do NOT set _migrated — will retry on next launch

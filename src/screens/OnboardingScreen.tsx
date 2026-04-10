@@ -13,6 +13,7 @@ import {
   Alert,
   Image,
   ImageSourcePropType,
+  ViewToken,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import notifee from '@notifee/react-native';
@@ -779,7 +780,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
     },
   }), [displayColors, insets.bottom]);
 
-  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: any[] }) => {
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length > 0) {
       const newIndex = viewableItems[0].index ?? 0;
       setCurrentIndex((prev) => {
@@ -901,6 +902,10 @@ export default function OnboardingScreen({ navigation, route }: Props) {
           offset: SCREEN_WIDTH * index,
           index,
         })}
+        removeClippedSubviews={true}
+        windowSize={3}
+        maxToRenderPerBatch={8}
+        initialNumToRender={8}
       />
       <View style={styles.dotContainer}>
         {slides.map((slide, index) => (

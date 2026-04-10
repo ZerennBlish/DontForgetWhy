@@ -14,6 +14,7 @@ import {
   Alert,
   Image,
   AppState,
+  GestureResponderEvent,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAudioRecorder, useAudioRecorderState, useAudioPlayer, useAudioPlayerStatus, requestRecordingPermissionsAsync, RecordingPresets } from 'expo-audio';
@@ -28,6 +29,8 @@ import type { Note } from '../types/note';
 import BackButton from './BackButton';
 import APP_ICONS from '../data/appIconAssets';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 import DrawingCanvas from './DrawingCanvas';
 import type { StrokeData } from './DrawingCanvas';
 import ShareNoteModal from './ShareNoteModal';
@@ -50,6 +53,12 @@ interface NoteEditorModalProps {
   onClose: () => void;
   onCustomBgColorChange: (color: string) => void;
   onCustomFontColorChange: (color: string) => void;
+  /**
+   * Optional ref the editor writes to whenever its content diverges from
+   * the loaded baseline. Parents use this to decide whether a widget
+   * deep-link action can safely preempt the current editing session.
+   */
+  dirtyRef?: React.MutableRefObject<boolean>;
 }
 
 export default function NoteEditorModal({
@@ -62,10 +71,11 @@ export default function NoteEditorModal({
   onClose,
   onCustomBgColorChange,
   onCustomFontColorChange,
+  dirtyRef,
 }: NoteEditorModalProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [editorText, setEditorText] = useState('');
   const [editorColor, setEditorColor] = useState(NOTE_COLORS[0]);
@@ -96,6 +106,14 @@ export default function NoteEditorModal({
   const progressBarWidthRef = useRef(0);
   const pendingPlayRef = useRef(false);
 
+  // Baseline of editor content at load time. The load effect (below)
+  // populates this synchronously from the source note/defaults, and a
+  // separate watcher effect diffs current state against it to drive
+  // dirtyRef. Using the source values — not React state, which hasn't
+  // committed yet when the load effect sets it — keeps the baseline
+  // accurate from the very first post-load render.
+  const loadedSnapshotRef = useRef<string>('');
+
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 500);
 
@@ -125,6 +143,8 @@ export default function NoteEditorModal({
       }
       newVoiceMemosRef.current = [];
       setEditorVoiceMemos([]);
+      loadedSnapshotRef.current = '';
+      if (dirtyRef) dirtyRef.current = false;
       return;
     }
     if (note) {
@@ -135,6 +155,14 @@ export default function NoteEditorModal({
       setEditorImages(note.images || []);
       setEditorVoiceMemos(note.voiceMemos || []);
       setIsViewMode(true);
+      loadedSnapshotRef.current = JSON.stringify({
+        text: note.text,
+        color: note.color,
+        icon: note.icon,
+        fontColor: note.fontColor ?? null,
+        images: note.images || [],
+        voiceMemos: note.voiceMemos || [],
+      });
     } else {
       setEditorText('');
       setEditorColor(colors.background);
@@ -143,7 +171,16 @@ export default function NoteEditorModal({
       setEditorImages([]);
       setEditorVoiceMemos([]);
       setIsViewMode(false);
+      loadedSnapshotRef.current = JSON.stringify({
+        text: '',
+        color: colors.background,
+        icon: '',
+        fontColor: null,
+        images: [] as string[],
+        voiceMemos: [] as string[],
+      });
     }
+    if (dirtyRef) dirtyRef.current = false;
     newVoiceMemosRef.current = [];
     setActivePlayerUri(null);
     setIsRecording(false);
@@ -152,6 +189,34 @@ export default function NoteEditorModal({
     pickedBgRef.current = customBgColor || '#4A90D9';
     pickedFontRef.current = customFontColor || '#FF6B6B';
   }, [visible, note]);
+
+  // Watch editor content and flip dirtyRef based on a diff against the
+  // baseline snapshot captured in the load effect above. This uses a
+  // real comparison rather than a one-way flag so typing and then
+  // reverting drops dirty back to false.
+  useEffect(() => {
+    if (!visible) return;
+    if (!dirtyRef) return;
+    if (!loadedSnapshotRef.current) return;
+    const current = JSON.stringify({
+      text: editorText,
+      color: editorColor,
+      icon: editorIcon,
+      fontColor: editorFontColor,
+      images: editorImages,
+      voiceMemos: editorVoiceMemos,
+    });
+    dirtyRef.current = current !== loadedSnapshotRef.current;
+  }, [
+    visible,
+    editorText,
+    editorColor,
+    editorIcon,
+    editorFontColor,
+    editorImages,
+    editorVoiceMemos,
+    dirtyRef,
+  ]);
 
   useEffect(() => {
     if (pendingPlayRef.current && playerStatus.isLoaded) {
@@ -179,6 +244,13 @@ export default function NoteEditorModal({
 
   const noteTextColor = getTextColor(editorColor);
   const resolvedFontColor = editorFontColor || noteTextColor;
+
+  // View-mode link parser is expensive (regex scan + JSX building per match).
+  // Memoize so it doesn't re-run on every recorder tick / unrelated re-render.
+  const linkColor = useMemo(
+    () => (noteTextColor === '#FFFFFF' ? '#48DBFB' : '#0066CC'),
+    [noteTextColor],
+  );
 
   const hasUnsavedChanges = (): boolean => {
     if (note) {
@@ -381,7 +453,7 @@ export default function NoteEditorModal({
     }
   };
 
-  const handleSeek = (e: any, duration: number) => {
+  const handleSeek = (e: GestureResponderEvent, duration: number) => {
     if (duration <= 0 || progressBarWidthRef.current <= 0) return;
     const x = e.nativeEvent.locationX;
     const fraction = Math.max(0, Math.min(1, x / progressBarWidthRef.current));
@@ -439,14 +511,6 @@ export default function NoteEditorModal({
       borderColor: colors.accent,
       backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.85)' : 'rgba(0, 0, 0, 0.10)',
     },
-    editorTopBtnEmoji: {
-      fontSize: 18,
-    },
-    editorColorIndicator: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-    },
     editorTrashBtn: {
       width: 36,
       height: 36,
@@ -456,10 +520,6 @@ export default function NoteEditorModal({
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    editorTrashIconWrap: {
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
     },
     editorInputArea: {
       flex: 1,
@@ -489,12 +549,6 @@ export default function NoteEditorModal({
       paddingTop: 12,
       paddingBottom: 12 + insets.bottom,
       maxHeight: 280,
-    },
-    pickerTitle: {
-      fontSize: 12,
-      fontFamily: FONTS.semiBold,
-      color: colors.textTertiary,
-      marginBottom: 10,
     },
     colorRow: {
       flexDirection: 'row',
@@ -567,11 +621,6 @@ export default function NoteEditorModal({
       paddingVertical: 12,
       gap: 10,
     },
-    dropdownDot: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-    },
     dropdownText: {
       fontSize: 14,
       fontFamily: FONTS.semiBold,
@@ -605,6 +654,19 @@ export default function NoteEditorModal({
     },
   }), [colors, insets.top, insets.bottom]);
 
+  // Memoize the parsed linked text used in view mode. Without this, every
+  // recorder tick or unrelated re-render re-runs the regex parser. We
+  // short-circuit when not in view mode so edit-mode keystrokes don't pay
+  // for output that's never used.
+  const linkedTextContent = useMemo(() => {
+    if (!isViewMode) return null;
+    return renderLinkedText(
+      editorText,
+      [styles.editorInput, { color: resolvedFontColor }],
+      linkColor,
+    );
+  }, [isViewMode, editorText, styles.editorInput, resolvedFontColor, linkColor]);
+
   return (
     <>
       {/* Editor Modal */}
@@ -618,7 +680,7 @@ export default function NoteEditorModal({
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-        <ScrollView style={[styles.editorContainer, { backgroundColor: editorColor }]} contentContainerStyle={{ flex: 1 }} keyboardShouldPersistTaps="handled" scrollEnabled={false}>
+        <ScrollView style={[styles.editorContainer, { backgroundColor: editorColor }]} contentContainerStyle={{ flex: 1 }} keyboardShouldPersistTaps="handled" scrollEnabled={false} accessibilityViewIsModal={true}>
 
           {/* Top bar */}
           <View style={styles.editorTopBar}>
@@ -636,6 +698,8 @@ export default function NoteEditorModal({
                     }}
                     onPress={handleGoHome}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go to home screen"
                   >
                     <Image source={APP_ICONS.house} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
@@ -645,6 +709,8 @@ export default function NoteEditorModal({
                     style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
                     onPress={() => { hapticLight(); setIsViewMode(false); }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit note"
                   >
                     <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: '#FFFFFF' }}>Edit</Text>
                   </TouchableOpacity>
@@ -663,6 +729,8 @@ export default function NoteEditorModal({
                       setShowShareModal(true);
                     }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share note"
                   >
                     <Image source={APP_ICONS.share} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
@@ -671,6 +739,8 @@ export default function NoteEditorModal({
                       style={styles.editorTrashBtn}
                       onPress={handleDeleteFromEditor}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete note"
                     >
                       <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
                     </TouchableOpacity>
@@ -691,6 +761,8 @@ export default function NoteEditorModal({
                     }}
                     onPress={handleGoHome}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go to home screen"
                   >
                     <Image source={APP_ICONS.house} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
@@ -701,6 +773,8 @@ export default function NoteEditorModal({
                       style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
                       onPress={handleSave}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Save note"
                     >
                       <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: '#FFFFFF' }}>Save</Text>
                     </TouchableOpacity>
@@ -716,6 +790,8 @@ export default function NoteEditorModal({
                       setShowMenu((v) => !v);
                     }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Attachment menu"
                   >
                     <Image source={APP_ICONS.plus} style={{ width: 24, height: 24 }} resizeMode="contain" />
                   </TouchableOpacity>
@@ -724,6 +800,8 @@ export default function NoteEditorModal({
                       style={styles.editorTrashBtn}
                       onPress={handleDeleteFromEditor}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete note"
                     >
                       <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
                     </TouchableOpacity>
@@ -745,6 +823,8 @@ export default function NoteEditorModal({
                   setShowColorPicker((v) => !v);
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Note colors"
               >
                 <Image source={APP_ICONS.palette} style={{ width: 26, height: 26, marginLeft: -4 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>Colors</Text>
@@ -757,6 +837,8 @@ export default function NoteEditorModal({
                   pickImage();
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Add photo from gallery"
               >
                 <Image source={APP_ICONS.image} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>Photo Library</Text>
@@ -769,6 +851,8 @@ export default function NoteEditorModal({
                   takePhoto();
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Take photo"
               >
                 <Image source={APP_ICONS.camera} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>Take Photo</Text>
@@ -787,6 +871,8 @@ export default function NoteEditorModal({
                   setShowDrawing(true);
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Add drawing"
               >
                 <Image source={APP_ICONS.paintbrush} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>Draw</Text>
@@ -799,6 +885,8 @@ export default function NoteEditorModal({
                   handleMicPress();
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Record voice memo"
               >
                 <Image source={APP_ICONS.microphone} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 <Text style={styles.dropdownText}>{isRecording ? 'Stop Recording' : 'Record'}</Text>
@@ -816,6 +904,8 @@ export default function NoteEditorModal({
               durationMillis={recorderState.durationMillis ?? 0}
               onPauseToggle={handlePauseToggle}
               onStop={handleMicPress}
+              recordingColor={colors.red}
+              successColor={colors.success}
             />
           )}
 
@@ -824,7 +914,7 @@ export default function NoteEditorModal({
             <ScrollView style={styles.editorInputArea} contentContainerStyle={{ paddingBottom: 20 }}>
               {editorIcon ? <Text style={{ fontSize: 28, marginBottom: 8 }}>{editorIcon}</Text> : null}
               <Text style={[styles.editorInput, { color: resolvedFontColor }]}>
-                {renderLinkedText(editorText, [styles.editorInput, { color: resolvedFontColor }], getTextColor(editorColor) === '#FFFFFF' ? '#48DBFB' : '#0066CC')}
+                {linkedTextContent}
               </Text>
             </ScrollView>
           ) : (
@@ -878,7 +968,7 @@ export default function NoteEditorModal({
                       ]);
                     }
                   }
-                }} activeOpacity={0.8}>
+                }} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="View image">
                   <Image source={{ uri }} style={styles.thumbnail} resizeMethod="resize" />
                   {!isViewMode && (
                     <TouchableOpacity
@@ -888,6 +978,8 @@ export default function NoteEditorModal({
                         setEditorImages((imgs) => imgs.filter((_, i) => i !== idx));
                       }}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Remove image"
                     >
                       <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
                     </TouchableOpacity>
@@ -951,6 +1043,9 @@ export default function NoteEditorModal({
                     ]}
                     onPress={() => { hapticLight(); setEditorColor(c); }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Background color ${c}`}
+                    accessibilityState={{ selected: editorColor === c }}
                   >
                     {editorColor === c && <Text style={[styles.colorCheck, { color: getTextColor(c) }]}>{'\u2713'}</Text>}
                   </TouchableOpacity>
@@ -977,6 +1072,9 @@ export default function NoteEditorModal({
                         }
                       }}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Custom background color"
+                      accessibilityState={{ selected: isCustomBgSelected }}
                     >
                       {isCustomBgSelected && <Text style={[styles.colorCheck, { color: getTextColor(customBgColor!) }]}>{'\u2713'}</Text>}
                     </TouchableOpacity>
@@ -1013,6 +1111,9 @@ export default function NoteEditorModal({
                       ]}
                       onPress={() => { hapticLight(); setEditorFontColor(isAuto ? null : fc); }}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={isAuto ? 'Automatic text color' : `Text color ${fc}`}
+                      accessibilityState={{ selected: isSelected }}
                     >
                       {isAuto ? (
                         <View style={{ flexDirection: 'row', flex: 1, width: '100%', height: '100%' }}>
@@ -1047,6 +1148,9 @@ export default function NoteEditorModal({
                         }
                       }}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Custom text color"
+                      accessibilityState={{ selected: isCustomFcSelected }}
                     >
                       {isCustomFcSelected && <Text style={[styles.fontColorCheck, { color: getTextColor(customFontColor!) }]}>{'\u2713'}</Text>}
                     </TouchableOpacity>

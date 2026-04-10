@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,105 @@ import { useSudoku, DIFFICULTY_CONFIG, formatTime, getStars, MAX_HINTS } from '.
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Sudoku'>;
 
+// ---------- Cell ----------
+
+// Memoized cell component. Pulled out so the timer tick (every 1s) only
+// re-renders the timer text, not all 81 cells. React.memo skips a cell
+// re-render if its props are referentially equal — which they will be
+// because the parent passes stable callbacks and pre-computed flags.
+interface SudokuCellProps {
+  row: number;
+  col: number;
+  value: number;
+  isGiven: boolean;
+  isSelected: boolean;
+  isHighlighted: boolean;
+  isSameNumber: boolean;
+  cellNotes: number[];
+  borderRight: number;
+  borderBottom: number;
+  borderLeft: number;
+  borderTop: number;
+  cellTextStyle: object;
+  notesGridStyle: object;
+  noteTextStyle: object;
+  baseCellStyle: object;
+  onPress: (row: number, col: number) => void;
+}
+
+const SudokuCell = React.memo(function SudokuCell({
+  row,
+  col,
+  value,
+  isGiven,
+  isSelected,
+  isHighlighted,
+  isSameNumber,
+  cellNotes,
+  borderRight,
+  borderBottom,
+  borderLeft,
+  borderTop,
+  cellTextStyle,
+  notesGridStyle,
+  noteTextStyle,
+  baseCellStyle,
+  onPress,
+}: SudokuCellProps) {
+  const handlePress = useCallback(() => onPress(row, col), [onPress, row, col]);
+
+  let bgColor: string = 'transparent';
+  if (isSelected) bgColor = 'rgba(74,144,217,0.25)';
+  else if (isSameNumber) bgColor = 'rgba(74,144,217,0.15)';
+  else if (isHighlighted) bgColor = 'rgba(0,0,0,0.06)';
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.8}
+      style={[
+        baseCellStyle,
+        {
+          backgroundColor: bgColor,
+          borderRightWidth: borderRight,
+          borderBottomWidth: borderBottom,
+          borderLeftWidth: borderLeft,
+          borderTopWidth: borderTop,
+          borderColor: 'rgba(0,0,0,0.2)',
+        },
+      ]}
+    >
+      {value !== 0 ? (
+        <Text
+          style={[
+            cellTextStyle,
+            {
+              color: isGiven ? '#000000' : '#1A1A44',
+              fontFamily: isGiven ? FONTS.bold : FONTS.semiBold,
+            },
+          ]}
+        >
+          {value}
+        </Text>
+      ) : cellNotes.length > 0 ? (
+        <View style={notesGridStyle}>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+            <Text
+              key={n}
+              style={[
+                noteTextStyle,
+                { color: cellNotes.includes(n) ? '#999999' : 'transparent' },
+              ]}
+            >
+              {n}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+    </TouchableOpacity>
+  );
+});
+
 // ---------- Main Screen ----------
 
 export default function SudokuScreen({ navigation }: Props) {
@@ -40,10 +139,38 @@ export default function SudokuScreen({ navigation }: Props) {
     winMessage, finalTime, finalMistakes, finalHints,
     remainingCounts, showRemainingCounts, showMistakesDuringPlay,
     hintDisabled,
+    cellFlags,
     startNewGame, resumeGame, handlePause, handleResume, handleBackFromGame,
+    saveGameState,
     handleNumberPress, handleErase, handleHint, handleNewGameConfirm,
-    isHighlighted, isSameNumber, clearSavedGame,
+    clearSavedGame,
   } = useSudoku();
+
+  // Stable cell-press handler. Each SudokuCell wraps this in its own
+  // useCallback that closes over its row/col, so cells receive a stable
+  // onPress reference and React.memo can skip re-renders.
+  const handleCellPress = useCallback((row: number, col: number) => {
+    hapticLight();
+    setSelectedCell([row, col]);
+  }, [setSelectedCell]);
+
+  // Intercept hardware back during active gameplay. The HomeButton uses
+  // popToTop() which dispatches POP_TO_TOP (or RESET) — for those we save
+  // progress and let navigation through. A plain POP is a per-screen back
+  // gesture, which we absorb into an in-game "return to menu" transition.
+  useEffect(() => {
+    if (gamePhase !== 'playing') return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      const actionType = e.data.action.type;
+      if (actionType === 'POP_TO_TOP' || actionType === 'RESET') {
+        saveGameState();
+        return;
+      }
+      e.preventDefault();
+      handleBackFromGame();
+    });
+    return unsubscribe;
+  }, [navigation, gamePhase, handleBackFromGame, saveGameState]);
 
   // ---------- Styles ----------
 
@@ -80,9 +207,11 @@ export default function SudokuScreen({ navigation }: Props) {
             style={[styles.difficultyBtn, { borderColor: colors.accent, borderWidth: 2 }]}
             onPress={() => { hapticLight(); playGameSound('tap'); resumeGame(); }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Continue game"
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <GlowIcon source={MEDIA_ICONS.gamePlay} size={24} glowColor="#4CAF50" style={{ marginRight: 8 }} />
+              <GlowIcon source={MEDIA_ICONS.gamePlay} size={24} glowColor={colors.success} style={{ marginRight: 8 }} />
               <Text style={styles.difficultyLabel}>Continue Game</Text>
             </View>
             <Text style={styles.difficultyInfo}>Resume your saved puzzle</Text>
@@ -113,6 +242,9 @@ export default function SudokuScreen({ navigation }: Props) {
                 }
               }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={config.label}
+              accessibilityState={{ selected: false }}
             >
               <Text style={styles.difficultyLabel}>{config.label}</Text>
               {best?.gamesPlayed ? (
@@ -140,16 +272,18 @@ export default function SudokuScreen({ navigation }: Props) {
       <ImageBackground source={require('../../assets/newspaper.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <View style={[styles.container, styles.centeredContent]}>
-        <GlowIcon source={MEDIA_ICONS.pause} size={48} glowColor="#4CAF50" />
+        <GlowIcon source={MEDIA_ICONS.pause} size={48} glowColor={colors.success} />
         <Text style={styles.pauseTitle}>Paused</Text>
         <Text style={styles.pauseSubtitle}>{formatTime(elapsed)}</Text>
-        <TouchableOpacity style={styles.resumeBtn} onPress={() => { hapticLight(); playGameSound('tap'); handleResume(); }} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.resumeBtn} onPress={() => { hapticLight(); playGameSound('tap'); handleResume(); }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Continue game">
           <Text style={styles.resumeBtnText}>Resume</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.changeDifficultyBtn}
           onPress={() => { hapticLight(); playGameSound('tap'); clearSavedGame(); setGamePhase('select'); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Change difficulty"
         >
           <Text style={styles.changeDifficultyText}>Quit Game</Text>
         </TouchableOpacity>
@@ -226,6 +360,8 @@ export default function SudokuScreen({ navigation }: Props) {
           style={styles.playAgainBtn}
           onPress={() => { hapticLight(); playGameSound('tap'); startNewGame(difficulty); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Play again"
         >
           <Text style={styles.playAgainText}>Play Again</Text>
         </TouchableOpacity>
@@ -233,6 +369,8 @@ export default function SudokuScreen({ navigation }: Props) {
           style={styles.changeDifficultyBtn}
           onPress={() => { hapticLight(); playGameSound('tap'); setGamePhase('select'); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Change difficulty"
         >
           <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
         </TouchableOpacity>
@@ -257,7 +395,7 @@ export default function SudokuScreen({ navigation }: Props) {
           </View>
           <Text style={styles.gameDifficulty}>{DIFFICULTY_CONFIG[difficulty].label}</Text>
         </View>
-        <View style={styles.statsRow}>
+        <View style={styles.statsRow} accessibilityLiveRegion="polite">
           {showMistakesDuringPlay ? (
             <Text style={styles.statText}>
               {'\u274C'} {mistakes}
@@ -268,7 +406,7 @@ export default function SudokuScreen({ navigation }: Props) {
           <TouchableOpacity onPress={() => { hapticLight(); playGameSound('tap'); handlePause(); }} activeOpacity={0.7}>
             <Text style={styles.timerText}>{'\u23F1\uFE0F'} {formatTime(elapsed)}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => { hapticLight(); playGameSound('tap'); handleNewGameConfirm(); }} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => { hapticLight(); playGameSound('tap'); handleNewGameConfirm(); }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Start new game">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Image source={require('../../assets/icons/icon-refresh.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
               <Text style={[styles.statText, { color: colors.accent }]}>New</Text>
@@ -283,68 +421,28 @@ export default function SudokuScreen({ navigation }: Props) {
           {Array.from({ length: 9 }, (_, row) => (
             <View key={row} style={styles.gridRow}>
               {Array.from({ length: 9 }, (_, col) => {
-                const isGiven = puzzleGrid[row]?.[col] !== 0;
-                const value = playerGrid[row]?.[col] || 0;
-                const isSelected = selectedCell?.[0] === row && selectedCell?.[1] === col;
-                const highlighted = isHighlighted(row, col);
-                const sameNum = isSameNumber(row, col);
-                const cellNotes = notes[row]?.[col] || [];
-
-                const borderRight = col % 3 === 2 && col < 8 ? 2 : 0.5;
-                const borderBottom = row % 3 === 2 && row < 8 ? 2 : 0.5;
-                const borderLeft = col === 0 ? 2 : 0;
-                const borderTop = row === 0 ? 2 : 0;
-
-                let bgColor = 'transparent';
-                if (isSelected) bgColor = 'rgba(74,144,217,0.25)';
-                else if (sameNum) bgColor = 'rgba(74,144,217,0.15)';
-                else if (highlighted) bgColor = 'rgba(0,0,0,0.06)';
-
+                const flags = cellFlags[row]?.[col];
                 return (
-                  <TouchableOpacity
+                  <SudokuCell
                     key={col}
-                    onPress={() => { hapticLight(); setSelectedCell([row, col]); }}
-                    activeOpacity={0.8}
-                    style={[
-                      styles.cell,
-                      {
-                        backgroundColor: bgColor,
-                        borderRightWidth: borderRight,
-                        borderBottomWidth: borderBottom,
-                        borderLeftWidth: borderLeft,
-                        borderTopWidth: borderTop,
-                        borderColor: 'rgba(0,0,0,0.2)',
-                      },
-                    ]}
-                  >
-                    {value !== 0 ? (
-                      <Text
-                        style={[
-                          styles.cellText,
-                          {
-                            color: isGiven ? '#000000' : '#1A1A44',
-                            fontFamily: isGiven ? FONTS.bold : FONTS.semiBold,
-                          },
-                        ]}
-                      >
-                        {value}
-                      </Text>
-                    ) : cellNotes.length > 0 ? (
-                      <View style={styles.notesGrid}>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                          <Text
-                            key={n}
-                            style={[
-                              styles.noteText,
-                              { color: cellNotes.includes(n) ? '#999999' : 'transparent' },
-                            ]}
-                          >
-                            {n}
-                          </Text>
-                        ))}
-                      </View>
-                    ) : null}
-                  </TouchableOpacity>
+                    row={row}
+                    col={col}
+                    value={playerGrid[row]?.[col] || 0}
+                    isGiven={puzzleGrid[row]?.[col] !== 0}
+                    isSelected={selectedCell?.[0] === row && selectedCell?.[1] === col}
+                    isHighlighted={flags?.isHighlighted ?? false}
+                    isSameNumber={flags?.isSameNumber ?? false}
+                    cellNotes={notes[row]?.[col] || []}
+                    borderRight={col % 3 === 2 && col < 8 ? 2 : 0.5}
+                    borderBottom={row % 3 === 2 && row < 8 ? 2 : 0.5}
+                    borderLeft={col === 0 ? 2 : 0}
+                    borderTop={row === 0 ? 2 : 0}
+                    cellTextStyle={styles.cellText}
+                    notesGridStyle={styles.notesGrid}
+                    noteTextStyle={styles.noteText}
+                    baseCellStyle={styles.cell}
+                    onPress={handleCellPress}
+                  />
                 );
               })}
             </View>
@@ -382,12 +480,15 @@ export default function SudokuScreen({ navigation }: Props) {
             style={[styles.toolBtn, notesMode && { backgroundColor: colors.accent }]}
             onPress={() => { hapticLight(); playGameSound('tap'); setNotesMode(!notesMode); }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle notes mode"
+            accessibilityState={{ selected: notesMode }}
           >
             <Text style={[styles.toolBtnText, notesMode && { color: colors.overlayText }]}>
               {'\u270F\uFE0F'} Notes {notesMode ? 'ON' : 'OFF'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.toolBtn} onPress={() => { hapticLight(); playGameSound('tap'); handleErase(); }} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.toolBtn} onPress={() => { hapticLight(); playGameSound('tap'); handleErase(); }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Erase cell">
             <Text style={styles.toolBtnText}>{'\u232B'} Erase</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -544,20 +645,16 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       left: 64,
       top: topInset + 10,
     },
-    winEmoji: {
-      fontSize: 64,
-      marginBottom: 8,
-    },
     winTitle: {
       fontSize: 26,
       fontFamily: FONTS.extraBold,
-      color: colors.textPrimary,
+      color: colors.overlayText,
       marginBottom: 12,
     },
     hardRevealText: {
       fontSize: 14,
       fontFamily: FONTS.regular,
-      color: colors.textTertiary,
+      color: colors.overlaySecondary,
       fontStyle: 'italic',
       marginBottom: 12,
     },
@@ -598,7 +695,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     winMessage: {
       fontSize: 14,
       fontFamily: FONTS.regular,
-      color: colors.textSecondary,
+      color: colors.overlaySecondary,
       fontStyle: 'italic',
       textAlign: 'center',
       marginBottom: 28,
@@ -647,7 +744,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     gameDifficulty: {
       fontSize: 15,
       fontFamily: FONTS.bold,
-      color: colors.textPrimary,
+      color: colors.overlayText,
     },
     statsRow: {
       flexDirection: 'row',
@@ -658,7 +755,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     statText: {
       fontSize: 14,
       fontFamily: FONTS.semiBold,
-      color: colors.textSecondary,
+      color: colors.overlaySecondary,
     },
     statPlaceholder: {
       width: 40,
@@ -666,7 +763,7 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
     timerText: {
       fontSize: 14,
       fontFamily: FONTS.semiBold,
-      color: colors.textSecondary,
+      color: colors.overlaySecondary,
     },
 
     // Grid

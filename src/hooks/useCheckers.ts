@@ -23,7 +23,7 @@ import { playGameSound } from '../utils/gameSounds';
 
 const AI_DELAY_MS = 400;
 
-export interface UseCheckersReturn {
+interface UseCheckersReturn {
   // Game state
   board: Board;
   playerColor: PieceColor;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -35,8 +35,6 @@ const PIECE_NAMES: Record<string, string> = {
   q: 'queen',
   k: 'king',
 };
-type BoardCell = { square: string; type: string; color: 'w' | 'b' } | null;
-
 // ── Helpers: visual grid → chess square & labels ────────────────
 function squareForCell(
   row: number,
@@ -81,6 +79,100 @@ const BOARD_SIZE = SCREEN_WIDTH - BOARD_H_PADDING * 2;
 const INNER_BOARD = BOARD_SIZE - BOARD_BORDER * 2;
 const SQUARE_SIZE = INNER_BOARD / 8;
 
+// ── Memoized board square ───────────────────────────────────────
+// Each square is its own React.memo'd component so a re-render of
+// ChessScreen (e.g. from the turnPulse animation, AI thinking flag,
+// or roast toast) doesn't re-render all 64 squares. Square props are
+// primitives or stable references; React.memo skips squares whose
+// state didn't actually change.
+interface ChessSquareProps {
+  square: string;
+  cellPiece: { type: string; color: 'w' | 'b' } | null;
+  isSelected: boolean;
+  isValidMove: boolean;
+  isLight: boolean;
+  isKingInCheck: boolean;
+  isLastMoveSquare: boolean;
+  isThreatened: boolean;
+  showRankLabel: boolean;
+  showFileLabel: boolean;
+  rankLabelText: string;
+  fileLabelText: string;
+  accessibilityLabel: string;
+  accentColor: string;
+  squareStyle: object;
+  rankLabelStyle: object;
+  fileLabelStyle: object;
+  pieceImgStyle: object;
+  moveDotStyle: object;
+  captureRingStyle: object;
+  onPress: (square: string) => void;
+}
+
+const ChessSquare = React.memo(function ChessSquare({
+  square,
+  cellPiece,
+  isSelected,
+  isValidMove,
+  isLight,
+  isKingInCheck,
+  isLastMoveSquare,
+  isThreatened,
+  showRankLabel,
+  showFileLabel,
+  rankLabelText,
+  fileLabelText,
+  accessibilityLabel,
+  accentColor,
+  squareStyle,
+  rankLabelStyle,
+  fileLabelStyle,
+  pieceImgStyle,
+  moveDotStyle,
+  captureRingStyle,
+  onPress,
+}: ChessSquareProps) {
+  const handlePress = useCallback(() => {
+    hapticLight();
+    onPress(square);
+  }, [onPress, square]);
+
+  let bg: string;
+  if (isSelected) {
+    bg = accentColor + '90';
+  } else if (isKingInCheck) {
+    bg = 'rgba(220, 38, 38, 0.6)';
+  } else if (isThreatened) {
+    bg = 'rgba(220, 38, 38, 0.35)';
+  } else if (isLastMoveSquare) {
+    bg = 'rgba(250, 204, 21, 0.4)';
+  } else {
+    bg = isLight ? accentColor + '60' : accentColor + 'CC';
+  }
+
+  return (
+    <TouchableOpacity
+      style={[squareStyle, { backgroundColor: bg }]}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      {showRankLabel && <Text style={rankLabelStyle}>{rankLabelText}</Text>}
+      {showFileLabel && <Text style={fileLabelStyle}>{fileLabelText}</Text>}
+      {cellPiece && (
+        <Image
+          source={getPieceImage(cellPiece)}
+          style={pieceImgStyle}
+          resizeMode="contain"
+        />
+      )}
+      {isValidMove && !cellPiece && <View style={moveDotStyle} />}
+      {isValidMove && cellPiece && <View style={captureRingStyle} />}
+    </TouchableOpacity>
+  );
+});
+
 export default function ChessScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -124,6 +216,23 @@ export default function ChessScreen({ navigation }: Props) {
     }
   }, [chess.isPlayerTurn, turnPulse]);
 
+  // Intercept hardware back during active game
+  useEffect(() => {
+    if (!chess.game || chess.isGameOver) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      e.preventDefault();
+      Alert.alert(
+        'Quit game?',
+        'Your game progress is saved automatically.',
+        [
+          { text: 'Keep playing', style: 'cancel' },
+          { text: 'Quit', onPress: () => navigation.dispatch(e.data.action) },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation, chess.game, chess.isGameOver]);
+
   const severityBg: Record<string, string> = useMemo(
     () => ({
       good: colors.accent + '30',
@@ -135,6 +244,13 @@ export default function ChessScreen({ navigation }: Props) {
     }),
     [colors.accent],
   );
+
+  // Stable square-press handler. Each ChessSquare wraps this in its own
+  // useCallback so a re-render of ChessScreen doesn't churn the onPress
+  // identity for all 64 squares.
+  const handleSquarePress = useCallback((sq: string) => {
+    chess.selectSquare(sq);
+  }, [chess]);
 
   const handleResignPress = () => {
     Alert.alert('Resign?', 'Are you sure you want to resign this game?', [
@@ -328,7 +444,7 @@ export default function ChessScreen({ navigation }: Props) {
           paddingVertical: 8,
           backgroundColor: colors.background,
         },
-        actionPillText: { fontSize: 12, fontFamily: FONTS.semiBold, color: colors.overlayText },
+        actionPillText: { fontSize: 12, fontFamily: FONTS.semiBold, color: colors.textPrimary },
         resignPill: { backgroundColor: colors.red + '30' },
         resignText: { color: colors.red, fontSize: 12, fontFamily: FONTS.semiBold },
 
@@ -504,7 +620,7 @@ export default function ChessScreen({ navigation }: Props) {
             accessibilityLabel="Training mode"
             accessibilityState={{ checked: teachingEnabled }}
           >
-            <Text style={{ color: teachingEnabled ? colors.accent : colors.overlayText, fontSize: 13, fontFamily: FONTS.semiBold }}>
+            <Text style={{ color: teachingEnabled ? colors.accent : colors.textSecondary, fontSize: 13, fontFamily: FONTS.semiBold }}>
               Training Mode
             </Text>
             <View
@@ -514,7 +630,7 @@ export default function ChessScreen({ navigation }: Props) {
                 borderRadius: 12,
                 backgroundColor: teachingEnabled ? colors.accent : colors.background,
                 borderWidth: 1,
-                borderColor: teachingEnabled ? colors.accent : colors.overlayText + '30',
+                borderColor: teachingEnabled ? colors.accent : colors.border,
                 justifyContent: 'center',
                 paddingHorizontal: 2,
               }}
@@ -524,7 +640,7 @@ export default function ChessScreen({ navigation }: Props) {
                   width: 20,
                   height: 20,
                   borderRadius: 10,
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: colors.overlayText,
                   alignSelf: teachingEnabled ? 'flex-end' : 'flex-start',
                 }}
               />
@@ -566,73 +682,51 @@ export default function ChessScreen({ navigation }: Props) {
               const isSelected = selectedSquare === sq;
               const isValidMove = validMoves.includes(sq);
               const isLight = isLightSquare(rowIdx, colIdx);
-              const isKingInCheck =
+              const isKingInCheck = !!(
                 chess.isInCheck &&
                 cell &&
                 cell.type === 'k' &&
-                cell.color === chess.game?.turn();
-
-              // Teaching mode highlights
-              const isLastMoveSquare =
+                cell.color === chess.game?.turn()
+              );
+              const isLastMoveSquare = !!(
                 chess.teachingMode &&
                 chess.lastMoveSquares &&
-                (sq === chess.lastMoveSquares.from || sq === chess.lastMoveSquares.to);
-              const isThreatened =
+                (sq === chess.lastMoveSquares.from || sq === chess.lastMoveSquares.to)
+              );
+              const isThreatened = !!(
                 chess.teachingMode &&
-                chess.threatenedSquares.has(sq);
-
-              // Background priority
-              let bg: string;
-              if (isSelected) {
-                bg = colors.accent + '90';
-              } else if (isKingInCheck) {
-                bg = 'rgba(220, 38, 38, 0.6)';
-              } else if (isThreatened) {
-                bg = 'rgba(220, 38, 38, 0.35)';
-              } else if (isLastMoveSquare) {
-                bg = 'rgba(250, 204, 21, 0.4)';
-              } else {
-                bg = isLight ? colors.accent + '60' : colors.accent + 'CC';
-              }
-              const showRankLabel = colIdx === 0;
-              const showFileLabel = rowIdx === 7;
+                chess.threatenedSquares.has(sq)
+              );
               let label = cell
                 ? `${sq}, ${cell.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[cell.type] || cell.type}`
                 : `${sq}, empty`;
               if (isThreatened && cell) label += ', threatened';
               if (isLastMoveSquare) label += ', last move';
               return (
-                <TouchableOpacity
+                <ChessSquare
                   key={colIdx}
-                  style={[styles.square, { backgroundColor: bg }]}
-                  onPress={() => {
-                    hapticLight();
-                    chess.selectSquare(sq);
-                  }}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
+                  square={sq}
+                  cellPiece={cell}
+                  isSelected={isSelected}
+                  isValidMove={isValidMove}
+                  isLight={isLight}
+                  isKingInCheck={isKingInCheck}
+                  isLastMoveSquare={isLastMoveSquare}
+                  isThreatened={isThreatened}
+                  showRankLabel={colIdx === 0}
+                  showFileLabel={rowIdx === 7}
+                  rankLabelText={rankLabel(rowIdx, playerColor)}
+                  fileLabelText={fileLabel(colIdx, playerColor)}
                   accessibilityLabel={label}
-                >
-                  {showRankLabel && (
-                    <Text style={styles.rankLabel}>
-                      {rankLabel(rowIdx, playerColor)}
-                    </Text>
-                  )}
-                  {showFileLabel && (
-                    <Text style={styles.fileLabel}>
-                      {fileLabel(colIdx, playerColor)}
-                    </Text>
-                  )}
-                  {cell && (
-                    <Image
-                      source={getPieceImage(cell)}
-                      style={styles.pieceImg}
-                      resizeMode="contain"
-                    />
-                  )}
-                  {isValidMove && !cell && <View style={styles.moveDot} />}
-                  {isValidMove && cell && <View style={styles.captureRing} />}
-                </TouchableOpacity>
+                  accentColor={colors.accent}
+                  squareStyle={styles.square}
+                  rankLabelStyle={styles.rankLabel}
+                  fileLabelStyle={styles.fileLabel}
+                  pieceImgStyle={styles.pieceImg}
+                  moveDotStyle={styles.moveDot}
+                  captureRingStyle={styles.captureRing}
+                  onPress={handleSquarePress}
+                />
               );
             })}
           </View>
@@ -703,16 +797,24 @@ export default function ChessScreen({ navigation }: Props) {
     </View>
   );
 
+  // Captured pieces only change when a move that captures lands. Recompute
+  // on move-history length change instead of on every animation tick.
+  const playerCapturedPieces = useMemo(() => {
+    if (!chess.game) return [];
+    const opp: 'w' | 'b' = chess.playerColor === 'w' ? 'b' : 'w';
+    return getCapturedPieces(chess.game, opp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chess.game, chess.moveHistory.length, chess.playerColor]);
+
+  const opponentCapturedPieces = useMemo(() => {
+    if (!chess.game) return [];
+    return getCapturedPieces(chess.game, chess.playerColor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chess.game, chess.moveHistory.length, chess.playerColor]);
+
   // ── Active game ────────────────────────────────────────────────
   const renderActiveGame = () => {
     const opponentColor: 'w' | 'b' = chess.playerColor === 'w' ? 'b' : 'w';
-    // Derive captures from move history (correct under promotion).
-    const playerCapturedPieces = chess.game
-      ? getCapturedPieces(chess.game, opponentColor)
-      : [];
-    const opponentCapturedPieces = chess.game
-      ? getCapturedPieces(chess.game, chess.playerColor)
-      : [];
     const moveNum = Math.max(1, Math.ceil(chess.moveHistory.length / 2));
     const diffName = DIFFICULTY_LABELS[chess.difficulty] ?? '';
 
@@ -720,9 +822,10 @@ export default function ChessScreen({ navigation }: Props) {
       <View style={styles.body}>
         <View style={styles.gameHeader}>
           <Text style={styles.gameHeaderText}>{diffName}</Text>
-          <Text style={styles.gameHeaderText}>Move {moveNum}</Text>
+          <Text style={styles.gameHeaderText} accessibilityLiveRegion="polite">Move {moveNum}</Text>
         </View>
         <View
+          accessibilityLiveRegion="polite"
           style={{
             height: 28,
             marginHorizontal: 16,

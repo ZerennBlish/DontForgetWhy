@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { TextInput, Alert, ToastAndroid } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import type { AlarmDay } from '../types/alarm';
@@ -30,7 +30,81 @@ interface UseReminderFormParams {
   initialDate?: string;
 }
 
-export function useReminderForm({ editId, initialDate }: UseReminderFormParams) {
+interface UseReminderFormResult {
+  // Time state
+  timeFormat: '12h' | '24h';
+  hourText: string;
+  setHourText: React.Dispatch<React.SetStateAction<string>>;
+  minuteText: string;
+  setMinuteText: React.Dispatch<React.SetStateAction<string>>;
+  ampm: 'AM' | 'PM';
+  setAmpm: React.Dispatch<React.SetStateAction<'AM' | 'PM'>>;
+  pickerHours: number;
+  pickerMinutes: number;
+  timeInputMode: 'scroll' | 'type';
+  modalHours: number;
+  modalMinutes: number;
+  modalAmpm: 'AM' | 'PM';
+  setModalAmpm: React.Dispatch<React.SetStateAction<'AM' | 'PM'>>;
+  hourRef: React.RefObject<TextInput | null>;
+  minuteRef: React.RefObject<TextInput | null>;
+  // Time handlers
+  handleHourChange: (t: string) => void;
+  handleMinuteChange: (t: string) => void;
+  handleMinuteKeyPress: (e: { nativeEvent: { key: string } }) => void;
+  handleModalHoursChange: (h: number) => void;
+  handleModalMinutesChange: (m: number) => void;
+  prepareTimeModal: () => void;
+  confirmTimeModal: () => void;
+  // Form state
+  existing: Reminder | null;
+  text: string;
+  setText: React.Dispatch<React.SetStateAction<string>>;
+  nickname: string;
+  setNickname: React.Dispatch<React.SetStateAction<string>>;
+  placeholder: string;
+  selectedIcon: string;
+  setSelectedIcon: React.Dispatch<React.SetStateAction<string>>;
+  selectedPrivate: boolean;
+  setSelectedPrivate: React.Dispatch<React.SetStateAction<boolean>>;
+  privateHint: string;
+  mode: 'one-time' | 'recurring';
+  setMode: React.Dispatch<React.SetStateAction<'one-time' | 'recurring'>>;
+  selectedDate: string | null;
+  setSelectedDate: React.Dispatch<React.SetStateAction<string | null>>;
+  iconInputRef: React.RefObject<TextInput | null>;
+  editReady: boolean;
+  // Day selection
+  selectedDays: AlarmDay[];
+  setSelectedDays: React.Dispatch<React.SetStateAction<AlarmDay[]>>;
+  handleToggleDay: (day: AlarmDay, currentMode: 'one-time' | 'recurring', clearDateFn?: () => void) => void;
+  handleQuickDays: (preset: AlarmDay[], clearDateFn?: () => void) => void;
+  isWeekdaysSelected: boolean;
+  isWeekendsSelected: boolean;
+  isEverydaySelected: boolean;
+  // Calendar
+  calMonth: number;
+  calYear: number;
+  showCalendar: boolean;
+  handleCalPrev: () => void;
+  handleCalNext: () => void;
+  handleSelectDate: (day: number) => void;
+  toggleCalendar: () => void;
+  calDays: number;
+  calFirstDay: number;
+  MONTH_NAMES: string[];
+  // Actions
+  clearDate: () => void;
+  hasContent: () => boolean;
+  save: (onSuccess: () => void) => Promise<void>;
+  switchMode: (newMode: 'one-time' | 'recurring') => void;
+  // Computed
+  isEditing: boolean;
+  isDirty: boolean;
+  notFound: boolean;
+}
+
+export function useReminderForm({ editId, initialDate }: UseReminderFormParams): UseReminderFormResult {
   // Time state
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [hourText, setHourText] = useState<string>(() => String(new Date().getHours()));
@@ -73,6 +147,14 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
   const [mode, setMode] = useState<'one-time' | 'recurring'>('one-time');
   const [placeholder] = useState(getRandomPlaceholder);
   const [editReady, setEditReady] = useState(!editId);
+  const [notFound, setNotFound] = useState(false);
+
+  // Dirty tracking — snapshot baseline, compare current state each render.
+  // For edit mode the snapshot is set inside the async hydration effect
+  // AFTER the form fields have been populated from the loaded reminder;
+  // setting it before hydration would make every loaded reminder read
+  // dirty the moment its fields land.
+  const originalStateRef = useRef<string | null>(null);
 
   // Day selection
   const {
@@ -247,7 +329,10 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
     if (!editId) return;
     getReminders().then((reminders) => {
       const found = reminders.find((r) => r.id === editId);
-      if (!found) return;
+      if (!found) {
+        setNotFound(true);
+        return;
+      }
       setExisting(found);
       setText(found.text);
       setNickname(found.nickname || '');
@@ -280,6 +365,28 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
         setMode('recurring');
       }
       setEditReady(true);
+
+      // Snapshot the baseline AFTER all form fields have been populated,
+      // using the source values directly (not React state, which hasn't
+      // committed yet at this point in the .then callback).
+      let baselineTime: string;
+      if (found.dueTime) {
+        const [bh, bm] = found.dueTime.split(':').map(Number);
+        baselineTime = `${bh.toString().padStart(2, '0')}:${bm.toString().padStart(2, '0')}`;
+      } else {
+        const now = new Date();
+        baselineTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      }
+      originalStateRef.current = JSON.stringify({
+        time: baselineTime,
+        text: found.text,
+        nickname: found.nickname || '',
+        selectedIcon: found.icon,
+        selectedPrivate: found.private,
+        mode: (found.recurring ? 'recurring' : 'one-time'),
+        selectedDate: found.dueDate || null,
+        days: [...((found.days as AlarmDay[] | undefined) ?? [])].sort(),
+      });
     });
   }, [editId, timeFormat]);
 
@@ -506,6 +613,72 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
     await doSave(dueDate, dueTime, onSuccess);
   };
 
+  // Canonicalize time state into a stable "HH:MM" 24-hour string so the
+  // diff is independent of 12h/24h format hydration from settings.
+  const getCanonicalTime = useCallback((): string => {
+    const rawH = timeInputMode === 'type'
+      ? (parseInt(hourText, 10) || pickerHours)
+      : pickerHours;
+    const rawM = timeInputMode === 'type'
+      ? (parseInt(minuteText, 10) || pickerMinutes)
+      : pickerMinutes;
+    let h: number;
+    if (timeFormat === '12h') {
+      if (rawH > 12) {
+        h = rawH;
+      } else {
+        const h12 = rawH || 12;
+        h = ampm === 'AM' ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12);
+      }
+    } else {
+      h = rawH || 0;
+    }
+    const m = rawM || 0;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  }, [hourText, minuteText, ampm, pickerHours, pickerMinutes, timeInputMode, timeFormat]);
+
+  // For a new reminder, snapshot the blank initial state synchronously on
+  // the first render. For an edit, the hydration effect above sets the
+  // snapshot after the source fields have been loaded.
+  if (originalStateRef.current === null && !editId) {
+    const now = new Date();
+    const initialTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    originalStateRef.current = JSON.stringify({
+      time: initialTime,
+      text: '',
+      nickname: '',
+      selectedIcon: '\u{1F4DD}',
+      selectedPrivate: false,
+      mode: 'one-time',
+      selectedDate: initialDate || null,
+      days: [] as AlarmDay[],
+    });
+  }
+
+  const isDirty = useMemo(() => {
+    if (originalStateRef.current === null) return false;
+    const current = JSON.stringify({
+      time: getCanonicalTime(),
+      text,
+      nickname,
+      selectedIcon,
+      selectedPrivate,
+      mode,
+      selectedDate,
+      days: [...selectedDays].sort(),
+    });
+    return current !== originalStateRef.current;
+  }, [
+    getCanonicalTime,
+    text,
+    nickname,
+    selectedIcon,
+    selectedPrivate,
+    mode,
+    selectedDate,
+    selectedDays,
+  ]);
+
   return {
     // Time state
     timeFormat, hourText, setHourText, minuteText, setMinuteText,
@@ -536,5 +709,7 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams) 
     clearDate, hasContent, save, switchMode,
     // Computed
     isEditing: !!existing,
+    isDirty,
+    notFound,
   };
 }

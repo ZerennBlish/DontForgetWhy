@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { AppState } from 'react-native';
 import type { NavigationContainerRef } from '@react-navigation/native';
 import notifee, { EventType } from '@notifee/react-native';
@@ -6,7 +6,7 @@ import { kvGet, kvSet, kvRemove } from '../services/database';
 import type { RootStackParamList } from '../navigation/types';
 import { loadAlarms, deleteAlarm, purgeDeletedAlarms, updateSingleAlarm } from '../services/storage';
 import { getReminders, updateReminder, purgeDeletedReminders } from '../services/reminderStorage';
-import { purgeDeletedNotes, getPendingNoteAction } from '../services/noteStorage';
+import { purgeDeletedNotes, getPendingNoteAction, getNoteById } from '../services/noteStorage';
 import { getOnboardingComplete } from '../services/settings';
 import {
   setupNotificationChannel,
@@ -17,8 +17,12 @@ import {
   scheduleSnooze,
 } from '../services/notifications';
 import { refreshHapticsSetting } from '../utils/haptics';
+import { safeParse } from '../utils/safeParse';
 import { refreshWidgets } from '../widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from '../services/timerStorage';
+import { getAlarmById } from '../services/storage';
+import { getReminderById } from '../services/reminderStorage';
+import { getVoiceMemoById } from '../services/voiceMemoStorage';
 import {
   getPendingAlarm,
   setPendingAlarm,
@@ -30,6 +34,29 @@ import {
 } from '../services/pendingAlarm';
 import { playAlarmSoundForNotification, stopAlarmSound } from '../services/alarmSound';
 import type { PendingAlarmData } from '../services/pendingAlarm';
+
+interface PendingTimestampAction {
+  timestamp: number;
+}
+
+interface PendingAlarmAction extends PendingTimestampAction {
+  action: string;
+  alarmId?: string;
+}
+
+interface PendingReminderAction extends PendingTimestampAction {
+  action: string;
+  reminderId?: string;
+}
+
+interface PendingCalendarAction extends PendingTimestampAction {
+  date: string | null;
+}
+
+interface PendingVoiceAction extends PendingTimestampAction {
+  type: string;
+  memoId?: string;
+}
 
 // ── Yearly reminder reschedule helper ──────────────────────────────
 // Yearly recurring reminders use a one-time trigger (notifee has no
@@ -110,7 +137,14 @@ interface InitState {
   voiceMemoDetailParams: RootStackParamList['VoiceMemoDetail'] | null;
 }
 
-export function useNotificationRouting() {
+interface UseNotificationRoutingResult {
+  navigationRef: React.MutableRefObject<NavigationContainerRef<RootStackParamList> | null>;
+  isNavigationReady: React.MutableRefObject<boolean>;
+  initState: InitState | null;
+  onNavigationReady: () => void;
+}
+
+export function useNotificationRouting(): UseNotificationRoutingResult {
   // Single init state: null = loading, non-null = ready to render.
   // Combines onboarding check + cold-start alarm/note resolution.
   const [initState, setInitState] = useState<InitState | null>(null);
@@ -323,7 +357,12 @@ export function useNotificationRouting() {
               if (pendingNote.type === 'new') {
                 notepadParams = { newNote: true };
               } else if (pendingNote.noteId) {
-                notepadParams = { noteId: pendingNote.noteId };
+                const note = getNoteById(pendingNote.noteId);
+                if (!note) {
+                  notepadParams = {};
+                } else {
+                  notepadParams = { noteId: pendingNote.noteId };
+                }
               } else {
                 notepadParams = {};
               }
@@ -338,8 +377,10 @@ export function useNotificationRouting() {
             const raw = kvGet('pendingAlarmAction');
             if (raw) {
               kvRemove('pendingAlarmAction');
-              const parsed = JSON.parse(raw) as { action: string; alarmId?: string; timestamp: number };
-              if (Date.now() - parsed.timestamp < 10000) {
+              const parsed = safeParse<PendingAlarmAction | null>(raw, null);
+              if (!parsed || Date.now() - parsed.timestamp > 10000) {
+                // expired or invalid
+              } else {
                 if (parsed.action === 'createAlarm') {
                   createAlarmParams = {};
                 } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
@@ -359,12 +400,17 @@ export function useNotificationRouting() {
             const raw = kvGet('pendingReminderAction');
             if (raw) {
               kvRemove('pendingReminderAction');
-              const parsed = JSON.parse(raw) as { action: string; reminderId?: string; timestamp: number };
-              if (Date.now() - parsed.timestamp < 10000) {
+              const parsed = safeParse<PendingReminderAction | null>(raw, null);
+              if (!parsed || Date.now() - parsed.timestamp > 10000) {
+                // expired or invalid
+              } else {
                 if (parsed.action === 'createReminder') {
                   createReminderParams = {};
                 } else if (parsed.action === 'editReminder' && parsed.reminderId) {
-                  createReminderParams = { reminderId: parsed.reminderId };
+                  const reminder = getReminderById(parsed.reminderId);
+                  if (reminder) {
+                    createReminderParams = { reminderId: parsed.reminderId };
+                  }
                 }
               }
             }
@@ -378,8 +424,8 @@ export function useNotificationRouting() {
             const raw = kvGet('pendingAlarmListAction');
             if (raw) {
               kvRemove('pendingAlarmListAction');
-              const parsed = JSON.parse(raw) as { timestamp: number };
-              if (Date.now() - parsed.timestamp < 10000) {
+              const parsed = safeParse<PendingTimestampAction | null>(raw, null);
+              if (parsed && Date.now() - parsed.timestamp < 10000) {
                 alarmListParams = true;
               }
             }
@@ -393,8 +439,8 @@ export function useNotificationRouting() {
             const raw = kvGet('pendingReminderListAction');
             if (raw) {
               kvRemove('pendingReminderListAction');
-              const parsed = JSON.parse(raw) as { timestamp: number };
-              if (Date.now() - parsed.timestamp < 10000) {
+              const parsed = safeParse<PendingTimestampAction | null>(raw, null);
+              if (parsed && Date.now() - parsed.timestamp < 10000) {
                 reminderListParams = true;
               }
             }
@@ -408,8 +454,8 @@ export function useNotificationRouting() {
             const raw = kvGet('pendingTimerAction');
             if (raw) {
               kvRemove('pendingTimerAction');
-              const parsed = JSON.parse(raw) as { timestamp: number };
-              if (Date.now() - parsed.timestamp < 10000) {
+              const parsed = safeParse<PendingTimestampAction | null>(raw, null);
+              if (parsed && Date.now() - parsed.timestamp < 10000) {
                 timerParams = true;
               }
             }
@@ -423,8 +469,8 @@ export function useNotificationRouting() {
             const raw = kvGet('pendingCalendarAction');
             if (raw) {
               kvRemove('pendingCalendarAction');
-              const parsed = JSON.parse(raw) as { date: string | null; timestamp: number };
-              if (Date.now() - parsed.timestamp < 10000) {
+              const parsed = safeParse<PendingCalendarAction | null>(raw, null);
+              if (parsed && Date.now() - parsed.timestamp < 10000) {
                 calendarParams = parsed.date ? { initialDate: parsed.date } : {};
               }
             }
@@ -440,14 +486,17 @@ export function useNotificationRouting() {
             const raw = kvGet('pendingVoiceAction');
             if (raw) {
               kvRemove('pendingVoiceAction');
-              const parsed = JSON.parse(raw) as { type: string; memoId?: string; timestamp: number };
-              if (Date.now() - parsed.timestamp < 10000) {
+              const parsed = safeParse<PendingVoiceAction | null>(raw, null);
+              if (parsed && Date.now() - parsed.timestamp < 10000) {
                 if (parsed.type === 'list') {
                   voiceMemoListParams = true;
                 } else if (parsed.type === 'record') {
                   voiceRecordParams = undefined;
                 } else if (parsed.type === 'detail' && parsed.memoId) {
-                  voiceMemoDetailParams = { memoId: parsed.memoId };
+                  const memo = getVoiceMemoById(parsed.memoId);
+                  if (memo) {
+                    voiceMemoDetailParams = { memoId: parsed.memoId };
+                  }
                 }
               }
             }
@@ -743,7 +792,14 @@ export function useNotificationRouting() {
     getPendingNoteAction().then((noteAction) => {
       if (noteAction && navigationRef.current) {
         if (noteAction.type === 'edit' && noteAction.noteId) {
-          navigationRef.current.navigate('Notepad', { noteId: noteAction.noteId });
+          // Verify the note still exists — widget actions can race
+          // against the user deleting the note from another surface.
+          const note = getNoteById(noteAction.noteId);
+          if (note) {
+            navigationRef.current.navigate('Notepad', { noteId: noteAction.noteId });
+          } else {
+            navigationRef.current.navigate('Notepad');
+          }
         } else if (noteAction.type === 'new') {
           navigationRef.current.navigate('Notepad', { newNote: true });
         } else {
@@ -757,8 +813,8 @@ export function useNotificationRouting() {
       const rawAlarm = kvGet('pendingAlarmAction');
       if (rawAlarm && navigationRef.current) {
         kvRemove('pendingAlarmAction');
-        const parsed = JSON.parse(rawAlarm) as { action: string; alarmId?: string; timestamp: number };
-        if (Date.now() - parsed.timestamp < 10000) {
+        const parsed = safeParse<PendingAlarmAction | null>(rawAlarm, null);
+        if (parsed && Date.now() - parsed.timestamp < 10000) {
           if (parsed.action === 'createAlarm') {
             navigationRef.current.navigate('CreateAlarm');
           } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
@@ -778,12 +834,15 @@ export function useNotificationRouting() {
       const rawReminder = kvGet('pendingReminderAction');
       if (rawReminder && navigationRef.current) {
         kvRemove('pendingReminderAction');
-        const parsed = JSON.parse(rawReminder) as { action: string; reminderId?: string; timestamp: number };
-        if (Date.now() - parsed.timestamp < 10000) {
+        const parsed = safeParse<PendingReminderAction | null>(rawReminder, null);
+        if (parsed && Date.now() - parsed.timestamp < 10000) {
           if (parsed.action === 'createReminder') {
             navigationRef.current.navigate('CreateReminder');
           } else if (parsed.action === 'editReminder' && parsed.reminderId) {
-            navigationRef.current.navigate('CreateReminder', { reminderId: parsed.reminderId });
+            const reminder = getReminderById(parsed.reminderId);
+            if (reminder && navigationRef.current) {
+              navigationRef.current.navigate('CreateReminder', { reminderId: parsed.reminderId });
+            }
           }
         }
       }
@@ -794,8 +853,8 @@ export function useNotificationRouting() {
       const rawCal = kvGet('pendingCalendarAction');
       if (rawCal && navigationRef.current) {
         kvRemove('pendingCalendarAction');
-        const parsed = JSON.parse(rawCal) as { date: string | null; timestamp: number };
-        if (Date.now() - parsed.timestamp < 10000) {
+        const parsed = safeParse<PendingCalendarAction | null>(rawCal, null);
+        if (parsed && Date.now() - parsed.timestamp < 10000) {
           navigationRef.current.navigate('Calendar', parsed.date ? { initialDate: parsed.date } : undefined);
         }
       }
@@ -806,8 +865,8 @@ export function useNotificationRouting() {
       const rawTimer = kvGet('pendingTimerAction');
       if (rawTimer && navigationRef.current) {
         kvRemove('pendingTimerAction');
-        const parsed = JSON.parse(rawTimer) as { timestamp: number };
-        if (Date.now() - parsed.timestamp < 10000) {
+        const parsed = safeParse<PendingTimestampAction | null>(rawTimer, null);
+        if (parsed && Date.now() - parsed.timestamp < 10000) {
           navigationRef.current.navigate('Timers');
         }
       }
@@ -818,14 +877,19 @@ export function useNotificationRouting() {
       const rawVoice = kvGet('pendingVoiceAction');
       if (rawVoice && navigationRef.current) {
         kvRemove('pendingVoiceAction');
-        const parsed = JSON.parse(rawVoice) as { type: string; memoId?: string; timestamp: number };
-        if (Date.now() - parsed.timestamp < 10000) {
+        const parsed = safeParse<PendingVoiceAction | null>(rawVoice, null);
+        if (parsed && Date.now() - parsed.timestamp < 10000) {
           if (parsed.type === 'list') {
             navigationRef.current.navigate('VoiceMemoList');
           } else if (parsed.type === 'record') {
             navigationRef.current.navigate('VoiceRecord');
           } else if (parsed.type === 'detail' && parsed.memoId) {
-            navigationRef.current.navigate('VoiceMemoDetail', { memoId: parsed.memoId });
+            const memo = getVoiceMemoById(parsed.memoId);
+            if (memo && navigationRef.current) {
+              navigationRef.current.navigate('VoiceMemoDetail', { memoId: parsed.memoId });
+            } else if (navigationRef.current) {
+              navigationRef.current.navigate('VoiceMemoList');
+            }
           }
         }
       }
@@ -836,8 +900,8 @@ export function useNotificationRouting() {
       const rawAlarmList = kvGet('pendingAlarmListAction');
       if (rawAlarmList && navigationRef.current) {
         kvRemove('pendingAlarmListAction');
-        const parsed = JSON.parse(rawAlarmList) as { timestamp: number };
-        if (Date.now() - parsed.timestamp < 10000) {
+        const parsed = safeParse<PendingTimestampAction | null>(rawAlarmList, null);
+        if (parsed && Date.now() - parsed.timestamp < 10000) {
           navigationRef.current.navigate('AlarmList');
         }
       }
@@ -848,8 +912,8 @@ export function useNotificationRouting() {
       const rawReminderList = kvGet('pendingReminderListAction');
       if (rawReminderList && navigationRef.current) {
         kvRemove('pendingReminderListAction');
-        const parsed = JSON.parse(rawReminderList) as { timestamp: number };
-        if (Date.now() - parsed.timestamp < 10000) {
+        const parsed = safeParse<PendingTimestampAction | null>(rawReminderList, null);
+        if (parsed && Date.now() - parsed.timestamp < 10000) {
           navigationRef.current.navigate('Reminders');
         }
       }
@@ -886,7 +950,12 @@ export function useNotificationRouting() {
         getPendingNoteAction().then((noteAction) => {
           if (noteAction && navigationRef.current) {
             if (noteAction.type === 'edit' && noteAction.noteId) {
-              navigationRef.current.navigate('Notepad', { noteId: noteAction.noteId });
+              const note = getNoteById(noteAction.noteId);
+              if (note) {
+                navigationRef.current.navigate('Notepad', { noteId: noteAction.noteId });
+              } else {
+                navigationRef.current.navigate('Notepad');
+              }
             } else if (noteAction.type === 'new') {
               navigationRef.current.navigate('Notepad', { newNote: true });
             } else {
@@ -899,8 +968,8 @@ export function useNotificationRouting() {
           const rawAlarm2 = kvGet('pendingAlarmAction');
           if (rawAlarm2 && navigationRef.current) {
             kvRemove('pendingAlarmAction');
-            const parsed = JSON.parse(rawAlarm2) as { action: string; alarmId?: string; timestamp: number };
-            if (Date.now() - parsed.timestamp < 10000) {
+            const parsed = safeParse<PendingAlarmAction | null>(rawAlarm2, null);
+            if (parsed && Date.now() - parsed.timestamp < 10000) {
               if (parsed.action === 'createAlarm') {
                 navigationRef.current.navigate('CreateAlarm');
               } else if (parsed.action === 'editAlarm' && parsed.alarmId) {
@@ -919,12 +988,15 @@ export function useNotificationRouting() {
           const rawReminder2 = kvGet('pendingReminderAction');
           if (rawReminder2 && navigationRef.current) {
             kvRemove('pendingReminderAction');
-            const parsed = JSON.parse(rawReminder2) as { action: string; reminderId?: string; timestamp: number };
-            if (Date.now() - parsed.timestamp < 10000) {
+            const parsed = safeParse<PendingReminderAction | null>(rawReminder2, null);
+            if (parsed && Date.now() - parsed.timestamp < 10000) {
               if (parsed.action === 'createReminder') {
                 navigationRef.current.navigate('CreateReminder');
               } else if (parsed.action === 'editReminder' && parsed.reminderId) {
-                navigationRef.current.navigate('CreateReminder', { reminderId: parsed.reminderId });
+                const reminder = getReminderById(parsed.reminderId);
+                if (reminder && navigationRef.current) {
+                  navigationRef.current.navigate('CreateReminder', { reminderId: parsed.reminderId });
+                }
               }
             }
           }
@@ -934,8 +1006,8 @@ export function useNotificationRouting() {
           const rawCal2 = kvGet('pendingCalendarAction');
           if (rawCal2 && navigationRef.current) {
             kvRemove('pendingCalendarAction');
-            const parsed = JSON.parse(rawCal2) as { date: string | null; timestamp: number };
-            if (Date.now() - parsed.timestamp < 10000) {
+            const parsed = safeParse<PendingCalendarAction | null>(rawCal2, null);
+            if (parsed && Date.now() - parsed.timestamp < 10000) {
               navigationRef.current.navigate('Calendar', parsed.date ? { initialDate: parsed.date } : undefined);
             }
           }
@@ -945,8 +1017,8 @@ export function useNotificationRouting() {
           const rawTimer2 = kvGet('pendingTimerAction');
           if (rawTimer2 && navigationRef.current) {
             kvRemove('pendingTimerAction');
-            const parsed = JSON.parse(rawTimer2) as { timestamp: number };
-            if (Date.now() - parsed.timestamp < 10000) {
+            const parsed = safeParse<PendingTimestampAction | null>(rawTimer2, null);
+            if (parsed && Date.now() - parsed.timestamp < 10000) {
               navigationRef.current.navigate('Timers');
             }
           }
@@ -956,14 +1028,19 @@ export function useNotificationRouting() {
           const rawVoice2 = kvGet('pendingVoiceAction');
           if (rawVoice2 && navigationRef.current) {
             kvRemove('pendingVoiceAction');
-            const parsed = JSON.parse(rawVoice2) as { type: string; memoId?: string; timestamp: number };
-            if (Date.now() - parsed.timestamp < 10000) {
+            const parsed = safeParse<PendingVoiceAction | null>(rawVoice2, null);
+            if (parsed && Date.now() - parsed.timestamp < 10000) {
               if (parsed.type === 'list') {
                 navigationRef.current.navigate('VoiceMemoList');
               } else if (parsed.type === 'record') {
                 navigationRef.current.navigate('VoiceRecord');
               } else if (parsed.type === 'detail' && parsed.memoId) {
-                navigationRef.current.navigate('VoiceMemoDetail', { memoId: parsed.memoId });
+                const memo = getVoiceMemoById(parsed.memoId);
+                if (memo && navigationRef.current) {
+                  navigationRef.current.navigate('VoiceMemoDetail', { memoId: parsed.memoId });
+                } else if (navigationRef.current) {
+                  navigationRef.current.navigate('VoiceMemoList');
+                }
               }
             }
           }
@@ -973,8 +1050,8 @@ export function useNotificationRouting() {
           const rawAlarmList2 = kvGet('pendingAlarmListAction');
           if (rawAlarmList2 && navigationRef.current) {
             kvRemove('pendingAlarmListAction');
-            const parsed = JSON.parse(rawAlarmList2) as { timestamp: number };
-            if (Date.now() - parsed.timestamp < 10000) {
+            const parsed = safeParse<PendingTimestampAction | null>(rawAlarmList2, null);
+            if (parsed && Date.now() - parsed.timestamp < 10000) {
               navigationRef.current.navigate('AlarmList');
             }
           }
@@ -984,8 +1061,8 @@ export function useNotificationRouting() {
           const rawReminderList2 = kvGet('pendingReminderListAction');
           if (rawReminderList2 && navigationRef.current) {
             kvRemove('pendingReminderListAction');
-            const parsed = JSON.parse(rawReminderList2) as { timestamp: number };
-            if (Date.now() - parsed.timestamp < 10000) {
+            const parsed = safeParse<PendingTimestampAction | null>(rawReminderList2, null);
+            if (parsed && Date.now() - parsed.timestamp < 10000) {
               navigationRef.current.navigate('Reminders');
             }
           }

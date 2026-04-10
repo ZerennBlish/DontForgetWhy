@@ -1,3 +1,5 @@
+import type { AlarmDay } from './alarm';
+
 export interface CompletionEntry {
   completedAt: string;
   scheduledFor?: string;
@@ -17,7 +19,7 @@ export interface Reminder {
   notificationId: string | null;
   pinned: boolean;
   deletedAt?: string | null;
-  days?: string[];
+  days?: AlarmDay[];
   recurring?: boolean;
   notificationIds?: string[];
   completionHistory?: CompletionEntry[];

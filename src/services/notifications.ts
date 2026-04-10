@@ -276,7 +276,7 @@ function extractMediaId(uri: string): string {
   return Math.abs(hash).toString(36);
 }
 
-export async function getOrCreateSoundChannel(
+async function getOrCreateSoundChannel(
   soundUri: string,
   soundName: string,
   channelPrefix = 'alarm_v2_custom_',
@@ -453,7 +453,7 @@ export async function dismissAlarmNotification(notificationId: string): Promise<
   await notifee.cancelNotification(notificationId);
 }
 
-export async function cancelAlarm(identifier: string): Promise<void> {
+async function cancelAlarm(identifier: string): Promise<void> {
   // Cancel both the scheduled trigger and any displayed notification
   await notifee.cancelTriggerNotification(identifier);
   await notifee.cancelNotification(identifier);

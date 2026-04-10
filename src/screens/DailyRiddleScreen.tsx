@@ -40,16 +40,15 @@ export default function DailyRiddleScreen({ navigation }: Props) {
 
   const {
     mode, setMode,
-    dailyRiddle, stats, revealed, answered, resultMessage, gotIt,
+    dailyRiddle, stats, revealed, answered, resultMessage,
     hintShown, alreadyPlayedToday, revealAnim,
     selectedCategory, setSelectedCategory,
     searchQuery, setSearchQuery,
     expandedRiddleId, setExpandedRiddleId,
     filteredRiddles,
-    browseSource, setBrowseSource,
+    browseSource,
     onlineRiddles, onlineLoading, onlineError,
     expandedOnlineId, setExpandedOnlineId,
-    isOnlineAvailable,
     handleReveal, handleAnswer, handleShowHint, handleFetchOnlineRiddles,
   } = useDailyRiddle();
 
@@ -91,7 +90,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         dateText: {
           fontSize: 14,
           fontFamily: FONTS.regular,
-          color: 'rgba(255,255,255,0.5)',
+          color: colors.overlaySecondary,
           marginTop: 4,
           textAlign: 'center',
         },
@@ -114,7 +113,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         statText: {
           fontSize: 12,
           fontFamily: FONTS.regular,
-          color: 'rgba(255,255,255,0.5)',
+          color: colors.overlaySecondary,
         },
 
         // Daily riddle area (no card box — question floats over background)
@@ -136,7 +135,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         difficultyBadgeText: {
           fontSize: 12,
           fontFamily: FONTS.bold,
-          color: '#FFFFFF',
+          color: colors.overlayText,
         },
         categoryBadge: {
           paddingHorizontal: 10,
@@ -152,7 +151,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         questionText: {
           fontSize: 20,
           fontFamily: FONTS.semiBold,
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontStyle: 'italic',
           lineHeight: 32,
           textAlign: 'center',
@@ -169,7 +168,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         hintBtnText: {
           fontSize: 13,
-          color: 'rgba(255,255,255,0.5)',
+          color: colors.overlaySecondary,
           fontFamily: FONTS.semiBold,
         },
         hintText: {
@@ -201,7 +200,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         didYouGetIt: {
           fontSize: 14,
           fontFamily: FONTS.regular,
-          color: 'rgba(255,255,255,0.5)',
+          color: colors.overlaySecondary,
           marginTop: 16,
           marginBottom: 12,
         },
@@ -212,7 +211,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         gotItBtn: {
           flex: 1,
-          backgroundColor: '#4CAF50',
+          backgroundColor: colors.success,
           borderRadius: 12,
           paddingVertical: 14,
           alignItems: 'center',
@@ -220,7 +219,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         gotItBtnText: {
           fontSize: 15,
           fontFamily: FONTS.bold,
-          color: '#FFFFFF',
+          color: colors.overlayText,
         },
         nopeBtn: {
           flex: 1,
@@ -232,12 +231,12 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         nopeBtnText: {
           fontSize: 15,
           fontFamily: FONTS.bold,
-          color: '#FFFFFF',
+          color: colors.overlayText,
         },
         resultText: {
           fontSize: 14,
           fontFamily: FONTS.regular,
-          color: 'rgba(255,255,255,0.7)',
+          color: colors.overlaySecondary,
           fontStyle: 'italic',
           textAlign: 'center',
           marginTop: 16,
@@ -357,7 +356,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         },
         browseSeenIcon: {
           fontSize: 16,
-          color: '#4CAF50',
+          color: colors.success,
         },
         browseQuestion: {
           flex: 1,
@@ -424,9 +423,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         sourceBtnActive: {
           backgroundColor: colors.accent,
         },
-        sourceBtnDisabled: {
-          opacity: 0.4,
-        },
         sourceBtnText: {
           fontSize: 12,
           fontFamily: FONTS.semiBold,
@@ -435,10 +431,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         sourceBtnTextActive: {
           color: colors.textPrimary,
         },
-        sourceBtnIcon: {
-          fontSize: 14,
-        },
-
         // Online riddle cards
         onlineCard: {
           marginHorizontal: 16,
@@ -520,14 +512,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           textAlign: 'center',
           lineHeight: 20,
         },
-        noInternetText: {
-          fontSize: 12,
-          fontFamily: FONTS.regular,
-          color: colors.textTertiary,
-          fontStyle: 'italic',
-          marginHorizontal: 16,
-          marginTop: 4,
-        },
       }),
     [colors, insets.bottom],
   );
@@ -573,12 +557,14 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   style={[styles.hintBtn, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
                   onPress={() => { hapticLight(); playGameSound('tap'); handleShowHint(); }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Show hint"
                 >
                   <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   <Text style={styles.hintBtnText}>Need a hint?</Text>
                 </TouchableOpacity>
               ) : (
-                <Text style={styles.hintText}>
+                <Text style={styles.hintText} accessibilityLiveRegion="polite">
                   Starts with "{hintLetter}"
                 </Text>
               )}
@@ -587,6 +573,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
 
           {revealed && (
             <Animated.View
+              accessibilityLiveRegion="polite"
               style={[
                 styles.answerSection,
                 {
@@ -615,6 +602,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                       style={styles.gotItBtn}
                       onPress={() => handleAnswer(true)}
                       activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityLabel="I got it"
                     >
                       <Text style={styles.gotItBtnText}>
                         {'\u2705'} Got it!
@@ -624,6 +613,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                       style={styles.nopeBtn}
                       onPress={() => handleAnswer(false)}
                       activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityLabel="I didn't get it"
                     >
                       <Text style={styles.nopeBtnText}>
                         {'\u274C'} Nope
@@ -656,6 +647,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             style={styles.revealBtn}
             onPress={() => { hapticLight(); playGameSound('tap'); handleReveal(); }}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Reveal answer"
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Image source={require('../../assets/icons/icon-magnify.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
@@ -668,6 +661,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           style={styles.browseBtn}
           onPress={() => { hapticLight(); playGameSound('tap'); setMode('browse'); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Browse riddles"
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Image source={require('../../assets/icons/icon-books.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
@@ -733,6 +728,9 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                 ]}
                 onPress={() => { hapticLight(); playGameSound('tap'); setSelectedCategory('all'); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="All"
+                accessibilityState={{ selected: selectedCategory === 'all' }}
               >
                 <Text
                   style={[
@@ -752,6 +750,9 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   ]}
                   onPress={() => { hapticLight(); playGameSound('tap'); setSelectedCategory(cat); }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={CATEGORY_LABELS[cat]}
+                  accessibilityState={{ selected: selectedCategory === cat }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     {RIDDLE_CATEGORY_IMAGES[cat] && (
@@ -787,6 +788,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                     setExpandedRiddleId(isExpanded ? null : riddle.id);
                   }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Riddle: ${riddle.question}`}
                 >
                   <View style={styles.browseCardRow}>
                     {isSeen && (
@@ -844,6 +847,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   style={styles.loadMoreBtn}
                   onPress={() => { hapticLight(); playGameSound('tap'); handleFetchOnlineRiddles(); }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Try again"
                 >
                   <Text style={styles.loadMoreText}>Try Again</Text>
                 </TouchableOpacity>
@@ -866,6 +871,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                         setExpandedOnlineId(isExpanded ? null : riddle.id);
                       }}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Online riddle: ${riddle.question}`}
                     >
                       <View style={[styles.onlineBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
                         <Image source={require('../../assets/icons/icon-globe.webp')} style={{ width: 14, height: 14 }} resizeMode="contain" />
@@ -888,6 +895,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   onPress={() => { hapticLight(); playGameSound('tap'); handleFetchOnlineRiddles(); }}
                   activeOpacity={0.7}
                   disabled={onlineLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel="Load more riddles"
                 >
                   {onlineLoading ? (
                     <ActivityIndicator size="small" color={colors.accent} />
@@ -932,7 +941,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       <Text style={[styles.dateText, { paddingHorizontal: 20 }]}>{getFormattedDate()}</Text>
 
       {stats.streak > 0 && (
-        <View style={[styles.streakRow, { paddingHorizontal: 20 }]}>
+        <View style={[styles.streakRow, { paddingHorizontal: 20 }]} accessibilityLiveRegion="polite">
           <Image source={require('../../assets/icons/icon-fire.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
           <Text style={styles.streakText}>{stats.streak} day streak</Text>
         </View>
@@ -958,6 +967,9 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           style={[styles.modeBtn, mode === 'daily' && styles.modeBtnActive]}
           onPress={() => { hapticLight(); playGameSound('tap'); setMode('daily'); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Today's riddle"
+          accessibilityState={{ selected: mode === 'daily' }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Image source={require('../../assets/icons/icon-star.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
@@ -975,6 +987,9 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           style={[styles.modeBtn, mode === 'browse' && styles.modeBtnActive]}
           onPress={() => { hapticLight(); playGameSound('tap'); setMode('browse'); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Browse riddles"
+          accessibilityState={{ selected: mode === 'browse' }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Image source={require('../../assets/icons/icon-books.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />

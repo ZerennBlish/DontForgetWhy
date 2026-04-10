@@ -34,8 +34,12 @@ export default function DrawingPickerModal({
 
   return (
     <Modal transparent visible={visible} animationType="fade">
-      <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'center', alignItems: 'center' }}>
-        <View style={{ backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.95)' : 'rgba(245, 245, 250, 0.98)', borderRadius: 16, padding: 20, marginHorizontal: 32, width: '85%' }}>
+      <View
+        style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'center', alignItems: 'center' }}
+        accessibilityRole="button"
+        accessibilityLabel="Cancel"
+      >
+        <View style={{ backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.95)' : 'rgba(245, 245, 250, 0.98)', borderRadius: 16, padding: 20, marginHorizontal: 32, width: '85%' }} accessibilityViewIsModal={true}>
           <Text style={{ color: colors.textPrimary, fontSize: 15, fontFamily: FONTS.bold, marginBottom: 16, textAlign: 'center' }}>{title}</Text>
           <ColorPicker
             value={pickedRef.current}
@@ -52,6 +56,8 @@ export default function DrawingPickerModal({
               onPress={() => { hapticLight(); onCancel(); }}
               style={[btn.secondarySmall, { flex: 1 }]}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={btn.secondarySmallText}>Cancel</Text>
             </TouchableOpacity>
@@ -63,6 +69,8 @@ export default function DrawingPickerModal({
               }}
               style={[btn.primarySmall, { flex: 1 }]}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Apply selection"
             >
               <Text style={btn.primarySmallText}>Apply</Text>
             </TouchableOpacity>

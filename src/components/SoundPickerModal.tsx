@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import APP_ICONS from '../data/appIconAssets';
 import { previewSystemSound, cancelSoundPreview } from '../services/notifications';
 import { useTheme } from '../theme/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { FONTS } from '../theme/fonts';
 
 export interface SystemSound {
@@ -33,6 +34,78 @@ interface Props {
   onClose: () => void;
   currentSoundID: number | null;
 }
+
+// Memoized row component. Pulled out of the parent so a search keystroke
+// or play-state flip doesn't recreate every list row's element tree —
+// React.memo skips rows whose own props didn't change.
+interface SoundRowProps {
+  sound: SystemSound;
+  isSelected: boolean;
+  isPlaying: boolean;
+  onSelect: (sound: SystemSound) => void;
+  onPlay: (sound: SystemSound) => void;
+  colors: ThemeColors;
+  rowStyle: object;
+  rowInfoStyle: object;
+  rowTitleStyle: object;
+  rowTitleSelectedStyle: object;
+  checkStyle: object;
+  playBtnStyle: object;
+  playBtnIdleStyle: object;
+  playBtnActiveStyle: object;
+}
+
+const SoundRow = React.memo(function SoundRow({
+  sound,
+  isSelected,
+  isPlaying,
+  onSelect,
+  onPlay,
+  colors,
+  rowStyle,
+  rowInfoStyle,
+  rowTitleStyle,
+  rowTitleSelectedStyle,
+  checkStyle,
+  playBtnStyle,
+  playBtnIdleStyle,
+  playBtnActiveStyle,
+}: SoundRowProps) {
+  const handleSelect = useCallback(() => onSelect(sound), [onSelect, sound]);
+  const handlePlay = useCallback(() => onPlay(sound), [onPlay, sound]);
+  return (
+    <TouchableOpacity
+      style={rowStyle}
+      onPress={handleSelect}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Select ${sound.title} alarm sound`}
+    >
+      <View style={rowInfoStyle}>
+        <Text
+          style={[rowTitleStyle, isSelected && rowTitleSelectedStyle]}
+          numberOfLines={1}
+        >
+          {sound.title}
+        </Text>
+      </View>
+      {isSelected && <Text style={checkStyle}>{'\u2713'}</Text>}
+      <TouchableOpacity
+        style={[playBtnStyle, isPlaying ? playBtnActiveStyle : playBtnIdleStyle]}
+        onPress={handlePlay}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={isPlaying ? 'Stop preview' : 'Preview sound'}
+      >
+        <GlowIcon
+          source={isPlaying ? MEDIA_ICONS.stop : MEDIA_ICONS.play}
+          size={20}
+          glowColor={isPlaying ? colors.red : colors.accent}
+        />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+});
 
 export default function SoundPickerModal({
   visible,
@@ -94,7 +167,7 @@ export default function SoundPickerModal({
     };
   }, []);
 
-  const handlePlay = async (item: SystemSound) => {
+  const handlePlay = useCallback(async (item: SystemSound) => {
     if (!isActiveRef.current) return;
 
     if (playingId === item.soundID) {
@@ -119,17 +192,17 @@ export default function SoundPickerModal({
       console.warn('[SoundPicker] Preview failed:', err);
       setPlayingId(null);
     }
-  };
+  }, [playingId, stopPreview]);
 
-  const handleSelect = async (item: SystemSound | null) => {
+  const handleSelect = useCallback(async (item: SystemSound | null) => {
     await stopPreview();
     onSelect(item);
-  };
+  }, [stopPreview, onSelect]);
 
-  const handleClose = async () => {
+  const handleClose = useCallback(async () => {
     await stopPreview();
     onClose();
-  };
+  }, [stopPreview, onClose]);
 
   const filtered = filter
     ? sounds.filter((s) =>
@@ -137,7 +210,7 @@ export default function SoundPickerModal({
       )
     : sounds;
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     overlay: {
       flex: 1,
       backgroundColor: colors.modalOverlay,
@@ -227,15 +300,6 @@ export default function SoundPickerModal({
     playBtnActive: {
       backgroundColor: colors.accent,
     },
-    playIcon: {
-      fontSize: 14,
-    },
-    playIconIdle: {
-      color: colors.textSecondary,
-    },
-    playIconActive: {
-      color: colors.overlayText,
-    },
     centered: {
       paddingVertical: 40,
       alignItems: 'center',
@@ -256,56 +320,48 @@ export default function SoundPickerModal({
       fontSize: 20,
       marginRight: 12,
     },
-  });
+  }), [colors]);
 
-  const renderItem = ({ item }: { item: SystemSound }) => {
-    const isSelected = currentSoundID === item.soundID;
-    const isPlaying = playingId === item.soundID;
-    return (
-      <TouchableOpacity
-        style={styles.row}
-        onPress={() => handleSelect(item)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.rowInfo}>
-          <Text
-            style={[styles.rowTitle, isSelected && styles.rowTitleSelected]}
-            numberOfLines={1}
-          >
-            {item.title}
-          </Text>
-        </View>
-        {isSelected && <Text style={styles.check}>{'\u2713'}</Text>}
-        <TouchableOpacity
-          style={[
-            styles.playBtn,
-            isPlaying ? styles.playBtnActive : styles.playBtnIdle,
-          ]}
-          onPress={() => handlePlay(item)}
-          activeOpacity={0.7}
-        >
-          <GlowIcon
-            source={isPlaying ? MEDIA_ICONS.stop : MEDIA_ICONS.play}
-            size={20}
-            glowColor={isPlaying ? '#FF3B30' : colors.accent}
-          />
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
-  };
+  const renderItem = useCallback(
+    ({ item }: { item: SystemSound }) => (
+      <SoundRow
+        sound={item}
+        isSelected={currentSoundID === item.soundID}
+        isPlaying={playingId === item.soundID}
+        onSelect={handleSelect}
+        onPlay={handlePlay}
+        colors={colors}
+        rowStyle={styles.row}
+        rowInfoStyle={styles.rowInfo}
+        rowTitleStyle={styles.rowTitle}
+        rowTitleSelectedStyle={styles.rowTitleSelected}
+        checkStyle={styles.check}
+        playBtnStyle={styles.playBtn}
+        playBtnIdleStyle={styles.playBtnIdle}
+        playBtnActiveStyle={styles.playBtnActive}
+      />
+    ),
+    [currentSoundID, playingId, handleSelect, handlePlay, colors, styles],
+  );
 
   return (
     <Modal transparent visible={visible} animationType="slide">
-      <TouchableWithoutFeedback onPress={handleClose}>
+      <TouchableWithoutFeedback
+        onPress={handleClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close sound picker"
+      >
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.sheet}>
+            <View style={styles.sheet} accessibilityViewIsModal={true}>
               <View style={styles.header}>
                 <Text style={styles.title}>Select Sound</Text>
                 <TouchableOpacity
                   style={styles.closeBtn}
                   onPress={handleClose}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close sound picker"
                 >
                   <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 </TouchableOpacity>
@@ -325,6 +381,8 @@ export default function SoundPickerModal({
                 style={styles.row}
                 onPress={() => handleSelect(null)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Select default alarm sound"
               >
                 <Text style={styles.defaultIcon}>{'\u{1F514}'}</Text>
                 <View style={styles.rowInfo}>
@@ -360,6 +418,10 @@ export default function SoundPickerModal({
                   keyExtractor={(item) => String(item.soundID)}
                   renderItem={renderItem}
                   keyboardShouldPersistTaps="handled"
+                  removeClippedSubviews={true}
+                  windowSize={5}
+                  maxToRenderPerBatch={8}
+                  initialNumToRender={8}
                 />
               )}
             </View>

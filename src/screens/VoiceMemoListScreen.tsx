@@ -12,7 +12,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
-import { getButtonStyles } from '../theme/buttonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import * as VMStore from '../services/voiceMemoStorage';
@@ -32,6 +31,7 @@ import SwipeableRow from '../components/SwipeableRow';
 import VoiceMemoCard from '../components/VoiceMemoCard';
 import UndoToast from '../components/UndoToast';
 import { createAudioPlayer } from 'expo-audio';
+import type { AudioStatus } from 'expo-audio';
 import type { VoiceMemo } from '../types/voiceMemo';
 import APP_ICONS from '../data/appIconAssets';
 import type { RootStackParamList } from '../navigation/types';
@@ -67,7 +67,6 @@ function formatDeletedAgo(deletedAt: string): string {
 export default function VoiceMemoListScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const btn = getButtonStyles(colors);
 
   const [emptyMsg] = useState(() => EMPTY_MESSAGES[Math.floor(Math.random() * EMPTY_MESSAGES.length)]);
   const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
@@ -76,8 +75,12 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
   const [showFilter, setShowFilter] = useState(false);
 
   // Playback
+  // playingMemoId is React state because the list needs to flip the play
+  // icon. playbackProgress is a REF (not state) so the 500ms update tick
+  // doesn't re-render the entire list — only the currently-playing card
+  // subscribes to the ref via its own internal interval.
   const [playingMemoId, setPlayingMemoId] = useState<string | null>(null);
-  const [playbackProgress, setPlaybackProgress] = useState<Record<string, number>>({});
+  const playbackProgressRef = useRef<number>(0);
   const playerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
   const playbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const playerListenerRef = useRef<{ remove: () => void } | null>(null);
@@ -116,6 +119,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       } catch { /* */ }
       playerRef.current = null;
     }
+    playbackProgressRef.current = 0;
     setPlayingMemoId(null);
   }, []);
 
@@ -130,24 +134,21 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     }, [reloadData, stopPlayback]),
   );
 
-  const handlePlayToggle = (memo: VoiceMemo) => {
+  const handlePlayToggle = useCallback((memo: VoiceMemo) => {
     if (playingMemoId === memo.id) {
       stopPlayback();
       return;
     }
-    if (playingMemoId) {
-      setPlaybackProgress((prev) => ({ ...prev, [playingMemoId]: 0 }));
-    }
     stopPlayback();
     const p = createAudioPlayer({ uri: memo.uri });
     playerRef.current = p;
+    playbackProgressRef.current = 0;
     setPlayingMemoId(memo.id);
-    const sub = p.addListener('playbackStatusUpdate', (status: any) => {
+    const sub = p.addListener('playbackStatusUpdate', (status: AudioStatus) => {
       if (status.didJustFinish) {
         playerListenerRef.current = null;
         sub.remove();
         stopPlayback();
-        setPlaybackProgress((prev) => ({ ...prev, [memo.id]: 0 }));
       }
     });
     playerListenerRef.current = sub;
@@ -156,17 +157,16 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       if (!current) return;
       try {
         if (current.duration > 0) {
-          setPlaybackProgress((prev) => ({
-            ...prev,
-            [memo.id]: current.currentTime / current.duration,
-          }));
+          // Mutate the ref instead of setState — the playing card polls
+          // this ref via its own interval and re-renders only itself.
+          playbackProgressRef.current = current.currentTime / current.duration;
         }
       } catch { /* player might be released */ }
     }, 500);
     p.play();
-  };
+  }, [playingMemoId, stopPlayback]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     hapticHeavy();
     const memo = voiceMemos.find((m) => m.id === id);
     if (!memo) return;
@@ -180,25 +180,25 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     refreshWidgets();
     setUndoKey((k) => k + 1);
     setShowUndo(true);
-  };
+  }, [voiceMemos, playingMemoId, stopPlayback, pinnedIds, reloadData]);
 
-  const handleRestore = async (id: string) => {
+  const handleRestore = useCallback(async (id: string) => {
     hapticLight();
     await VMStore.restoreVoiceMemo(id);
     await reloadData();
     refreshWidgets();
-  };
+  }, [reloadData]);
 
-  const handlePermanentDelete = async (id: string) => {
+  const handlePermanentDelete = useCallback(async (id: string) => {
     hapticHeavy();
     const memo = voiceMemos.find((m) => m.id === id);
     if (memo) await deleteVoiceMemoFile(memo.uri);
     await VMStore.permanentlyDeleteVoiceMemo(id);
     await reloadData();
     refreshWidgets();
-  };
+  }, [voiceMemos, reloadData]);
 
-  const handleUndoDelete = async () => {
+  const handleUndoDelete = useCallback(async () => {
     setShowUndo(false);
     if (!deletedMemo) return;
     await VMStore.restoreVoiceMemo(deletedMemo.id);
@@ -208,14 +208,14 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     await reloadData();
     refreshWidgets();
     setDeletedMemo(null);
-  };
+  }, [deletedMemo, reloadData]);
 
-  const handleUndoDismiss = () => {
+  const handleUndoDismiss = useCallback(() => {
     setShowUndo(false);
     setDeletedMemo(null);
-  };
+  }, []);
 
-  const handleTogglePin = async (id: string) => {
+  const handleTogglePin = useCallback(async (id: string) => {
     hapticMedium();
     const currentlyPinned = isVoiceMemoPinned(id, pinnedIds);
     if (!currentlyPinned && pinnedIds.length >= MAX_VOICE_MEMO_PINS) {
@@ -230,13 +230,13 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       currentlyPinned ? 'Unpinned' : 'Pinned to widget',
       ToastAndroid.SHORT,
     );
-  };
+  }, [pinnedIds]);
 
   const sortedMemos = useMemo(() => {
     if (filter === 'deleted') {
       return voiceMemos
         .filter((m) => !!m.deletedAt)
-        .sort((a, b) => new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime());
+        .sort((a, b) => new Date(b.deletedAt ?? '').getTime() - new Date(a.deletedAt ?? '').getTime());
     }
     const active = voiceMemos.filter((m) => !m.deletedAt);
     const pinned = active.filter((m) => isVoiceMemoPinned(m.id, pinnedIds));
@@ -359,15 +359,38 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.card + 'CC',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionVoice + '15',
       borderRadius: 12,
       padding: 12,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.sectionVoice,
       borderLeftWidth: 3,
       borderLeftColor: colors.sectionVoice,
       marginBottom: 8,
       opacity: 0.7,
+      elevation: 2,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+    },
+    capsuleBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
+      borderWidth: 1,
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+    },
+    capsuleBtnText: {
+      fontSize: 11,
+      fontFamily: FONTS.semiBold,
+      color: colors.textTertiary,
+    },
+    capsuleBtnDestructiveText: {
+      fontSize: 11,
+      fontFamily: FONTS.semiBold,
+      color: colors.red,
     },
     iconCircle: {
       width: 36,
@@ -412,15 +435,16 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.accent + '30',
+      backgroundColor: colors.accent + '15',
       shadowColor: colors.accent,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.6,
       shadowRadius: 12,
+      elevation: 8,
     },
   }), [colors, insets.bottom, insets.top]);
 
-  const renderDeletedItem = (memo: VoiceMemo) => (
+  const renderDeletedItem = useCallback((memo: VoiceMemo) => (
     <View style={styles.card}>
       <View style={styles.iconCircle}>
         <Text style={styles.iconCircleText}>{'\u{1F399}\uFE0F'}</Text>
@@ -434,32 +458,41 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
         </Text>
       </View>
       <View style={styles.cardActions}>
-        <TouchableOpacity onPress={() => handleRestore(memo.id)} style={btn.ghostSmall} activeOpacity={0.7}>
-          <Text style={btn.ghostSmallText}>Restore</Text>
+        <TouchableOpacity onPress={() => handleRestore(memo.id)} style={styles.capsuleBtn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Restore voice memo">
+          <Text style={styles.capsuleBtnText}>Restore</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePermanentDelete(memo.id)} style={btn.destructiveSmall} activeOpacity={0.7}>
-          <Text style={btn.destructiveSmallText}>Forever</Text>
+        <TouchableOpacity onPress={() => handlePermanentDelete(memo.id)} style={styles.capsuleBtn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Permanently delete voice memo">
+          <Text style={styles.capsuleBtnDestructiveText}>Forever</Text>
         </TouchableOpacity>
       </View>
     </View>
-  );
+  ), [styles, handleRestore, handlePermanentDelete]);
 
-  const renderItem = ({ item }: { item: VoiceMemo }) => {
+  const keyExtractor = useCallback((item: VoiceMemo) => item.id, []);
+
+  // Stable navigation handler so VoiceMemoCard's onPress prop is
+  // referentially equal across renders that don't change navigation.
+  const handleMemoOpen = useCallback((memo: VoiceMemo) => {
+    hapticLight();
+    navigation.navigate('VoiceMemoDetail', { memoId: memo.id });
+  }, [navigation]);
+
+  const renderItem = useCallback(({ item }: { item: VoiceMemo }) => {
     if (item.deletedAt) return renderDeletedItem(item);
     return (
       <SwipeableRow onDelete={() => handleDelete(item.id)}>
         <VoiceMemoCard
           memo={item}
-          onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.id }); }}
-          onPlayToggle={() => handlePlayToggle(item)}
+          onPress={handleMemoOpen}
+          onPlayToggle={handlePlayToggle}
           isPlaying={playingMemoId === item.id}
-          playbackProgress={playbackProgress[item.id] || 0}
-          onPin={() => handleTogglePin(item.id)}
+          progressRef={playbackProgressRef}
+          onPin={handleTogglePin}
           isPinned={isVoiceMemoPinned(item.id, pinnedIds)}
         />
       </SwipeableRow>
     );
-  };
+  }, [renderDeletedItem, handleDelete, handleMemoOpen, handlePlayToggle, playingMemoId, handleTogglePin, pinnedIds]);
 
   const renderEmpty = () => {
     if (filter === 'deleted') {
@@ -520,6 +553,9 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
               });
             }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={showFilter ? 'Hide filters' : 'Show filters'}
+            accessibilityState={{ expanded: showFilter }}
           >
             {filter !== 'active' && <View style={styles.filterDot} />}
             <Text style={[styles.filterToggleText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
@@ -536,6 +572,9 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
                 style={[styles.pill, filter === f && styles.pillActive]}
                 onPress={() => { hapticLight(); setFilter(f); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter ${f === 'active' ? 'active' : 'deleted'}`}
+                accessibilityState={{ selected: filter === f }}
               >
                 <Text style={[styles.pillText, filter === f && styles.pillTextActive]}>
                   {f === 'active' ? 'Active' : 'Deleted'}
@@ -550,7 +589,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
         ) : (
           <FlatList
             data={sortedMemos}
-            keyExtractor={(item) => item.id}
+            keyExtractor={keyExtractor}
             renderItem={renderItem}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
@@ -565,8 +604,10 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           style={styles.fab}
           onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Record new voice memo"
         >
-          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
+          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40, tintColor: colors.accent }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast

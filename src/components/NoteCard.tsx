@@ -12,9 +12,12 @@ import type { Note } from '../types/note';
 interface NoteCardProps {
   note: Note;
   isPinned: boolean;
-  onPress: () => void;
-  onDelete: () => void;
-  onTogglePin: () => void;
+  // Callbacks take the note (or its id) so the parent can pass stable
+  // references via useCallback. Wrapping in inline arrows at the call
+  // site would defeat React.memo on this component.
+  onPress: (note: Note) => void;
+  onDelete: (id: string) => void;
+  onTogglePin: (id: string) => void;
 }
 
 function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardProps) {
@@ -27,7 +30,7 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.mode === 'dark' ? colors.sectionNotepad + '20' : colors.sectionNotepad + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionNotepad + '15',
       borderRadius: 12,
       padding: 12,
       borderWidth: 1,
@@ -75,7 +78,7 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
       borderWidth: 1,
       borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
@@ -91,22 +94,30 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
       width: 6,
       height: 6,
       borderRadius: 3,
-      backgroundColor: colors.sectionNotepad,
-      marginLeft: 4,
+      backgroundColor: colors.accent,
+      marginLeft: 6,
     },
   }), [colors]);
 
+  // These thin wrappers stay stable across renders inside the memoized
+  // card body — they only get re-created when the card itself re-renders,
+  // which (thanks to React.memo) only happens when its props actually
+  // change. They bridge the parent's id-based handlers to the local DOM.
+  const handleCardPress = () => { hapticLight(); onPress(note); };
+  const handlePinPress = () => onTogglePin(note.id);
+  const handleSwipeDelete = () => onDelete(note.id);
+
   return (
-    <SwipeableRow onDelete={onDelete}>
+    <SwipeableRow onDelete={handleSwipeDelete}>
       <View style={styles.card}>
         <View style={[styles.iconCircle, { backgroundColor: note.color }]}>
           <Text style={styles.iconCircleText}>{note.icon || '\u{1F4DD}'}</Text>
         </View>
         <TouchableOpacity
           style={styles.cardCenter}
-          onPress={() => { hapticLight(); onPress(); }}
+          onPress={handleCardPress}
           accessibilityRole="button"
-          accessibilityLabel={truncated}
+          accessibilityLabel={`Note: ${truncated || 'Empty note'}`}
           accessibilityHint="Long press to copy"
           onLongPress={async () => {
             hapticMedium();
@@ -136,10 +147,10 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
         </TouchableOpacity>
         <View style={styles.cardActions}>
           <TouchableOpacity
-            onPress={onTogglePin}
+            onPress={handlePinPress}
             style={[styles.pinBtn, isPinned && styles.pinBtnActive]}
             activeOpacity={0.6}
-            accessibilityLabel={isPinned ? 'Unpin from widget' : 'Pin to widget'}
+            accessibilityLabel={isPinned ? 'Unpin note' : 'Pin note'}
             accessibilityRole="button"
           >
             <Text style={[styles.pinBtnText, isPinned && { color: colors.accent }]}>

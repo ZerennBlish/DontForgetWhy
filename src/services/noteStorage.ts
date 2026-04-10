@@ -2,6 +2,7 @@ import { getDb } from './database';
 import { kvGet, kvSet, kvRemove } from './database';
 import type { Note } from '../types/note';
 import { deleteAllNoteImages } from './noteImageStorage';
+import { safeParse, safeParseArray } from '../utils/safeParse';
 
 const PENDING_ACTION_KEY = 'pendingNoteAction';
 
@@ -36,8 +37,8 @@ function rowToNote(row: NoteRow): Note {
     icon: row.icon || '',
     fontColor: row.fontColor,
     pinned: !!row.pinned,
-    images: row.images ? JSON.parse(row.images) : undefined,
-    voiceMemos: row.voiceMemos ? JSON.parse(row.voiceMemos) : undefined,
+    images: row.images ? safeParseArray<string>(row.images) : undefined,
+    voiceMemos: row.voiceMemos ? safeParseArray<string>(row.voiceMemos) : undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
@@ -60,6 +61,12 @@ export async function getAllNotes(includeDeleted = false): Promise<Note[]> {
     ? 'SELECT * FROM notes'
     : 'SELECT * FROM notes WHERE deletedAt IS NULL';
   return db.getAllSync<NoteRow>(sql).map(rowToNote);
+}
+
+export function getNoteById(id: string): Note | null {
+  const db = getDb();
+  const row = db.getFirstSync<NoteRow>('SELECT * FROM notes WHERE id = ?', [id]);
+  return row ? rowToNote(row) : null;
 }
 
 export async function addNote(note: Note): Promise<Note[]> {
@@ -107,7 +114,7 @@ export async function permanentlyDeleteNote(id: string): Promise<Note[]> {
   const db = getDb();
   const row = db.getFirstSync<NoteRow>('SELECT * FROM notes WHERE id=?', [id]);
   if (row?.images) {
-    const imgs = JSON.parse(row.images) as string[];
+    const imgs = safeParseArray<string>(row.images);
     await deleteAllNoteImages(imgs);
   }
   db.runSync('DELETE FROM notes WHERE id=?', [id]);
@@ -123,7 +130,7 @@ export async function purgeDeletedNotes(): Promise<void> {
   );
   for (const row of toPurge) {
     if (row.images) {
-      const imgs = JSON.parse(row.images) as string[];
+      const imgs = safeParseArray<string>(row.images);
       await deleteAllNoteImages(imgs);
     }
   }
@@ -138,7 +145,7 @@ export async function purgeDeletedNotes(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function setPendingNoteAction(action: PendingNoteAction): Promise<void> {
-  kvSet(PENDING_ACTION_KEY, JSON.stringify(action));
+  kvSet(PENDING_ACTION_KEY, JSON.stringify({ ...action, timestamp: Date.now() }));
 }
 
 export async function getPendingNoteAction(): Promise<PendingNoteAction | null> {
@@ -146,8 +153,38 @@ export async function getPendingNoteAction(): Promise<PendingNoteAction | null> 
     const raw = kvGet(PENDING_ACTION_KEY);
     if (!raw) return null;
     kvRemove(PENDING_ACTION_KEY);
-    return JSON.parse(raw) as PendingNoteAction;
+    const parsed = safeParse<(PendingNoteAction & { timestamp?: number }) | null>(raw, null);
+    if (!parsed) return null;
+    if (parsed.timestamp && Date.now() - parsed.timestamp > 30_000) return null;
+    return parsed;
   } catch {
     return null;
   }
+}
+
+/**
+ * Read the pending note action WITHOUT removing it from storage.
+ * Callers must explicitly call clearPendingNoteAction() once they've
+ * successfully processed the action. This lets a caller skip processing
+ * (e.g. editor is dirty) without losing the action for the next check.
+ */
+export function peekPendingNoteAction(): PendingNoteAction | null {
+  try {
+    const raw = kvGet(PENDING_ACTION_KEY);
+    if (!raw) return null;
+    const parsed = safeParse<(PendingNoteAction & { timestamp?: number }) | null>(raw, null);
+    if (!parsed) return null;
+    if (parsed.timestamp && Date.now() - parsed.timestamp > 30_000) {
+      // Expired — remove it proactively so it doesn't linger in storage.
+      kvRemove(PENDING_ACTION_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingNoteAction(): void {
+  try { kvRemove(PENDING_ACTION_KEY); } catch {}
 }

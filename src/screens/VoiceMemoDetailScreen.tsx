@@ -9,6 +9,7 @@ import {
   ToastAndroid,
   Image,
   Keyboard,
+  GestureResponderEvent,
 } from 'react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useFocusEffect } from '@react-navigation/native';
@@ -328,7 +329,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     try { player.seekTo(pos); } catch { /* */ }
   };
 
-  const handleSeekEvent = (e: any) => {
+  const handleSeekEvent = (e: GestureResponderEvent) => {
     if (barWidthRef.current <= 0) return;
     const dur = playerStatus.duration || memo?.duration || 0;
     if (!Number.isFinite(dur) || dur <= 0) return;
@@ -384,10 +385,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
           borderWidth: 1,
           borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-        },
-        trashIconWrap: {
-          alignItems: 'center',
-          justifyContent: 'center',
         },
         content: {
           flex: 1,
@@ -635,6 +632,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
                 onPress={() => { hapticLight(); setIsViewMode(false); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Edit voice memo"
               >
                 <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>Edit</Text>
               </TouchableOpacity>
@@ -643,6 +642,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
                 onPress={handleSaveExisting}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Save changes"
               >
                 <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>Save</Text>
               </TouchableOpacity>
@@ -653,6 +654,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               style={styles.trashBtn}
               onPress={handleDelete}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Delete voice memo"
             >
               <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
             </TouchableOpacity>
@@ -722,7 +725,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           </View>
 
           {/* Time display */}
-          <View style={styles.timeRow}>
+          <View style={styles.timeRow} accessibilityLiveRegion="polite">
             <Text style={[styles.timeText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
               {formatTime(playerStatus.currentTime)}
             </Text>
@@ -735,6 +738,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               style={styles.skipBtn}
               onPress={skipBack}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Skip back"
             >
               <Text style={[styles.skipText, bgUri && { color: 'rgba(255,255,255,0.7)' }]}>-5</Text>
             </TouchableOpacity>
@@ -743,11 +748,13 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               style={styles.playPauseBtn}
               onPress={togglePlay}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={playerStatus.playing ? "Pause voice memo" : "Play voice memo"}
             >
               {playerStatus.playing ? (
-                <GlowIcon source={MEDIA_ICONS.pause} size={32} glowColor="#4CAF50" />
+                <GlowIcon source={MEDIA_ICONS.pause} size={32} glowColor={colors.success} />
               ) : (
-                <GlowIcon source={MEDIA_ICONS.play} size={32} glowColor="#4CAF50" />
+                <GlowIcon source={MEDIA_ICONS.play} size={32} glowColor={colors.success} />
               )}
             </TouchableOpacity>
 
@@ -755,6 +762,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               style={styles.skipBtn}
               onPress={skipForward}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Skip forward"
             >
               <Text style={[styles.skipText, bgUri && { color: 'rgba(255,255,255,0.7)' }]}>+5</Text>
             </TouchableOpacity>
@@ -769,6 +778,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             style={styles.discardBtn}
             onPress={handleDiscardNew}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Discard recording"
           >
             <Text style={styles.discardBtnText}>Discard</Text>
           </TouchableOpacity>
@@ -777,6 +788,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             onPress={handleSaveNew}
             activeOpacity={0.7}
             disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel="Save recording"
           >
             <Text style={styles.saveBtnText}>
               {saving ? 'Saving...' : 'Save'}

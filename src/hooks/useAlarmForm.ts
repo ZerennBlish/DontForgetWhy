@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { TextInput, Alert, ToastAndroid } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import * as ImagePicker from 'expo-image-picker';
@@ -27,7 +27,94 @@ interface UseAlarmFormParams {
   initialDate?: string;
 }
 
-export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams) {
+interface UseAlarmFormResult {
+  // Time state
+  timeFormat: '12h' | '24h';
+  hourText: string;
+  setHourText: React.Dispatch<React.SetStateAction<string>>;
+  minuteText: string;
+  setMinuteText: React.Dispatch<React.SetStateAction<string>>;
+  ampm: 'AM' | 'PM';
+  setAmpm: React.Dispatch<React.SetStateAction<'AM' | 'PM'>>;
+  pickerHours: number;
+  pickerMinutes: number;
+  timeInputMode: 'scroll' | 'type';
+  modalHours: number;
+  modalMinutes: number;
+  modalAmpm: 'AM' | 'PM';
+  setModalAmpm: React.Dispatch<React.SetStateAction<'AM' | 'PM'>>;
+  hourRef: React.RefObject<TextInput | null>;
+  minuteRef: React.RefObject<TextInput | null>;
+  // Time handlers
+  handleHourChange: (text: string) => void;
+  handleMinuteChange: (text: string) => void;
+  handleMinuteKeyPress: (e: { nativeEvent: { key: string } }) => void;
+  handleModalHoursChange: (h: number) => void;
+  handleModalMinutesChange: (m: number) => void;
+  prepareTimeModal: () => void;
+  confirmTimeModal: () => void;
+  // Form state
+  nickname: string;
+  setNickname: React.Dispatch<React.SetStateAction<string>>;
+  note: string;
+  setNote: React.Dispatch<React.SetStateAction<string>>;
+  placeholder: string;
+  selectedIcon: string | null;
+  setSelectedIcon: React.Dispatch<React.SetStateAction<string | null>>;
+  guessWhy: boolean;
+  setGuessWhy: React.Dispatch<React.SetStateAction<boolean>>;
+  selectedPrivate: boolean;
+  setSelectedPrivate: React.Dispatch<React.SetStateAction<boolean>>;
+  privateHint: string;
+  mode: 'recurring' | 'one-time';
+  setMode: React.Dispatch<React.SetStateAction<'recurring' | 'one-time'>>;
+  selectedDate: string | null;
+  setSelectedDate: React.Dispatch<React.SetStateAction<string | null>>;
+  iconInputRef: React.RefObject<TextInput | null>;
+  // Sound state
+  soundMode: SoundMode;
+  setSoundMode: React.Dispatch<React.SetStateAction<SoundMode>>;
+  selectedSoundUri: string | null;
+  setSelectedSoundUri: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedSoundName: string | null;
+  setSelectedSoundName: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedSystemSoundID: number | null;
+  setSelectedSystemSoundID: React.Dispatch<React.SetStateAction<number | null>>;
+  // Day selection
+  selectedDays: AlarmDay[];
+  setSelectedDays: React.Dispatch<React.SetStateAction<AlarmDay[]>>;
+  handleToggleDay: (day: AlarmDay, currentMode: 'one-time' | 'recurring', clearDateFn?: () => void) => void;
+  handleQuickDays: (preset: AlarmDay[], clearDateFn?: () => void) => void;
+  isWeekdaysSelected: boolean;
+  isWeekendsSelected: boolean;
+  isEverydaySelected: boolean;
+  // Calendar
+  calMonth: number;
+  calYear: number;
+  showCalendar: boolean;
+  handleCalPrev: () => void;
+  handleCalNext: () => void;
+  handleSelectDate: (day: number) => void;
+  toggleCalendar: () => void;
+  calDays: number;
+  calFirstDay: number;
+  MONTH_NAMES: string[];
+  // Photo
+  photoUri: string | null;
+  pickPhoto: () => Promise<void>;
+  clearPhoto: () => void;
+  // Actions
+  clearDate: () => void;
+  applySystemSound: (sound: SystemSound | null) => void;
+  hasContent: () => boolean;
+  save: (onSuccess: () => void) => Promise<void>;
+  switchMode: (newMode: 'recurring' | 'one-time') => void;
+  // Computed
+  isEditing: boolean;
+  isDirty: boolean;
+}
+
+export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams): UseAlarmFormResult {
   const isEditing = !!existingAlarm;
   const [alarmId] = useState(() => existingAlarm?.id || uuidv4());
 
@@ -125,6 +212,12 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
   const originalPhotoRef = useRef<string | null>(existingAlarm?.photoUri ?? null);
   const photoChangedRef = useRef(false);
 
+  // Dirty tracking — snapshot baseline, compare current state each render.
+  // A simple flag flip can't detect reverts (e.g., type and delete) and
+  // misses fields not in its dep list. We snapshot the source-of-truth
+  // values once on mount, then diff the derived form state against it.
+  const originalStateRef = useRef<string | null>(null);
+
   // Day selection
   const {
     selectedDays, setSelectedDays,
@@ -173,14 +266,15 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
   };
 
   // Calendar
+  const initDateStr = existingAlarm?.date || initialDate || null;
   const {
     calendarMonth: calMonth, calendarYear: calYear,
     showCalendar, handleCalPrev, handleCalNext,
     handleSelectDate, toggleCalendar,
     calDays, calFirstDay, MONTH_NAMES,
   } = useCalendar({
-    initialMonth: (existingAlarm?.date || initialDate) ? (existingAlarm?.date || initialDate)!.split('-').map(Number)[1] - 1 : undefined,
-    initialYear: (existingAlarm?.date || initialDate) ? (existingAlarm?.date || initialDate)!.split('-').map(Number)[0] : undefined,
+    initialMonth: initDateStr ? initDateStr.split('-').map(Number)[1] - 1 : undefined,
+    initialYear: initDateStr ? initDateStr.split('-').map(Number)[0] : undefined,
     onSelectDate: (dateStr) => {
       setSelectedDate(dateStr);
       if (mode === 'recurring') {
@@ -411,7 +505,7 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
         }
       }
 
-      if (!isEditing || existingAlarm!.enabled) {
+      if (!isEditing || existingAlarm?.enabled) {
         const granted = await requestPermissions();
         if (!granted) {
           Alert.alert('Permissions Needed', 'Enable notifications to use alarms.');
@@ -451,7 +545,7 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
             mode,
             days: selectedDays,
             date: mode === 'one-time' ? alarmDate : null,
-            soundId: soundModeToSoundId(soundMode) ?? (selectedSoundUri ? undefined : (existingAlarm!.soundId === 'silent' || existingAlarm!.soundId === 'true_silent' ? undefined : existingAlarm!.soundId)),
+            soundId: soundModeToSoundId(soundMode) ?? (selectedSoundUri ? undefined : (existingAlarm?.soundId === 'silent' || existingAlarm?.soundId === 'true_silent' ? undefined : existingAlarm?.soundId)),
             soundUri: soundMode === 'sound' ? (selectedSoundUri || undefined) : undefined,
             soundName: soundMode === 'sound' ? (selectedSoundName || undefined) : undefined,
             soundID: soundMode === 'sound' ? (selectedSystemSoundID ?? undefined) : undefined,
@@ -562,6 +656,101 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
     }
   };
 
+  // Canonicalize time state into a stable "HH:MM" 24-hour string so the
+  // snapshot and current-state comparison are both independent of the
+  // 12h/24h format setting (which hydrates asynchronously from settings).
+  const getCanonicalTime = useCallback((): string => {
+    const rawH = timeInputMode === 'type'
+      ? (parseInt(hourText, 10) || pickerHours)
+      : pickerHours;
+    const rawM = timeInputMode === 'type'
+      ? (parseInt(minuteText, 10) || pickerMinutes)
+      : pickerMinutes;
+    let h: number;
+    if (timeFormat === '12h') {
+      // Before settings hydration the picker may still hold a 24-hour
+      // value even though timeFormat reads '12h'. Treat anything > 12
+      // as already being a 24-hour hour.
+      if (rawH > 12) {
+        h = rawH;
+      } else {
+        const h12 = rawH || 12;
+        h = ampm === 'AM' ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12);
+      }
+    } else {
+      h = rawH || 0;
+    }
+    const m = rawM || 0;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  }, [hourText, minuteText, ampm, pickerHours, pickerMinutes, timeInputMode, timeFormat]);
+
+  // Take the baseline snapshot once, during the first render, from the
+  // source-of-truth data (existingAlarm or "now" for a new alarm). Using
+  // the source — not derived form state — makes the snapshot stable across
+  // the async loadSettings hydration that rewrites the time picker fields.
+  if (originalStateRef.current === null) {
+    const initialTime24 = existingAlarm?.time
+      ?? `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
+    const initialDays: AlarmDay[] = existingAlarm?.days?.length
+      ? [...(existingAlarm.days as AlarmDay[])].sort()
+      : [];
+    originalStateRef.current = JSON.stringify({
+      time: initialTime24,
+      nickname: existingAlarm?.nickname || '',
+      note: existingAlarm?.note || '',
+      selectedIcon: existingAlarm?.icon || null,
+      guessWhy: existingAlarm?.guessWhy ?? false,
+      selectedPrivate: existingAlarm?.private || false,
+      mode: existingAlarm?.mode || 'one-time',
+      selectedDate: existingAlarm?.date || initialDate || null,
+      days: initialDays,
+      soundMode: soundIdToSoundMode(existingAlarm?.soundId),
+      selectedSoundUri: existingAlarm?.soundUri || null,
+      selectedSoundName: existingAlarm?.soundName || null,
+      selectedSystemSoundID: existingAlarm?.soundID ?? null,
+      // photoUri reflects the alarmPhotoExists check done in the useState
+      // initializer above, which may null out a missing file. Capture the
+      // post-check value so a stale-but-nulled photoUri doesn't read dirty.
+      photoUri,
+    });
+  }
+
+  const isDirty = useMemo(() => {
+    if (originalStateRef.current === null) return false;
+    const current = JSON.stringify({
+      time: getCanonicalTime(),
+      nickname,
+      note,
+      selectedIcon,
+      guessWhy,
+      selectedPrivate,
+      mode,
+      selectedDate,
+      days: [...selectedDays].sort(),
+      soundMode,
+      selectedSoundUri,
+      selectedSoundName,
+      selectedSystemSoundID,
+      photoUri,
+    });
+    return current !== originalStateRef.current;
+  }, [
+    getCanonicalTime,
+    nickname,
+    note,
+    selectedIcon,
+    guessWhy,
+    selectedPrivate,
+    mode,
+    selectedDate,
+    selectedDays,
+    soundMode,
+    selectedSoundUri,
+    selectedSoundName,
+    selectedSystemSoundID,
+    photoUri,
+  ]);
+
   return {
     // Time state
     timeFormat, hourText, setHourText, minuteText, setMinuteText,
@@ -600,5 +789,6 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
     clearDate, applySystemSound, hasContent, save, switchMode,
     // Computed
     isEditing,
+    isDirty,
   };
 }

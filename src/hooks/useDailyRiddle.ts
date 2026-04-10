@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Animated } from 'react-native';
 import { kvGet, kvSet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import {
   RIDDLES,
   getDailyRiddleIndex,
   type RiddleCategory,
+  type Riddle,
 } from '../data/riddles';
 import {
   fetchMultipleOnlineRiddles,
@@ -103,7 +104,49 @@ export function difficultyColor(diff: string) {
   return '#F44336';
 }
 
-export function useDailyRiddle() {
+interface UseDailyRiddleResult {
+  // Mode
+  mode: ScreenMode;
+  setMode: React.Dispatch<React.SetStateAction<ScreenMode>>;
+
+  // Daily riddle
+  dailyRiddle: Riddle;
+  stats: DailyRiddleStats;
+  revealed: boolean;
+  answered: boolean;
+  resultMessage: string;
+  gotIt: boolean;
+  hintShown: boolean;
+  alreadyPlayedToday: boolean;
+  revealAnim: Animated.Value;
+
+  // Browse
+  selectedCategory: RiddleCategory | 'all';
+  setSelectedCategory: React.Dispatch<React.SetStateAction<RiddleCategory | 'all'>>;
+  searchQuery: string;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  expandedRiddleId: number | null;
+  setExpandedRiddleId: React.Dispatch<React.SetStateAction<number | null>>;
+  filteredRiddles: Riddle[];
+
+  // Online browse
+  browseSource: BrowseSource;
+  setBrowseSource: React.Dispatch<React.SetStateAction<BrowseSource>>;
+  onlineRiddles: OnlineRiddle[];
+  onlineLoading: boolean;
+  onlineError: boolean;
+  expandedOnlineId: string | null;
+  setExpandedOnlineId: React.Dispatch<React.SetStateAction<string | null>>;
+  isOnlineAvailable: boolean;
+
+  // Callbacks
+  handleReveal: () => void;
+  handleAnswer: (correct: boolean) => Promise<void>;
+  handleShowHint: () => void;
+  handleFetchOnlineRiddles: () => Promise<void>;
+}
+
+export function useDailyRiddle(): UseDailyRiddleResult {
   const [mode, setMode] = useState<ScreenMode>('daily');
   const [stats, setStats] = useState<DailyRiddleStats>(DEFAULT_STATS);
   const [revealed, setRevealed] = useState(false);

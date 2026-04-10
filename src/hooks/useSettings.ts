@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Platform,
   Linking,
@@ -30,7 +30,62 @@ import type { RootStackParamList } from '../navigation/types';
 
 type SettingsNavigation = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 
-export function useSettings(navigation: SettingsNavigation) {
+interface UseSettingsResult {
+  // Settings
+  timeFormat: '12h' | '24h';
+  timeInputMode: 'scroll' | 'type';
+  hapticsEnabled: boolean;
+  gameSoundsEnabled: boolean;
+  voiceRoasts: boolean;
+
+  // Permissions
+  hasPermissionIssues: boolean;
+
+  // Silence
+  silenceAll: boolean;
+  silenceRemaining: string | null;
+  silencePickerVisible: boolean;
+  setSilencePickerVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  pickerHours: number;
+  setPickerHours: React.Dispatch<React.SetStateAction<number>>;
+  pickerMinutes: number;
+  setPickerMinutes: React.Dispatch<React.SetStateAction<number>>;
+
+  // Background
+  bgUri: string | null;
+  bgOpacity: number;
+
+  // Backup
+  lastBackup: string | null;
+  isExporting: boolean;
+  isImporting: boolean;
+  showNudge: boolean;
+  autoBackupEnabled: boolean;
+  autoBackupFrequency: BackupFrequency;
+  autoBackupFolderName: string | null;
+
+  // Handlers
+  handleTimeFormatToggle: (value: boolean) => Promise<void>;
+  handleTimeInputModeChange: (mode: 'scroll' | 'type') => Promise<void>;
+  handleHapticsToggle: (value: boolean) => Promise<void>;
+  handleGameSoundsToggle: (value: boolean) => Promise<void>;
+  handleVoiceToggle: (val: boolean) => Promise<void>;
+  handleSilenceToggle: (value: boolean) => Promise<void>;
+  handleSilencePickerCancel: () => void;
+  handleSilencePickerSet: () => Promise<void>;
+  handleSilencePickerIndefinite: () => Promise<void>;
+  handlePickBackground: () => Promise<void>;
+  handleClearBackground: () => void;
+  handleSetOverlayOpacity: (val: number) => Promise<void>;
+  handleExport: () => Promise<void>;
+  handleImport: () => Promise<void>;
+  handleAutoBackupToggle: (value: boolean) => Promise<void>;
+  handleChangeFolder: () => Promise<void>;
+  handleFrequencyChange: (freq: BackupFrequency) => void;
+  handleSendFeedback: () => void;
+}
+
+export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);

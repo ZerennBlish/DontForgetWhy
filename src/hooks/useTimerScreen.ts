@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ToastAndroid, TextInput, Alert, AppState } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import { useFocusEffect } from '@react-navigation/native';
@@ -54,7 +54,66 @@ function recalculateTimers(timers: ActiveTimer[]): ActiveTimer[] {
   });
 }
 
-export function useTimerScreen() {
+interface UseTimerScreenResult {
+  // Active timers
+  activeTimers: ActiveTimer[];
+
+  // Background
+  bgUri: string | null;
+  setBgUri: React.Dispatch<React.SetStateAction<string | null>>;
+  bgOpacity: number;
+
+  // Presets
+  presets: TimerPreset[];
+  recentPresets: TimerPreset[];
+  restPresets: TimerPreset[];
+  customPreset: TimerPreset | null;
+  pinnedPresets: TimerPreset[];
+  pinnedIds: string[];
+
+  // User timers
+  userTimers: UserTimer[];
+
+  // Modal state
+  customModal: TimerPreset | null;
+  setCustomModal: React.Dispatch<React.SetStateAction<TimerPreset | null>>;
+  customHours: number;
+  setCustomHours: React.Dispatch<React.SetStateAction<number>>;
+  customMinutes: number;
+  setCustomMinutes: React.Dispatch<React.SetStateAction<number>>;
+  customSeconds: number;
+  setCustomSeconds: React.Dispatch<React.SetStateAction<number>>;
+  soundMode: 'sound' | 'vibrate' | 'silent';
+  setSoundMode: React.Dispatch<React.SetStateAction<'sound' | 'vibrate' | 'silent'>>;
+  isCreatingNew: boolean;
+  newTimerName: string;
+  setNewTimerName: React.Dispatch<React.SetStateAction<string>>;
+  newTimerIcon: string;
+  setNewTimerIcon: React.Dispatch<React.SetStateAction<string>>;
+  editingUserTimer: UserTimer | null;
+  timeInputMode: 'scroll' | 'type';
+  iconInputRef: React.RefObject<TextInput | null>;
+
+  // Sound picker
+  timerSoundName: string | null;
+  timerSoundID: number | null;
+  timerSoundPickerVisible: boolean;
+  setTimerSoundPickerVisible: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Callbacks
+  handleStartTimer: (preset: TimerPreset, timerSoundId?: string) => Promise<void>;
+  handleLongPress: (preset: TimerPreset) => void;
+  handleRemoveTimer: (id: string) => Promise<void>;
+  handleTogglePause: (id: string) => Promise<void>;
+  handlePinToggle: (preset: TimerPreset) => Promise<void>;
+  handleStartUserTimer: (ut: UserTimer) => Promise<void>;
+  handleUserTimerLongPress: (ut: UserTimer) => void;
+  handleModalSave: () => Promise<void> | void;
+  handleTimerSoundSelect: (sound: SystemSound | null) => Promise<void>;
+  closeModal: () => void;
+}
+
+export function useTimerScreen(): UseTimerScreenResult {
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
@@ -263,7 +322,6 @@ export function useTimerScreen() {
   const { recentPresets, restPresets, customPreset, pinnedPresets } = useMemo(() => {
     const custom = presets.find((p) => p.id === 'custom') || null;
     const nonCustom = presets.filter((p) => p.id !== 'custom');
-    const recentSet = new Set(recentIds);
     const pinnedSet = new Set(pinnedIds);
 
     const pinned = nonCustom.filter((p) => pinnedSet.has(p.id));

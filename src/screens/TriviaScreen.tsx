@@ -137,7 +137,6 @@ export default function TriviaScreen({ navigation }: Props) {
 
   // Phase state
   const [phase, setPhase] = useState<Phase>('category');
-  const [isOnline, setIsOnline] = useState(false);
   const [onlineMode, setOnlineMode] = useState(false);
   const [allSeenMessage, setAllSeenMessage] = useState<string | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('all');
@@ -149,7 +148,6 @@ export default function TriviaScreen({ navigation }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [shuffledAnswers, setShuffledAnswers] = useState<string[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [score, setScore] = useState(0);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
@@ -165,9 +163,7 @@ export default function TriviaScreen({ navigation }: Props) {
 
   // Check online availability on mount (online mode is disabled for now)
   useEffect(() => {
-    checkOnlineAvailable().then((available) => {
-      setIsOnline(available);
-    });
+    checkOnlineAvailable().then(() => {});
   }, []);
 
   // Timer logic
@@ -205,7 +201,6 @@ export default function TriviaScreen({ navigation }: Props) {
     answerLocked.current = true;
     hapticHeavy();
     setSelectedAnswer('__timeout__');
-    setIsCorrect(false);
     setCurrentStreak(0);
     const elapsed = Date.now() - questionStartTime;
     setQuestionTimes((prev) => [...prev, elapsed]);
@@ -221,7 +216,6 @@ export default function TriviaScreen({ navigation }: Props) {
     } else {
       setCurrentIndex(nextIndex);
       setSelectedAnswer(null);
-      setIsCorrect(null);
       setTimeLeft(roundTimePerQuestion.current);
       timerWidth.setValue(1);
       answerLocked.current = false;
@@ -304,7 +298,6 @@ export default function TriviaScreen({ navigation }: Props) {
     setLongestStreak(0);
     setQuestionTimes([]);
     setSelectedAnswer(null);
-    setIsCorrect(null);
     setTimeLeft(timePerQ);
     timerWidth.setValue(1);
     answerLocked.current = false;
@@ -326,7 +319,6 @@ export default function TriviaScreen({ navigation }: Props) {
     const elapsed = Date.now() - questionStartTime;
 
     setSelectedAnswer(answer);
-    setIsCorrect(correct);
     setQuestionTimes((prev) => [...prev, elapsed]);
 
     if (correct) {
@@ -352,6 +344,22 @@ export default function TriviaScreen({ navigation }: Props) {
     answerLocked.current = true;
     setPhase('category');
   }, [timerWidth]);
+
+  // Intercept hardware back during active gameplay. HomeButton's
+  // popToTop dispatches POP_TO_TOP/RESET — let those through so Home
+  // actually navigates away. Plain POP stays in-game (return to category).
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      const actionType = e.data.action.type;
+      if (actionType === 'POP_TO_TOP' || actionType === 'RESET') {
+        return;
+      }
+      e.preventDefault();
+      handleBackFromGame();
+    });
+    return unsubscribe;
+  }, [navigation, phase, handleBackFromGame]);
 
   const getStarRating = (s: number): number => {
     if (s >= 9) return 3;
@@ -397,6 +405,8 @@ export default function TriviaScreen({ navigation }: Props) {
               style={[styles.categoryCard, selectedCategory === cat.id && styles.categoryCardActive]}
               onPress={() => { hapticLight(); playGameSound('tap'); setSelectedCategory(cat.id); }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Play ${cat.label} trivia`}
             >
               <Image source={CATEGORY_IMAGES[cat.id]} style={styles.categoryImage} resizeMode="contain" />
               <Text style={[styles.categoryLabel, selectedCategory === cat.id && styles.categoryLabelActive]}>{cat.label}</Text>
@@ -414,6 +424,9 @@ export default function TriviaScreen({ navigation }: Props) {
                 style={[styles.pill, difficultyFilter === d && styles.pillActive]}
                 onPress={() => { hapticLight(); playGameSound('tap'); setDifficultyFilter(d); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={d === 'all' ? 'All difficulties' : `${d.charAt(0).toUpperCase() + d.slice(1)} difficulty`}
+                accessibilityState={{ selected: difficultyFilter === d }}
               >
                 <Text style={[styles.pillText, difficultyFilter === d && styles.pillTextActive]}>
                   {d === 'all' ? 'All' : d.charAt(0).toUpperCase() + d.slice(1)}
@@ -431,6 +444,9 @@ export default function TriviaScreen({ navigation }: Props) {
                 style={[styles.pill, speedOption === s && styles.pillActive]}
                 onPress={() => { hapticLight(); playGameSound('tap'); setSpeedOption(s); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${s.charAt(0).toUpperCase() + s.slice(1)} speed`}
+                accessibilityState={{ selected: speedOption === s }}
               >
                 <Text style={[styles.pillText, speedOption === s && styles.pillTextActive]}>
                   {s === 'relaxed' ? 'Relaxed' : s === 'normal' ? 'Normal' : 'Blitz'}
@@ -443,6 +459,8 @@ export default function TriviaScreen({ navigation }: Props) {
           style={styles.startBtn}
           onPress={() => { hapticLight(); playGameSound('tap'); startRound(selectedCategory); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Start trivia game"
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Image source={CATEGORY_IMAGES[selectedCategory]} style={{ width: 40, height: 40 }} resizeMode="contain" />
@@ -508,6 +526,8 @@ export default function TriviaScreen({ navigation }: Props) {
             style={styles.primaryBtn}
             onPress={() => { hapticLight(); playGameSound('tap'); startRound(selectedCategory); }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Play again"
           >
             <Text style={styles.primaryBtnText}>Play Again</Text>
           </TouchableOpacity>
@@ -521,6 +541,8 @@ export default function TriviaScreen({ navigation }: Props) {
               setAllSeenMessage(null);
             }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Change category"
           >
             <Text style={styles.secondaryBtnText}>Change Category</Text>
           </TouchableOpacity>
@@ -547,7 +569,7 @@ export default function TriviaScreen({ navigation }: Props) {
           <HomeButton forceDark />
         </View>
         <View style={styles.topBarRight}>
-          <Text style={styles.topBarCounter}>{currentIndex + 1}/{questions.length}</Text>
+          <Text style={styles.topBarCounter} accessibilityLiveRegion="polite">{currentIndex + 1}/{questions.length}</Text>
           {currentStreak > 1 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
               <Image source={require('../../assets/icons/icon-fire.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
@@ -582,7 +604,7 @@ export default function TriviaScreen({ navigation }: Props) {
           ]}
         />
       </View>
-      <Text style={[styles.timerText, { color: timerColor }]}>{timeLeft}s</Text>
+      <Text style={[styles.timerText, { color: timerColor }]} accessibilityLiveRegion="polite">{timeLeft}s</Text>
 
       {/* Question */}
       <View style={styles.questionContainer}>
@@ -614,6 +636,8 @@ export default function TriviaScreen({ navigation }: Props) {
               onPress={() => handleAnswer(answer)}
               activeOpacity={0.7}
               disabled={selectedAnswer !== null}
+              accessibilityRole="button"
+              accessibilityLabel={answer}
             >
               <Text style={textStyle}>{answer}</Text>
             </TouchableOpacity>
@@ -665,29 +689,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       fontFamily: FONTS.gameHeader,
     },
 
-    // Mode toggle
-    modeToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      alignSelf: 'flex-start',
-      marginHorizontal: 20,
-      marginBottom: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      backgroundColor: 'rgba(255,255,255,0.15)',
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
-      gap: 6,
-    },
-    modeIcon: {
-      fontSize: 16,
-    },
-    modeText: {
-      fontSize: 13,
-      fontFamily: FONTS.semiBold,
-      color: colors.textSecondary,
-    },
     seenNote: {
       fontSize: 12,
       fontFamily: FONTS.regular,
@@ -806,11 +807,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       alignItems: 'center',
       gap: 8,
     },
-    topBarCategory: {
-      fontSize: 14,
-      fontFamily: FONTS.semiBold,
-      color: 'rgba(255,255,255,0.8)',
-    },
     topBarRight: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -874,7 +870,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
     questionText: {
       fontSize: 20,
       fontFamily: FONTS.bold,
-      color: '#FFFFFF',
+      color: colors.overlayText,
       textAlign: 'center',
       lineHeight: 32,
       textShadowColor: 'rgba(0, 0, 0, 0.8)',
@@ -916,18 +912,18 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       textAlign: 'center',
     },
     correctBtn: {
-      backgroundColor: '#4CAF50',
-      borderColor: '#4CAF50',
+      backgroundColor: colors.success,
+      borderColor: colors.success,
     },
     correctText: {
-      color: '#FFFFFF',
+      color: colors.overlayText,
     },
     incorrectBtn: {
       backgroundColor: colors.red,
       borderColor: colors.red,
     },
     incorrectText: {
-      color: '#FFFFFF',
+      color: colors.overlayText,
     },
     dimmedBtn: {
       opacity: 0.3,

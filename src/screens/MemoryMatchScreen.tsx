@@ -406,6 +406,22 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     setGamePhase('select');
   }, []);
 
+  // Intercept hardware back during active gameplay. HomeButton's
+  // popToTop dispatches POP_TO_TOP/RESET — let those through so Home
+  // actually navigates away. Plain POP stays in-game (return to menu).
+  useEffect(() => {
+    if (gamePhase !== 'playing') return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      const actionType = e.data.action.type;
+      if (actionType === 'POP_TO_TOP' || actionType === 'RESET') {
+        return;
+      }
+      e.preventDefault();
+      handleBackFromGame();
+    });
+    return unsubscribe;
+  }, [navigation, gamePhase, handleBackFromGame]);
+
   // ---------- Styles ----------
 
   const { width: screenWidthForLayout } = Dimensions.get('window');
@@ -552,10 +568,6 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           color: colors.overlayText,
           marginBottom: 12,
         },
-        starsText: {
-          fontSize: 36,
-          marginBottom: 20,
-        },
         winStatsCard: {
           backgroundColor: colors.card,
           borderRadius: 16,
@@ -655,6 +667,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
                   style={styles.difficultyBtn}
                   onPress={() => { hapticLight(); playGameSound('tap'); startGame(diff); }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${config.label}, ${config.cols} by ${config.rows} grid`}
                 >
                   <Text style={styles.difficultyLabel}>{config.label}</Text>
                   <Text style={styles.difficultyInfo}>
@@ -742,6 +756,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
               style={styles.playAgainBtn}
               onPress={() => { hapticLight(); playGameSound('tap'); startGame(difficulty); }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Play again"
             >
               <Text style={styles.playAgainText}>Play Again</Text>
             </TouchableOpacity>
@@ -750,6 +766,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
               style={styles.changeDifficultyBtn}
               onPress={() => { hapticLight(); playGameSound('tap'); setGamePhase('select'); }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Change difficulty"
             >
               <Text style={styles.changeDifficultyText}>Change Difficulty</Text>
             </TouchableOpacity>
@@ -783,7 +801,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
               </View>
               <Text style={styles.gameDifficulty}>{config.label}</Text>
             </View>
-            <View style={styles.statsRow}>
+            <View style={styles.statsRow} accessibilityLiveRegion="polite">
               <Text style={styles.statText}>Moves: {moves}</Text>
               <Text style={styles.statText}>{formatTime(elapsedTime)}</Text>
             </View>

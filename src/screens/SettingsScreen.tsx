@@ -38,7 +38,7 @@ export default function SettingsScreen({ navigation }: Props) {
     timeFormat, timeInputMode, hapticsEnabled, voiceRoasts,
     hasPermissionIssues,
     silenceAll, silenceRemaining,
-    silencePickerVisible, setSilencePickerVisible,
+    silencePickerVisible,
     pickerHours, setPickerHours, pickerMinutes, setPickerMinutes,
     bgUri, bgOpacity,
     lastBackup, isExporting, isImporting, showNudge,
@@ -89,29 +89,20 @@ export default function SettingsScreen({ navigation }: Props) {
     permissionBanner: {
       marginHorizontal: 16,
       marginBottom: 16,
-      backgroundColor: 'rgba(255, 107, 107, 0.15)',
+      backgroundColor: colors.red + '25',
       borderRadius: 12,
       paddingVertical: 14,
       paddingHorizontal: 16,
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: 'rgba(255, 107, 107, 0.3)',
-    },
-    permissionBannerIcon: {
-      fontSize: 20,
-      marginRight: 12,
+      borderColor: colors.red + '4D',
     },
     permissionBannerText: {
       fontSize: 14,
       fontFamily: FONTS.semiBold,
       color: colors.red,
       flex: 1,
-    },
-    permissionBannerChevron: {
-      fontSize: 18,
-      color: colors.red,
-      marginLeft: 8,
     },
     card: {
       marginHorizontal: 16,
@@ -200,26 +191,6 @@ export default function SettingsScreen({ navigation }: Props) {
       alignItems: 'center',
       padding: 24,
     },
-    modalCard: {
-      backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 24,
-      width: '100%',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    modalTitle: {
-      fontSize: 18,
-      fontFamily: FONTS.bold,
-      color: colors.textPrimary,
-      textAlign: 'center',
-      marginBottom: 20,
-    },
-    modalBtns: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 20,
-    },
     setupGuideDesc: {
       fontSize: 13,
       fontFamily: FONTS.regular,
@@ -231,10 +202,6 @@ export default function SettingsScreen({ navigation }: Props) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-    },
-    aboutChevron: {
-      fontSize: 18,
-      color: colors.textTertiary,
     },
   }), [colors, insets.bottom]);
 
@@ -260,6 +227,8 @@ export default function SettingsScreen({ navigation }: Props) {
           style={styles.permissionBanner}
           onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Fix notification permissions"
         >
           <Image source={APP_ICONS.warning} style={{ width: 18, height: 18 }} resizeMode="contain" />
           <Text style={styles.permissionBannerText}>Some permissions need attention</Text>
@@ -275,6 +244,7 @@ export default function SettingsScreen({ navigation }: Props) {
             onValueChange={handleTimeFormatToggle}
             trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor={timeFormat === '24h' ? colors.textPrimary : colors.textTertiary}
+            accessibilityLabel="Toggle 24-hour time"
           />
         </View>
         <Text style={styles.description}>
@@ -290,6 +260,7 @@ export default function SettingsScreen({ navigation }: Props) {
             onValueChange={handleSilenceToggle}
             trackColor={{ false: colors.border, true: colors.orange }}
             thumbColor={silenceAll ? '#FFFFFF' : colors.textTertiary}
+            accessibilityLabel="Toggle silence all alarms"
           />
         </View>
         {silenceAll && (
@@ -309,6 +280,9 @@ export default function SettingsScreen({ navigation }: Props) {
             style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: timeInputMode === 'scroll' ? colors.accent : 'transparent' }}
             onPress={() => handleTimeInputModeChange('scroll')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Scroll input mode"
+            accessibilityState={{ selected: timeInputMode === 'scroll' }}
           >
             <Text style={{ fontSize: 13, fontFamily: FONTS.semiBold, color: timeInputMode === 'scroll' ? colors.textPrimary : colors.textTertiary }}>Scroll</Text>
           </TouchableOpacity>
@@ -316,6 +290,9 @@ export default function SettingsScreen({ navigation }: Props) {
             style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: timeInputMode === 'type' ? colors.accent : 'transparent' }}
             onPress={() => handleTimeInputModeChange('type')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Keypad input mode"
+            accessibilityState={{ selected: timeInputMode === 'type' }}
           >
             <Text style={{ fontSize: 13, fontFamily: FONTS.semiBold, color: timeInputMode === 'type' ? colors.textPrimary : colors.textTertiary }}>Type</Text>
           </TouchableOpacity>
@@ -338,6 +315,9 @@ export default function SettingsScreen({ navigation }: Props) {
                 style={styles.themeItem}
                 onPress={() => { hapticLight(); setTheme(name); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Select ${displayName} theme`}
+                accessibilityState={{ selected: isActive }}
               >
                 <View
                   style={[
@@ -368,6 +348,8 @@ export default function SettingsScreen({ navigation }: Props) {
           <TouchableOpacity
             onPress={handlePickBackground}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Choose background photo"
           >
             {bgUri ? (
               <Image source={{ uri: bgUri }} style={{ width: 80, height: 80, borderRadius: 8 }} resizeMode="cover" />
@@ -383,6 +365,8 @@ export default function SettingsScreen({ navigation }: Props) {
               style={btn.secondarySmall}
               onPress={handlePickBackground}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Choose background photo"
             >
               <Text style={btn.secondarySmallText}>Change Photo</Text>
             </TouchableOpacity>
@@ -391,6 +375,8 @@ export default function SettingsScreen({ navigation }: Props) {
                 style={btn.destructiveSmall}
                 onPress={handleClearBackground}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Remove background photo"
               >
                 <Text style={btn.destructiveSmallText}>Clear</Text>
               </TouchableOpacity>
@@ -414,6 +400,9 @@ export default function SettingsScreen({ navigation }: Props) {
                   }}
                   onPress={() => handleSetOverlayOpacity(val)}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${Math.round(val * 100)}% overlay darkness`}
+                  accessibilityState={{ selected: bgOpacity === val }}
                 >
                   <Text style={{ fontSize: 12, fontFamily: FONTS.semiBold, color: colors.textPrimary }}>{Math.round(val * 100)}%</Text>
                 </TouchableOpacity>
@@ -431,6 +420,7 @@ export default function SettingsScreen({ navigation }: Props) {
             onValueChange={handleVoiceToggle}
             trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor="#FFFFFF"
+            accessibilityLabel="Toggle voice clips"
           />
         </View>
         <Text style={styles.description}>
@@ -446,6 +436,7 @@ export default function SettingsScreen({ navigation }: Props) {
             onValueChange={handleHapticsToggle}
             trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor={hapticsEnabled ? colors.textPrimary : colors.textTertiary}
+            accessibilityLabel="Toggle haptic feedback"
           />
         </View>
         <Text style={styles.description}>
@@ -461,6 +452,7 @@ export default function SettingsScreen({ navigation }: Props) {
             onValueChange={handleGameSoundsToggle}
             trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor={gameSoundsEnabled ? colors.textPrimary : colors.textTertiary}
+            accessibilityLabel="Toggle game sounds"
           />
         </View>
         <Text style={styles.description}>
@@ -472,6 +464,8 @@ export default function SettingsScreen({ navigation }: Props) {
         style={[styles.card, { marginTop: 16 }]}
         onPress={handleSendFeedback}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Send feedback"
       >
         <View style={styles.aboutRow}>
           <Text style={styles.label}>Send Feedback</Text>
@@ -486,6 +480,8 @@ export default function SettingsScreen({ navigation }: Props) {
         style={[styles.card, { marginTop: 16 }]}
         onPress={() => { hapticLight(); navigation.navigate('About'); }}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="About Don't Forget Why"
       >
         <View style={styles.aboutRow}>
           <Text style={styles.label}>About</Text>
@@ -502,6 +498,8 @@ export default function SettingsScreen({ navigation }: Props) {
           style={btn.primary}
           onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Run setup wizard"
         >
           <Text style={btn.primaryText}>Setup Guide</Text>
         </TouchableOpacity>
@@ -535,6 +533,8 @@ export default function SettingsScreen({ navigation }: Props) {
           onPress={handleExport}
           disabled={isExporting || isImporting}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Export backup"
         >
           <Text style={btn.primaryText}>
             {isExporting ? 'Exporting...' : 'Export Memories'}
@@ -546,6 +546,8 @@ export default function SettingsScreen({ navigation }: Props) {
           onPress={handleImport}
           disabled={isExporting || isImporting}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Import backup"
         >
           <Text style={btn.secondaryText}>
             {isImporting ? 'Importing...' : 'Import Memories'}
@@ -562,6 +564,7 @@ export default function SettingsScreen({ navigation }: Props) {
             onValueChange={handleAutoBackupToggle}
             trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor={autoBackupEnabled ? colors.textPrimary : colors.textTertiary}
+            accessibilityLabel="Toggle auto backup"
           />
         </View>
 
@@ -573,7 +576,7 @@ export default function SettingsScreen({ navigation }: Props) {
               </Text>
             )}
 
-            <TouchableOpacity onPress={handleChangeFolder} activeOpacity={0.7} style={{ marginTop: 8 }}>
+            <TouchableOpacity onPress={handleChangeFolder} activeOpacity={0.7} style={{ marginTop: 8 }} accessibilityRole="button" accessibilityLabel="Change auto backup folder">
               <Text style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.accent }}>Change folder</Text>
             </TouchableOpacity>
 
@@ -584,6 +587,9 @@ export default function SettingsScreen({ navigation }: Props) {
                   style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: autoBackupFrequency === freq ? colors.accent : 'transparent' }}
                   onPress={() => handleFrequencyChange(freq)}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${freq.charAt(0).toUpperCase() + freq.slice(1)} backup frequency`}
+                  accessibilityState={{ selected: autoBackupFrequency === freq }}
                 >
                   <Text style={{ fontSize: 13, fontFamily: FONTS.semiBold, color: autoBackupFrequency === freq ? colors.textPrimary : colors.textTertiary }}>
                     {freq.charAt(0).toUpperCase() + freq.slice(1)}
@@ -607,7 +613,7 @@ export default function SettingsScreen({ navigation }: Props) {
             borderWidth: 1,
             borderBottomWidth: 0,
             borderColor: colors.border,
-          }}>
+          }} accessibilityViewIsModal={true}>
             {/* Header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <Text style={{ fontSize: 18, fontFamily: FONTS.bold, color: colors.textPrimary }}>Silence Duration</Text>
@@ -615,6 +621,8 @@ export default function SettingsScreen({ navigation }: Props) {
                 onPress={handleSilencePickerCancel}
                 style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Close silence picker"
               >
                 <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
               </TouchableOpacity>
@@ -662,6 +670,8 @@ export default function SettingsScreen({ navigation }: Props) {
                 style={btn.primary}
                 onPress={handleSilencePickerSet}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Set silence timer"
               >
                 <Text style={btn.primaryText}>Set Timer</Text>
               </TouchableOpacity>
@@ -669,6 +679,8 @@ export default function SettingsScreen({ navigation }: Props) {
                 style={btn.secondary}
                 onPress={handleSilencePickerIndefinite}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Silence until turned off"
               >
                 <Text style={btn.secondaryText}>Until I Turn It Off</Text>
               </TouchableOpacity>
@@ -680,7 +692,7 @@ export default function SettingsScreen({ navigation }: Props) {
     {isImporting && (
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 999 }}>
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={{ color: '#FFFFFF', fontSize: 15, fontFamily: FONTS.semiBold, marginTop: 16 }}>
+        <Text style={{ color: colors.overlayText, fontSize: 15, fontFamily: FONTS.semiBold, marginTop: 16 }}>
           Importing memories...
         </Text>
       </View>

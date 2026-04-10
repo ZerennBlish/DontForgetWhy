@@ -2,25 +2,25 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
-import { getButtonStyles } from '../theme/buttonStyles';
 import { formatDeletedAgo } from '../utils/time';
 import type { Note } from '../types/note';
 
 interface DeletedNoteCardProps {
   note: Note;
-  onRestore: () => void;
-  onPermanentDelete: () => void;
+  // Callbacks take the note id so the parent can pass stable references
+  // via useCallback. Inline arrows would defeat React.memo.
+  onRestore: (id: string) => void;
+  onPermanentDelete: (id: string) => void;
 }
 
 function DeletedNoteCard({ note, onRestore, onPermanentDelete }: DeletedNoteCardProps) {
   const { colors } = useTheme();
-  const btn = getButtonStyles(colors);
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.mode === 'dark' ? colors.sectionNotepad + '20' : colors.sectionNotepad + '15',
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionNotepad + '15',
       borderRadius: 12,
       padding: 12,
       borderWidth: 1,
@@ -34,6 +34,24 @@ function DeletedNoteCard({ note, onRestore, onPermanentDelete }: DeletedNoteCard
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.15,
       shadowRadius: 3,
+    },
+    capsuleBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
+      borderWidth: 1,
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+    },
+    capsuleBtnText: {
+      fontSize: 11,
+      fontFamily: FONTS.semiBold,
+      color: colors.textTertiary,
+    },
+    capsuleBtnDestructiveText: {
+      fontSize: 11,
+      fontFamily: FONTS.semiBold,
+      color: colors.red,
     },
     iconCircle: {
       width: 36,
@@ -84,11 +102,11 @@ function DeletedNoteCard({ note, onRestore, onPermanentDelete }: DeletedNoteCard
         </Text>
       </View>
       <View style={styles.cardActions}>
-        <TouchableOpacity onPress={onRestore} style={btn.ghostSmall} activeOpacity={0.7} accessibilityLabel="Restore note" accessibilityRole="button">
-          <Text style={btn.ghostSmallText}>Restore</Text>
+        <TouchableOpacity onPress={() => onRestore(note.id)} style={styles.capsuleBtn} activeOpacity={0.7} accessibilityLabel="Restore note" accessibilityRole="button">
+          <Text style={styles.capsuleBtnText}>Restore</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={onPermanentDelete} style={btn.destructiveSmall} activeOpacity={0.7} accessibilityLabel="Permanently delete note" accessibilityRole="button">
-          <Text style={btn.destructiveSmallText}>Forever</Text>
+        <TouchableOpacity onPress={() => onPermanentDelete(note.id)} style={styles.capsuleBtn} activeOpacity={0.7} accessibilityLabel="Permanently delete note" accessibilityRole="button">
+          <Text style={styles.capsuleBtnDestructiveText}>Forever</Text>
         </TouchableOpacity>
       </View>
     </View>

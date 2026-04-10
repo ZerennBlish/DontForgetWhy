@@ -12,7 +12,7 @@ function filterRiddle(riddle: OnlineRiddle): boolean {
   return true;
 }
 
-export async function fetchOnlineRiddle(): Promise<OnlineRiddle | null> {
+async function fetchOnlineRiddle(): Promise<OnlineRiddle | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);

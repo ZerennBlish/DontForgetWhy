@@ -488,7 +488,7 @@ export default function HomeScreen({ navigation }: Props) {
         {/* B. Personality banner */}
         <View style={[styles.banner, { borderLeftColor: bannerColorMap[bannerQuote.section] || colors.accent, backgroundColor: colors.mode === 'dark' ? hexToRgba(bannerColorMap[bannerQuote.section] || colors.accent, bgUri ? 0.35 : 0.12) : hexToRgba(bannerColorMap[bannerQuote.section] || colors.accent, bgUri ? 0.25 : 0.08) }]}>
           <Text style={[styles.bannerHeader, { color: bannerColorMap[bannerQuote.section] || colors.accent }]}>ALARM GUY SAYS</Text>
-          <Text style={[styles.bannerQuote, bgUri && { color: 'rgba(255,255,255,0.7)' }]}>{bannerQuote.text}</Text>
+          <Text style={[styles.bannerQuote, bgUri && { color: colors.overlaySecondary }]}>{bannerQuote.text}</Text>
         </View>
 
         {/* C. Quick Capture */}
@@ -537,8 +537,8 @@ export default function HomeScreen({ navigation }: Props) {
                 style={[
                   styles.gridCell,
                   {
-                    width: '31%' as unknown as number,
-                    flexBasis: '31%' as unknown as number,
+                    width: '31%',
+                    flexBasis: '31%',
                     flexGrow: 1,
                     backgroundColor: `${section.color}${bgUri ? '90' : '40'}`,
                   },
@@ -551,15 +551,15 @@ export default function HomeScreen({ navigation }: Props) {
                     resizeMode="contain"
                   />
                 </View>
-                <Text style={[styles.gridLabel, { color: (colors.mode === 'dark' || bgUri) ? '#FFFFFF' : '#1F2937' }]}>{section.label}</Text>
-                {subtitle !== '' && <Text style={[styles.gridSubtitle, { color: bgUri ? 'rgba(255,255,255,0.55)' : (colors.mode === 'dark' ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)') }]}>{subtitle}</Text>}
+                <Text style={[styles.gridLabel, { color: (colors.mode === 'dark' || bgUri) ? colors.overlayText : colors.textPrimary }]}>{section.label}</Text>
+                {subtitle !== '' && <Text style={[styles.gridSubtitle, { color: bgUri ? colors.overlaySecondary : colors.textSecondary }]}>{subtitle}</Text>}
               </TouchableOpacity>
             );
           })}
         </View>
 
         {/* D. Today section */}
-        <Text style={[styles.todayHeader, bgUri && { color: colors.mode === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.6)' }]}>TODAY {'\u2014'} {monthName} {dayNum}</Text>
+        <Text style={[styles.todayHeader, bgUri && { color: colors.overlaySecondary }]}>TODAY {'\u2014'} {monthName} {dayNum}</Text>
 
         <View style={[styles.todayContainer, { backgroundColor: bgUri ? (colors.mode === 'dark' ? 'rgba(10, 10, 18, 0.88)' : 'rgba(242, 243, 248, 0.92)') : undefined }]}>
           {todayEvents.length === 0 ? (

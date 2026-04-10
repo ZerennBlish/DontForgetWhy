@@ -148,8 +148,12 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <View
+        style={styles.overlay}
+        accessibilityRole="button"
+        accessibilityLabel="Close emoji picker"
+      >
+        <View style={styles.container} accessibilityViewIsModal={true}>
           <View style={styles.header}>
             <Text style={styles.title}>Pick an Icon</Text>
             <TouchableOpacity
@@ -196,6 +200,9 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
             contentContainerStyle={styles.grid}
             renderItem={renderEmojiItem}
             removeClippedSubviews={true}
+            windowSize={5}
+            maxToRenderPerBatch={8}
+            initialNumToRender={8}
           />
         </View>
       </View>

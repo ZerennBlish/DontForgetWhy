@@ -1,6 +1,7 @@
 import { kvGet, kvSet } from './database';
 import { defaultPresets } from '../data/timerPresets';
 import { loadUserTimers } from './timerStorage';
+import { withLock } from '../utils/asyncMutex';
 
 const PINNED_KEY = 'widgetPinnedPresets';
 const ALARM_PINNED_KEY = 'widgetPinnedAlarms';
@@ -32,16 +33,18 @@ export async function getPinnedPresets(): Promise<string[]> {
 }
 
 export async function togglePinPreset(presetId: string): Promise<string[]> {
-  const current = await getPinnedPresets();
-  const index = current.indexOf(presetId);
-  if (index >= 0) {
-    current.splice(index, 1);
-  } else {
-    if (current.length >= MAX_PRESET_PINS) return current;
-    current.push(presetId);
-  }
-  kvSet(PINNED_KEY, JSON.stringify(current));
-  return current;
+  return withLock('widget-pins-presets', async () => {
+    const current = await getPinnedPresets();
+    const index = current.indexOf(presetId);
+    if (index >= 0) {
+      current.splice(index, 1);
+    } else {
+      if (current.length >= MAX_PRESET_PINS) return current;
+      current.push(presetId);
+    }
+    kvSet(PINNED_KEY, JSON.stringify(current));
+    return current;
+  });
 }
 
 export function isPinned(presetId: string, pinnedList: string[]): boolean {
@@ -49,11 +52,13 @@ export function isPinned(presetId: string, pinnedList: string[]): boolean {
 }
 
 export async function unpinPreset(presetId: string): Promise<void> {
-  const current = await getPinnedPresets();
-  const filtered = current.filter((id) => id !== presetId);
-  if (filtered.length !== current.length) {
-    kvSet(PINNED_KEY, JSON.stringify(filtered));
-  }
+  return withLock('widget-pins-presets', async () => {
+    const current = await getPinnedPresets();
+    const filtered = current.filter((id) => id !== presetId);
+    if (filtered.length !== current.length) {
+      kvSet(PINNED_KEY, JSON.stringify(filtered));
+    }
+  });
 }
 
 // --- Alarm pins ---
@@ -73,16 +78,18 @@ export async function getPinnedAlarms(): Promise<string[]> {
 }
 
 export async function togglePinAlarm(alarmId: string): Promise<string[]> {
-  const current = await getPinnedAlarms();
-  const index = current.indexOf(alarmId);
-  if (index >= 0) {
-    current.splice(index, 1);
-  } else {
-    if (current.length >= MAX_ALARM_PINS) return current;
-    current.push(alarmId);
-  }
-  kvSet(ALARM_PINNED_KEY, JSON.stringify(current));
-  return current;
+  return withLock('widget-pins-alarms', async () => {
+    const current = await getPinnedAlarms();
+    const index = current.indexOf(alarmId);
+    if (index >= 0) {
+      current.splice(index, 1);
+    } else {
+      if (current.length >= MAX_ALARM_PINS) return current;
+      current.push(alarmId);
+    }
+    kvSet(ALARM_PINNED_KEY, JSON.stringify(current));
+    return current;
+  });
 }
 
 export function isAlarmPinned(alarmId: string, pinnedList: string[]): boolean {
@@ -90,21 +97,25 @@ export function isAlarmPinned(alarmId: string, pinnedList: string[]): boolean {
 }
 
 export async function unpinAlarm(alarmId: string): Promise<void> {
-  const current = await getPinnedAlarms();
-  const filtered = current.filter((id) => id !== alarmId);
-  if (filtered.length !== current.length) {
-    kvSet(ALARM_PINNED_KEY, JSON.stringify(filtered));
-  }
+  return withLock('widget-pins-alarms', async () => {
+    const current = await getPinnedAlarms();
+    const filtered = current.filter((id) => id !== alarmId);
+    if (filtered.length !== current.length) {
+      kvSet(ALARM_PINNED_KEY, JSON.stringify(filtered));
+    }
+  });
 }
 
 export async function pruneAlarmPins(validIds: string[]): Promise<string[]> {
-  const current = await getPinnedAlarms();
-  const validSet = new Set(validIds);
-  const pruned = current.filter((id) => validSet.has(id));
-  if (pruned.length !== current.length) {
-    kvSet(ALARM_PINNED_KEY, JSON.stringify(pruned));
-  }
-  return pruned;
+  return withLock('widget-pins-alarms', async () => {
+    const current = await getPinnedAlarms();
+    const validSet = new Set(validIds);
+    const pruned = current.filter((id) => validSet.has(id));
+    if (pruned.length !== current.length) {
+      kvSet(ALARM_PINNED_KEY, JSON.stringify(pruned));
+    }
+    return pruned;
+  });
 }
 
 // --- Reminder pins ---
@@ -127,17 +138,19 @@ export async function getPinnedReminders(): Promise<string[]> {
 }
 
 export async function togglePinReminder(reminderId: string): Promise<boolean> {
-  const current = await getPinnedReminders();
-  const index = current.indexOf(reminderId);
-  if (index >= 0) {
-    current.splice(index, 1);
+  return withLock('widget-pins-reminders', async () => {
+    const current = await getPinnedReminders();
+    const index = current.indexOf(reminderId);
+    if (index >= 0) {
+      current.splice(index, 1);
+      kvSet(REMINDER_PINNED_KEY, JSON.stringify(current));
+      return false;
+    }
+    if (current.length >= MAX_REMINDER_PINS) return true;
+    current.push(reminderId);
     kvSet(REMINDER_PINNED_KEY, JSON.stringify(current));
-    return false;
-  }
-  if (current.length >= MAX_REMINDER_PINS) return true;
-  current.push(reminderId);
-  kvSet(REMINDER_PINNED_KEY, JSON.stringify(current));
-  return true;
+    return true;
+  });
 }
 
 export function isReminderPinned(reminderId: string, pinnedList: string[]): boolean {
@@ -145,21 +158,25 @@ export function isReminderPinned(reminderId: string, pinnedList: string[]): bool
 }
 
 export async function unpinReminder(reminderId: string): Promise<void> {
-  const current = await getPinnedReminders();
-  const filtered = current.filter((id) => id !== reminderId);
-  if (filtered.length !== current.length) {
-    kvSet(REMINDER_PINNED_KEY, JSON.stringify(filtered));
-  }
+  return withLock('widget-pins-reminders', async () => {
+    const current = await getPinnedReminders();
+    const filtered = current.filter((id) => id !== reminderId);
+    if (filtered.length !== current.length) {
+      kvSet(REMINDER_PINNED_KEY, JSON.stringify(filtered));
+    }
+  });
 }
 
 export async function pruneReminderPins(validIds: string[]): Promise<string[]> {
-  const current = await getPinnedReminders();
-  const validSet = new Set(validIds);
-  const pruned = current.filter((id) => validSet.has(id));
-  if (pruned.length !== current.length) {
-    kvSet(REMINDER_PINNED_KEY, JSON.stringify(pruned));
-  }
-  return pruned;
+  return withLock('widget-pins-reminders', async () => {
+    const current = await getPinnedReminders();
+    const validSet = new Set(validIds);
+    const pruned = current.filter((id) => validSet.has(id));
+    if (pruned.length !== current.length) {
+      kvSet(REMINDER_PINNED_KEY, JSON.stringify(pruned));
+    }
+    return pruned;
+  });
 }
 
 // --- Note pins ---
@@ -182,34 +199,40 @@ export async function getPinnedNotes(): Promise<string[]> {
 }
 
 export async function togglePinNote(id: string): Promise<string[]> {
-  const current = await getPinnedNotes();
-  const index = current.indexOf(id);
-  if (index >= 0) {
-    current.splice(index, 1);
-  } else {
-    if (current.length >= MAX_NOTE_PINS) return current;
-    current.push(id);
-  }
-  kvSet(NOTE_PINNED_KEY, JSON.stringify(current));
-  return current;
+  return withLock('widget-pins-notes', async () => {
+    const current = await getPinnedNotes();
+    const index = current.indexOf(id);
+    if (index >= 0) {
+      current.splice(index, 1);
+    } else {
+      if (current.length >= MAX_NOTE_PINS) return current;
+      current.push(id);
+    }
+    kvSet(NOTE_PINNED_KEY, JSON.stringify(current));
+    return current;
+  });
 }
 
 export async function unpinNote(id: string): Promise<void> {
-  const current = await getPinnedNotes();
-  const filtered = current.filter((pinId) => pinId !== id);
-  if (filtered.length !== current.length) {
-    kvSet(NOTE_PINNED_KEY, JSON.stringify(filtered));
-  }
+  return withLock('widget-pins-notes', async () => {
+    const current = await getPinnedNotes();
+    const filtered = current.filter((pinId) => pinId !== id);
+    if (filtered.length !== current.length) {
+      kvSet(NOTE_PINNED_KEY, JSON.stringify(filtered));
+    }
+  });
 }
 
 export async function pruneNotePins(activeIds: string[]): Promise<string[]> {
-  const current = await getPinnedNotes();
-  const validSet = new Set(activeIds);
-  const pruned = current.filter((id) => validSet.has(id));
-  if (pruned.length !== current.length) {
-    kvSet(NOTE_PINNED_KEY, JSON.stringify(pruned));
-  }
-  return pruned;
+  return withLock('widget-pins-notes', async () => {
+    const current = await getPinnedNotes();
+    const validSet = new Set(activeIds);
+    const pruned = current.filter((id) => validSet.has(id));
+    if (pruned.length !== current.length) {
+      kvSet(NOTE_PINNED_KEY, JSON.stringify(pruned));
+    }
+    return pruned;
+  });
 }
 
 export function isNotePinned(id: string, pinnedIds: string[]): boolean {
@@ -236,34 +259,40 @@ export async function getPinnedVoiceMemos(): Promise<string[]> {
 }
 
 export async function togglePinVoiceMemo(id: string): Promise<string[]> {
-  const current = await getPinnedVoiceMemos();
-  const index = current.indexOf(id);
-  if (index >= 0) {
-    current.splice(index, 1);
-  } else {
-    if (current.length >= MAX_VOICE_MEMO_PINS) return current;
-    current.push(id);
-  }
-  kvSet(VOICE_MEMO_PINNED_KEY, JSON.stringify(current));
-  return current;
+  return withLock('widget-pins-voice', async () => {
+    const current = await getPinnedVoiceMemos();
+    const index = current.indexOf(id);
+    if (index >= 0) {
+      current.splice(index, 1);
+    } else {
+      if (current.length >= MAX_VOICE_MEMO_PINS) return current;
+      current.push(id);
+    }
+    kvSet(VOICE_MEMO_PINNED_KEY, JSON.stringify(current));
+    return current;
+  });
 }
 
 export async function unpinVoiceMemo(id: string): Promise<void> {
-  const current = await getPinnedVoiceMemos();
-  const filtered = current.filter((pinId) => pinId !== id);
-  if (filtered.length !== current.length) {
-    kvSet(VOICE_MEMO_PINNED_KEY, JSON.stringify(filtered));
-  }
+  return withLock('widget-pins-voice', async () => {
+    const current = await getPinnedVoiceMemos();
+    const filtered = current.filter((pinId) => pinId !== id);
+    if (filtered.length !== current.length) {
+      kvSet(VOICE_MEMO_PINNED_KEY, JSON.stringify(filtered));
+    }
+  });
 }
 
 export async function pruneVoiceMemoPins(activeIds: string[]): Promise<string[]> {
-  const current = await getPinnedVoiceMemos();
-  const validSet = new Set(activeIds);
-  const pruned = current.filter((id) => validSet.has(id));
-  if (pruned.length !== current.length) {
-    kvSet(VOICE_MEMO_PINNED_KEY, JSON.stringify(pruned));
-  }
-  return pruned;
+  return withLock('widget-pins-voice', async () => {
+    const current = await getPinnedVoiceMemos();
+    const validSet = new Set(activeIds);
+    const pruned = current.filter((id) => validSet.has(id));
+    if (pruned.length !== current.length) {
+      kvSet(VOICE_MEMO_PINNED_KEY, JSON.stringify(pruned));
+    }
+    return pruned;
+  });
 }
 
 export function isVoiceMemoPinned(id: string, pinnedIds: string[]): boolean {

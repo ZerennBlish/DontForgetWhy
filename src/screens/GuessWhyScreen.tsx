@@ -74,10 +74,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
   // AlarmFireScreen's handleGuessWhy cancels everything before navigating.
 
   useEffect(() => {
-    let cancelled = false;
     playRandomClip('guess_before');
     return () => {
-      cancelled = true;
       stopVoice();
     };
   }, []);
@@ -395,9 +393,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       {/* Top section */}
       <View style={styles.top}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton onPress={() => navigation.goBack()} forceDark />
         <View style={styles.headerHome}>
-          <HomeButton />
+          <HomeButton forceDark />
         </View>
         <Text style={styles.emoji}>{displayEmoji}</Text>
         <Text style={styles.time}>{formatTime(alarm.time, timeFormat)}</Text>
@@ -412,6 +410,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
             style={[styles.modeBtn, mode === 'icons' && styles.modeBtnActive, !hasIcon && styles.modeBtnDisabled]}
             onPress={() => { if (hasIcon) { hapticLight(); setMode('icons'); } }}
             activeOpacity={hasIcon ? 0.7 : 1}
+            accessibilityRole="button"
+            accessibilityLabel="Icon mode"
+            accessibilityState={{ selected: mode === 'icons' }}
           >
             <Text style={[styles.modeBtnText, mode === 'icons' && styles.modeBtnTextActive]}>
               Icons
@@ -421,6 +422,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
             style={[styles.modeBtn, mode === 'type' && styles.modeBtnActive]}
             onPress={() => { hapticLight(); setMode('type'); }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Type answer mode"
+            accessibilityState={{ selected: mode === 'type' }}
           >
             <Text style={[styles.modeBtnText, mode === 'type' && styles.modeBtnTextActive]}>
               Type It
@@ -471,6 +475,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
               onPress={handleTypeGuess}
               activeOpacity={0.7}
               disabled={typedGuess.trim().length < 3 || resolvedRef.current}
+              accessibilityRole="button"
+              accessibilityLabel="Submit answer"
             >
               <Text style={styles.submitBtnText}>Guess</Text>
             </TouchableOpacity>
@@ -479,7 +485,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
         {/* Result overlay */}
         {result && (
-          <View style={[styles.overlay, { backgroundColor: overlayColor }]}>
+          <View style={[styles.overlay, { backgroundColor: overlayColor }]} accessibilityLiveRegion="assertive">
             <Image
               source={result.type === 'win' ? GUESS_RIGHT : GUESS_WRONG}
               style={{ width: 80, height: 80, marginBottom: 12 }}
@@ -490,6 +496,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
               style={styles.overlayBtn}
               onPress={handleContinue}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Continue"
             >
               <Text style={styles.overlayBtnText}>{continueLabel}</Text>
             </TouchableOpacity>
@@ -499,7 +507,7 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
 
       {/* Bottom section */}
       <View style={styles.bottom}>
-        <Text style={styles.attemptsText}>
+        <Text style={styles.attemptsText} accessibilityLiveRegion="polite">
           {attemptsLeft} attempt{attemptsLeft !== 1 ? 's' : ''} left
         </Text>
         <TouchableOpacity
@@ -507,6 +515,8 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
           onPress={handleSkip}
           activeOpacity={0.7}
           disabled={resolvedRef.current}
+          accessibilityRole="button"
+          accessibilityLabel="Skip question"
         >
           <Text style={styles.skipBtnText}>Skip</Text>
         </TouchableOpacity>

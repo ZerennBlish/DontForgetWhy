@@ -183,7 +183,7 @@ export const CATEGORY_LABELS: Record<RiddleCategory, string> = {
   quick: 'Quick',
 };
 
-export const DIFFICULTY_COLORS: Record<RiddleDifficulty, string> = {
+const DIFFICULTY_COLORS: Record<RiddleDifficulty, string> = {
   easy: '#4CAF50',
   medium: '#FF9800',
   hard: '#F44336',
