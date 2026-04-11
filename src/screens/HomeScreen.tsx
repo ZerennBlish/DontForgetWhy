@@ -504,7 +504,17 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickCaptureBtn, { backgroundColor: colors.sectionVoice + (bgUri ? '90' : '45') }]}
-            onPress={() => { hapticLight(); navigation.navigate('VoiceRecord'); }}
+            onPress={() => {
+              hapticLight();
+              navigation.reset({
+                index: 2,
+                routes: [
+                  { name: 'Home' },
+                  { name: 'VoiceMemoList' },
+                  { name: 'VoiceRecord' },
+                ],
+              });
+            }}
             activeOpacity={0.7}
             accessibilityLabel="Quick Record"
             accessibilityRole="button"

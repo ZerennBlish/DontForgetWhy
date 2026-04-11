@@ -105,7 +105,13 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
     // countdown chronometer countdown-{timerId}). We identify completions
     // by data.timerId: the countdown has no data field → timerId is undefined;
     // the completion trigger has data: { timerId } → timerId is set.
-    if (timerId && notifId) {
+    const isCountdown = notifId?.startsWith('countdown-');
+    if (notifId && isCountdown) {
+      if (type === EventType.PRESS) {
+        kvSet('pendingTimerAction', JSON.stringify({ timestamp: Date.now() }));
+        console.log('[NOTIF] BACKGROUND — countdown tap, stored pendingTimerAction');
+      }
+    } else if (timerId && notifId) {
       const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
       const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
       let timerSoundId: string | undefined;

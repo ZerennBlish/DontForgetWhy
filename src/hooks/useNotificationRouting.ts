@@ -571,6 +571,12 @@ export function useNotificationRouting(): UseNotificationRoutingResult {
       // ── PRESS: user tapped notification body — navigate to AlarmFireScreen ─
       if (type === EventType.PRESS) {
         if (!navigationRef.current || !isNavigationReady.current) {
+          const isCountdownEarly = notifId?.startsWith('countdown-');
+          if (isCountdownEarly) {
+            kvSet('pendingTimerAction', JSON.stringify({ timestamp: Date.now() }));
+            console.log('[NOTIF] FOREGROUND PRESS — countdown tap, nav not ready, stored pendingTimerAction');
+            return;
+          }
           if (timerId && notifId) {
             const tIcon = (detail.notification?.title ?? '').replace(' Timer Complete', '').trim() || '\u23F1\uFE0F';
             const tLabel = (detail.notification?.body ?? '').replace(' is done!', '').trim() || 'Timer';
@@ -600,6 +606,18 @@ export function useNotificationRouting(): UseNotificationRoutingResult {
         // Skip if AlarmFireScreen already handled this notification
         if (wasNotifHandled(notifId)) {
           console.log('[NOTIF] FOREGROUND PRESS — skipping already-handled:', notifId);
+          return;
+        }
+
+        // Countdown tap — navigate to TimerScreen, not AlarmFire
+        const isCountdown = notifId?.startsWith('countdown-');
+        if (isCountdown) {
+          console.log('[NOTIF] FOREGROUND PRESS — countdown tap, navigating to Timers');
+          if (navigationRef.current && isNavigationReady.current) {
+            navigationRef.current.navigate('Timers');
+          } else {
+            kvSet('pendingTimerAction', JSON.stringify({ timestamp: Date.now() }));
+          }
           return;
         }
 
