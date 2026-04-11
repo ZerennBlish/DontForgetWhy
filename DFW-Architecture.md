@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 24 (April 10, 2026)
+**Last updated:** Session 25 (April 11, 2026)
 
 ---
 
@@ -145,6 +145,16 @@ All old theme names migrate to current 6: midnight/ember/neon/void→dark, frost
 
 ### Timer Start from Widget
 All app-opening approaches failed (Linking.openURL, OPEN_URI, deep links). Solution: headless timer start. `START_TIMER__{presetId}` clickAction → handler creates ActiveTimer, saves to SQLite `active_timers` table, schedules notifications. User sees countdown notification immediately. App loads running timer from SQLite when opened later.
+
+### Widget Navigation Stacks (cold start)
+`App.tsx` builds an `initialNavState` for cold-start widget entries so Back lands on the correct parent:
+- VoiceRecord widget entry: initial stack is `Home → VoiceMemoList → VoiceRecord` (Session 25)
+- VoiceMemoDetail widget entry: initial stack is `Home → VoiceMemoList → VoiceMemoDetail` (Session 25)
+- Notepad widget entry: `Home → Notepad` (NotepadScreen IS the parent list, no intermediate)
+- Calendar widget entry: `Home → Calendar`
+- AlarmFire (notification cold start): `Home → AlarmList → AlarmFire`
+- CreateAlarm/CreateReminder: `Home → AlarmList → CreateAlarm` / `Home → Reminders → CreateReminder`
+- Note: warm-app widget paths still navigate directly via `navigation.navigate(...)` in most cases. The Quick Record button on `HomeScreen` was switched to `navigation.reset({ routes: [Home, VoiceMemoList, VoiceRecord] })` in Session 25 to match the cold-start back behavior. Other warm-app widget paths are a known limitation, deferred to Session 26.
 
 ### Widget Theming
 `getWidgetTheme()` reads theme from SQLite `kv_store` with migration map, returns `WidgetTheme` object. `refreshWidgets()` (renamed from `refreshTimerWidget`) triggered after theme changes, data changes.

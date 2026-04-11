@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 24 (April 10, 2026)
+**Last updated:** Session 25 (April 11, 2026)
 
 ---
 
@@ -71,6 +71,9 @@
   - Chess: pickUp (select piece), chessPlace (move), capture, promote, gameWin, gameLoss
   - Checkers: pickUp (select piece), checkersMove, capture (shared), promote (shared for king), gameWin (shared), gameLoss (shared)
   - Memory Match: cardFlip, flipBack (mismatch), memoryWin
+  - Sudoku (Session 25): pencil sound on number placement, eraser sound on cell clear
+  - Trivia (Session 25): dedicated trivia-tap sound (replaces generic tap), correct/wrong answer sounds
+  - Daily Riddle (Session 25): triviaCorrect/triviaWrong on Got it/Nope buttons
   - UI: tap (game UI buttons only — not gameplay interactions like sudoku cells, trivia answers, card flips)
 
 ### Media Control Icons (Session 23)

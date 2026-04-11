@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 24 (April 10, 2026)
+**Last updated:** Session 25 (April 11, 2026)
 
 ---
 
@@ -608,3 +608,40 @@
 - **Status:** unresolved. Two paths: (1) wire it — add 8 game icon exports to `appIconAssets.ts`, swap `BackButton`/`HomeButton` usage in the 6 game screens for `GameNavButtons`, (2) delete it — remove `GameNavButtons.tsx` and the 8 stranded asset files. Decision pending
 
 **60 audits total.**
+
+### Session 25 — Audit Fix Redo + Notification + Navigation Bugs
+
+**Bug: Timer fires immediately on start**
+- Found: Session 25 Zerenn, live device
+- Cause: Adding `data: { timerId, timerProgress: 'true' }` to the countdown progress notification caused the background `DELIVERED` handler to read `timerId`, treat it as a completion notification, and immediately call `playAlarmSoundForNotification`. Timer "fired" the instant it was started
+- Fix: Removed the `data` field from `showTimerCountdownNotification` entirely. Distinguish progress vs completion by notification ID prefix instead — `countdown-{timerId}` for progress, `timer-done-{timerId}` for completion. Both background (`index.ts`) and foreground (`useNotificationRouting.ts`) handlers check `notifId?.startsWith('countdown-')` before falling into the completion path
+
+**Bug: Quick note editor infinite reopen**
+- Found: Session 25 Zerenn, live device
+- Cause: `closeEditor` in `useNotepad.ts` cleared `handledActionRef.current = ''`. The route-params effect then re-fired (because `editorVisible` had changed), saw `newNote: true` still in the route params, found `handledActionRef` empty, and reopened the editor. Infinite loop — user couldn't escape the editor on widget cold start
+- Fix: Removed the `handledActionRef.current = ''` line from `closeEditor`. The ref must persist across editor close/reopen cycles so the effect doesn't re-trigger on the same set of widget params
+
+**Bug: `savedRef` set before save succeeds**
+- Found: Session 25 audit
+- Cause: `CreateAlarmScreen` and `CreateReminderScreen` flipped `savedRef.current = true` immediately before calling `form.save()`. `form.save()` has multiple early-return paths (validation failures, confirmation dialogs). If save bailed out, the flag was already `true` and the `beforeRemove` guard was permanently bypassed for the rest of the screen's lifetime — silent dirty-form loss on subsequent back attempts
+- Fix: Moved `savedRef.current = true` into the `navigateBack` callback. The flag now flips only after `form.save()` actually invokes its success callback. Removed the eager assignments from both `handleSave` and from the alert "I like chaos" / "Vibes only" branches
+
+**Bug: `AlarmFireScreen` KeepAwake crash**
+- Found: Session 25 Zerenn, live device crash report
+- Cause: `activateKeepAwakeAsync()` rejects when the activity isn't available yet — specifically during cold-start when AlarmFireScreen mounts before the Android activity is fully attached. Unhandled promise rejection bubbled up and crashed the screen
+- Fix: Wrapped the call in an async IIFE with try/catch. KeepAwake is best-effort — if it fails during cold start, the screen still functions
+
+**Bug: VoiceMemoDetail no save button**
+- Found: Session 25 Zerenn, live device
+- Cause: Header rendered the "Edit" button only in view mode and showed nothing in edit mode for newly recorded memos. The bottom save/discard row had been removed in an earlier session, leaving no way to save a freshly recorded memo from the detail screen
+- Fix: Header now always renders the "Save" button when `!isViewMode`. Bottom row stays removed. Added a sarcastic no-title alert when the user tries to save without giving the memo a name
+
+**Bug: Quick Record back goes to Home instead of VoiceMemoList (warm app)**
+- Found: Session 25 Zerenn, live device
+- Cause: `App.tsx` cold-start initial nav stack already inserted `VoiceMemoList` between `Home` and `VoiceRecord`/`VoiceMemoDetail`, but the warm-app path on `HomeScreen.tsx` used `navigation.navigate('VoiceRecord')` directly, putting `VoiceRecord` straight on top of `Home`. Back popped to Home, skipping the memos list
+- Fix: Changed the Quick Record `onPress` on HomeScreen to `navigation.reset({ index: 2, routes: [Home, VoiceMemoList, VoiceRecord] })`. Back from VoiceRecord now lands on VoiceMemoList; back again lands on Home
+
+**Bug: Quick countdown notification tap did nothing**
+- Found: Session 25 Zerenn, live device
+- Cause: `showTimerCountdownNotification` set `pressAction.id = 'default'` but provided no data, so the press handler in `useNotificationRouting.ts` couldn't find a `timerId` or `alarmId` and did nothing
+- Fix: ID-prefix routing. On `EventType.PRESS`, both background and foreground handlers detect `countdown-` prefix and either navigate directly to the `Timers` route (if nav is ready) or store `pendingTimerAction` for the next foreground tick to drain

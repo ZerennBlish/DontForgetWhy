@@ -1,6 +1,12 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 24 (April 10, 2026)
+**Last updated:** Session 25 (April 11, 2026)
+
+### Session 25 Additions
+
+- **Timer notification ID convention** — Progress notifications use ID `countdown-{timerId}` with NO `data` field. Completion notifications use ID `timer-done-{timerId}` with `data: { timerId }`. Background and foreground handlers distinguish by ID prefix, not by data fields. This avoids the "alarm fires immediately" bug caused by adding a `timerId` data field to the progress notification (which made the background DELIVERED handler treat the progress display as a completion and play the alarm sound the instant the timer started).
+- **`savedRef` timing** — `savedRef` must only flip to `true` INSIDE the success callback (`navigateBack`), never before `form.save()`. `form.save()` has multiple early-return and failure paths (validation bailouts, confirmation dialogs), and an eager flag flip permanently disarms the `beforeRemove` dirty-form guard for the rest of the screen's lifetime.
+- **`handledActionRef` persistence** — `closeEditor` in `useNotepad` must NOT clear `handledActionRef`. The ref prevents the route-params effect from re-triggering the editor when the screen was opened with widget params (`newNote: true`) that persist after the editor closes. Clearing the ref creates an infinite reopen loop on widget cold start.
 
 ---
 
