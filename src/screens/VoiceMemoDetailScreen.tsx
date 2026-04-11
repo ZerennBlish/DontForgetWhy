@@ -317,15 +317,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     await doSaveNew();
   };
 
-  const handleDiscardNew = () => {
-    if (savingRef.current) return;
-    hapticLight();
-    try { player.pause(); } catch { /* */ }
-    deleteVoiceMemoFile((params as { tempUri: string }).tempUri).catch(() => {});
-    exitingRef.current = true;
-    navigation.goBack();
-  };
-
   const togglePlay = () => {
     hapticLight();
     Keyboard.dismiss();

@@ -85,6 +85,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   }, [navigation, form.isDirty]);
 
   const navigateBack = () => {
+    savedRef.current = true;
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
@@ -100,12 +101,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         "A reminder with no details. That's not a reminder, that's a vibe. Good luck remembering... whatever this is.",
         [
           { text: "Fine, I'll add something", style: 'cancel' },
-          { text: 'Vibes only', onPress: () => { savedRef.current = true; form.save(navigateBack); } },
+          { text: 'Vibes only', onPress: () => form.save(navigateBack) },
         ],
       );
       return;
     }
-    savedRef.current = true;
     await form.save(navigateBack);
   };
 

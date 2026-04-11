@@ -588,7 +588,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                   <View style={styles.answerBtnRow}>
                     <TouchableOpacity
                       style={styles.gotItBtn}
-                      onPress={() => { hapticLight(); playGameSound('triviaCorrect'); handleAnswer(true); }}
+                      onPress={() => { playGameSound('triviaCorrect'); handleAnswer(true); }}
                       activeOpacity={0.8}
                       accessibilityRole="button"
                       accessibilityLabel="I got it"
@@ -600,7 +600,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.nopeBtn}
-                      onPress={() => { hapticLight(); playGameSound('triviaWrong'); handleAnswer(false); }}
+                      onPress={() => { playGameSound('triviaWrong'); handleAnswer(false); }}
                       activeOpacity={0.8}
                       accessibilityRole="button"
                       accessibilityLabel="I didn't get it"

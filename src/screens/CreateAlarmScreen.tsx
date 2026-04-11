@@ -85,6 +85,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const cardBg = colors.card + 'BF';
 
   const navigateBack = () => {
+    savedRef.current = true;
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
@@ -100,12 +101,11 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         "No nickname, no reason, no icon. You're literally setting a mystery alarm. Future you is going to be SO confused.",
         [
           { text: "Go back, I'll fix it", style: 'cancel' },
-          { text: 'I like chaos', onPress: () => { savedRef.current = true; form.save(navigateBack); } },
+          { text: 'I like chaos', onPress: () => form.save(navigateBack) },
         ],
       );
       return;
     }
-    savedRef.current = true;
     form.save(navigateBack);
   };
 
