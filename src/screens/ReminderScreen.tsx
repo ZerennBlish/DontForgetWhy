@@ -948,7 +948,7 @@ export default function ReminderScreen({ navigation }: Props) {
         accessibilityLabel="Create new reminder"
         accessibilityRole="button"
       >
-        <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        <Image source={APP_ICONS.plus} style={{ width: 40, height: 40, tintColor: colors.accent }} resizeMode="contain" />
       </TouchableOpacity>
 
       <UndoToast

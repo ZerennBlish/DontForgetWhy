@@ -102,8 +102,6 @@ interface UseReminderFormResult {
   isEditing: boolean;
   isDirty: boolean;
   notFound: boolean;
-  // Refs
-  savedRef: React.MutableRefObject<boolean>;
 }
 
 export function useReminderForm({ editId, initialDate }: UseReminderFormParams): UseReminderFormResult {
@@ -150,10 +148,6 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams):
   const [placeholder] = useState(getRandomPlaceholder);
   const [editReady, setEditReady] = useState(!editId);
   const [notFound, setNotFound] = useState(false);
-
-  // Set true once a successful save has fired so the screen's beforeRemove
-  // guard can skip the discard prompt for the post-save navigation.
-  const savedRef = useRef(false);
 
   // Dirty tracking — snapshot baseline, compare current state each render.
   // For edit mode the snapshot is set inside the async hydration effect
@@ -523,7 +517,6 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams):
       } catch {}
 
       refreshWidgets();
-      savedRef.current = true;
       onSuccess();
     } catch (error: unknown) {
       console.error('[SAVE REMINDER ERROR]', error);
@@ -718,7 +711,5 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams):
     isEditing: !!existing,
     isDirty,
     notFound,
-    // Refs
-    savedRef,
   };
 }

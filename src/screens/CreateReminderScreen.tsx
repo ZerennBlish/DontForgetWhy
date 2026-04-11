@@ -68,8 +68,6 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      // Skip prompt if we're navigating away because save succeeded
-      if (form.savedRef.current) return;
       if (!form.isDirty) return;
       e.preventDefault();
       Alert.alert(
@@ -82,7 +80,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
       );
     });
     return unsubscribe;
-  }, [navigation, form.isDirty, form.savedRef]);
+  }, [navigation, form.isDirty]);
 
   const navigateBack = () => {
     if (navigation.canGoBack()) {

@@ -112,8 +112,6 @@ interface UseAlarmFormResult {
   // Computed
   isEditing: boolean;
   isDirty: boolean;
-  // Refs
-  savedRef: React.MutableRefObject<boolean>;
 }
 
 export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams): UseAlarmFormResult {
@@ -219,10 +217,6 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
   // misses fields not in its dep list. We snapshot the source-of-truth
   // values once on mount, then diff the derived form state against it.
   const originalStateRef = useRef<string | null>(null);
-
-  // Set true once a successful save has fired so the screen's beforeRemove
-  // guard can skip the discard prompt for the post-save navigation.
-  const savedRef = useRef(false);
 
   // Day selection
   const {
@@ -655,7 +649,6 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
       } catch {}
 
       refreshWidgets();
-      savedRef.current = true;
       onSuccess();
     } catch (error: unknown) {
       console.error('[SAVE ERROR]', error);
@@ -797,7 +790,5 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
     // Computed
     isEditing,
     isDirty,
-    // Refs
-    savedRef,
   };
 }
