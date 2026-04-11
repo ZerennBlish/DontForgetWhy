@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 23 (April 9, 2026)
+**Last updated:** Session 24 (April 10, 2026)
 
 ---
 
@@ -300,6 +300,63 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 ### Dependencies (Session 23)
 - `expo-audio` used by both `soundFeedback.ts` (alarm chirp) and `gameSounds.ts` (game SFX)
 - `metro.config.js` required for wav asset bundling (added `wav` to `resolver.assetExts`)
+
+### New/Modified Files in Session 24
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/utils/safeParse.ts` | NEW | `safeParse<T>(json, fallback)` + `safeParseArray<T>(json)` — guards every `JSON.parse` call site from malformed storage rows |
+| `src/utils/asyncMutex.ts` | NEW | `withLock(key, fn)` — per-key async mutex. Serializes concurrent storage mutations on the same entity (e.g., two renames racing on the same note id) |
+| `src/utils/audioCompat.ts` | NEW | `PlayerWithEvents` intersection type. Patches expo-audio 55.x type drift where `AudioPlayer extends SharedObject<AudioEvents>` loses inherited `addListener`/`release`. Created but not yet imported by consumers — `gameSounds.ts` + `soundFeedback.ts` + `VoiceMemoListScreen.tsx` still throw TS errors on the raw `AudioPlayer` type |
+| `src/components/GameNavButtons.tsx` | NEW (stranded) | Character-style back/home button pair for game screens. References `APP_ICONS.gameBack` + `APP_ICONS.gameHome` which were not added to the icon registry after the FINAL-prompt revert. Not imported anywhere. TypeScript errors on lines 68 + 79. Must be wired or deleted before ship |
+| `src/utils/alarmSounds.ts` | DELETED | Dead file left over from pre-v1.18 sound architecture |
+| `src/theme/colors.ts` | MODIFIED | Added `success: string` + `overlaySecondary: string` to `ThemeColors`. Values defined for all 6 themes (Dark #4CAF50, Light #16A34A, HighContrast #44FF44, Vivid #00FF88, Sunset #16A34A, Ruby #16A34A) |
+| 13 storage files | MODIFIED | Wrapped all `JSON.parse` calls with `safeParse`/`safeParseArray`; wrapped mutation paths with `withLock` where concurrent writes could race |
+| `CreateAlarmScreen.tsx` + `CreateReminderScreen.tsx` | MODIFIED | `beforeRemove` guard with `savedRef` bypass pattern — confirmation prompt on back while editing, but save-then-navigate doesn't trip the guard |
+| 4 list screens (AlarmList, Notepad, Reminder, VoiceMemoList) | MODIFIED | FAB chrome circle matching `BackButton`/`HomeButton` (theme-aware rgba fill + 1px border, no elevation/shadow — fixes Android hex hole). Plus icon renders without `tintColor` to show natural silver |
+| `NoteCard.tsx` + `DeletedNoteCard.tsx` | MODIFIED | Silver-metallic `APP_ICONS.notepad` fallback when `note.icon` is empty (replaces `📝` emoji) |
+| `assets/sounds/pencil.wav` | NEW (unwired) | Sudoku number placement SFX — on disk, not in `gameSounds.ts` registry |
+| `assets/sounds/Eraser.wav` | NEW (unwired) | Sudoku cell clear SFX |
+| `assets/sounds/Triva-tap.wav` | NEW (unwired) | Trivia button tap SFX |
+| `assets/sounds/right-answer-Triva.wav` | NEW (unwired) | Trivia correct answer SFX |
+| `assets/sounds/wrong-answer-trivia.wav` | NEW (unwired) | Trivia wrong answer SFX |
+| `assets/icons/icon-hourglass.webp` | NEW (unexported) | Game character icon — tired hourglass face |
+| `assets/icons/icon-pencil.webp` | NEW (unexported) | Game character icon — pencil (Sudoku/notes) |
+| `assets/icons/icon-erase.webp` | NEW (unexported) | Game character icon — eraser |
+| `assets/icons/icon-chevron-left.webp` | NEW (unexported) | Game chevron (pagination/navigation) |
+| `assets/icons/icon-chevron-right.webp` | NEW (unexported) | Game chevron |
+| `assets/icons/icon-game-back.webp` | NEW (unexported) | Character back button for GameNavButtons |
+| `assets/icons/icon-game-home.webp` | NEW (unexported) | Character home button for GameNavButtons |
+| `assets/icons/icon-smiley.webp` | NEW (unexported) | Game character smiley (generic positive feedback) |
+| `assets/app-icons/lock.webp` | NEW (unexported) | Chrome lock icon — deferred until PIN system ships |
+| `assets/app-icons/checkmark.webp` | NEW (unexported) | Chrome checkmark icon |
+
+### Two-Tier Icon System (established Session 20, expanded Session 24)
+
+The app has two distinct visual languages for icons:
+
+1. **Chrome icons** (`assets/app-icons/`) — silver/brushed metallic WebP, 512×512, transparent bg. Clean utility language for productivity surfaces (alarms, reminders, notes, calendar, settings). No faces, no personality. Examples: `alarm-clock`, `bell`, `notepad`, `plus`, `close-x`, `back-arrow`.
+2. **Game character icons** (`assets/icons/`) — anthropomorphic full-color WebP with weathered expressions. Gameplay surfaces only (Chess, Checkers, Sudoku, Trivia, Memory Match, Daily Riddle). Examples: `game-play`, `icon-smiley`, `icon-hourglass`, 22 Memory Guy Match card images, 12 chess piece characters, 10 trivia category icons, 9 rank tier images.
+
+**Navigation mirror:** non-game screens use `BackButton`/`HomeButton` (chrome). Game screens were intended to use `GameNavButtons` (character art via `icon-game-back`/`icon-game-home`) to keep the game/app boundary visually clean — but the component is currently stranded (see Session 24 files above).
+
+### Data Layer Safety (Session 24)
+
+- **`safeParse<T>(json, fallback): T`** — wraps `JSON.parse` with try/catch; returns `fallback` on SyntaxError or when parse result is `null`/`undefined`. Replaces the pattern `JSON.parse(raw) ?? fallback` which would still crash on malformed JSON
+- **`safeParseArray<T>(json): T[]`** — same contract, returns `[]` on any failure. Used in the 13 storage services for list-valued kv entries (`alarms_list`, `notes_list`, `reminders_list`, etc.)
+- **`withLock(key, fn): Promise<T>`** — per-key async mutex. Each key gets its own promise chain; subsequent calls queue behind the current in-flight operation. Use case: two simultaneous note-rename operations on the same note id should serialize, not race. Usage: `await withLock('note:' + id, async () => { ... })`
+- **Restore mutex** — `restoreInProgress` boolean flag set at start of `restoreFromBackup()`, cleared in `finally`. Prevents concurrent restore attempts from corrupting the transactional rollback state
+- **Migration safety** — per-row try/catch in data migrations. A single malformed row logs and skips rather than aborting the entire migration
+- **`autoExportBackup` never throws** — background backup operations swallow and log errors. A stale SAF URI or permission drop can't crash the app
+
+### Navigation Guards (Session 24)
+
+- **`beforeRemove` guards** on `CreateAlarmScreen` and `CreateReminderScreen`. When the form is dirty and the user hits back, a confirmation dialog asks "Discard changes?". The `savedRef` ref is flipped to `true` before calling `navigation.goBack()` after a successful save, so the normal save-then-navigate path bypasses the guard
+- **`isDirty` comparison** uses `JSON.stringify(currentForm) !== JSON.stringify(initialForm)` instead of a simple boolean flag. A flag gets out of sync when the user edits then reverts a field; the stringify comparison catches that the form is back to clean state
+- **`VoiceRecordScreen` confirmation** — recording in progress triggers a confirm-before-leave prompt
+- **Game screens intercept hardware back** — Chess/Checkers/Sudoku/Trivia/MemoryMatch/DailyRiddle listen for hardware back and bounce the user back to the pre-game menu phase instead of exiting the screen
+- **`HomeButton.popToTop()`** — ensures the `beforeRemove` guards fire when the user taps Home from a modal/nested route (vs. `navigate('Home')` which would skip them)
+- **Deep-link existence checks** — deep links from widgets/notifications validate the target entity still exists before routing. A deleted note's widget tile no longer opens a blank editor
 
 ---
 

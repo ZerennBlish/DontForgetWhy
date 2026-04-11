@@ -111,7 +111,11 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
     <SwipeableRow onDelete={handleSwipeDelete}>
       <View style={styles.card}>
         <View style={[styles.iconCircle, { backgroundColor: note.color }]}>
-          <Text style={styles.iconCircleText}>{note.icon || '\u{1F4DD}'}</Text>
+          {note.icon ? (
+            <Text style={styles.iconCircleText}>{note.icon}</Text>
+          ) : (
+            <Image source={APP_ICONS.notepad} style={{ width: 22, height: 22 }} resizeMode="contain" accessible={false} />
+          )}
         </View>
         <TouchableOpacity
           style={styles.cardCenter}

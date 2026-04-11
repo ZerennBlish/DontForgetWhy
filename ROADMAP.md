@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 23 (April 9, 2026)
+### Source of Truth · Updated: Session 24 (April 10, 2026)
 
 ---
 
@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.18.0 (versionCode 35) — Game sounds, media control icons, GlowIcon, close-x, checkmate banner |
+| **Current Version** | v1.18.0 (versionCode 35) — Session 24 audit work applied on top, no version bump yet |
 | **Branch** | `dev` |
-| **Production Status** | v1.18.0 building for Google Play |
-| **Current Focus** | Session 23: Game sound effects (11 wav files, volume map, expo-audio, settings toggle), media control icon replacement (5 WebP chrome/character icons replacing all CSS border-triangle and emoji play/pause/stop/record), GlowIcon component with colored glow shadow, FAB glow effect, close-x chrome icon (15 replacements across 9 files), checkmate banner, take back label fix, metro.config.js wav support, chess light mode card text fix, 3 audit rounds (6 total fixes). |
+| **Production Status** | v1.18.0 on Play Store. Session 24 audit fixes sitting on `dev` unshipped. |
+| **Current Focus** | Session 24: Full codebase audit sweep (dual Codex + Gemini, 8 categories). Dead code cleanup, theme compliance, accessibility, performance, type safety, UI patterns, data/storage safety, navigation guards. FINAL-prompt expansion (GameNavButtons wiring, game sound expansion, emoji→icon sweep in secondary screens) was reverted after laptop issues — assets on disk, wiring pending. Two follow-up visual fixes applied: FAB chrome circle across 4 list screens, NoteCard/DeletedNoteCard silver notepad fallback. |
 | **Blocked By** | Nothing |
-| **Next Action** | Session 24: Full codebase audit sweep (accumulated debt, stale code, missed inconsistencies across 23 sessions). Then P5.5 Premium Foundation (expo-iap, entitlement system, ProGate), Checkers (P6.3). |
+| **Next Action** | Re-run `npx tsc --noEmit` (currently 10 errors in stranded files: GameNavButtons, audioCompat consumers). Either wire the stranded code or delete the orphan files before shipping. Then P5.5 Premium Foundation (expo-iap, entitlement system, ProGate), Checkers polish (P6.3). |
 | **EAS Credits** | ~25 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — 68 clips shipped |
@@ -60,6 +60,7 @@
 - **Session 21 · Chess Overhaul + Custom Fonts (v1.16.0)** — Chess: post-game move review (FEN history, step-through board), check/checkmate indication (red king square, CHECK! banner, red board border), training mode (threatened pieces, last move highlight, toggle for difficulty 0-2), haptic tiers (light=turn, heavy=check, error=checkmate). Art: 12 anthropomorphic chess pieces (6 white cream/gold, 6 black charcoal/silver), 3 calendar empty state illustrations (hammock, beach chair, couch), calendar icon refresh. Visual: plus icon sizes increased across 8 files, color picker circles aligned in NoteEditorModal. Fonts: Satisfy (app title), Lilita One (game headers), Nunito (core UI headers). Phase 1 font rollout — headers only, body text Phase 2.
 - **Session 22 · Montserrat Alternates + Hook Extractions** — Font Phase 2: Montserrat Alternates to all ~40 files, fontWeight→fontFamily pattern, systematic font size reduction. Hook extractions: useSudoku, useTimerScreen, useDailyRiddle, useSettings. NoteEditorModal cleanup: linkedText.tsx, NoteVoiceMemo.tsx, ColorPickerModal.tsx. Quick Capture simplification. Splash dark bg prep. Play Store refresh (8 screenshots, updated description). Dual audit, 11 fixes.
 - **Session 23 · Game Sounds + Media Control Icons + Close-X (v1.18.0)** — Game sound effects: 11 wav files (chess place/capture/promote/pickUp, checkers move, game win/loss, card flip/flipBack, memory win, tap), gameSounds.ts service with VOLUMES map (cached toggle, fire-and-forget expo-audio), settings toggle, wired to useChess/useCheckers/MemoryMatchScreen. Tap SFX on game UI buttons across 8 screens. Media control icon replacement: 5 WebP assets (game-play character, chrome play/pause/stop/record) replacing all CSS border-triangle and emoji play/pause/stop icons. GlowIcon component with colored shadow spotlight (Android translucent fill fix). FAB + buttons: colored backgrounds removed, glow shadow added across 4 screens. Close-X chrome icon: 15 replacements across 9 files, dead CloseIcon removed from Icons.tsx. Checkmate banner (CHECK! vs CHECKMATE!). Take back label fix (fresh game shows "Take Back" not "Used"). Chess light mode card text fix. metro.config.js wav asset extension. 3 audit rounds, 6 total fixes.
+- **Session 24 · Full Codebase Audit Sweep** — 8-category dual audit (Codex + Gemini): dead code, theme compliance, accessibility, performance, type safety, UI patterns, data/storage, navigation. **Dead code:** removed `alarmSounds.ts` (dead file), 26 dead icon exports, orphaned styles across 13 files, unused imports/variables across 14 files, unexported dead exports across 27 files. **Theme:** added `success` + `overlaySecondary` tokens (all 6 themes), fixed 5 light-theme broken screens, hardcoded color cleanup across 15+ files, capsule pill opacity fix. **Accessibility:** BackButton/HomeButton hitSlop + labels (foundation), AlarmFire/VoiceRecord/Timer/VoiceMemoDetail critical-screen pass, card components, modals, form screens, game screens, complex components, live regions. **Performance:** FlatList configs (removeClippedSubviews, windowSize 5, maxToRenderPerBatch 8, initialNumToRender 8), React.memo wraps, useCallback in hooks + screens. **Data safety:** restore mutex (`restoreInProgress` flag), notification cancellation timing, per-row migration error handling, `safeParse` utility, `asyncMutex` utility wired across 13 storage files, safe JSON parsing everywhere. **Navigation:** `beforeRemove` guards on CreateAlarm/CreateReminder with `savedRef` bypass, VoiceRecord confirmation dialog, game screen hardware-back intercept, HomeButton popToTop, deep-link existence checks, note pending TTL, NoteEditor widget protection. **Type safety:** migration entity types, storage validation, alarm form non-null fixes, useSudoku validation, hook return types. **UI patterns (partially reverted):** `GameNavButtons.tsx` component created but wiring + icon exports reverted (file stranded with broken `APP_ICONS.gameBack`/`gameHome` references — must be wired or deleted before ship). Emoji-chrome sweep in secondary screens also reverted. **Custom icons (assets present, exports reverted):** 8 game character icons on disk (hourglass, pencil, erase, chevron-left/right, game-back, game-home, smiley), 2 chrome icons (lock, checkmark) — all in `assets/` but not exported from `appIconAssets.ts`. **Game sounds (assets present, registry reverted):** 5 new wav files on disk (pencil, Eraser, Triva-tap, right-answer-Triva, wrong-answer-trivia) but `gameSounds.ts` SOUNDS registry has no pencil/eraser/trivia entries. **Audio compat layer:** `audioCompat.ts` created to patch expo-audio 55.x type drift (missing `addListener`/`release` inheritance), but not yet imported — `gameSounds.ts` and `soundFeedback.ts` still throw the TS errors. **Bug fixes shipped:** FAB glow styling (hex hole → chrome circle matching BackButton/HomeButton on 4 list screens), VoiceRecord navigation, autoBackup SAF error handling (never-throw contract), NoteCard/DeletedNoteCard silver notepad fallback when `note.icon` is empty, expo-audio type compatibility scaffolding. Gemini audit violation: created 6 unauthorized files during read-only audit phase (ESLint config + scripts) — deleted, read-only warnings escalated in auditor prompts. **Audit work from 3e94a28 is intact. "FINAL prompt" wiring from 3ae389f was reverted in 4820f36 after laptop instability.**
 
 ---
 
@@ -293,6 +294,51 @@
 
 ---
 
+## SESSION 24 — FULL CODEBASE AUDIT SWEEP
+
+**Version:** v1.18.0 (no bump — audit sits on `dev` unshipped)
+**Branch:** `dev`
+**Build cost:** 0 (no new native deps)
+**Commits:** `3e94a28` audit work, `3ae389f` FINAL prompt (reverted by `1991813`), `4820f36` revert cleanup keeping audit intact
+
+### Audit Categories (8)
+
+- [x] **Dead code** — Removed `src/utils/alarmSounds.ts` (dead file), 26 dead icon exports from `Icons.tsx`, orphaned `StyleSheet.create` entries across 13 screens/components, unused imports + locals across 14 files, unexported dead exports across 27 files
+- [x] **Theme compliance** — Added `success: string` and `overlaySecondary: string` tokens to `ThemeColors` interface and all 6 themes, fixed 5 light-theme broken screens (text/chrome invisible on card surfaces), hardcoded hex cleanup across 15+ files, capsule pill opacity fix
+- [x] **Accessibility** — Foundation layer (`BackButton`/`HomeButton` hitSlop + accessibilityLabel/Role), critical screens (AlarmFire, VoiceRecord, Timer, VoiceMemoDetail), card components, modal dialogs, form screens, game screens, complex components, live regions (accessibilityLiveRegion="polite")
+- [x] **Performance** — `removeClippedSubviews`, `windowSize={5}`, `maxToRenderPerBatch={8}`, `initialNumToRender={8}` on all FlatLists. `React.memo` wraps on `NoteCard`, `DeletedNoteCard`, `AlarmCard`, `DeletedAlarmCard`, other list items. `useCallback` stabilization in hooks and list screens to prevent memo bailout
+- [x] **Data safety** — `restoreInProgress` mutex flag in backup service, notification cancellation timing fixes, per-row try/catch in migrations (bad row can't tank the whole migration), new `safeParse<T>` + `safeParseArray<T>` utility (src/utils/safeParse.ts), new `withLock` per-key async mutex (src/utils/asyncMutex.ts) wired across 13 storage files, `autoExportBackup` must never throw (background operation)
+- [x] **Navigation guards** — `beforeRemove` guards on `CreateAlarmScreen` + `CreateReminderScreen` with `savedRef` bypass pattern (save-then-navigate doesn't trip the guard), `VoiceRecordScreen` confirmation dialog, game screens intercept hardware back, `HomeButton` uses `popToTop()` so guards fire, deep-link paths validate target exists before navigating, note pending TTL, NoteEditor widget protection
+- [x] **Type safety** — Migration entity types, storage validation, alarm form non-null fixes, `useSudoku` validation, hook return types
+- [~] **UI patterns** — `GameNavButtons.tsx` component created (game-style back/home pair using character icon set) + emoji-chrome sweep plan. **Both reverted in FINAL cleanup.** File remains on disk but references non-exported `APP_ICONS.gameBack`/`gameHome` — stranded.
+
+### Visual Fixes (applied separately, post-audit)
+- [x] **FAB chrome circle** — All 4 list screens (`AlarmListScreen`, `NotepadScreen`, `ReminderScreen`, `VoiceMemoListScreen`) now use the same chrome circle pattern as `BackButton`/`HomeButton` (theme-aware `rgba(30, 30, 40, 0.8)` dark fill + 1px white-rgba border). Elevation + shadow removed (fixed the Android hex hole bug). Plus icon renders without `tintColor` so natural silver webp shows through
+- [x] **NoteCard silver fallback** — `NoteCard.tsx` + `DeletedNoteCard.tsx` now render `APP_ICONS.notepad` (22×22 natural silver) when `note.icon` is empty, instead of the `📝` emoji fallback
+
+### Stranded Work (reverted, not yet deleted)
+- [ ] **GameNavButtons component** — file at `src/components/GameNavButtons.tsx` exists but `APP_ICONS.gameBack`/`gameHome` were not added to `appIconAssets.ts`. TypeScript errors. Not imported anywhere. Either wire it or delete it.
+- [ ] **Game icon exports** — 8 character icons on disk in `assets/icons/` (icon-hourglass, icon-pencil, icon-erase, icon-chevron-left, icon-chevron-right, icon-game-back, icon-game-home, icon-smiley) but none exported from `appIconAssets.ts`
+- [ ] **Chrome icon exports** — `lock.webp` + `checkmark.webp` in `assets/app-icons/` but not in `appIconAssets.ts`
+- [ ] **Trivia + Sudoku game sounds** — 5 wav files on disk (`pencil.wav`, `Eraser.wav`, `Triva-tap.wav`, `right-answer-Triva.wav`, `wrong-answer-trivia.wav`) but `gameSounds.ts` SOUNDS registry has no entries for them, and no call sites in `useSudoku` or trivia
+- [ ] **audioCompat.ts adoption** — `src/utils/audioCompat.ts` exports `PlayerWithEvents` intersection type to patch expo-audio 55.x type drift, but `gameSounds.ts` and `soundFeedback.ts` still use raw `AudioPlayer` and throw TS errors on `addListener` + `release`. Need to cast via `PlayerWithEvents` and use `.remove()` instead of `.release()`
+- [ ] **VoiceMemoListScreen audio TS errors** — same expo-audio type drift at lines 118, 147
+
+### Audit Gate
+- [x] Dead code categorical pass
+- [x] Theme compliance pass
+- [x] Accessibility pass
+- [x] Performance pass
+- [x] Data safety pass
+- [x] Navigation guards pass
+- [x] Type safety pass
+- [~] UI patterns pass (partially reverted)
+- [ ] `npx tsc --noEmit` — **10 errors** in stranded files (`GameNavButtons.tsx` missing icon refs, `gameSounds.ts` + `soundFeedback.ts` + `VoiceMemoListScreen.tsx` audio types). Pre-existing on this branch, introduced when wiring was reverted but orphan files kept.
+- [ ] `npx jest` — not re-run since the revert
+- [ ] Version bump — deferred until stranded work is resolved
+
+---
+
 ## PHASE 6.5 — VOICE CONTENT EXPANSION
 
 **Version Target:** v1.15.0
@@ -339,6 +385,15 @@
 ---
 
 ## BACKLOG (Not Scheduled)
+
+### Deferred from Session 24
+- **Board memoization** — Sudoku 81-cell rebuild on every render, Chess/Checkers 64-cell rebuild. Audited, prompts written, not applied (scope + risk of breaking stable game UX).
+- **DrawingCanvas render-tick refactor** — audited, prompt written, not applied
+- **ReminderCard extraction** — inline cards in ReminderScreen should move to a component (noted by auditors)
+- **Widget emoji cleanup** — needs a new ImageWidget wrapper before emoji can be fully swept from widget layouts
+- **Timer preset emoji → icon conversion** — design decision pending (what icon language for presets?)
+- **PIN system** — for private alarms/reminders. Once shipped, wire the `lock.webp` chrome icon (currently on disk but unexported)
+- **Dual brand identity** — Personality Mode / Clean Mode — concept only
 
 ### Features
 - Memory Match custom card art — replace emoji with custom-designed images (ChatGPT-generated, DFW-themed). ~20-22 unique cards + custom card back. Polish pass for free tier storefront quality.
@@ -468,3 +523,5 @@
 | Apr 7 | Session 20 silver metallic icon set. 25+ silver/chrome utility icons replacing View-based CSS geometry + emoji. Two-tier visual language (silver core, anthropomorphic games). Screen headers on 7 core screens. Sound mode icons. ShareNoteModal icons. FAB plus buttons. Guess Why art. Checker pieces (4 WebP). Icons.tsx pruned. Jest webp moduleNameMapper. Accessibility labels. TimerScreen header absolute positioning. |
 | Apr 7 | Session 21 chess overhaul + custom fonts. v1.16.0 (versionCode 33). Chess: post-game move review (FEN history, step-through), check/checkmate indication (red king, CHECK! banner, red border, haptic tiers), training mode (threatened red, last move gold, toggle for difficulty 0-2). 12 anthropomorphic chess pieces. 3 calendar empty state illustrations. Calendar icon refresh. Plus icon sizes. Color picker alignment. Fonts: Satisfy (title), Lilita One (games), Nunito (core headers). 3 audit rounds (9 findings, all fixed). 283 tests passing. |
 | Apr 8 | Session 22 font rollout + hook extractions. v1.17.0 (versionCode 34). Phase 2 font: Montserrat Alternates applied to all body text across 25 screens + 16 components + buttonStyles. Font swap Nunito→Montserrat Alternates. Font size reduction pass. Hook extractions: useSudoku, useTimerScreen, useDailyRiddle, useSettings. NoteEditorModal cleanup: linkedText, NoteVoiceMemo, ColorPickerModal extracted. Quick Capture renamed. Splash bg dark. Play Store refresh. Dual audit (11 fixes). |
+| Apr 9 | Session 23 game sounds + media control icons + close-x. v1.18.0 (versionCode 35). 11 wav files wired via gameSounds.ts, 5 media control WebP assets, GlowIcon component, FAB glow, close-x chrome icon (15 replacements), checkmate banner, take back label fix, chess light mode fix. 3 audit rounds, 6 fixes. |
+| Apr 10 | Session 24 full codebase audit sweep. 8-category dual audit (Codex + Gemini). Dead code removed (alarmSounds.ts + 26 icon exports + orphan styles across 13 files + dead exports across 27 files). Theme tokens added (success + overlaySecondary). Accessibility pass across critical screens/cards/modals/forms/games. FlatList perf configs. Data safety: safeParse + asyncMutex utilities wired across 13 storage files, restore mutex, never-throw autoBackup. Navigation beforeRemove guards with savedRef bypass. Type safety in migrations/forms/hooks. `audioCompat.ts` type-compat layer scaffolded (not yet imported). `GameNavButtons.tsx` + 8 game icons + 5 new trivia/sudoku sounds + lock/checkmark chrome icons on disk but wiring was reverted after laptop issues (stranded files: broken icon refs in GameNavButtons). Visual fixes: FAB chrome circle on 4 list screens, silver notepad fallback on NoteCard/DeletedNoteCard. No version bump — audit sits on dev unshipped. |

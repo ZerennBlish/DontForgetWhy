@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { formatDeletedAgo } from '../utils/time';
+import APP_ICONS from '../data/appIconAssets';
 import type { Note } from '../types/note';
 
 interface DeletedNoteCardProps {
@@ -91,7 +92,11 @@ function DeletedNoteCard({ note, onRestore, onPermanentDelete }: DeletedNoteCard
   return (
     <View style={styles.card}>
       <View style={[styles.iconCircle, { backgroundColor: note.color }]}>
-        <Text style={styles.iconCircleText}>{note.icon || '\u{1F4DD}'}</Text>
+        {note.icon ? (
+          <Text style={styles.iconCircleText}>{note.icon}</Text>
+        ) : (
+          <Image source={APP_ICONS.notepad} style={{ width: 22, height: 22 }} resizeMode="contain" accessible={false} />
+        )}
       </View>
       <View style={styles.cardCenter}>
         <Text style={styles.cardTitle} numberOfLines={2}>

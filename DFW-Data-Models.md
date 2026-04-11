@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 18 (April 5, 2026)
+**Last updated:** Session 24 (April 10, 2026)
 
 ---
 
@@ -108,13 +108,18 @@ interface ThemeColors {
   textPrimary: string; textSecondary: string; textTertiary: string; border: string;
   red: string; orange: string; activeBackground: string;
   overlayWin: string; overlayLose: string; overlaySkip: string;
-  overlayButton: string; overlayText: string; modalOverlay: string;
+  overlayButton: string; overlayText: string; overlaySecondary: string; modalOverlay: string;
+  success: string;  // Added Session 24 — green for correct/win states (not derivable from accent which is blue/orange/etc depending on theme)
   // Section colors — every theme defines its own palette
   sectionAlarm: string; sectionReminder: string; sectionCalendar: string;
   sectionNotepad: string; sectionVoice: string; sectionTimer: string; sectionGames: string;
   brandTitle: string;
 }
 ```
+
+**Session 24 additions:**
+- `success` — dedicated green for correct-answer / win / positive states. Previously overloaded into `accent` which is theme-dependent (blue in Dark/Light, cyan in HighContrast, neon green in Vivid, orange in Sunset, rose in Ruby) and was producing "correct answer is orange" in Sunset. Values: Dark `#4CAF50`, Light `#16A34A`, HighContrast `#44FF44`, Vivid `#00FF88`, Sunset `#16A34A`, Ruby `#16A34A`.
+- `overlaySecondary` — subdued text color for use on top of permanent dark overlays (alarm fire screen, game-over cards). `overlayText` is always white/full-contrast; `overlaySecondary` is the dimmer variant (`rgba(255,255,255,0.7)` to `0.85`) for captions, timestamps, and secondary labels that shouldn't compete with the primary text.
 
 **ThemeName:** `'dark' | 'light' | 'highContrast' | 'vivid'` — custom theme removed. `customTheme` kv_store key cleaned up on migration.
 
@@ -338,3 +343,42 @@ Max score: 140 (7 games × 20). Rank thresholds scaled from 0-100 to 0-140.
 | Trivia | 20 | Accuracy × 10 + best round + category breadth |
 | Chess | 20 | totalPoints / 5 (wins/draws weighted by difficulty) |
 | Checkers | 20 | totalPoints / 5 (wins weighted by difficulty) |
+
+---
+
+## 11. Shared Utilities (Session 24)
+
+### `safeParse<T>(json, fallback): T`
+```typescript
+// src/utils/safeParse.ts
+function safeParse<T>(json: string | null | undefined, fallback: T): T
+function safeParseArray<T>(json: string | null | undefined): T[]
+```
+- Replaces the `JSON.parse(raw) ?? fallback` pattern which crashes on malformed JSON
+- `safeParse`: try-catch around `JSON.parse`; returns `fallback` on SyntaxError or when the parsed value is `null`/`undefined`
+- `safeParseArray<T>`: same contract, always returns `[]` on any failure
+- Used by the 13 storage services that read list-valued kv entries (`alarms_list`, `notes_list`, etc.)
+
+### `withLock(key, fn): Promise<T>`
+```typescript
+// src/utils/asyncMutex.ts
+async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T>
+```
+- Per-key async mutex. Each key gets its own promise chain; subsequent calls queue behind the current in-flight operation
+- Serializes concurrent storage mutations on the same entity so two renames on the same note id don't race
+- Usage: `await withLock('note:' + id, async () => { ... })`
+- Keys are not persisted — mutex state is in-memory, module-level
+
+### `PlayerWithEvents` (expo-audio compat layer)
+```typescript
+// src/utils/audioCompat.ts
+type PlayerWithEvents = AudioPlayer & {
+  addListener(
+    eventName: 'playbackStatusUpdate',
+    listener: (status: AudioStatus) => void,
+  ): { remove: () => void };
+};
+```
+- Patches expo-audio 55.x type drift. `AudioPlayer extends SharedObject<AudioEvents>`, but the re-export chain prevents TypeScript from inheriting `addListener` and `release` onto `AudioPlayer`. Runtime methods still work — only the type is broken
+- Call sites should cast `createAudioPlayer(...) as PlayerWithEvents` and prefer `player.remove()` (declared directly on `AudioPlayer`) over `player.release()`
+- **Currently unused** — `gameSounds.ts`, `soundFeedback.ts`, and `VoiceMemoListScreen.tsx` still use the raw type and throw TS errors. Adoption is on the Session 24 punch list

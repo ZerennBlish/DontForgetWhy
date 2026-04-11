@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 23 (April 9, 2026)
+**Last updated:** Session 24 (April 10, 2026)
 
 ---
 
@@ -86,11 +86,22 @@
 - Replaces all 15 `\u2715` unicode characters across 9 files
 - Dead `CloseIcon` function removed from `Icons.tsx`
 
-### FAB Buttons (Session 23)
-- Colored backgrounds removed from all 4 FABs (AlarmList, Notepad, Reminder, VoiceMemoList)
-- Glow shadow with `colors.accent`, centered, translucent fill
-- Plus icon from APP_ICONS.plus at 40×40
-- All 4 standardized: width 56, height 56, right 24, borderRadius 28
+### FAB Buttons (Session 23 → Session 24 revision)
+- **Session 23:** Colored backgrounds removed, glow shadow with `colors.accent`, centered, translucent fill, plus icon from `APP_ICONS.plus` at 40×40, standardized 56×56 / right: 24 / borderRadius 28 across all 4 FABs (AlarmList, Notepad, Reminder, VoiceMemoList).
+- **Session 24:** Glow-shadow variant caused a visible Android hex-hole artifact inside the accent halo (polygon outline from elevation + translucent fill at low alpha). Replaced with the chrome-circle pattern used by `BackButton`/`HomeButton`: theme-aware `rgba(30, 30, 40, 0.8)` dark fill + 1px white-rgba border, **no elevation, no shadow**. Plus icon now renders with no `tintColor` so the natural silver-metallic `plus.webp` shows through. Same consistent chrome as the nav buttons.
+
+### FAB / Nav Chrome Circle Pattern (Session 24)
+Shared visual language for all circular chrome buttons (back, home, FAB):
+```
+backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)'
+borderWidth: 1
+borderColor:    colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'
+```
+40×40 for nav buttons, 56×56 (borderRadius 28) for FABs. No elevation, no shadow — opaque-enough rgba fills the circle cleanly on Android without the polygon outline bug.
+
+### NoteCard Silver Fallback (Session 24)
+- `NoteCard.tsx` + `DeletedNoteCard.tsx` iconCircle: when `note.icon` is set, renders it as `<Text>`. When empty, falls back to `<Image source={APP_ICONS.notepad} size=22 />` — natural silver-metallic notepad (no `tintColor`) instead of the `📝` emoji
+- `DeletedNoteCard.tsx` gained `Image` import + `APP_ICONS` import
 
 ### Play Store Listing (Session 22)
 - 8 screenshots: Home, Alarms/Reminders/Calendar, Chess/Checkers/Memory, Notes, Timers, Settings, Widgets, Alarm Fire

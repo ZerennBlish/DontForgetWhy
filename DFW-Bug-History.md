@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 23 (April 9, 2026)
+**Last updated:** Session 24 (April 10, 2026)
 
 ---
 
@@ -566,3 +566,45 @@
 - **Dead styles from close-x swap** — Text→Image replacement left orphaned style entries (clearDateText, closeBtnText, closeText, thumbnailRemoveText, memoDeleteText, cancelBtnText) and dead imports in ImageLightbox. Cleaned up. Found by Codex re-audit round 2.
 
 **57 audits total.**
+
+### Session 24 — Full Codebase Audit Bugs
+
+**Bug: FAB plus icon hex hole (Android)**
+- Found: Session 24 Zerenn, live device
+- Cause: FAB used `backgroundColor: colors.accent + '15'` (~8% alpha) + `elevation: 8`. Android renders elevation shadow as a polygon outline when the fill alpha is low, producing a visible hex/octagon artifact inside the accent halo. Multiple alpha bumps, stacked-view halos, and bare-icon variants all produced some form of the outline
+- Fix: Replaced entirely with the chrome-circle pattern used by `BackButton`/`HomeButton`: theme-aware `rgba(30, 30, 40, 0.8)` dark fill + 1px white-rgba border, no elevation, no shadow. Applied across all 4 list screens (AlarmList, Notepad, Reminder, VoiceMemoList)
+- Related fix: plus icon `tintColor: colors.accent` removed so the natural silver `plus.webp` shows through instead of an accent-tinted silhouette
+
+**Bug: Alarm save blocked by `beforeRemove` guard**
+- Found: Session 24 Zerenn, manual testing
+- Cause: Added `beforeRemove` guard to `CreateAlarmScreen` so back with dirty form shows "Discard changes?" — but the save handler calls `navigation.goBack()` after persisting, which also tripped the guard. User saved an alarm and got a discard-changes prompt
+- Fix: `savedRef` ref pattern. `handleSave` flips the ref to `true` immediately before `goBack()`. Guard checks the ref and bypasses the prompt
+
+**Bug: VoiceRecord back → Home (stack gap)**
+- Found: Session 24 Zerenn, manual testing
+- Cause: Deep-link flow from Memory's Voice widget navigated `Home → VoiceRecord` directly, skipping `VoiceMemoList`. Hitting back from VoiceRecord took the user back to Home (correct per stack), but felt disorienting since the list was never on the stack
+- Fix: VoiceRecord back handler ensures `VoiceMemoList` is on the stack before popping. Confirmation dialog added for in-progress recordings
+
+**Bug: `autoBackup` crash on stale SAF URI**
+- Found: Session 24 audit (data safety category)
+- Cause: `autoExportBackup` called at app open. If the user's chosen SAF folder had been moved, deleted, or had its permission revoked (Google Drive sign-out, Downloads folder cleared), the SAF permission check threw — unhandled — and the app crashed on launch
+- Fix: `autoExportBackup` wrapped in try/catch. Errors logged and written to `lastBackupError` kv key, never propagated. Background operations now follow a "never throw" contract
+- Commit: `3e94a28`
+
+**Bug: NoteCard blank icon after emoji removal**
+- Found: Session 24 Zerenn, live device
+- Cause: During the emoji → icon sweep, the `📝` fallback in `NoteCard` + `DeletedNoteCard` was removed but the `APP_ICONS.notepad` `Image` fallback wasn't added. Notes without a user-chosen emoji rendered a blank iconCircle. Fix was added, then reverted with the rest of the FINAL prompt
+- Fix: Re-added the conditional: `note.icon ? <Text>{note.icon}</Text> : <Image source={APP_ICONS.notepad} size=22 />`. Applied to both `NoteCard.tsx` and `DeletedNoteCard.tsx` (the latter also required adding `Image` + `APP_ICONS` imports)
+
+**Bug: expo-audio type drift (addListener/release missing)**
+- Found: Session 24 `npx tsc --noEmit`
+- Cause: expo-audio 55.x declares `AudioPlayer extends SharedObject<AudioEvents>` where `SharedObject` is a re-export chain ending in `typeof ExpoGlobal.SharedObject`. That circular indirection prevents TypeScript from inheriting `addListener` (from EventEmitter) and `release` (from SharedObject) onto `AudioPlayer`. The runtime methods still exist — the breakage is purely at the type level
+- Partial fix: Created `src/utils/audioCompat.ts` exporting `PlayerWithEvents = AudioPlayer & { addListener(...) }`. Call sites are supposed to cast `createAudioPlayer(...)` to `PlayerWithEvents` and prefer `.remove()` (declared directly on `AudioPlayer`) over `.release()` (only reachable through the broken inheritance)
+- **Status:** compat file written but not yet adopted. `gameSounds.ts`, `soundFeedback.ts`, and `VoiceMemoListScreen.tsx` still use the raw `AudioPlayer` type and still throw TS errors on `addListener` + `release`. 10 TypeScript errors on `dev` branch currently, all from this issue
+
+**Bug: `GameNavButtons` references non-exported icons (stranded file)**
+- Found: Session 24 `npx tsc --noEmit`
+- Cause: `GameNavButtons.tsx` imports and renders `APP_ICONS.gameBack` and `APP_ICONS.gameHome`. The corresponding asset files exist (`assets/icons/icon-game-back.webp`, `icon-game-home.webp`) but the exports were never added to `appIconAssets.ts` — or the adds were reverted with the FINAL prompt cleanup. File is also not imported anywhere, so these errors don't manifest at runtime, but TSC flags them
+- **Status:** unresolved. Two paths: (1) wire it — add 8 game icon exports to `appIconAssets.ts`, swap `BackButton`/`HomeButton` usage in the 6 game screens for `GameNavButtons`, (2) delete it — remove `GameNavButtons.tsx` and the 8 stranded asset files. Decision pending
+
+**60 audits total.**

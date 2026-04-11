@@ -435,12 +435,9 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.accent + '15',
-      shadowColor: colors.accent,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.6,
-      shadowRadius: 12,
-      elevation: 8,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+      borderWidth: 1,
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
   }), [colors, insets.bottom, insets.top]);
 
@@ -607,7 +604,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Record new voice memo"
         >
-          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40, tintColor: colors.accent }} resizeMode="contain" />
+          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast
