@@ -18,23 +18,20 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { v4 as uuidv4 } from 'uuid';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import {
   getAllVoiceMemos,
   updateVoiceMemo,
   deleteVoiceMemo,
-  addVoiceMemo,
 } from '../services/voiceMemoStorage';
 import {
   getClipsForMemo,
-  addClip,
   deleteClip,
   updateClipLabel,
 } from '../services/voiceClipStorage';
-import { saveVoiceClipFile, deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
+import { kvGet, kvSet } from '../services/database';
 import APP_ICONS from '../data/appIconAssets';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
@@ -44,6 +41,9 @@ import type { VoiceMemo } from '../types/voiceMemo';
 import type { VoiceClip } from '../types/voiceClip';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VoiceMemoDetail'>;
+
+type PlaybackMode = 'stop' | 'playAll' | 'repeat';
+const PLAYBACK_MODE_KEY = 'clipPlaybackMode';
 
 const SAVE_TOASTS = [
   'Saved. Future you will either thank you or cringe.',
@@ -76,26 +76,24 @@ function formatClipTimestamp(isoDate: string): string {
 export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const params = route.params;
-  const isNewRecording = 'tempUri' in params;
+  const memoId = (route.params as { memoId: string }).memoId;
 
   const [memo, setMemo] = useState<VoiceMemo | null>(null);
   const [clips, setClips] = useState<VoiceClip[]>([]);
-  const [loading, setLoading] = useState(!isNewRecording);
+  const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
-  const [saving, setSaving] = useState(false);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
-  const [isViewMode, setIsViewMode] = useState(!isNewRecording);
+  const [isViewMode, setIsViewMode] = useState(true);
   const [activeClipId, setActiveClipId] = useState<string | null>(null);
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
   const [editingLabelText, setEditingLabelText] = useState('');
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('stop');
 
   const initialTitleRef = useRef('');
   const initialNoteRef = useRef('');
   const barWidthRef = useRef(0);
-  const savingRef = useRef(false);
   const exitingRef = useRef(false);
   const prevClipRef = useRef<string | null>(null);
 
@@ -104,12 +102,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     [clips, activeClipId],
   );
 
-  const audioUri = isNewRecording
-    ? (params as { tempUri: string }).tempUri
-    : activeClip?.uri ?? null;
-  const tempDuration = isNewRecording
-    ? (params as { tempUri: string; duration: number }).duration
-    : 0;
+  const audioUri = activeClip?.uri ?? null;
   const audioSource = useMemo(
     () => (audioUri ? { uri: audioUri } : null),
     [audioUri],
@@ -117,7 +110,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const player = useAudioPlayer(audioSource);
   const playerStatus = useAudioPlayerStatus(player);
 
-  const showControls = isNewRecording || activeClipId !== null;
+  const showControls = activeClipId !== null;
 
   // Load memo, clips, and background on mount
   useEffect(() => {
@@ -126,35 +119,48 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         loadBackground().then(setBgUri),
         getOverlayOpacity().then(setBgOpacity),
       ]);
-      if (!isNewRecording) {
-        const memoId = (params as { memoId: string }).memoId;
-        const all = await getAllVoiceMemos();
-        const found = all.find((m) => m.id === memoId);
-        if (found) {
-          setMemo(found);
-          setTitle(found.title);
-          setNote(found.note);
-          initialTitleRef.current = found.title;
-          initialNoteRef.current = found.note;
-          const loadedClips = getClipsForMemo(memoId);
-          setClips(loadedClips);
-        }
-        setLoading(false);
+      const savedMode = kvGet(PLAYBACK_MODE_KEY);
+      if (savedMode === 'stop' || savedMode === 'playAll' || savedMode === 'repeat') {
+        setPlaybackMode(savedMode);
       }
+      const all = await getAllVoiceMemos();
+      const found = all.find((m) => m.id === memoId);
+      if (found) {
+        setMemo(found);
+        setTitle(found.title);
+        setNote(found.note);
+        initialTitleRef.current = found.title;
+        initialNoteRef.current = found.note;
+        const loadedClips = getClipsForMemo(memoId);
+        setClips(loadedClips);
+      }
+      setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reset position when playback finishes
+  // Playback mode behavior when a clip finishes
   useEffect(() => {
-    if (playerStatus.didJustFinish) {
+    if (!playerStatus.didJustFinish) return;
+
+    if (playbackMode === 'repeat') {
+      try { player.seekTo(0); } catch { /* */ }
+      setTimeout(() => { try { player.play(); } catch { /* */ } }, 50);
+    } else if (playbackMode === 'playAll') {
+      const currentIndex = clips.findIndex((c) => c.id === activeClipId);
+      if (currentIndex >= 0 && currentIndex < clips.length - 1) {
+        const nextClip = clips[currentIndex + 1];
+        setActiveClipId(nextClip.id);
+      } else {
+        try { player.seekTo(0); } catch { /* */ }
+      }
+    } else {
       try { player.seekTo(0); } catch { /* */ }
     }
-  }, [playerStatus.didJustFinish, player]);
+  }, [playerStatus.didJustFinish, playbackMode, clips, activeClipId, player]);
 
   // Auto-play when active clip changes (player needs time to reinit on source change)
   useEffect(() => {
-    if (isNewRecording) return;
     if (activeClipId && activeClipId !== prevClipRef.current) {
       const timer = setTimeout(() => {
         try { player.play(); } catch { /* */ }
@@ -165,23 +171,26 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     if (!activeClipId) {
       prevClipRef.current = null;
     }
-  }, [activeClipId, player, isNewRecording]);
+  }, [activeClipId, player]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!isNewRecording) {
-        const memoId = (params as { memoId: string }).memoId;
-        const freshClips = getClipsForMemo(memoId);
-        setClips(freshClips);
-      }
+      const freshClips = getClipsForMemo(memoId);
+      setClips(freshClips);
       return () => {
         try { player.pause(); } catch { /* */ }
       };
-    }, [isNewRecording, params, player]),
+    }, [memoId, player]),
   );
 
+  const handleSetPlaybackMode = (mode: PlaybackMode) => {
+    hapticLight();
+    setPlaybackMode(mode);
+    kvSet(PLAYBACK_MODE_KEY, mode);
+  };
+
   const handleSaveExisting = async (): Promise<boolean> => {
-    if (!memo || isNewRecording) return false;
+    if (!memo) return false;
     hapticMedium();
     Keyboard.dismiss();
     try {
@@ -210,29 +219,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (exitingRef.current) return;
-      if (savingRef.current) { e.preventDefault(); return; }
-
-      if (isNewRecording) {
-        e.preventDefault();
-        try { player.pause(); } catch { /* */ }
-        Alert.alert(
-          'Discard recording?',
-          "You haven't saved this recording yet.",
-          [
-            { text: 'Keep Editing', style: 'cancel' },
-            {
-              text: 'Discard',
-              style: 'destructive',
-              onPress: () => {
-                deleteVoiceMemoFile((params as { tempUri: string }).tempUri).catch(() => {});
-                exitingRef.current = true;
-                navigation.dispatch(e.data.action);
-              },
-            },
-          ],
-        );
-        return;
-      }
 
       const hasChanges = memo &&
         (title !== initialTitleRef.current || note !== initialNoteRef.current);
@@ -269,7 +255,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     });
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, isNewRecording, memo, title, note]);
+  }, [navigation, memo, title, note]);
 
   const handleBack = () => {
     Keyboard.dismiss();
@@ -278,8 +264,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   };
 
   const handleDelete = () => {
-    if (isNewRecording) return;
-    const memoId = (params as { memoId: string }).memoId;
     Alert.alert(
       'Delete this memo?',
       "Once it's gone, your brilliant thought goes with it. Well, for 30 days. Then it's really gone.",
@@ -299,90 +283,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         },
       ],
     );
-  };
-
-  const doSaveNew = async () => {
-    if (savingRef.current) return;
-    savingRef.current = true;
-    setSaving(true);
-    hapticMedium();
-    Keyboard.dismiss();
-    try { player.pause(); } catch { /* */ }
-    try {
-      const tempUri = (params as { tempUri: string; duration: number }).tempUri;
-      const dur = (params as { tempUri: string; duration: number }).duration;
-      const newMemoId = uuidv4();
-      const clipId = uuidv4();
-      const now = new Date().toISOString();
-
-      const permanentUri = await saveVoiceClipFile(clipId, tempUri);
-
-      try {
-        await addVoiceMemo({
-          id: newMemoId,
-          uri: '',
-          title: title.trim(),
-          note: note.trim(),
-          duration: 0,
-          createdAt: now,
-          updatedAt: now,
-          deletedAt: null,
-          noteId: null,
-        });
-
-        addClip({
-          id: clipId,
-          memoId: newMemoId,
-          uri: permanentUri,
-          duration: dur,
-          position: 0,
-          label: null,
-          createdAt: now,
-        });
-      } catch (metaError) {
-        deleteVoiceMemoFile(permanentUri).catch(() => {});
-        throw metaError;
-      }
-
-      deleteVoiceMemoFile(tempUri).catch(() => {});
-      refreshWidgets();
-      ToastAndroid.show(SAVE_TOASTS[Math.floor(Math.random() * SAVE_TOASTS.length)], ToastAndroid.LONG);
-      exitingRef.current = true;
-      savingRef.current = false;
-      setSaving(false);
-      navigation.goBack();
-    } catch (e) {
-      console.error('Save failed:', e);
-      ToastAndroid.show('Failed to save recording', ToastAndroid.SHORT);
-      savingRef.current = false;
-      setSaving(false);
-    }
-  };
-
-  const handleSaveNew = async () => {
-    if (savingRef.current || !isNewRecording) return;
-
-    if (!title.trim()) {
-      const NO_TITLE_WARNINGS = [
-        "No title? Your future self will have zero idea what this is.",
-        "You're really saving this unnamed? Bold move.",
-        "Untitled voice memo #347. Very organized of you.",
-        "A memo with no name. How mysterious. How unhelpful.",
-        "Future you is going to scroll past this and wonder what it was.",
-      ];
-      const warning = NO_TITLE_WARNINGS[Math.floor(Math.random() * NO_TITLE_WARNINGS.length)];
-      Alert.alert(
-        'No Title?',
-        warning,
-        [
-          { text: 'Add Title', style: 'cancel' },
-          { text: 'Save Anyway', onPress: () => { doSaveNew(); } },
-        ],
-      );
-      return;
-    }
-
-    await doSaveNew();
   };
 
   const handleClipPlayPress = (clipId: string) => {
@@ -467,7 +367,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
 
   const skipForward = () => {
     hapticLight();
-    const dur = playerStatus.duration || activeClip?.duration || tempDuration || 0;
+    const dur = playerStatus.duration || activeClip?.duration || 0;
     const pos = Math.min(dur, playerStatus.currentTime + 5);
     if (!Number.isFinite(pos)) return;
     try { player.seekTo(pos); } catch { /* */ }
@@ -475,7 +375,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
 
   const handleSeekEvent = (e: GestureResponderEvent) => {
     if (barWidthRef.current <= 0) return;
-    const dur = playerStatus.duration || activeClip?.duration || tempDuration || 0;
+    const dur = playerStatus.duration || activeClip?.duration || 0;
     if (!Number.isFinite(dur) || dur <= 0) return;
     const x = e.nativeEvent.locationX;
     const fraction = Math.max(0, Math.min(1, x / barWidthRef.current));
@@ -491,7 +391,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const displayDuration =
     playerStatus.duration > 0
       ? playerStatus.duration
-      : (activeClip?.duration || tempDuration || 0);
+      : (activeClip?.duration || 0);
 
   const styles = useMemo(
     () =>
@@ -693,11 +593,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           justifyContent: 'center',
           alignItems: 'center',
         },
-        skipText: {
-          fontSize: 13,
-          fontFamily: FONTS.bold,
-          color: colors.textSecondary,
-        },
         playPauseBtn: {
           width: 64,
           height: 64,
@@ -724,7 +619,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
 
   if (loading) return <View style={styles.container} />;
 
-  if (!memo && !isNewRecording) {
+  if (!memo) {
     return (
       <View style={styles.container}>
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -817,31 +712,28 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20, opacity: saving ? 0.5 : 1 }}
-              onPress={isNewRecording ? handleSaveNew : handleSaveExisting}
+              style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+              onPress={handleSaveExisting}
               activeOpacity={0.7}
-              disabled={saving}
               accessibilityRole="button"
               accessibilityLabel="Save voice memo"
             >
               <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>
-                {saving ? 'Saving...' : 'Save'}
+                Save
               </Text>
             </TouchableOpacity>
           )}
         </View>
         <View style={styles.headerRight}>
-          {!isNewRecording && (
-            <TouchableOpacity
-              style={styles.trashBtn}
-              onPress={handleDelete}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Delete voice memo"
-            >
-              <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.trashBtn}
+            onPress={handleDelete}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Delete voice memo"
+          >
+            <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -852,7 +744,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         keyboardShouldPersistTaps="handled"
       >
         {/* Title & Note */}
-        {isViewMode && !isNewRecording ? (
+        {isViewMode ? (
           <>
             {title ? (
               <Text style={[styles.titleText, bgUri && { color: colors.overlayText }]}>{title}</Text>
@@ -887,12 +779,10 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           </>
         )}
 
-        {/* Clip list (existing memos only) */}
-        {!isNewRecording && (
-          <>
-            <Text style={[styles.clipsHeader, bgUri && { color: 'rgba(255,255,255,0.6)' }]}>
-              Clips
-            </Text>
+        {/* Clip list */}
+        <Text style={[styles.clipsHeader, bgUri && { color: 'rgba(255,255,255,0.6)' }]}>
+          Clips
+        </Text>
             {clips.length === 0 ? (
               <Text style={[styles.emptyClipsText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>
                 No clips yet.
@@ -1009,8 +899,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 </Text>
               </TouchableOpacity>
             )}
-          </>
-        )}
       </ScrollView>
 
       {/* Playback controls — fixed at bottom, only visible when there's something to play */}
@@ -1053,7 +941,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Skip back"
             >
-              <Text style={[styles.skipText, bgUri && { color: 'rgba(255,255,255,0.7)' }]}>-5</Text>
+              <Image source={MEDIA_ICONS.skipBack} style={{ width: 32, height: 32 }} resizeMode="contain" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1077,8 +965,51 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Skip forward"
             >
-              <Text style={[styles.skipText, bgUri && { color: 'rgba(255,255,255,0.7)' }]}>+5</Text>
+              <Image source={MEDIA_ICONS.skipForward} style={{ width: 32, height: 32 }} resizeMode="contain" />
             </TouchableOpacity>
+          </View>
+
+          <View style={{
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 16,
+            marginTop: 20,
+          }}>
+            {([
+              { mode: 'stop' as PlaybackMode, icon: MEDIA_ICONS.playStop, label: 'Stop after clip' },
+              { mode: 'playAll' as PlaybackMode, icon: MEDIA_ICONS.playAll, label: 'Play all clips' },
+              { mode: 'repeat' as PlaybackMode, icon: MEDIA_ICONS.repeat, label: 'Repeat clip' },
+            ]).map((item) => (
+              <TouchableOpacity
+                key={item.mode}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: playbackMode === item.mode
+                    ? colors.sectionVoice + '30'
+                    : (colors.mode === 'dark' ? 'rgba(30,30,40,0.7)' : 'rgba(0,0,0,0.06)'),
+                  borderWidth: playbackMode === item.mode ? 1.5 : 1,
+                  borderColor: playbackMode === item.mode
+                    ? colors.sectionVoice
+                    : (colors.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'),
+                }}
+                onPress={() => handleSetPlaybackMode(item.mode)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+                accessibilityState={{ selected: playbackMode === item.mode }}
+              >
+                <Image
+                  source={item.icon}
+                  style={{ width: 22, height: 22 }}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       )}

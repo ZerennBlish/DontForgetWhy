@@ -22,7 +22,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { hapticLight } from '../utils/haptics';
 import { deleteVoiceMemoFile, saveVoiceClipFile } from '../services/voiceMemoFileStorage';
 import { addClip, getNextClipPosition } from '../services/voiceClipStorage';
+import { addVoiceMemo } from '../services/voiceMemoStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
+import { refreshWidgets } from '../widget/updateWidget';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
@@ -65,6 +67,69 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
+  const saveAndNavigate = async (uri: string, dur: number) => {
+    if (isAddClipMode && addToMemoId) {
+      try {
+        const clipId = uuidv4();
+        const permanentUri = await saveVoiceClipFile(clipId, uri);
+        const position = getNextClipPosition(addToMemoId);
+        addClip({
+          id: clipId,
+          memoId: addToMemoId,
+          uri: permanentUri,
+          duration: dur,
+          position,
+          label: null,
+          createdAt: new Date().toISOString(),
+        });
+        ToastAndroid.show('Clip added', ToastAndroid.SHORT);
+      } catch (e) {
+        console.error('Failed to save clip:', e);
+        ToastAndroid.show('Failed to save clip', ToastAndroid.SHORT);
+      }
+      navigation.goBack();
+    } else {
+      try {
+        const newMemoId = uuidv4();
+        const clipId = uuidv4();
+        const now = new Date().toISOString();
+        const permanentUri = await saveVoiceClipFile(clipId, uri);
+
+        try {
+          await addVoiceMemo({
+            id: newMemoId,
+            uri: '',
+            title: '',
+            note: '',
+            duration: 0,
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: null,
+            noteId: null,
+          });
+          addClip({
+            id: clipId,
+            memoId: newMemoId,
+            uri: permanentUri,
+            duration: dur,
+            position: 0,
+            label: null,
+            createdAt: now,
+          });
+        } catch (metaError) {
+          deleteVoiceMemoFile(permanentUri).catch(() => {});
+          throw metaError;
+        }
+        refreshWidgets();
+        navigation.replace('VoiceMemoDetail', { memoId: newMemoId });
+      } catch (e) {
+        console.error('Failed to create memo:', e);
+        ToastAndroid.show('Failed to save recording', ToastAndroid.SHORT);
+        navigation.goBack();
+      }
+    }
+  };
+
   useEffect(() => {
     loadBackground().then(setBgUri);
     getOverlayOpacity().then(setBgOpacity);
@@ -88,25 +153,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
           if (uri && durationMs > 500 && !navigatedRef.current) {
             navigatedRef.current = true;
             const dur = Math.round(durationMs / 1000);
-            if (isAddClipMode && addToMemoId) {
-              try {
-                const clipId = uuidv4();
-                const permanentUri = await saveVoiceClipFile(clipId, uri);
-                const position = getNextClipPosition(addToMemoId);
-                addClip({
-                  id: clipId,
-                  memoId: addToMemoId,
-                  uri: permanentUri,
-                  duration: dur,
-                  position,
-                  label: null,
-                  createdAt: new Date().toISOString(),
-                });
-              } catch { /* best-effort on background */ }
-              navigation.goBack();
-            } else {
-              navigation.replace('VoiceMemoDetail', { tempUri: uri, duration: dur });
-            }
+            await saveAndNavigate(uri, dur);
           }
         } catch { /* best-effort */ }
       }
@@ -209,29 +256,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
       if (uri && !navigatedRef.current) {
         const dur = durationMs > 0 ? Math.round(durationMs / 1000) : elapsed;
         navigatedRef.current = true;
-        if (isAddClipMode && addToMemoId) {
-          try {
-            const clipId = uuidv4();
-            const permanentUri = await saveVoiceClipFile(clipId, uri);
-            const position = getNextClipPosition(addToMemoId);
-            addClip({
-              id: clipId,
-              memoId: addToMemoId,
-              uri: permanentUri,
-              duration: dur,
-              position,
-              label: null,
-              createdAt: new Date().toISOString(),
-            });
-            ToastAndroid.show('Clip added', ToastAndroid.SHORT);
-          } catch (e) {
-            console.error('Failed to save clip:', e);
-            ToastAndroid.show('Failed to save clip', ToastAndroid.SHORT);
-          }
-          navigation.goBack();
-        } else {
-          navigation.replace('VoiceMemoDetail', { tempUri: uri, duration: dur });
-        }
+        await saveAndNavigate(uri, dur);
       }
     } catch (e) {
       console.error('Stop recording failed:', e);

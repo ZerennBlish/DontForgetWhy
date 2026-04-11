@@ -13,6 +13,16 @@ const MEDIA_ICONS = {
   record: require('../../assets/icons/record.webp') as ImageSourcePropType,
   /** Chrome stop square — for stopping recording/playback */
   stop: require('../../assets/icons/stop.webp') as ImageSourcePropType,
+  /** Chrome repeat loop — for voice clip repeat mode */
+  repeat: require('../../assets/icons/repeat.webp') as ImageSourcePropType,
+  /** Chrome play-all/fast-forward — for voice clip play-all mode */
+  playAll: require('../../assets/icons/play-all.webp') as ImageSourcePropType,
+  /** Chrome play-stop/skip-to-end — for voice clip stop-after-current mode */
+  playStop: require('../../assets/icons/play-stop.webp') as ImageSourcePropType,
+  /** Chrome skip back arrow with 5 — rewind 5 seconds */
+  skipBack: require('../../assets/icons/skip-back.webp') as ImageSourcePropType,
+  /** Chrome skip forward arrow with 5 — forward 5 seconds */
+  skipForward: require('../../assets/icons/skip-forward.webp') as ImageSourcePropType,
 };
 
 export default MEDIA_ICONS;
