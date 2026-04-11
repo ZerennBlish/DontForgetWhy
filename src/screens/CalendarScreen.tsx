@@ -800,7 +800,11 @@ export default function CalendarScreen({ navigation, route }: Props) {
         const a = item.data;
         return (
           <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('CreateAlarm', { alarm: item.data }); }} style={[styles.card, { borderColor: DOT_ALARM, borderLeftColor: DOT_ALARM, backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : DOT_ALARM + '15' }]} accessibilityRole="button" accessibilityLabel={`Alarm: ${a.nickname || a.category}, ${formatTime(a.time, timeFormat)}${a.mode === 'recurring' ? `, ${a.days.join(', ')}` : ''}`}>
-            <Text style={styles.cardIcon}>{a.icon || '\u23F0'}</Text>
+            {a.icon ? (
+              <Text style={styles.cardIcon}>{a.icon}</Text>
+            ) : (
+              <Image source={APP_ICONS.bell} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            )}
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
                 {a.nickname || a.category}
@@ -856,7 +860,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         const dur = `${Math.floor(memo.duration / 60)}:${String(Math.floor(memo.duration % 60)).padStart(2, '0')}`;
         return (
           <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.data.id }); }} style={[styles.card, { borderColor: DOT_VOICE, borderLeftColor: DOT_VOICE, backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : DOT_VOICE + '15' }]} accessibilityRole="button" accessibilityLabel={`Voice memo: ${memo.title || 'Voice Memo'}, ${dur}`}>
-            <Text style={styles.cardIcon}>{'\u{1F399}\uFE0F'}</Text>
+            <Image source={APP_ICONS.microphone} style={{ width: 20, height: 20 }} resizeMode="contain" />
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
                 {memo.title || 'Voice Memo'}
@@ -999,7 +1003,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Create alarm for this date"
             >
-              <Text style={styles.createBtnText}>{'\uFF0B'} Alarm</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Image source={APP_ICONS.plus} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                <Text style={styles.createBtnText}>Alarm</Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
@@ -1011,7 +1018,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Create reminder for this date"
             >
-              <Text style={styles.createBtnText}>{'\uFF0B'} Reminder</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Image source={APP_ICONS.plus} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                <Text style={styles.createBtnText}>Reminder</Text>
+              </View>
             </TouchableOpacity>
           </View>
         )}

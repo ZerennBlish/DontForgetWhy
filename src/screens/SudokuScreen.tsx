@@ -19,8 +19,8 @@ import { playGameSound } from '../utils/gameSounds';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
-import BackButton from '../components/BackButton';
-import HomeButton from '../components/HomeButton';
+import APP_ICONS from '../data/appIconAssets';
+import { GameNavButtons } from '../components/GameNavButtons';
 import type { Difficulty } from '../utils/sudoku';
 import { useSudoku, DIFFICULTY_CONFIG, formatTime, getStars, MAX_HINTS } from '../hooks/useSudoku';
 
@@ -154,10 +154,10 @@ export default function SudokuScreen({ navigation }: Props) {
     setSelectedCell([row, col]);
   }, [setSelectedCell]);
 
-  // Intercept hardware back during active gameplay. The HomeButton uses
-  // popToTop() which dispatches POP_TO_TOP (or RESET) — for those we save
-  // progress and let navigation through. A plain POP is a per-screen back
-  // gesture, which we absorb into an in-game "return to menu" transition.
+  // Intercept hardware back during active gameplay. Home nav uses popToTop()
+  // which dispatches POP_TO_TOP (or RESET) — for those we save progress and
+  // let navigation through. A plain POP is a per-screen back gesture, which
+  // we absorb into an in-game "return to menu" transition.
   useEffect(() => {
     if (gamePhase !== 'playing') return;
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -189,13 +189,8 @@ export default function SudokuScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/newspaper.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
+      <GameNavButtons topOffset={insets.top + 10} />
       <View style={styles.header}>
-        <View style={styles.headerBack}>
-          <BackButton onPress={() => navigation.goBack()} forceDark />
-        </View>
-        <View style={styles.headerHome}>
-          <HomeButton forceDark />
-        </View>
         <Image source={require('../../assets/icons/icon-sudoku.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
       <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Sudoku</Text>
@@ -301,13 +296,8 @@ export default function SudokuScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/newspaper.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
+      <GameNavButtons topOffset={insets.top + 10} />
       <View style={styles.winHeader}>
-        <View style={styles.winHeaderBack}>
-          <BackButton onPress={() => navigation.goBack()} forceDark />
-        </View>
-        <View style={styles.winHeaderHome}>
-          <HomeButton forceDark />
-        </View>
         <Image source={require('../../assets/icons/icon-sudoku.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
       <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Sudoku</Text>
@@ -319,7 +309,11 @@ export default function SudokuScreen({ navigation }: Props) {
           <Text style={styles.hardRevealText}>Let's see how you actually did...</Text>
         )}
 
-        <Text style={styles.starsText}>{'\u2B50'.repeat(stars)}</Text>
+        <View style={{ flexDirection: 'row', gap: 4, marginBottom: 20 }}>
+          {Array.from({ length: stars }, (_, i) => (
+            <Image key={i} source={APP_ICONS.star} style={{ width: 36, height: 36 }} resizeMode="contain" />
+          ))}
+        </View>
 
         <View style={styles.winStatsCard}>
           <View style={styles.winStatRow}>
@@ -385,26 +379,28 @@ export default function SudokuScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/newspaper.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
+    <GameNavButtons topOffset={insets.top + 10} onBack={handleBackFromGame} />
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.gameHeader}>
         <View style={styles.gameHeaderRow}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <BackButton onPress={handleBackFromGame} forceDark />
-            <HomeButton forceDark />
-          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} />
           <Text style={styles.gameDifficulty}>{DIFFICULTY_CONFIG[difficulty].label}</Text>
         </View>
         <View style={styles.statsRow} accessibilityLiveRegion="polite">
           {showMistakesDuringPlay ? (
-            <Text style={styles.statText}>
-              {'\u274C'} {mistakes}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Image source={APP_ICONS.loss} style={{ width: 14, height: 14 }} resizeMode="contain" />
+              <Text style={styles.statText}>{mistakes}</Text>
+            </View>
           ) : (
             <View style={styles.statPlaceholder} />
           )}
           <TouchableOpacity onPress={() => { hapticLight(); playGameSound('tap'); handlePause(); }} activeOpacity={0.7}>
-            <Text style={styles.timerText}>{'\u23F1\uFE0F'} {formatTime(elapsed)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Image source={APP_ICONS.hourglass} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
+            </View>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { hapticLight(); playGameSound('tap'); handleNewGameConfirm(); }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Start new game">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -484,12 +480,18 @@ export default function SudokuScreen({ navigation }: Props) {
             accessibilityLabel="Toggle notes mode"
             accessibilityState={{ selected: notesMode }}
           >
-            <Text style={[styles.toolBtnText, notesMode && { color: colors.overlayText }]}>
-              {'\u270F\uFE0F'} Notes {notesMode ? 'ON' : 'OFF'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Image source={APP_ICONS.pencil} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Text style={[styles.toolBtnText, notesMode && { color: colors.overlayText }]}>
+                Notes {notesMode ? 'ON' : 'OFF'}
+              </Text>
+            </View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolBtn} onPress={() => { hapticLight(); playGameSound('tap'); handleErase(); }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Erase cell">
-            <Text style={styles.toolBtnText}>{'\u232B'} Erase</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Image source={APP_ICONS.erase} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Text style={styles.toolBtnText}>Erase</Text>
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.toolBtn, hintDisabled && { opacity: 0.4 }]}
@@ -535,16 +537,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       paddingTop: topInset + 10,
       paddingHorizontal: 20,
       paddingBottom: 4,
-    },
-    headerBack: {
-      position: 'absolute',
-      left: 20,
-      top: topInset + 10,
-    },
-    headerHome: {
-      position: 'absolute',
-      left: 64,
-      top: topInset + 10,
     },
     title: {
       fontSize: 28,
@@ -635,16 +627,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       paddingHorizontal: 20,
       paddingBottom: 4,
     },
-    winHeaderBack: {
-      position: 'absolute',
-      left: 20,
-      top: topInset + 10,
-    },
-    winHeaderHome: {
-      position: 'absolute',
-      left: 64,
-      top: topInset + 10,
-    },
     winTitle: {
       fontSize: 26,
       fontFamily: FONTS.extraBold,
@@ -657,10 +639,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number, 
       color: colors.overlaySecondary,
       fontStyle: 'italic',
       marginBottom: 12,
-    },
-    starsText: {
-      fontSize: 36,
-      marginBottom: 20,
     },
     winStatsCard: {
       backgroundColor: colors.card,

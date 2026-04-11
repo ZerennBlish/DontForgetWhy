@@ -28,8 +28,7 @@ import {
   resetSeenQuestionsForCategory,
 } from '../services/triviaStorage';
 import type { TriviaQuestion, TriviaCategory } from '../types/trivia';
-import BackButton from '../components/BackButton';
-import HomeButton from '../components/HomeButton';
+import { GameNavButtons } from '../components/GameNavButtons';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trivia'>;
@@ -322,6 +321,7 @@ export default function TriviaScreen({ navigation }: Props) {
     setQuestionTimes((prev) => [...prev, elapsed]);
 
     if (correct) {
+      playGameSound('triviaCorrect');
       hapticMedium();
       setScore((prev) => prev + 1);
       setCurrentStreak((prev) => {
@@ -331,6 +331,7 @@ export default function TriviaScreen({ navigation }: Props) {
       });
       setTimeout(() => advanceQuestion(), 800);
     } else {
+      playGameSound('triviaWrong');
       hapticHeavy();
       setCurrentStreak(0);
       setTimeout(() => advanceQuestion(), 1200);
@@ -345,9 +346,9 @@ export default function TriviaScreen({ navigation }: Props) {
     setPhase('category');
   }, [timerWidth]);
 
-  // Intercept hardware back during active gameplay. HomeButton's
-  // popToTop dispatches POP_TO_TOP/RESET — let those through so Home
-  // actually navigates away. Plain POP stays in-game (return to category).
+  // Intercept hardware back during active gameplay. Home nav's popToTop
+  // dispatches POP_TO_TOP/RESET — let those through so Home actually
+  // navigates away. Plain POP stays in-game (return to category).
   useEffect(() => {
     if (phase !== 'playing') return;
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -383,12 +384,7 @@ export default function TriviaScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
-      <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} forceDark />
-      </View>
-      <View style={styles.headerHome}>
-        <HomeButton forceDark />
-      </View>
+      <GameNavButtons topOffset={insets.top + 10} />
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
@@ -403,7 +399,7 @@ export default function TriviaScreen({ navigation }: Props) {
             <TouchableOpacity
               key={cat.id}
               style={[styles.categoryCard, selectedCategory === cat.id && styles.categoryCardActive]}
-              onPress={() => { hapticLight(); playGameSound('tap'); setSelectedCategory(cat.id); }}
+              onPress={() => { hapticLight(); playGameSound('triviaTap'); setSelectedCategory(cat.id); }}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={`Play ${cat.label} trivia`}
@@ -422,7 +418,7 @@ export default function TriviaScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={d}
                 style={[styles.pill, difficultyFilter === d && styles.pillActive]}
-                onPress={() => { hapticLight(); playGameSound('tap'); setDifficultyFilter(d); }}
+                onPress={() => { hapticLight(); playGameSound('triviaTap'); setDifficultyFilter(d); }}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={d === 'all' ? 'All difficulties' : `${d.charAt(0).toUpperCase() + d.slice(1)} difficulty`}
@@ -442,7 +438,7 @@ export default function TriviaScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={s}
                 style={[styles.pill, speedOption === s && styles.pillActive]}
-                onPress={() => { hapticLight(); playGameSound('tap'); setSpeedOption(s); }}
+                onPress={() => { hapticLight(); playGameSound('triviaTap'); setSpeedOption(s); }}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={`${s.charAt(0).toUpperCase() + s.slice(1)} speed`}
@@ -457,7 +453,7 @@ export default function TriviaScreen({ navigation }: Props) {
         </View>
         <TouchableOpacity
           style={styles.startBtn}
-          onPress={() => { hapticLight(); playGameSound('tap'); startRound(selectedCategory); }}
+          onPress={() => { hapticLight(); playGameSound('triviaTap'); startRound(selectedCategory); }}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Start trivia game"
@@ -479,12 +475,7 @@ export default function TriviaScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
-      <View style={styles.headerBack}>
-        <BackButton onPress={() => navigation.goBack()} forceDark />
-      </View>
-      <View style={styles.headerHome}>
-        <HomeButton forceDark />
-      </View>
+      <GameNavButtons topOffset={insets.top + 10} />
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
@@ -524,7 +515,7 @@ export default function TriviaScreen({ navigation }: Props) {
 
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => { hapticLight(); playGameSound('tap'); startRound(selectedCategory); }}
+            onPress={() => { hapticLight(); playGameSound('triviaTap'); startRound(selectedCategory); }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Play again"
@@ -536,7 +527,7 @@ export default function TriviaScreen({ navigation }: Props) {
             style={styles.secondaryBtn}
             onPress={() => {
               hapticLight();
-              playGameSound('tap');
+              playGameSound('triviaTap');
               setPhase('category');
               setAllSeenMessage(null);
             }}
@@ -561,13 +552,11 @@ export default function TriviaScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+    <GameNavButtons topOffset={insets.top + 10} onBack={handleBackFromGame} />
     <View style={styles.container}>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <View style={styles.topBarLeft}>
-          <BackButton onPress={handleBackFromGame} forceDark />
-          <HomeButton forceDark />
-        </View>
+        <View style={styles.topBarLeft} />
         <View style={styles.topBarRight}>
           <Text style={styles.topBarCounter} accessibilityLiveRegion="polite">{currentIndex + 1}/{questions.length}</Text>
           {currentStreak > 1 && (
@@ -670,18 +659,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       paddingTop: insets.top + 10,
       paddingHorizontal: 20,
       paddingBottom: 4,
-    },
-    headerBack: {
-      position: 'absolute',
-      left: 20,
-      top: insets.top + 10,
-      zIndex: 10,
-    },
-    headerHome: {
-      position: 'absolute',
-      left: 64,
-      top: insets.top + 10,
-      zIndex: 10,
     },
     title: {
       fontSize: 28,

@@ -116,15 +116,17 @@ function AppNavigator() {
   } : voiceRecordParams !== null ? {
     routes: [
       { name: 'Home' as const },
+      { name: 'VoiceMemoList' as const },
       { name: 'VoiceRecord' as const },
     ],
-    index: 1,
+    index: 2,
   } : voiceMemoDetailParams ? {
     routes: [
       { name: 'Home' as const },
+      { name: 'VoiceMemoList' as const },
       { name: 'VoiceMemoDetail' as const, params: voiceMemoDetailParams },
     ],
-    index: 1,
+    index: 2,
   } : reminderListParams ? {
     routes: [
       { name: 'Home' as const },

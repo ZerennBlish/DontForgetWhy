@@ -22,8 +22,7 @@ import {
 import { recordWin, recordLoss, recordSkip } from '../services/guessWhyStats';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
-import BackButton from '../components/BackButton';
-import HomeButton from '../components/HomeButton';
+import { GameNavButtons } from '../components/GameNavButtons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playRandomClip, stopVoice } from '../services/voicePlayback';
@@ -99,9 +98,6 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     top: {
       alignItems: 'center',
       marginTop: 20,
-    },
-    headerHome: {
-      marginTop: 8,
     },
     emoji: {
       fontSize: 48,
@@ -391,12 +387,9 @@ export default function GuessWhyScreen({ route, navigation }: Props) {
     <ImageBackground source={require('../../assets/gameclock.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <View style={styles.container}>
+      <GameNavButtons topOffset={insets.top + 10} />
       {/* Top section */}
       <View style={styles.top}>
-        <BackButton onPress={() => navigation.goBack()} forceDark />
-        <View style={styles.headerHome}>
-          <HomeButton forceDark />
-        </View>
         <Text style={styles.emoji}>{displayEmoji}</Text>
         <Text style={styles.time}>{formatTime(alarm.time, timeFormat)}</Text>
         <Text style={styles.categoryLabel}>{alarm.category.toUpperCase()}</Text>

@@ -15,8 +15,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
-import BackButton from '../components/BackButton';
-import HomeButton from '../components/HomeButton';
+import { GameNavButtons } from '../components/GameNavButtons';
 import { useCheckers } from '../hooks/useCheckers';
 import { getCheckerImage } from '../data/checkersAssets';
 import { DIFFICULTY_LEVELS, PieceColor } from '../services/checkersAI';
@@ -192,8 +191,6 @@ export default function CheckersScreen({ navigation }: Props) {
           paddingHorizontal: 20,
           paddingBottom: 4,
         },
-        headerBack: { position: 'absolute', left: 20, top: insets.top + 10 },
-        headerHome: { position: 'absolute', left: 64, top: insets.top + 10 },
         title: { fontSize: 28, color: colors.overlayText, fontFamily: FONTS.gameHeader },
         body: { flex: 1, paddingHorizontal: BOARD_H_PADDING },
         centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -609,22 +606,8 @@ export default function CheckersScreen({ navigation }: Props) {
       resizeMode="cover"
     >
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <GameNavButtons topOffset={insets.top + 10} />
         <View style={styles.header}>
-          <View style={styles.headerBack}>
-            <BackButton
-              onPress={() => {
-                if (navigation.canGoBack()) {
-                  navigation.goBack();
-                } else {
-                  navigation.navigate('Home');
-                }
-              }}
-              forceDark
-            />
-          </View>
-          <View style={styles.headerHome}>
-            <HomeButton forceDark />
-          </View>
           <Image source={require('../../assets/icons/icon-checkers.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </View>
         <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Checkers</Text>

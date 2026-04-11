@@ -595,7 +595,11 @@ export default function TimerScreen({ navigation }: Props) {
                     <Image source={getSoundModeIcon(soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.emojiHintSmall}>Tap {'\u{1F60A}'} to set icon</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={styles.emojiHintSmall}>Tap </Text>
+                  <Image source={APP_ICONS.smiley} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                  <Text style={styles.emojiHintSmall}> to set icon</Text>
+                </View>
                 <TextInput
                   ref={iconInputRef}
                   style={styles.hiddenInput}

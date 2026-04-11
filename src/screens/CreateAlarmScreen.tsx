@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -57,6 +57,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const [emojiModalVisible, setEmojiModalVisible] = useState(false);
   const [systemSoundPickerVisible, setSystemSoundPickerVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const savedRef = useRef(false);
 
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -66,6 +67,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (savedRef.current) return;
       if (!form.isDirty) return;
       e.preventDefault();
       Alert.alert(
@@ -98,11 +100,12 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         "No nickname, no reason, no icon. You're literally setting a mystery alarm. Future you is going to be SO confused.",
         [
           { text: "Go back, I'll fix it", style: 'cancel' },
-          { text: 'I like chaos', onPress: () => form.save(navigateBack) },
+          { text: 'I like chaos', onPress: () => { savedRef.current = true; form.save(navigateBack); } },
         ],
       );
       return;
     }
+    savedRef.current = true;
     form.save(navigateBack);
   };
 

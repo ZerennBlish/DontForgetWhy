@@ -115,7 +115,7 @@ function formatCompletionDates(history: CompletionEntry[]): string {
       const d = new Date(entry.completedAt);
       const month = d.toLocaleDateString('en-US', { month: 'short' });
       const day = d.getDate();
-      return `\u2705 ${month} ${day}`;
+      return `${month} ${day}`;
     })
     .join(', ');
 }
@@ -461,10 +461,6 @@ export default function ReminderScreen({ navigation }: Props) {
       backgroundColor: colors.sectionReminder,
       borderColor: colors.sectionReminder,
     },
-    checkmark: {
-      fontSize: 16,
-      color: '#FFFFFF',
-    },
     middle: {
       flex: 1,
       marginRight: 12,
@@ -648,7 +644,7 @@ export default function ReminderScreen({ navigation }: Props) {
   const renderItem = useCallback(({ item }: { item: Reminder }) => {
     if (item.deletedAt) {
       const deletedPrimary = item.private
-        ? (item.nickname || '\u{1F512} Private')
+        ? (item.nickname || 'Private')
         : item.nickname
           ? `${item.icon} ${item.nickname}`
           : item.text ? `${item.icon} ${item.text}` : item.icon;
@@ -686,7 +682,7 @@ export default function ReminderScreen({ navigation }: Props) {
 
     const pinned = isReminderPinned(item.id, pinnedIds);
     const displayPrimary = item.private
-      ? (item.nickname || '\u{1F512} Private')
+      ? (item.nickname || 'Private')
       : item.nickname
         ? `${item.icon} ${item.nickname}`
         : item.text ? `${item.icon} ${item.text}` : item.icon;
@@ -723,7 +719,9 @@ export default function ReminderScreen({ navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={(item.completed || (item.recurring && hasCompletedToday(item))) ? 'Mark incomplete' : 'Mark complete'}
           >
-            {(item.completed || (item.recurring && hasCompletedToday(item))) && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+            {(item.completed || (item.recurring && hasCompletedToday(item))) && (
+              <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity

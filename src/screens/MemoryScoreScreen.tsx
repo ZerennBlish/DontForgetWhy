@@ -18,8 +18,7 @@ import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
-import BackButton from '../components/BackButton';
-import HomeButton from '../components/HomeButton';
+import { GameNavButtons } from '../components/GameNavButtons';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import type { TriviaStats, TriviaCategory } from '../types/trivia';
@@ -265,12 +264,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/library.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-    <View style={styles.headerBack}>
-      <BackButton onPress={() => navigation.goBack()} forceDark />
-    </View>
-    <View style={styles.headerHome}>
-      <HomeButton forceDark />
-    </View>
+    <GameNavButtons topOffset={insets.top + 10} />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Image source={require('../../assets/icons/icon-chart.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
@@ -751,18 +745,6 @@ function makeStyles(colors: ThemeColors, bottomInset: number, topInset: number) 
       paddingTop: topInset + 10,
       paddingHorizontal: 20,
       paddingBottom: 4,
-    },
-    headerBack: {
-      position: 'absolute',
-      left: 20,
-      top: topInset + 10,
-      zIndex: 10,
-    },
-    headerHome: {
-      position: 'absolute',
-      left: 64,
-      top: topInset + 10,
-      zIndex: 10,
     },
     title: {
       fontSize: 26,

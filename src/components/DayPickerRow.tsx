@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import type { AlarmDay } from '../types/alarm';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
+import APP_ICONS from '../data/appIconAssets';
 
 const HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 } as const;
 
@@ -139,7 +140,7 @@ export default function DayPickerRow({
               accessibilityRole="button"
               accessibilityLabel="Open date picker"
             >
-              <Text style={[styles.quickDayText, { color: colors.textSecondary }]}>{'\u{1F4C5}'}</Text>
+              <Image source={APP_ICONS.calendar} style={{ width: 20, height: 20 }} resizeMode="contain" />
             </TouchableOpacity>
           )}
         </View>

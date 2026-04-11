@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { formatTime, formatDeletedAgo } from '../utils/time';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
+import APP_ICONS from '../data/appIconAssets';
 import type { Alarm } from '../types/alarm';
 
 interface DeletedAlarmCardProps {
@@ -82,9 +83,18 @@ function DeletedAlarmCard({ alarm, timeFormat, onRestore, onPermanentDelete }: D
         <Text style={styles.time}>
           {formatTime(alarm.time, timeFormat)}
         </Text>
-        <Text style={styles.detail} numberOfLines={1}>
-          {alarm.private ? 'Alarm' : `${alarm.icon || '\u23F0'} ${alarm.nickname || alarm.note || 'Alarm'}`}
-        </Text>
+        {alarm.private ? (
+          <Text style={styles.detail} numberOfLines={1}>Alarm</Text>
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+            {!alarm.icon && (
+              <Image source={APP_ICONS.bell} style={{ width: 14, height: 14, marginRight: 4 }} resizeMode="contain" />
+            )}
+            <Text style={[styles.detail, { marginTop: 0, flex: 1 }]} numberOfLines={1}>
+              {alarm.icon ? `${alarm.icon} ` : ''}{alarm.nickname || alarm.note || 'Alarm'}
+            </Text>
+          </View>
+        )}
         <Text style={styles.deletedAgo}>
           {formatDeletedAgo(alarm.deletedAt!)}
         </Text>

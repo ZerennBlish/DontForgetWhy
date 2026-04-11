@@ -1,6 +1,11 @@
 import { ImageSourcePropType } from 'react-native';
 
-/** Custom silver metallic app icons — 512×512 WebP, transparent bg */
+/**
+ * App icon registry. Two tiers share one map:
+ *   - Chrome icons (`assets/app-icons/`) — silver metallic, no faces, utility
+ *   - Game character icons (`assets/icons/`) — full-color, faces, gameplay-only
+ * Game icons should render without `tintColor` — they are full-color character art.
+ */
 const APP_ICONS = {
   alarm: require('../../assets/app-icons/alarm-clock.webp') as ImageSourcePropType,
   bell: require('../../assets/app-icons/bell.webp') as ImageSourcePropType,
@@ -30,6 +35,20 @@ const APP_ICONS = {
   vibrate: require('../../assets/app-icons/vibrate.webp') as ImageSourcePropType,
   silent: require('../../assets/app-icons/silent.webp') as ImageSourcePropType,
   closeX: require('../../assets/app-icons/close-x.webp') as ImageSourcePropType,
+  checkmark: require('../../assets/app-icons/checkmark.webp') as ImageSourcePropType,
+
+  // Game character icons — full-color, do not tint
+  star: require('../../assets/icons/icon-star.webp') as ImageSourcePropType,
+  win: require('../../assets/icons/icon-win.webp') as ImageSourcePropType,
+  loss: require('../../assets/icons/icon-loss.webp') as ImageSourcePropType,
+  hourglass: require('../../assets/icons/icon-hourglass.webp') as ImageSourcePropType,
+  pencil: require('../../assets/icons/icon-pencil.webp') as ImageSourcePropType,
+  erase: require('../../assets/icons/icon-erase.webp') as ImageSourcePropType,
+  chevronLeft: require('../../assets/icons/icon-chevron-left.webp') as ImageSourcePropType,
+  chevronRight: require('../../assets/icons/icon-chevron-right.webp') as ImageSourcePropType,
+  gameBack: require('../../assets/icons/icon-game-back.webp') as ImageSourcePropType,
+  gameHome: require('../../assets/icons/icon-game-home.webp') as ImageSourcePropType,
+  smiley: require('../../assets/icons/icon-smiley.webp') as ImageSourcePropType,
 };
 
 export default APP_ICONS;

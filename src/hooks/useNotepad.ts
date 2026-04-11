@@ -190,7 +190,6 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadResult 
   const closeEditor = useCallback(() => {
     setEditorVisible(false);
     setEditingNote(null);
-    handledActionRef.current = '';
     cleanupTempDrawings();
   }, []);
 

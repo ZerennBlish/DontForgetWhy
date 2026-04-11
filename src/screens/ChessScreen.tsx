@@ -17,10 +17,10 @@ import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
-import BackButton from '../components/BackButton';
-import HomeButton from '../components/HomeButton';
+import { GameNavButtons } from '../components/GameNavButtons';
 import { useChess } from '../hooks/useChess';
 import { getPieceImage } from '../data/chessAssets';
+import APP_ICONS from '../data/appIconAssets';
 import { DIFFICULTY_LEVELS } from '../services/chessAI';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -297,8 +297,6 @@ export default function ChessScreen({ navigation }: Props) {
           paddingHorizontal: 20,
           paddingBottom: 4,
         },
-        headerBack: { position: 'absolute', left: 20, top: insets.top + 10 },
-        headerHome: { position: 'absolute', left: 64, top: insets.top + 10 },
         title: { fontSize: 28, color: colors.overlayText, fontFamily: FONTS.gameHeader },
         body: { flex: 1, paddingHorizontal: BOARD_H_PADDING },
         centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -508,11 +506,6 @@ export default function ChessScreen({ navigation }: Props) {
           backgroundColor: colors.background,
           justifyContent: 'center',
           alignItems: 'center',
-        },
-        reviewBtnText: {
-          color: colors.textPrimary,
-          fontSize: 18,
-          fontFamily: FONTS.bold,
         },
         reviewCounter: {
           color: colors.textSecondary,
@@ -992,7 +985,10 @@ export default function ChessScreen({ navigation }: Props) {
             accessibilityLabel="Go to start"
             accessibilityState={{ disabled: atStart }}
           >
-            <Text style={styles.reviewBtnText}>{'\u00AB'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={APP_ICONS.chevronLeft} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={APP_ICONS.chevronLeft} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.reviewBtn, atStart && { opacity: 0.3 }]}
@@ -1003,7 +999,7 @@ export default function ChessScreen({ navigation }: Props) {
             accessibilityLabel="Step back"
             accessibilityState={{ disabled: atStart }}
           >
-            <Text style={styles.reviewBtnText}>{'\u2039'}</Text>
+            <Image source={APP_ICONS.chevronLeft} style={{ width: 20, height: 20 }} resizeMode="contain" />
           </TouchableOpacity>
 
           <Text style={styles.reviewCounter}>
@@ -1019,7 +1015,7 @@ export default function ChessScreen({ navigation }: Props) {
             accessibilityLabel="Step forward"
             accessibilityState={{ disabled: atEnd }}
           >
-            <Text style={styles.reviewBtnText}>{'\u203A'}</Text>
+            <Image source={APP_ICONS.chevronRight} style={{ width: 20, height: 20 }} resizeMode="contain" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.reviewBtn, atEnd && { opacity: 0.3 }]}
@@ -1030,7 +1026,10 @@ export default function ChessScreen({ navigation }: Props) {
             accessibilityLabel="Go to end"
             accessibilityState={{ disabled: atEnd }}
           >
-            <Text style={styles.reviewBtnText}>{'\u00BB'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={APP_ICONS.chevronRight} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={APP_ICONS.chevronRight} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -1058,22 +1057,8 @@ export default function ChessScreen({ navigation }: Props) {
       resizeMode="cover"
     >
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <GameNavButtons topOffset={insets.top + 10} />
         <View style={styles.header}>
-          <View style={styles.headerBack}>
-            <BackButton
-              onPress={() => {
-                if (navigation.canGoBack()) {
-                  navigation.goBack();
-                } else {
-                  navigation.navigate('Home');
-                }
-              }}
-              forceDark
-            />
-          </View>
-          <View style={styles.headerHome}>
-            <HomeButton forceDark />
-          </View>
           <Image source={require('../../assets/icons/icon-chess.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </View>
         <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Chess</Text>

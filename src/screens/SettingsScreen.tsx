@@ -168,11 +168,6 @@ export default function SettingsScreen({ navigation }: Props) {
       justifyContent: 'center',
       alignItems: 'center',
     },
-    checkmark: {
-      fontSize: 17,
-      fontFamily: FONTS.bold,
-      color: colors.overlayText,
-    },
     themeName: {
       fontSize: 11,
       fontFamily: FONTS.semiBold,
@@ -329,7 +324,7 @@ export default function SettingsScreen({ navigation }: Props) {
                   ]}
                 >
                   <View style={[styles.themeCircleInner, { backgroundColor: t.accent }]}>
-                    {isActive && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                    {isActive && <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />}
                   </View>
                 </View>
                 <Text style={[styles.themeName, isActive && styles.themeNameActive]}>

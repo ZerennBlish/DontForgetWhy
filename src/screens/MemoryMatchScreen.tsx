@@ -19,8 +19,7 @@ import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
-import BackButton from '../components/BackButton';
-import HomeButton from '../components/HomeButton';
+import { GameNavButtons } from '../components/GameNavButtons';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import { CARD_POOL, CARD_BACK } from '../data/memoryMatchAssets';
@@ -406,9 +405,9 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     setGamePhase('select');
   }, []);
 
-  // Intercept hardware back during active gameplay. HomeButton's
-  // popToTop dispatches POP_TO_TOP/RESET — let those through so Home
-  // actually navigates away. Plain POP stays in-game (return to menu).
+  // Intercept hardware back during active gameplay. Home nav's popToTop
+  // dispatches POP_TO_TOP/RESET — let those through so Home actually
+  // navigates away. Plain POP stays in-game (return to menu).
   useEffect(() => {
     if (gamePhase !== 'playing') return;
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -449,16 +448,6 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
           paddingBottom: 4,
-        },
-        headerBack: {
-          position: 'absolute',
-          left: 20,
-          top: insets.top + 10,
-        },
-        headerHome: {
-          position: 'absolute',
-          left: 64,
-          top: insets.top + 10,
         },
         title: {
           fontSize: 28,
@@ -552,16 +541,6 @@ export default function MemoryMatchScreen({ navigation }: Props) {
           paddingHorizontal: 20,
           paddingBottom: 4,
         },
-        winHeaderBack: {
-          position: 'absolute',
-          left: 20,
-          top: insets.top + 10,
-        },
-        winHeaderHome: {
-          position: 'absolute',
-          left: 64,
-          top: insets.top + 10,
-        },
         winTitle: {
           fontSize: 26,
           fontFamily: FONTS.extraBold,
@@ -645,13 +624,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/memory-match-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)' }}>
+          <GameNavButtons topOffset={insets.top + 10} />
           <View style={styles.header}>
-            <View style={styles.headerBack}>
-              <BackButton onPress={() => navigation.goBack()} forceDark />
-            </View>
-            <View style={styles.headerHome}>
-              <HomeButton forceDark />
-            </View>
             <Image source={require('../../assets/memory-match/card-back.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
           </View>
           <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Memory Guy Match</Text>
@@ -704,13 +678,8 @@ export default function MemoryMatchScreen({ navigation }: Props) {
     return (
       <ImageBackground source={require('../../assets/memory-match-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)' }}>
+          <GameNavButtons topOffset={insets.top + 10} />
           <View style={styles.winHeader}>
-            <View style={styles.winHeaderBack}>
-              <BackButton onPress={() => navigation.goBack()} forceDark />
-            </View>
-            <View style={styles.winHeaderHome}>
-              <HomeButton forceDark />
-            </View>
             <Image source={require('../../assets/memory-match/card-back.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
           </View>
           <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Memory Guy Match</Text>
@@ -792,13 +761,11 @@ export default function MemoryMatchScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/memory-match-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)' }}>
+        <GameNavButtons topOffset={insets.top + 10} onBack={handleBackFromGame} />
         <View style={styles.container}>
           <View style={styles.gameHeader}>
             <View style={styles.gameHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <BackButton onPress={handleBackFromGame} forceDark />
-                <HomeButton forceDark />
-              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} />
               <Text style={styles.gameDifficulty}>{config.label}</Text>
             </View>
             <View style={styles.statsRow} accessibilityLiveRegion="polite">

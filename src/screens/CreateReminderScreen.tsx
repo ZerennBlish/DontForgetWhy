@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [emojiModalVisible, setEmojiModalVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const savedRef = useRef(false);
 
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -68,6 +69,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (savedRef.current) return;
       if (!form.isDirty) return;
       e.preventDefault();
       Alert.alert(
@@ -98,11 +100,12 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
         "A reminder with no details. That's not a reminder, that's a vibe. Good luck remembering... whatever this is.",
         [
           { text: "Fine, I'll add something", style: 'cancel' },
-          { text: 'Vibes only', onPress: () => form.save(navigateBack) },
+          { text: 'Vibes only', onPress: () => { savedRef.current = true; form.save(navigateBack); } },
         ],
       );
       return;
     }
+    savedRef.current = true;
     await form.save(navigateBack);
   };
 

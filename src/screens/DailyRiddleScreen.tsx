@@ -18,8 +18,8 @@ import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
-import BackButton from '../components/BackButton';
-import HomeButton from '../components/HomeButton';
+import { GameNavButtons } from '../components/GameNavButtons';
+import APP_ICONS from '../data/appIconAssets';
 import type { RootStackParamList } from '../navigation/types';
 import { RIDDLES, CATEGORY_LABELS } from '../data/riddles';
 import { useDailyRiddle, ALL_CATEGORIES, getFormattedDate, difficultyColor } from '../hooks/useDailyRiddle';
@@ -69,18 +69,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
           paddingBottom: 4,
-        },
-        headerBack: {
-          position: 'absolute',
-          left: 20,
-          top: insets.top + 10,
-          zIndex: 10,
-        },
-        headerHome: {
-          position: 'absolute',
-          left: 64,
-          top: insets.top + 10,
-          zIndex: 10,
         },
         title: {
           fontSize: 28,
@@ -605,9 +593,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                       accessibilityRole="button"
                       accessibilityLabel="I got it"
                     >
-                      <Text style={styles.gotItBtnText}>
-                        {'\u2705'} Got it!
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Image source={APP_ICONS.win} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                        <Text style={styles.gotItBtnText}>Got it!</Text>
+                      </View>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.nopeBtn}
@@ -616,9 +605,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                       accessibilityRole="button"
                       accessibilityLabel="I didn't get it"
                     >
-                      <Text style={styles.nopeBtnText}>
-                        {'\u274C'} Nope
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Image source={APP_ICONS.loss} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                        <Text style={styles.nopeBtnText}>Nope</Text>
+                      </View>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -923,12 +913,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/door.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-    <View style={styles.headerBack}>
-      <BackButton onPress={() => navigation.goBack()} forceDark />
-    </View>
-    <View style={styles.headerHome}>
-      <HomeButton forceDark />
-    </View>
+    <GameNavButtons topOffset={insets.top + 10} />
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}

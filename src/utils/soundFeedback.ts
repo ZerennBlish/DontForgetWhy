@@ -7,10 +7,10 @@ export async function playChirp(): Promise<void> {
     const player = createAudioPlayer(chirpSource);
     player.volume = 0.3;
 
-    const sub = player.addListener('playbackStatusUpdate', (status) => {
+    const sub = (player as any).addListener('playbackStatusUpdate', (status: any) => {
       if (status.didJustFinish) {
         sub.remove();
-        player.release();
+        (player as any).release();
       }
     });
 

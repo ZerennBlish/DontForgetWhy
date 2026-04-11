@@ -36,6 +36,11 @@ const SOUNDS = {
   tap: require('../../assets/sounds/tap.wav'),
   pickUp: require('../../assets/sounds/picking-up-chess-or-checker.wav'),
   flipBack: require('../../assets/sounds/Flip-back.wav'),
+  sudokuPencil: require('../../assets/sounds/pencil.wav'),
+  sudokuErase: require('../../assets/sounds/Eraser.wav'),
+  triviaTap: require('../../assets/sounds/Triva-tap.wav'),
+  triviaCorrect: require('../../assets/sounds/right-answer-Triva.wav'),
+  triviaWrong: require('../../assets/sounds/wrong-answer-trivia.wav'),
 } as const;
 
 export type SoundName = keyof typeof SOUNDS;
@@ -52,6 +57,11 @@ const VOLUMES: Record<SoundName, number> = {
   memoryWin: 0.5,
   pickUp: 0.25,
   flipBack: 0.3,
+  sudokuPencil: 0.5,
+  sudokuErase: 0.5,
+  triviaTap: 0.4,
+  triviaCorrect: 0.6,
+  triviaWrong: 0.5,
 };
 
 export function playGameSound(name: SoundName): void {
@@ -60,10 +70,10 @@ export function playGameSound(name: SoundName): void {
     const player = createAudioPlayer(SOUNDS[name]);
     player.volume = VOLUMES[name];
 
-    const sub = player.addListener('playbackStatusUpdate', (status) => {
+    const sub = (player as any).addListener('playbackStatusUpdate', (status: any) => {
       if (status.didJustFinish) {
         sub.remove();
-        player.release();
+        (player as any).release();
       }
     });
 

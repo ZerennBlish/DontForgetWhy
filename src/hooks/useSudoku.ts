@@ -5,6 +5,7 @@ import { safeParse } from '../utils/safeParse';
 import { withLock } from '../utils/asyncMutex';
 import { useFocusEffect } from '@react-navigation/native';
 import { hapticMedium } from '../utils/haptics';
+import { playGameSound } from '../utils/gameSounds';
 import {
   generatePuzzle,
   checkComplete,
@@ -397,6 +398,7 @@ export function useSudoku(): UseSudokuResult {
       }
       notesRef.current = updated;
       setNotes(updated);
+      playGameSound('sudokuPencil');
       saveGame();
       return;
     }
@@ -407,6 +409,7 @@ export function useSudoku(): UseSudokuResult {
     newGrid[row][col] = num;
     playerRef.current = newGrid;
     setPlayerGrid(newGrid);
+    playGameSound('sudokuPencil');
 
     clearNotesForPlacement(row, col, num);
 
@@ -443,6 +446,10 @@ export function useSudoku(): UseSudokuResult {
     const [row, col] = selectedCell;
     if (puzzleRef.current[row][col] !== 0) return;
 
+    const hadValue = playerRef.current[row][col] !== 0;
+    const hadNotes = notesRef.current[row][col].length > 0;
+    if (!hadValue && !hadNotes) return;
+
     const newGrid = playerRef.current.map((r) => [...r]);
     newGrid[row][col] = 0;
     playerRef.current = newGrid;
@@ -453,6 +460,7 @@ export function useSudoku(): UseSudokuResult {
     notesRef.current = updated;
     setNotes(updated);
 
+    playGameSound('sudokuErase');
     saveGame();
   }, [selectedCell, saveGame]);
 

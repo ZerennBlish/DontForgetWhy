@@ -6,8 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BackButton from '../components/BackButton';
-import HomeButton from '../components/HomeButton';
+import { GameNavButtons } from '../components/GameNavButtons';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import { ChevronRightIcon } from '../components/Icons';
@@ -53,18 +52,6 @@ export default function GamesScreen({ navigation }: Props) {
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
           paddingBottom: 4,
-        },
-        headerBack: {
-          position: 'absolute',
-          left: 20,
-          top: insets.top + 10,
-          zIndex: 10,
-        },
-        headerHome: {
-          position: 'absolute',
-          left: 64,
-          top: insets.top + 10,
-          zIndex: 10,
         },
         title: {
           fontSize: 28,
@@ -125,12 +112,7 @@ export default function GamesScreen({ navigation }: Props) {
   return (
     <ImageBackground source={require('../../assets/brain.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-    <View style={styles.headerBack}>
-      <BackButton onPress={() => navigation.goBack()} forceDark />
-    </View>
-    <View style={styles.headerHome}>
-      <HomeButton forceDark />
-    </View>
+    <GameNavButtons topOffset={insets.top + 10} />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Image source={require('../../assets/icons/icon-controller.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />

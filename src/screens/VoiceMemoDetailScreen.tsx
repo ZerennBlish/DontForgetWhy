@@ -65,7 +65,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const [saving, setSaving] = useState(false);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
-  const [isViewMode, setIsViewMode] = useState(true);
+  const [isViewMode, setIsViewMode] = useState(!isNewRecording);
 
   const initialTitleRef = useRef('');
   const initialNoteRef = useRef('');
@@ -105,10 +105,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           initialNoteRef.current = found.note;
         }
         setLoading(false);
-      }
-      // New recordings go straight to edit mode
-      if (isNewRecording) {
-        setIsViewMode(false);
       }
     })();
   }, []);
@@ -251,8 +247,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     );
   };
 
-  const handleSaveNew = async () => {
-    if (savingRef.current || !isNewRecording) return;
+  const doSaveNew = async () => {
+    if (savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
     hapticMedium();
@@ -293,6 +289,32 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       savingRef.current = false;
       setSaving(false);
     }
+  };
+
+  const handleSaveNew = async () => {
+    if (savingRef.current || !isNewRecording) return;
+
+    if (!title.trim()) {
+      const NO_TITLE_WARNINGS = [
+        "No title? Your future self will have zero idea what this is.",
+        "You're really saving this unnamed? Bold move.",
+        "Untitled voice memo #347. Very organized of you.",
+        "A memo with no name. How mysterious. How unhelpful.",
+        "Future you is going to scroll past this and wonder what it was.",
+      ];
+      const warning = NO_TITLE_WARNINGS[Math.floor(Math.random() * NO_TITLE_WARNINGS.length)];
+      Alert.alert(
+        'No Title?',
+        warning,
+        [
+          { text: 'Add Title', style: 'cancel' },
+          { text: 'Save Anyway', onPress: () => { doSaveNew(); } },
+        ],
+      );
+      return;
+    }
+
+    await doSaveNew();
   };
 
   const handleDiscardNew = () => {
@@ -496,38 +518,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           color: colors.textTertiary,
           textAlign: 'center',
         },
-        saveDiscardRow: {
-          flexDirection: 'row',
-          gap: 12,
-          paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 16,
-        },
-        saveBtn: {
-          flex: 1,
-          backgroundColor: colors.accent,
-          borderRadius: 20,
-          paddingVertical: 14,
-          alignItems: 'center',
-        },
-        saveBtnText: {
-          fontSize: 14,
-          fontFamily: FONTS.bold,
-          color: colors.background,
-        },
-        discardBtn: {
-          flex: 1,
-          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-          borderRadius: 20,
-          paddingVertical: 14,
-          alignItems: 'center',
-          borderWidth: 1,
-          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-        },
-        discardBtnText: {
-          fontSize: 14,
-          fontFamily: FONTS.semiBold,
-          color: colors.textPrimary,
-        },
       }),
     [colors, insets],
   );
@@ -607,49 +597,41 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       </View>
 
       {/* Header */}
-      {isNewRecording ? (
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <BackButton onPress={handleBack} forceDark={!!bgUri} />
-            <View style={{ marginLeft: 4 }}>
-              <HomeButton forceDark={!!bgUri} />
-            </View>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <BackButton onPress={handleBack} forceDark={!!bgUri} />
+          <View style={{ marginLeft: 4 }}>
+            <HomeButton forceDark={!!bgUri} />
           </View>
-          <View style={styles.headerCenter} />
-          <View style={styles.headerRight} />
         </View>
-      ) : (
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <BackButton onPress={handleBack} forceDark={!!bgUri} />
-            <View style={{ marginLeft: 4 }}>
-              <HomeButton forceDark={!!bgUri} />
-            </View>
-          </View>
-          <View style={styles.headerCenter}>
-            {isViewMode ? (
-              <TouchableOpacity
-                style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
-                onPress={() => { hapticLight(); setIsViewMode(false); }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Edit voice memo"
-              >
-                <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>Edit</Text>
-              </TouchableOpacity>
-            ) : hasUnsavedChanges ? (
-              <TouchableOpacity
-                style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
-                onPress={handleSaveExisting}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Save changes"
-              >
-                <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>Save</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-          <View style={styles.headerRight}>
+        <View style={styles.headerCenter}>
+          {isViewMode ? (
+            <TouchableOpacity
+              style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+              onPress={() => { hapticLight(); setIsViewMode(false); }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Edit voice memo"
+            >
+              <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>Edit</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20, opacity: saving ? 0.5 : 1 }}
+              onPress={isNewRecording ? handleSaveNew : handleSaveExisting}
+              activeOpacity={0.7}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Save voice memo"
+            >
+              <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>
+                {saving ? 'Saving...' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={styles.headerRight}>
+          {!isNewRecording && (
             <TouchableOpacity
               style={styles.trashBtn}
               onPress={handleDelete}
@@ -659,9 +641,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             >
               <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
             </TouchableOpacity>
-          </View>
+          )}
         </View>
-      )}
+      </View>
 
       {/* Content */}
       <View style={styles.content}>
@@ -771,32 +753,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         </View>
       </View>
 
-      {/* Save/Discard for new recordings */}
-      {isNewRecording && (
-        <View style={styles.saveDiscardRow}>
-          <TouchableOpacity
-            style={styles.discardBtn}
-            onPress={handleDiscardNew}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Discard recording"
-          >
-            <Text style={styles.discardBtnText}>Discard</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && { opacity: 0.5 }]}
-            onPress={handleSaveNew}
-            activeOpacity={0.7}
-            disabled={saving}
-            accessibilityRole="button"
-            accessibilityLabel="Save recording"
-          >
-            <Text style={styles.saveBtnText}>
-              {saving ? 'Saving...' : 'Save'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 }

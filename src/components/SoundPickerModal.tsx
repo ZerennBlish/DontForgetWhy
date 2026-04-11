@@ -49,7 +49,6 @@ interface SoundRowProps {
   rowInfoStyle: object;
   rowTitleStyle: object;
   rowTitleSelectedStyle: object;
-  checkStyle: object;
   playBtnStyle: object;
   playBtnIdleStyle: object;
   playBtnActiveStyle: object;
@@ -66,7 +65,6 @@ const SoundRow = React.memo(function SoundRow({
   rowInfoStyle,
   rowTitleStyle,
   rowTitleSelectedStyle,
-  checkStyle,
   playBtnStyle,
   playBtnIdleStyle,
   playBtnActiveStyle,
@@ -89,7 +87,7 @@ const SoundRow = React.memo(function SoundRow({
           {sound.title}
         </Text>
       </View>
-      {isSelected && <Text style={checkStyle}>{'\u2713'}</Text>}
+      {isSelected && <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />}
       <TouchableOpacity
         style={[playBtnStyle, isPlaying ? playBtnActiveStyle : playBtnIdleStyle]}
         onPress={handlePlay}
@@ -279,12 +277,6 @@ export default function SoundPickerModal({
       fontFamily: FONTS.bold,
       color: colors.accent,
     },
-    check: {
-      fontSize: 16,
-      color: colors.accent,
-      fontFamily: FONTS.bold,
-      marginRight: 10,
-    },
     playBtn: {
       width: 36,
       height: 36,
@@ -316,10 +308,6 @@ export default function SoundPickerModal({
       fontFamily: FONTS.regular,
       color: colors.textTertiary,
     },
-    defaultIcon: {
-      fontSize: 20,
-      marginRight: 12,
-    },
   }), [colors]);
 
   const renderItem = useCallback(
@@ -335,7 +323,6 @@ export default function SoundPickerModal({
         rowInfoStyle={styles.rowInfo}
         rowTitleStyle={styles.rowTitle}
         rowTitleSelectedStyle={styles.rowTitleSelected}
-        checkStyle={styles.check}
         playBtnStyle={styles.playBtn}
         playBtnIdleStyle={styles.playBtnIdle}
         playBtnActiveStyle={styles.playBtnActive}
@@ -384,7 +371,7 @@ export default function SoundPickerModal({
                 accessibilityRole="button"
                 accessibilityLabel="Select default alarm sound"
               >
-                <Text style={styles.defaultIcon}>{'\u{1F514}'}</Text>
+                <Image source={APP_ICONS.bell} style={{ width: 20, height: 20 }} resizeMode="contain" />
                 <View style={styles.rowInfo}>
                   <Text
                     style={[
@@ -396,7 +383,7 @@ export default function SoundPickerModal({
                   </Text>
                 </View>
                 {currentSoundID === null && (
-                  <Text style={styles.check}>{'\u2713'}</Text>
+                  <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 )}
               </TouchableOpacity>
 

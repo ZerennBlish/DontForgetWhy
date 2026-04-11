@@ -115,7 +115,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     if (playerRef.current) {
       try {
         playerRef.current.pause();
-        playerRef.current.release();
+        (playerRef.current as any).release();
       } catch { /* */ }
       playerRef.current = null;
     }
@@ -144,7 +144,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     playerRef.current = p;
     playbackProgressRef.current = 0;
     setPlayingMemoId(memo.id);
-    const sub = p.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+    const sub = (p as any).addListener('playbackStatusUpdate', (status: any) => {
       if (status.didJustFinish) {
         playerListenerRef.current = null;
         sub.remove();
@@ -344,10 +344,6 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       paddingBottom: 80 + insets.bottom,
       paddingHorizontal: 32,
     },
-    emptyIcon: {
-      fontSize: 40,
-      marginBottom: 12,
-    },
     emptyText: {
       fontSize: 13,
       color: colors.textTertiary,
@@ -401,9 +397,6 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       backgroundColor: colors.sectionVoice,
       opacity: 0.6,
     },
-    iconCircleText: {
-      fontSize: 16,
-    },
     cardCenter: {
       flex: 1,
       marginHorizontal: 12,
@@ -444,7 +437,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
   const renderDeletedItem = useCallback((memo: VoiceMemo) => (
     <View style={styles.card}>
       <View style={styles.iconCircle}>
-        <Text style={styles.iconCircleText}>{'\u{1F399}\uFE0F'}</Text>
+        <Image source={APP_ICONS.microphone} style={{ width: 22, height: 22 }} resizeMode="contain" />
       </View>
       <View style={styles.cardCenter}>
         <Text style={styles.cardTitle} numberOfLines={2}>
@@ -495,14 +488,14 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     if (filter === 'deleted') {
       return (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>{'\u{1F5D1}\uFE0F'}</Text>
+          <Image source={APP_ICONS.trash} style={{ width: 48, height: 48, marginBottom: 12 }} resizeMode="contain" />
           <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Nothing in the trash. How responsible of you.</Text>
         </View>
       );
     }
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyIcon}>{'\u{1F399}\uFE0F'}</Text>
+        <Image source={APP_ICONS.microphone} style={{ width: 48, height: 48, marginBottom: 12 }} resizeMode="contain" />
         <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>{emptyMsg}</Text>
       </View>
     );
