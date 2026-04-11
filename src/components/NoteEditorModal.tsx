@@ -512,14 +512,14 @@ export default function NoteEditorModal({
       backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.85)' : 'rgba(0, 0, 0, 0.10)',
     },
     editorTrashBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+      borderColor: colors.red,
     },
     editorInputArea: {
       flex: 1,
@@ -704,18 +704,26 @@ export default function NoteEditorModal({
                     <Image source={APP_ICONS.house} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
-                <View style={styles.topBarCenter}>
+                <View style={styles.topBarCenter} />
+                <View style={styles.topBarRight}>
                   <TouchableOpacity
-                    style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+                      borderWidth: 1,
+                      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                    }}
                     onPress={() => { hapticLight(); setIsViewMode(false); }}
                     activeOpacity={0.7}
                     accessibilityRole="button"
                     accessibilityLabel="Edit note"
                   >
-                    <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: '#FFFFFF' }}>Edit</Text>
+                    <Image source={APP_ICONS.edit} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
-                </View>
-                <View style={styles.topBarRight}>
                   <TouchableOpacity
                     style={styles.editorTopBtn}
                     onPress={() => {
@@ -767,20 +775,28 @@ export default function NoteEditorModal({
                     <Image source={APP_ICONS.house} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
-                <View style={styles.topBarCenter}>
+                <View style={styles.topBarCenter} />
+                <View style={styles.topBarRight}>
                   {hasUnsavedChanges() ? (
                     <TouchableOpacity
-                      style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+                        borderWidth: 1,
+                        borderColor: colors.accent,
+                      }}
                       onPress={handleSave}
                       activeOpacity={0.7}
                       accessibilityRole="button"
                       accessibilityLabel="Save note"
                     >
-                      <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: '#FFFFFF' }}>Save</Text>
+                      <Image source={APP_ICONS.save} style={{ width: 18, height: 18 }} resizeMode="contain" />
                     </TouchableOpacity>
                   ) : null}
-                </View>
-                <View style={styles.topBarRight}>
                   <TouchableOpacity
                     style={[styles.editorTopBtn, showMenu && styles.editorTopBtnActive]}
                     onPress={() => {

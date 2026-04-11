@@ -259,6 +259,20 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
     console.error('[DB] Voice clip migration failed:', e);
   }
 
+  // --- Add images column to voice_memos if missing ---
+  try {
+    const cols = db.getAllSync<{ name: string }>(
+      `PRAGMA table_info(voice_memos)`
+    );
+    const hasImages = cols.some((c) => c.name === 'images');
+    if (!hasImages) {
+      db.execSync(`ALTER TABLE voice_memos ADD COLUMN images TEXT NOT NULL DEFAULT '[]'`);
+      console.log('[DB] Added images column to voice_memos');
+    }
+  } catch (e) {
+    console.error('[DB] voice_memos images migration failed:', e);
+  }
+
   console.log('[DB] _initSchema complete');
 }
 

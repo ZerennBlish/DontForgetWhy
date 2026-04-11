@@ -79,7 +79,12 @@
       "Bash(npx -y tsc --noEmit --pretty src/components/DrawingCanvas.tsx)",
       "Bash(xargs -I{} basename {})",
       "Bash(echo \"exit=$?\")",
-      "Bash(echo \"tsc=$?\")"
+      "Bash(echo \"tsc=$?\")",
+      "Read(//mnt/c/**)",
+      "Bash(cmd.exe /c \"where python\")",
+      "Bash(python.exe:*)",
+      "Bash(cmd.exe /c \"where py\")",
+      "Bash(py -c \"from PIL import Image; print\\('ok'\\)\")"
     ]
   }
 }

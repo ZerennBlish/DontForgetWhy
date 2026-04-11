@@ -483,8 +483,25 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
           {form.existing ? 'Edit Reminder' : 'New Reminder'}
         </Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={[btn.primarySmall, !form.editReady && { opacity: 0.4 }]} onPress={form.editReady ? handleSave : undefined} activeOpacity={0.8} disabled={!form.editReady} accessibilityRole="button" accessibilityLabel="Save reminder">
-            <Text style={btn.primarySmallText}>{form.existing ? 'Update' : 'Save'}</Text>
+          <TouchableOpacity
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+              borderWidth: 1.5,
+              borderColor: colors.accent,
+              opacity: form.editReady ? 1 : 0.4,
+            }}
+            onPress={form.editReady ? handleSave : undefined}
+            activeOpacity={0.7}
+            disabled={!form.editReady}
+            accessibilityRole="button"
+            accessibilityLabel={form.existing ? 'Update reminder' : 'Save reminder'}
+          >
+            <Image source={APP_ICONS.save} style={{ width: 18, height: 18 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -667,9 +684,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             <>
               {form.selectedDate && (
                 <View style={styles.setDateRow}>
-                  <Text style={styles.setDateText}>
-                    <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 4 }} /> {formatDateDisplay(form.selectedDate)}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
+                    <Text style={styles.setDateText}>{formatDateDisplay(form.selectedDate)}</Text>
+                  </View>
                   <TouchableOpacity
                     onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                     style={styles.clearDateBtn}
@@ -692,9 +710,10 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={form.selectedDate ? `Selected date: ${formatDateDisplay(form.selectedDate)}` : 'Set date'}
               >
-                <Text style={styles.setDateText}>
-                  <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 4 }} /> {form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
+                  <Text style={styles.setDateText}>{form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}</Text>
+                </View>
               </TouchableOpacity>
               {form.selectedDate ? (
                 <TouchableOpacity
@@ -785,7 +804,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Choose reminder icon"
           >
-            <Text style={styles.emojiCircleText}>{form.selectedIcon !== '' ? (form.selectedIcon || '\u{1F4DD}') : ''}</Text>
+            {form.selectedIcon && form.selectedIcon !== '\u{1F4DD}' ? (
+              <Text style={styles.emojiCircleText}>{form.selectedIcon}</Text>
+            ) : (
+              <Image source={APP_ICONS.plus} style={{ width: 22, height: 22 }} resizeMode="contain" />
+            )}
           </TouchableOpacity>
         </View>
         {emojiPickerOpen && (

@@ -58,7 +58,7 @@ export default function TimerScreen({ navigation }: Props) {
     handleRemoveTimer, handleTogglePause,
     handlePinToggle,
     handleStartUserTimer,
-    handleModalSave, handleTimerSoundSelect,
+    handleModalSave, handleModalSaveOnly, handleTimerSoundSelect,
     closeModal,
   } = useTimerScreen();
 
@@ -220,8 +220,12 @@ export default function TimerScreen({ navigation }: Props) {
       textAlign: 'center',
     },
     soundModeIconBtn: {
-      width: 34,
-      height: 34,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+      borderWidth: 1.5,
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -262,33 +266,10 @@ export default function TimerScreen({ navigation }: Props) {
     },
     modalBtns: {
       flexDirection: 'row',
-      gap: 12,
-    },
-    modalCancelBtn: {
-      flex: 1,
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      paddingVertical: 14,
+      justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    modalCancelText: {
-      fontSize: 15,
-      fontFamily: FONTS.semiBold,
-      color: colors.textTertiary,
-    },
-    modalSaveBtn: {
-      flex: 1,
-      backgroundColor: colors.accent,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    modalSaveText: {
-      fontSize: 15,
-      fontFamily: FONTS.bold,
-      color: colors.textPrimary,
+      gap: 24,
+      marginTop: 8,
     },
     newTimerHeaderRow: {
       flexDirection: 'row',
@@ -296,12 +277,12 @@ export default function TimerScreen({ navigation }: Props) {
       marginBottom: 4,
     },
     emojiCircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: colors.card,
-      borderWidth: 1,
-      borderColor: colors.border,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+      borderWidth: 1.5,
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -319,8 +300,12 @@ export default function TimerScreen({ navigation }: Props) {
       paddingVertical: 4,
     },
     headerSoundBtn: {
-      width: 44,
-      height: 44,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+      borderWidth: 1.5,
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -567,7 +552,11 @@ export default function TimerScreen({ navigation }: Props) {
                     onPress={() => { hapticLight(); iconInputRef.current?.focus(); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.emojiCircleText}>{newTimerIcon}</Text>
+                    {newTimerIcon === '\u{1F60A}' ? (
+                      <Image source={APP_ICONS.plus} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                    ) : (
+                      <Text style={styles.emojiCircleText}>{newTimerIcon}</Text>
+                    )}
                   </TouchableOpacity>
                   <TextInput
                     style={styles.headerNameInput}
@@ -592,13 +581,14 @@ export default function TimerScreen({ navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel={`Sound mode: ${getSoundModeLabel(soundMode)}`}
                   >
-                    <Image source={getSoundModeIcon(soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                    <Image source={getSoundModeIcon(soundMode)} style={{ width: 26, height: 26 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={styles.emojiHintSmall}>Tap </Text>
-                  <Image source={APP_ICONS.smiley} style={{ width: 24, height: 24 }} resizeMode="contain" />
-                  <Text style={styles.emojiHintSmall}> to set icon</Text>
+                  <Image source={APP_ICONS.plus} style={{ width: 16, height: 16, marginTop: -4 }} resizeMode="contain" />
+                  <Text style={styles.emojiHintSmall}> to set </Text>
+                  <Image source={APP_ICONS.smiley} style={{ width: 20, height: 20, marginTop: -4 }} resizeMode="contain" />
                 </View>
                 <TextInput
                   ref={iconInputRef}
@@ -619,7 +609,7 @@ export default function TimerScreen({ navigation }: Props) {
             ) : (
               <>
                 <View style={styles.modalTitleRow}>
-                  <View style={{ width: 34 }} />
+                  <View style={{ width: 48 }} />
                   <Text style={styles.modalTitle}>
                     {(customModal?.icon ?? '') + ' ' + (customModal?.label ?? '')}
                   </Text>
@@ -637,7 +627,7 @@ export default function TimerScreen({ navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel={`Sound mode: ${getSoundModeLabel(soundMode)}`}
                   >
-                    <Image source={getSoundModeIcon(soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                    <Image source={getSoundModeIcon(soundMode)} style={{ width: 26, height: 26 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.modalSubtitle}>
@@ -699,17 +689,57 @@ export default function TimerScreen({ navigation }: Props) {
             <View style={styles.modalBtns}>
               <TouchableOpacity
                 onPress={() => { hapticLight(); closeModal(); }}
-                style={styles.modalCancelBtn}
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(30, 30, 40, 0.7)',
+                  borderWidth: 1.5,
+                  borderColor: colors.red,
+                }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Image source={APP_ICONS.closeX} style={{ width: 22, height: 22 }} resizeMode="contain" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleModalSaveOnly}
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(30, 30, 40, 0.7)',
+                  borderWidth: 1.5,
+                  borderColor: colors.accent,
+                }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Save timer"
+              >
+                <Image source={APP_ICONS.save} style={{ width: 22, height: 22 }} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleModalSave}
-                style={styles.modalSaveBtn}
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(30, 30, 40, 0.7)',
+                  borderWidth: 1.5,
+                  borderColor: colors.success,
+                }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Save and start timer"
               >
-                <Text style={styles.modalSaveText}>Save & Start</Text>
+                <Image source={MEDIA_ICONS.play} style={{ width: 24, height: 24 }} resizeMode="contain" />
               </TouchableOpacity>
             </View>
           </View>

@@ -36,6 +36,8 @@ const APP_ICONS = {
   silent: require('../../assets/app-icons/silent.webp') as ImageSourcePropType,
   closeX: require('../../assets/app-icons/close-x.webp') as ImageSourcePropType,
   checkmark: require('../../assets/app-icons/checkmark.webp') as ImageSourcePropType,
+  save: require('../../assets/icons/floppy-disk.webp') as ImageSourcePropType,
+  edit: require('../../assets/icons/pencil.webp') as ImageSourcePropType,
 
   // Game character icons — full-color, do not tint
   star: require('../../assets/icons/icon-star.webp') as ImageSourcePropType,

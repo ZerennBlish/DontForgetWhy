@@ -1,5 +1,6 @@
 import { getDb } from './database';
 import { getClipSummaries, deleteAllClipsForMemo } from './voiceClipStorage';
+import { deleteAllVoiceMemoImages } from './voiceMemoImageStorage';
 import type { VoiceMemo } from '../types/voiceMemo';
 
 // ---------------------------------------------------------------------------
@@ -13,12 +14,19 @@ interface VoiceMemoRow {
   note: string;
   duration: number;
   noteId: string | null;
+  images: string;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
 }
 
 function rowToMemo(row: VoiceMemoRow): VoiceMemo {
+  let parsedImages: string[] = [];
+  try {
+    parsedImages = row.images ? JSON.parse(row.images) : [];
+  } catch {
+    parsedImages = [];
+  }
   return {
     id: row.id,
     uri: row.uri,
@@ -26,6 +34,7 @@ function rowToMemo(row: VoiceMemoRow): VoiceMemo {
     note: row.note || '',
     duration: row.duration || 0,
     noteId: row.noteId,
+    images: parsedImages,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
@@ -64,20 +73,22 @@ export function getVoiceMemoById(id: string): VoiceMemo | null {
 export async function addVoiceMemo(memo: VoiceMemo): Promise<void> {
   const db = getDb();
   db.runSync(
-    `INSERT INTO voice_memos (id, uri, title, note, duration, noteId, createdAt, updatedAt, deletedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO voice_memos (id, uri, title, note, duration, noteId, images, createdAt, updatedAt, deletedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [memo.id, memo.uri, memo.title, memo.note || '', memo.duration || 0,
-     memo.noteId ?? null, memo.createdAt, memo.updatedAt, memo.deletedAt ?? null],
+     memo.noteId ?? null, JSON.stringify(memo.images ?? []),
+     memo.createdAt, memo.updatedAt, memo.deletedAt ?? null],
   );
 }
 
 export async function updateVoiceMemo(updated: VoiceMemo): Promise<void> {
   const db = getDb();
   db.runSync(
-    `UPDATE voice_memos SET uri=?, title=?, note=?, duration=?, noteId=?, updatedAt=?, deletedAt=?
+    `UPDATE voice_memos SET uri=?, title=?, note=?, duration=?, noteId=?, images=?, updatedAt=?, deletedAt=?
      WHERE id=?`,
     [updated.uri, updated.title, updated.note || '', updated.duration || 0,
-     updated.noteId ?? null, updated.updatedAt, updated.deletedAt ?? null, updated.id],
+     updated.noteId ?? null, JSON.stringify(updated.images ?? []),
+     updated.updatedAt, updated.deletedAt ?? null, updated.id],
   );
 }
 
@@ -95,6 +106,10 @@ export async function restoreVoiceMemo(id: string): Promise<void> {
 }
 
 export async function permanentlyDeleteVoiceMemo(id: string): Promise<void> {
+  const memo = getVoiceMemoById(id);
+  if (memo?.images && memo.images.length > 0) {
+    await deleteAllVoiceMemoImages(memo.images);
+  }
   await deleteAllClipsForMemo(id);
   const db = getDb();
   db.runSync('DELETE FROM voice_memos WHERE id=?', [id]);

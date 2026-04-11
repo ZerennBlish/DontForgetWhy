@@ -8,12 +8,14 @@ import {
   Image,
   AppState,
   Alert,
+  ScrollView,
 } from 'react-native';
 import {
   useAudioRecorder,
   requestRecordingPermissionsAsync,
   RecordingPresets,
 } from 'expo-audio';
+import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
@@ -22,7 +24,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { hapticLight } from '../utils/haptics';
 import { deleteVoiceMemoFile, saveVoiceClipFile } from '../services/voiceMemoFileStorage';
 import { addClip, getNextClipPosition } from '../services/voiceClipStorage';
-import { addVoiceMemo } from '../services/voiceMemoStorage';
+import { addVoiceMemo, updateVoiceMemo, getVoiceMemoById } from '../services/voiceMemoStorage';
+import { saveVoiceMemoImage } from '../services/voiceMemoImageStorage';
+import APP_ICONS from '../data/appIconAssets';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
 import BackButton from '../components/BackButton';
@@ -58,6 +62,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [bgUri, setBgUri] = useState<string | null>(null);
   const [bgOpacity, setBgOpacity] = useState(0.5);
+  const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
 
   const isRecordingRef = useRef(false);
   const isPausedRef = useRef(false);
@@ -66,6 +71,35 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
   const navigatedRef = useRef(false);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+
+  const takePhoto = async () => {
+    if (isRecordingRef.current) {
+      ToastAndroid.show('Stop recording first', ToastAndroid.SHORT);
+      return;
+    }
+    if (capturedPhotos.length >= 5) {
+      ToastAndroid.show('5 photos max per memo', ToastAndroid.SHORT);
+      return;
+    }
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      ToastAndroid.show('Camera permission needed', ToastAndroid.SHORT);
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      hapticLight();
+      setCapturedPhotos((prev) => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    hapticLight();
+    setCapturedPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const saveAndNavigate = async (uri: string, dur: number) => {
     if (isAddClipMode && addToMemoId) {
@@ -82,6 +116,26 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
           label: null,
           createdAt: new Date().toISOString(),
         });
+        if (capturedPhotos.length > 0) {
+          const savedUris: string[] = [];
+          for (const photoUri of capturedPhotos) {
+            try {
+              const saved = await saveVoiceMemoImage(addToMemoId, photoUri);
+              savedUris.push(saved);
+            } catch { /* best-effort */ }
+          }
+          if (savedUris.length > 0) {
+            const existingMemo = getVoiceMemoById(addToMemoId);
+            if (existingMemo) {
+              const currentImages = existingMemo.images ?? [];
+              await updateVoiceMemo({
+                ...existingMemo,
+                images: [...currentImages, ...savedUris],
+                updatedAt: new Date().toISOString(),
+              });
+            }
+          }
+        }
         ToastAndroid.show('Clip added', ToastAndroid.SHORT);
       } catch (e) {
         console.error('Failed to save clip:', e);
@@ -119,6 +173,25 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
         } catch (metaError) {
           deleteVoiceMemoFile(permanentUri).catch(() => {});
           throw metaError;
+        }
+        if (capturedPhotos.length > 0) {
+          const savedUris: string[] = [];
+          for (const photoUri of capturedPhotos) {
+            try {
+              const saved = await saveVoiceMemoImage(newMemoId, photoUri);
+              savedUris.push(saved);
+            } catch { /* best-effort */ }
+          }
+          if (savedUris.length > 0) {
+            const createdMemo = getVoiceMemoById(newMemoId);
+            if (createdMemo) {
+              await updateVoiceMemo({
+                ...createdMemo,
+                images: savedUris,
+                updatedAt: new Date().toISOString(),
+              });
+            }
+          }
         }
         refreshWidgets();
         navigation.replace('VoiceMemoDetail', { memoId: newMemoId });
@@ -490,18 +563,80 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
         ) : (
           <>
             <TouchableOpacity
-              style={[styles.recordBtn, { marginBottom: 48 }]}
               onPress={handleRecordPress}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Start recording"
+              style={{ marginBottom: 48 }}
             >
-              <GlowIcon source={MEDIA_ICONS.record} size={56} glowColor={colors.red} />
+              <GlowIcon source={APP_ICONS.microphone} size={56} glowColor={colors.red} />
             </TouchableOpacity>
+
             <Text style={styles.hint}>{idleHint}</Text>
           </>
         )}
+
+        {capturedPhotos.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginTop: 16, maxHeight: 72 }}
+            contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}
+          >
+            {capturedPhotos.map((uri, index) => (
+              <View key={uri + index} style={{ position: 'relative' }}>
+                <Image
+                  source={{ uri }}
+                  style={{ width: 64, height: 64, borderRadius: 8 }}
+                  resizeMode="cover"
+                />
+                <TouchableOpacity
+                  style={{
+                    position: 'absolute',
+                    top: -6,
+                    right: -6,
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    backgroundColor: colors.red,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => removePhoto(index)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove photo"
+                >
+                  <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
       </View>
+
+      {/* Camera — bottom right corner, always visible */}
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          bottom: insets.bottom + 32,
+          right: 32,
+          width: 52,
+          height: 52,
+          borderRadius: 26,
+          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+          borderWidth: 1,
+          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+        onPress={takePhoto}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Take a photo"
+      >
+        <Image source={APP_ICONS.camera} style={{ width: 26, height: 26 }} resizeMode="contain" />
+      </TouchableOpacity>
     </View>
   );
 }

@@ -20,7 +20,7 @@ import { scheduleAlarm, scheduleReminderNotification, cancelAllAlarms } from './
 // ---------------------------------------------------------------------------
 
 const BACKUP_VERSION = 1;
-const MEDIA_FOLDERS = ['voice-memos', 'note-images', 'backgrounds', 'alarm-photos'];
+const MEDIA_FOLDERS = ['voice-memos', 'note-images', 'backgrounds', 'alarm-photos', 'voice-memo-images'];
 const DB_FILENAME = 'dfw.db';
 const META_FILENAME = 'backup-meta.json';
 const LAST_BACKUP_KEY = 'lastBackupDate';

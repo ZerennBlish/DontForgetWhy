@@ -466,8 +466,12 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
       gap: 10,
     },
     soundModeIconBtn: {
-      width: 36,
-      height: 36,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+      borderWidth: 1.5,
+      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -499,8 +503,23 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         </View>
         <Text style={styles.heading}>{form.isEditing ? 'Edit Alarm' : 'New Alarm'}</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={btn.primarySmall} onPress={handleSave} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Save alarm">
-            <Text style={btn.primarySmallText}>{form.isEditing ? 'Update' : 'Save'}</Text>
+          <TouchableOpacity
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+              borderWidth: 1.5,
+              borderColor: colors.accent,
+            }}
+            onPress={handleSave}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={form.isEditing ? 'Update alarm' : 'Save alarm'}
+          >
+            <Image source={APP_ICONS.save} style={{ width: 18, height: 18 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -683,9 +702,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             <>
               {form.selectedDate && (
                 <View style={styles.setDateRow}>
-                  <Text style={styles.setDateText}>
-                    <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 4 }} /> {formatDateDisplay(form.selectedDate)}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
+                    <Text style={styles.setDateText}>{formatDateDisplay(form.selectedDate)}</Text>
+                  </View>
                   <TouchableOpacity
                     onPress={() => { hapticLight(); form.setSelectedDate(null); }}
                     style={styles.clearDateBtn}
@@ -706,9 +726,10 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 onPress={() => { hapticLight(); form.toggleCalendar(); }}
                 activeOpacity={0.6}
               >
-                <Text style={styles.setDateText}>
-                  <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 4 }} /> {form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
+                  <Text style={styles.setDateText}>{form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}</Text>
+                </View>
               </TouchableOpacity>
               {form.selectedDate ? (
                 <TouchableOpacity
@@ -799,7 +820,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Choose alarm icon"
           >
-            {form.selectedIcon ? <Text style={styles.emojiCircleText}>{form.selectedIcon}</Text> : <Image source={APP_ICONS.alarm} style={{ width: 22, height: 22 }} resizeMode="contain" />}
+            {form.selectedIcon ? <Text style={styles.emojiCircleText}>{form.selectedIcon}</Text> : <Image source={APP_ICONS.plus} style={{ width: 22, height: 22 }} resizeMode="contain" />}
           </TouchableOpacity>
         </View>
         {emojiPickerOpen && (
@@ -951,7 +972,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel={`Sound mode: ${getSoundModeLabel(form.soundMode)}`}
             >
-              <Image source={getSoundModeIcon(form.soundMode)} style={{ width: 22, height: 22 }} resizeMode="contain" />
+              <Image source={getSoundModeIcon(form.soundMode)} style={{ width: 18, height: 18 }} resizeMode="contain" />
             </TouchableOpacity>
             <Text style={{ fontSize: 11, fontFamily: FONTS.regular, color: colors.textTertiary, marginTop: 4 }}>
               {getSoundModeLabel(form.soundMode)}

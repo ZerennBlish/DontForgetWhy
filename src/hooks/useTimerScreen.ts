@@ -109,6 +109,7 @@ interface UseTimerScreenResult {
   handleStartUserTimer: (ut: UserTimer) => Promise<void>;
   handleUserTimerLongPress: (ut: UserTimer) => void;
   handleModalSave: () => Promise<void> | void;
+  handleModalSaveOnly: () => Promise<void> | void;
   handleTimerSoundSelect: (sound: SystemSound | null) => Promise<void>;
   closeModal: () => void;
 }
@@ -629,6 +630,94 @@ export function useTimerScreen(): UseTimerScreenResult {
     return handleSaveCustom();
   };
 
+  const handleSaveCustomOnly = async () => {
+    if (!customModal) return;
+    const hours = Math.min(customHours, 23);
+    const mins = Math.min(customMinutes, 59);
+    const secs = Math.min(customSeconds, 59);
+    const totalSeconds = hours * 3600 + mins * 60 + secs;
+    if (totalSeconds <= 0) {
+      setCustomModal(null);
+      return;
+    }
+    await saveCustomDuration(customModal.id, totalSeconds);
+    setPresets((prev) =>
+      prev.map((p) =>
+        p.id === customModal.id ? { ...p, customSeconds: totalSeconds } : p
+      )
+    );
+    setCustomModal(null);
+    ToastAndroid.show('Saved', ToastAndroid.SHORT);
+  };
+
+  const handleSaveNewTimerOnly = async () => {
+    const hours = Math.min(customHours, 23);
+    const mins = Math.min(customMinutes, 59);
+    const secs = Math.min(customSeconds, 59);
+    const totalSeconds = hours * 3600 + mins * 60 + secs;
+
+    if (!newTimerName.trim()) {
+      ToastAndroid.show('Give your timer a name', ToastAndroid.SHORT);
+      return;
+    }
+    if (totalSeconds <= 0) {
+      closeModal();
+      return;
+    }
+
+    const timerSoundId = soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined;
+
+    const ut: UserTimer = {
+      id: uuidv4(),
+      icon: newTimerIcon || '\u{23F1}\u{FE0F}',
+      label: newTimerName.trim(),
+      seconds: totalSeconds,
+      createdAt: new Date().toISOString(),
+      soundId: timerSoundId,
+    };
+
+    await saveUserTimer(ut);
+    setUserTimers((prev) => [ut, ...prev]);
+    closeModal();
+    ToastAndroid.show('Timer saved', ToastAndroid.SHORT);
+  };
+
+  const handleSaveEditTimerOnly = async () => {
+    if (!editingUserTimer) return;
+    const hours = Math.min(customHours, 23);
+    const mins = Math.min(customMinutes, 59);
+    const secs = Math.min(customSeconds, 59);
+    const totalSeconds = hours * 3600 + mins * 60 + secs;
+
+    if (!newTimerName.trim()) {
+      ToastAndroid.show('Give your timer a name', ToastAndroid.SHORT);
+      return;
+    }
+    if (totalSeconds <= 0) {
+      closeModal();
+      return;
+    }
+
+    const timerSoundId = soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined;
+    const updatedLabel = newTimerName.trim();
+    const updatedIcon = newTimerIcon || '\u{23F1}\u{FE0F}';
+
+    await updateUserTimer(editingUserTimer.id, { seconds: totalSeconds, soundId: timerSoundId, label: updatedLabel, icon: updatedIcon });
+    setUserTimers((prev) =>
+      prev.map((t) =>
+        t.id === editingUserTimer.id ? { ...t, seconds: totalSeconds, soundId: timerSoundId, label: updatedLabel, icon: updatedIcon } : t
+      )
+    );
+    closeModal();
+    ToastAndroid.show('Timer updated', ToastAndroid.SHORT);
+  };
+
+  const handleModalSaveOnly = () => {
+    if (isCreatingNew) return handleSaveNewTimerOnly();
+    if (editingUserTimer) return handleSaveEditTimerOnly();
+    return handleSaveCustomOnly();
+  };
+
   return {
     // Active timers
     activeTimers,
@@ -684,6 +773,7 @@ export function useTimerScreen(): UseTimerScreenResult {
     handleStartUserTimer,
     handleUserTimerLongPress,
     handleModalSave,
+    handleModalSaveOnly,
     handleTimerSoundSelect,
     closeModal,
   };

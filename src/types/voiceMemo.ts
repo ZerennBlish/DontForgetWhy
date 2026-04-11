@@ -10,6 +10,7 @@ export interface VoiceMemo {
   updatedAt: string;
   deletedAt?: string | null;
   noteId?: string | null;
+  images?: string[];
   clips?: VoiceClip[];
   clipCount?: number;
   totalDuration?: number;

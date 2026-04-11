@@ -29,6 +29,9 @@ import {
   deleteClip,
   updateClipLabel,
 } from '../services/voiceClipStorage';
+import { saveVoiceMemoImage, deleteVoiceMemoImage } from '../services/voiceMemoImageStorage';
+import * as ImagePicker from 'expo-image-picker';
+import ImageLightbox from '../components/ImageLightbox';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
 import { kvGet, kvSet } from '../services/database';
@@ -90,6 +93,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
   const [editingLabelText, setEditingLabelText] = useState('');
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('stop');
+  const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
   const initialTitleRef = useRef('');
   const initialNoteRef = useRef('');
@@ -321,6 +325,91 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     setEditingLabelText('');
   };
 
+  const handleTakePhoto = async () => {
+    if (!memo) return;
+    const currentImages = memo.images ?? [];
+    if (currentImages.length >= 5) {
+      ToastAndroid.show('5 photos max per memo', ToastAndroid.SHORT);
+      return;
+    }
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      ToastAndroid.show('Camera permission needed', ToastAndroid.SHORT);
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      hapticLight();
+      try {
+        const savedUri = await saveVoiceMemoImage(memo.id, result.assets[0].uri);
+        const updatedImages = [...currentImages, savedUri];
+        await updateVoiceMemo({
+          ...memo,
+          images: updatedImages,
+          updatedAt: new Date().toISOString(),
+        });
+        setMemo({ ...memo, images: updatedImages });
+      } catch {
+        ToastAndroid.show('Failed to save photo', ToastAndroid.SHORT);
+      }
+    }
+  };
+
+  const handlePickImage = async () => {
+    if (!memo) return;
+    const currentImages = memo.images ?? [];
+    if (currentImages.length >= 5) {
+      ToastAndroid.show('5 photos max per memo', ToastAndroid.SHORT);
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      quality: 0.7,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets[0]) {
+      hapticLight();
+      try {
+        const savedUri = await saveVoiceMemoImage(memo.id, result.assets[0].uri);
+        const updatedImages = [...currentImages, savedUri];
+        await updateVoiceMemo({
+          ...memo,
+          images: updatedImages,
+          updatedAt: new Date().toISOString(),
+        });
+        setMemo({ ...memo, images: updatedImages });
+      } catch {
+        ToastAndroid.show('Failed to save photo', ToastAndroid.SHORT);
+      }
+    }
+  };
+
+  const handleDeletePhoto = (imageUri: string) => {
+    Alert.alert('Delete photo?', 'This photo will be permanently removed.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          hapticHeavy();
+          await deleteVoiceMemoImage(imageUri);
+          const updatedImages = (memo?.images ?? []).filter((u) => u !== imageUri);
+          if (memo) {
+            await updateVoiceMemo({
+              ...memo,
+              images: updatedImages,
+              updatedAt: new Date().toISOString(),
+            });
+            setMemo({ ...memo, images: updatedImages });
+          }
+        },
+      },
+    ]);
+  };
+
   const handleDeleteClip = (clipId: string) => {
     Alert.alert(
       'Delete this clip?',
@@ -413,9 +502,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         },
         headerCenter: {
           flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginRight: 44,
         },
         headerRight: {
           flexDirection: 'row',
@@ -430,7 +516,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           alignItems: 'center',
           backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
           borderWidth: 1,
-          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+          borderColor: colors.red,
         },
         content: {
           flex: 1,
@@ -699,32 +785,47 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             <HomeButton forceDark={!!bgUri} />
           </View>
         </View>
-        <View style={styles.headerCenter}>
+        <View style={styles.headerCenter} />
+        <View style={styles.headerRight}>
           {isViewMode ? (
             <TouchableOpacity
-              style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+                borderWidth: 1,
+                borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+              }}
               onPress={() => { hapticLight(); setIsViewMode(false); }}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Edit voice memo"
             >
-              <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>Edit</Text>
+              <Image source={APP_ICONS.edit} style={{ width: 18, height: 18 }} resizeMode="contain" />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={{ backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20 }}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+                borderWidth: 1,
+                borderColor: colors.accent,
+              }}
               onPress={handleSaveExisting}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Save voice memo"
             >
-              <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.overlayText }}>
-                Save
-              </Text>
+              <Image source={APP_ICONS.save} style={{ width: 18, height: 18 }} resizeMode="contain" />
             </TouchableOpacity>
           )}
-        </View>
-        <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.trashBtn}
             onPress={handleDelete}
@@ -777,6 +878,109 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               textAlignVertical="top"
             />
           </>
+        )}
+
+        {/* Photos */}
+        {memo && (memo.images ?? []).length > 0 && (
+          <View style={{ marginTop: 16, marginBottom: 8 }}>
+            <Text style={{
+              fontSize: 11,
+              fontFamily: FONTS.bold,
+              color: bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary,
+              letterSpacing: 1.5,
+              marginBottom: 8,
+            }}>PHOTOS</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8 }}
+            >
+              {(memo.images ?? []).map((uri) => (
+                <View key={uri} style={{ position: 'relative' }}>
+                  <TouchableOpacity
+                    onPress={() => setLightboxUri(uri)}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="View photo"
+                  >
+                    <Image
+                      source={{ uri }}
+                      style={{ width: 80, height: 80, borderRadius: 10 }}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                  {!isViewMode && (
+                    <TouchableOpacity
+                      style={{
+                        position: 'absolute',
+                        top: -6,
+                        right: -6,
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: colors.red,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                      onPress={() => handleDeletePhoto(uri)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete photo"
+                    >
+                      <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {!isViewMode && memo && (
+          <View style={{
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: 16,
+            marginTop: 8,
+            marginBottom: 8,
+          }}>
+            <TouchableOpacity
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+                borderWidth: 1,
+                borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={handleTakePhoto}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Take a photo"
+            >
+              <Image source={APP_ICONS.camera} style={{ width: 18, height: 18 }} resizeMode="contain" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+                borderWidth: 1,
+                borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={handlePickImage}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Choose photo from gallery"
+            >
+              <Image source={APP_ICONS.image} style={{ width: 18, height: 18 }} resizeMode="contain" />
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Clip list */}
@@ -1013,6 +1217,12 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           </View>
         </View>
       )}
+
+      <ImageLightbox
+        visible={!!lightboxUri}
+        imageUri={lightboxUri}
+        onClose={() => setLightboxUri(null)}
+      />
     </View>
   );
 }
