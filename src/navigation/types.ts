@@ -34,6 +34,6 @@ export type RootStackParamList = {
   Checkers: undefined;
   Notepad: { noteId?: string; newNote?: boolean } | undefined;
   Calendar: { initialDate?: string } | undefined;
-  VoiceRecord: undefined;
+  VoiceRecord: { addToMemoId?: string } | undefined;
   VoiceMemoDetail: { memoId: string } | { tempUri: string; duration: number };
 };

@@ -18,8 +18,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { v4 as uuidv4 } from 'uuid';
 import { hapticLight } from '../utils/haptics';
-import { deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
+import { deleteVoiceMemoFile, saveVoiceClipFile } from '../services/voiceMemoFileStorage';
+import { addClip, getNextClipPosition } from '../services/voiceClipStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
@@ -42,9 +44,11 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function VoiceRecordScreen({ navigation }: Props) {
+export default function VoiceRecordScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const addToMemoId = route.params?.addToMemoId ?? null;
+  const isAddClipMode = !!addToMemoId;
 
   const [idleHint] = useState(() => IDLE_HINTS[Math.floor(Math.random() * IDLE_HINTS.length)]);
   const [isRecording, setIsRecording] = useState(false);
@@ -83,10 +87,26 @@ export default function VoiceRecordScreen({ navigation }: Props) {
           const durationMs = status.durationMillis || 0;
           if (uri && durationMs > 500 && !navigatedRef.current) {
             navigatedRef.current = true;
-            navigation.replace('VoiceMemoDetail', {
-              tempUri: uri,
-              duration: Math.round(durationMs / 1000),
-            });
+            const dur = Math.round(durationMs / 1000);
+            if (isAddClipMode && addToMemoId) {
+              try {
+                const clipId = uuidv4();
+                const permanentUri = await saveVoiceClipFile(clipId, uri);
+                const position = getNextClipPosition(addToMemoId);
+                addClip({
+                  id: clipId,
+                  memoId: addToMemoId,
+                  uri: permanentUri,
+                  duration: dur,
+                  position,
+                  label: null,
+                  createdAt: new Date().toISOString(),
+                });
+              } catch { /* best-effort on background */ }
+              navigation.goBack();
+            } else {
+              navigation.replace('VoiceMemoDetail', { tempUri: uri, duration: dur });
+            }
           }
         } catch { /* best-effort */ }
       }
@@ -189,7 +209,29 @@ export default function VoiceRecordScreen({ navigation }: Props) {
       if (uri && !navigatedRef.current) {
         const dur = durationMs > 0 ? Math.round(durationMs / 1000) : elapsed;
         navigatedRef.current = true;
-        navigation.replace('VoiceMemoDetail', { tempUri: uri, duration: dur });
+        if (isAddClipMode && addToMemoId) {
+          try {
+            const clipId = uuidv4();
+            const permanentUri = await saveVoiceClipFile(clipId, uri);
+            const position = getNextClipPosition(addToMemoId);
+            addClip({
+              id: clipId,
+              memoId: addToMemoId,
+              uri: permanentUri,
+              duration: dur,
+              position,
+              label: null,
+              createdAt: new Date().toISOString(),
+            });
+            ToastAndroid.show('Clip added', ToastAndroid.SHORT);
+          } catch (e) {
+            console.error('Failed to save clip:', e);
+            ToastAndroid.show('Failed to save clip', ToastAndroid.SHORT);
+          }
+          navigation.goBack();
+        } else {
+          navigation.replace('VoiceMemoDetail', { tempUri: uri, duration: dur });
+        }
       }
     } catch (e) {
       console.error('Stop recording failed:', e);
@@ -375,7 +417,9 @@ export default function VoiceRecordScreen({ navigation }: Props) {
         <View style={styles.headerHome}>
           <HomeButton forceDark={!!bgUri} />
         </View>
-        <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Record</Text>
+        <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>
+          {isAddClipMode ? 'Add Clip' : 'Record'}
+        </Text>
       </View>
 
       {/* Content */}

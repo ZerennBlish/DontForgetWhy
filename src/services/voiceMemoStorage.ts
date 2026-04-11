@@ -1,4 +1,5 @@
 import { getDb } from './database';
+import { getClipSummaries, deleteAllClipsForMemo } from './voiceClipStorage';
 import type { VoiceMemo } from '../types/voiceMemo';
 
 // ---------------------------------------------------------------------------
@@ -38,7 +39,15 @@ function rowToMemo(row: VoiceMemoRow): VoiceMemo {
 export async function getVoiceMemos(): Promise<VoiceMemo[]> {
   const db = getDb();
   const rows = db.getAllSync<VoiceMemoRow>('SELECT * FROM voice_memos WHERE deletedAt IS NULL');
-  return rows.map(rowToMemo);
+  const memos = rows.map(rowToMemo);
+  const ids = memos.map((m) => m.id);
+  const summaries = getClipSummaries(ids);
+  for (const memo of memos) {
+    const summary = summaries.get(memo.id);
+    memo.clipCount = summary?.clipCount ?? 0;
+    memo.totalDuration = summary?.totalDuration ?? 0;
+  }
+  return memos;
 }
 
 export async function getAllVoiceMemos(): Promise<VoiceMemo[]> {
@@ -86,6 +95,7 @@ export async function restoreVoiceMemo(id: string): Promise<void> {
 }
 
 export async function permanentlyDeleteVoiceMemo(id: string): Promise<void> {
+  await deleteAllClipsForMemo(id);
   const db = getDb();
   db.runSync('DELETE FROM voice_memos WHERE id=?', [id]);
 }

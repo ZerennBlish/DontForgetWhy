@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import * as VMStore from '../services/voiceMemoStorage';
 import { deleteVoiceMemoFile } from '../services/voiceMemoFileStorage';
+import { getClipSummaries } from '../services/voiceClipStorage';
 import {
   getPinnedVoiceMemos,
   togglePinVoiceMemo,
@@ -97,6 +98,13 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
 
   const reloadData = useCallback(async () => {
     const memos = await VMStore.getAllVoiceMemos();
+    const ids = memos.map((m) => m.id);
+    const summaries = getClipSummaries(ids);
+    for (const memo of memos) {
+      const summary = summaries.get(memo.id);
+      memo.clipCount = summary?.clipCount ?? 0;
+      memo.totalDuration = summary?.totalDuration ?? 0;
+    }
     setVoiceMemos(memos);
     const activeIds = memos.filter((m) => !m.deletedAt).map((m) => m.id);
     const pruned = await pruneVoiceMemoPins(activeIds);
@@ -135,6 +143,11 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
   );
 
   const handlePlayToggle = useCallback((memo: VoiceMemo) => {
+    // Clips-based memos have no direct uri — navigate to detail for playback
+    if (!memo.uri) {
+      navigation.navigate('VoiceMemoDetail', { memoId: memo.id });
+      return;
+    }
     if (playingMemoId === memo.id) {
       stopPlayback();
       return;
@@ -164,7 +177,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       } catch { /* player might be released */ }
     }, 500);
     p.play();
-  }, [playingMemoId, stopPlayback]);
+  }, [playingMemoId, stopPlayback, navigation]);
 
   const handleDelete = useCallback(async (id: string) => {
     hapticHeavy();
@@ -192,7 +205,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
   const handlePermanentDelete = useCallback(async (id: string) => {
     hapticHeavy();
     const memo = voiceMemos.find((m) => m.id === id);
-    if (memo) await deleteVoiceMemoFile(memo.uri);
+    if (memo?.uri) await deleteVoiceMemoFile(memo.uri);
     await VMStore.permanentlyDeleteVoiceMemo(id);
     await reloadData();
     refreshWidgets();

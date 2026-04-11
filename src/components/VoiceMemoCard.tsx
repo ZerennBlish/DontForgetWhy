@@ -84,7 +84,20 @@ function VoiceMemoCard({
     };
   }, [isPlaying, progressRef]);
 
-  const handlePlayPress = () => onPlayToggle(memo);
+  const clipCount = memo.clipCount ?? 0;
+  const totalDuration = memo.totalDuration ?? memo.duration ?? 0;
+  const clipInfo = clipCount > 1
+    ? `${clipCount} clips \u00B7 ${formatDuration(totalDuration)}`
+    : formatDuration(totalDuration);
+
+  const handlePlayPress = () => {
+    // Clips-based memo (no legacy single uri) → open detail for playback
+    if (!memo.uri) {
+      onPress(memo);
+      return;
+    }
+    onPlayToggle(memo);
+  };
   const handleCenterPress = () => onPress(memo);
   const handlePinPress = onPin ? () => onPin(memo.id) : undefined;
 
@@ -189,7 +202,7 @@ function VoiceMemoCard({
         onPress={handleCenterPress}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel={`Voice memo: ${memo.title || 'Untitled'}, ${formatDuration(memo.duration)}`}
+        accessibilityLabel={`Voice memo: ${memo.title || 'Untitled'}, ${clipInfo}`}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Text style={styles.title} numberOfLines={1}>
@@ -198,8 +211,7 @@ function VoiceMemoCard({
           {isPinned && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent, marginLeft: 6 }} />}
         </View>
         <Text style={styles.subtitle} numberOfLines={1}>
-          {formatDuration(memo.duration)} {'\u00B7'}{' '}
-          {formatRelativeTime(memo.createdAt)}
+          {clipInfo} {'\u00B7'} {formatRelativeTime(memo.createdAt)}
         </Text>
         {localProgress > 0 && (
           <View style={styles.miniTrack}>

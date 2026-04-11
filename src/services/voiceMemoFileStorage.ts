@@ -24,6 +24,22 @@ export async function saveVoiceMemoFile(memoId: string, sourceUri: string): Prom
   return destFile.uri;
 }
 
+export async function saveVoiceClipFile(clipId: string, sourceUri: string): Promise<string> {
+  const voiceDir = ensureVoiceMemoDir();
+  const filename = `${clipId}_${Date.now()}.m4a`;
+  const destFile = new File(voiceDir, filename);
+  const sourceFile = new File(sourceUri);
+  sourceFile.copy(destFile);
+
+  if (sourceUri.includes(Paths.cache.uri)) {
+    try {
+      if (sourceFile.exists) sourceFile.delete();
+    } catch { /* best-effort */ }
+  }
+
+  return destFile.uri;
+}
+
 export async function deleteVoiceMemoFile(uri: string): Promise<void> {
   try {
     const file = new File(uri);

@@ -144,6 +144,21 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
   }
 
   try {
+    db.execSync(`CREATE TABLE IF NOT EXISTS voice_clips (
+      id TEXT PRIMARY KEY,
+      memoId TEXT NOT NULL,
+      uri TEXT NOT NULL,
+      duration INTEGER NOT NULL DEFAULT 0,
+      position INTEGER NOT NULL DEFAULT 0,
+      label TEXT,
+      createdAt TEXT NOT NULL,
+      FOREIGN KEY (memoId) REFERENCES voice_memos(id) ON DELETE CASCADE
+    )`);
+  } catch (e) {
+    console.error('[DB] Failed to create voice_clips table:', e);
+  }
+
+  try {
     db.execSync(`CREATE TABLE IF NOT EXISTS active_timers (
       id TEXT PRIMARY KEY,
       presetId TEXT NOT NULL,
@@ -212,6 +227,36 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
     )`);
   } catch (e) {
     console.error('[DB] Failed to create checkers_game table:', e);
+  }
+
+  // --- Migrate legacy voice memos (single uri) → voice_clips rows ---
+  try {
+    const legacyMemos = db.getAllSync<{ id: string; uri: string; duration: number; createdAt: string }>(
+      `SELECT id, uri, duration, createdAt FROM voice_memos WHERE uri != '' AND uri IS NOT NULL`,
+    );
+    for (const m of legacyMemos) {
+      const existing = db.getFirstSync<{ cnt: number }>(
+        'SELECT COUNT(*) as cnt FROM voice_clips WHERE memoId = ?',
+        [m.id],
+      );
+      if (!existing || existing.cnt === 0) {
+        const clipId = `${m.id}_clip0`;
+        db.runSync(
+          `INSERT INTO voice_clips (id, memoId, uri, duration, position, label, createdAt)
+           VALUES (?, ?, ?, ?, 0, NULL, ?)`,
+          [clipId, m.id, m.uri, m.duration, m.createdAt],
+        );
+      }
+      db.runSync(
+        `UPDATE voice_memos SET uri = '', duration = 0 WHERE id = ?`,
+        [m.id],
+      );
+    }
+    if (legacyMemos.length > 0) {
+      console.log(`[DB] Migrated ${legacyMemos.length} voice memo(s) to clips`);
+    }
+  } catch (e) {
+    console.error('[DB] Voice clip migration failed:', e);
   }
 
   console.log('[DB] _initSchema complete');
@@ -294,6 +339,7 @@ const ENTITY_KEYS = [
   'reminders',
   'notes',
   'voiceMemos',
+  'voiceClips',
   'activeTimers',
   'userTimers',
 ] as const;
@@ -452,6 +498,31 @@ function _insertVoiceMemos(db: SQLite.SQLiteDatabase, items: unknown[]): void {
   }
 }
 
+function _insertVoiceClips(db: SQLite.SQLiteDatabase, items: unknown[]): void {
+  for (const item of items) {
+    if (!isRecord(item)) continue;
+    const c = item as Record<string, any>;
+    try {
+      db.runSync(
+        `INSERT OR IGNORE INTO voice_clips
+          (id, memoId, uri, duration, position, label, createdAt)
+         VALUES (?,?,?,?,?,?,?)`,
+        [
+          c.id,
+          c.memoId,
+          c.uri,
+          c.duration ?? 0,
+          c.position ?? 0,
+          c.label ?? null,
+          c.createdAt,
+        ],
+      );
+    } catch (e) {
+      console.warn('[migration] Skipping malformed voice clip row:', e);
+    }
+  }
+}
+
 function _insertActiveTimers(db: SQLite.SQLiteDatabase, items: unknown[]): void {
   for (const item of items) {
     if (!isRecord(item)) continue;
@@ -515,6 +586,7 @@ const ENTITY_INSERTERS: Record<
   reminders: _insertReminders,
   notes: _insertNotes,
   voiceMemos: _insertVoiceMemos,
+  voiceClips: _insertVoiceClips,
   activeTimers: _insertActiveTimers,
   userTimers: _insertUserTimers,
 };
