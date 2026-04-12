@@ -12,44 +12,6 @@ function formatDuration(seconds: number): string {
 }
 
 const voiceMemoStyles = StyleSheet.create({
-  recordingControls: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  recordingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  recordingBtnRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  pauseBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stopBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  recordingText: {
-    fontSize: 12,
-    fontFamily: FONTS.semiBold,
-    color: '#FF4444',
-  },
   memoRow: {
     paddingHorizontal: 16,
     paddingBottom: 8,
@@ -101,55 +63,6 @@ const voiceMemoStyles = StyleSheet.create({
 });
 
 export { voiceMemoStyles };
-
-interface RecordingControlsProps {
-  isPaused: boolean;
-  durationMillis: number;
-  onPauseToggle: () => void;
-  onStop: () => void;
-  recordingColor?: string;
-  successColor?: string;
-}
-
-export function RecordingControls({ isPaused, durationMillis, onPauseToggle, onStop, recordingColor, successColor }: RecordingControlsProps) {
-  const { colors } = useTheme();
-  const effectiveRed = recordingColor ?? colors.red;
-  const effectiveGreen = successColor ?? colors.success;
-  return (
-    <View style={voiceMemoStyles.recordingControls}>
-      <View style={voiceMemoStyles.recordingInfo}>
-        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isPaused ? '#FFA500' : effectiveRed }} />
-        <Text style={[voiceMemoStyles.recordingText, { color: effectiveRed }]}>
-          {isPaused ? 'Paused' : 'Recording'} {formatDuration(durationMillis / 1000)}
-        </Text>
-      </View>
-      <View style={voiceMemoStyles.recordingBtnRow}>
-        <TouchableOpacity
-          onPress={onPauseToggle}
-          style={voiceMemoStyles.pauseBtn}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={isPaused ? "Resume recording" : "Pause recording"}
-        >
-          {isPaused ? (
-            <GlowIcon source={MEDIA_ICONS.play} size={26} glowColor={effectiveGreen} />
-          ) : (
-            <GlowIcon source={MEDIA_ICONS.pause} size={26} glowColor={effectiveGreen} />
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={onStop}
-          style={voiceMemoStyles.stopBtn}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Stop recording"
-        >
-          <GlowIcon source={MEDIA_ICONS.stop} size={26} glowColor={effectiveRed} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
 
 interface MemoCardProps {
   isActive: boolean;

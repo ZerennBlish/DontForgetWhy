@@ -32,6 +32,7 @@ import {
 } from '../services/voiceClipStorage';
 import { saveVoiceMemoImage, deleteVoiceMemoImage } from '../services/voiceMemoImageStorage';
 import * as ImagePicker from 'expo-image-picker';
+import * as Sharing from 'expo-sharing';
 import ImageLightbox from '../components/ImageLightbox';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
@@ -95,6 +96,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const [editingLabelText, setEditingLabelText] = useState('');
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('stop');
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+  const [showAttachments, setShowAttachments] = useState(false);
 
   const initialTitleRef = useRef('');
   const initialNoteRef = useRef('');
@@ -445,6 +447,51 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       ],
     );
   };
+
+  const handleShare = useCallback(async () => {
+    if (clips.length === 0) {
+      ToastAndroid.show('No clips to share', ToastAndroid.SHORT);
+      return;
+    }
+    try { player.pause(); } catch { /* */ }
+
+    if (clips.length === 1) {
+      try {
+        await Sharing.shareAsync(clips[0].uri, {
+          mimeType: 'audio/mp4',
+          dialogTitle: title || 'Voice Memo',
+        });
+      } catch (e) {
+        console.error('Share failed:', e);
+        ToastAndroid.show('Share failed', ToastAndroid.SHORT);
+      }
+      return;
+    }
+
+    const options = clips.map((clip) => ({
+      text: clip.label ?? formatClipTimestamp(clip.createdAt),
+      onPress: async () => {
+        try {
+          await Sharing.shareAsync(clip.uri, {
+            mimeType: 'audio/mp4',
+            dialogTitle: title || 'Voice Memo',
+          });
+        } catch (e) {
+          console.error('Share failed:', e);
+          ToastAndroid.show('Share failed', ToastAndroid.SHORT);
+        }
+      },
+    }));
+
+    Alert.alert(
+      'Share Clip',
+      'Which clip do you want to share?',
+      [
+        ...options.map((opt) => ({ text: opt.text, onPress: opt.onPress })),
+        { text: 'Cancel', style: 'cancel' as const },
+      ],
+    );
+  }, [clips, player, title]);
 
   const togglePlay = () => {
     hapticLight();
@@ -797,24 +844,44 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         <View style={styles.headerCenter} />
         <View style={styles.headerRight}>
           {isViewMode ? (
-            <TouchableOpacity
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
-                borderWidth: 1,
-                borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-              }}
-              onPress={() => { hapticLight(); setIsViewMode(false); }}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Edit voice memo"
-            >
-              <Image source={APP_ICONS.edit} style={{ width: 18, height: 18 }} resizeMode="contain" />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+                  borderWidth: 1,
+                  borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                }}
+                onPress={handleShare}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Share voice memo"
+              >
+                <Image source={APP_ICONS.share} style={{ width: 18, height: 18 }} resizeMode="contain" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
+                  borderWidth: 1,
+                  borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                }}
+                onPress={() => { hapticLight(); setIsViewMode(false); }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Edit voice memo"
+              >
+                <Image source={APP_ICONS.edit} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              </TouchableOpacity>
+            </>
           ) : (
             <TouchableOpacity
               style={{
@@ -832,7 +899,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Save voice memo"
             >
-              <Image source={APP_ICONS.save} style={{ width: 18, height: 18 }} resizeMode="contain" />
+              <Image source={APP_ICONS.save} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -842,7 +909,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Delete voice memo"
           >
-            <Image source={APP_ICONS.trash} style={{ width: 18, height: 18 }} resizeMode="contain" />
+            <Image source={APP_ICONS.trash} style={{ width: 20, height: 20 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -881,7 +948,6 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               onChangeText={setNote}
               placeholder="Add a note..."
               placeholderTextColor={bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary}
-              maxLength={200}
               multiline
               numberOfLines={3}
               textAlignVertical="top"
@@ -889,110 +955,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           </>
         )}
 
-        {/* Photos */}
-        {memo && (memo.images ?? []).length > 0 && (
-          <View style={{ marginTop: 16, marginBottom: 8 }}>
-            <Text style={{
-              fontSize: 11,
-              fontFamily: FONTS.bold,
-              color: bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary,
-              letterSpacing: 1.5,
-              marginBottom: 8,
-            }}>PHOTOS</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {(memo.images ?? []).map((uri) => (
-                <View key={uri} style={{ position: 'relative' }}>
-                  <TouchableOpacity
-                    onPress={() => setLightboxUri(uri)}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel="View photo"
-                  >
-                    <Image
-                      source={{ uri }}
-                      style={{ width: 80, height: 80, borderRadius: 10 }}
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-                  {!isViewMode && (
-                    <TouchableOpacity
-                      style={{
-                        position: 'absolute',
-                        top: -6,
-                        right: -6,
-                        width: 22,
-                        height: 22,
-                        borderRadius: 11,
-                        backgroundColor: colors.red,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                      onPress={() => handleDeletePhoto(uri)}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel="Delete photo"
-                    >
-                      <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {!isViewMode && memo && (
-          <View style={{
-            flexDirection: 'row',
-            justifyContent: 'center',
-            gap: 16,
-            marginTop: 8,
-            marginBottom: 8,
-          }}>
-            <TouchableOpacity
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-                borderWidth: 1,
-                borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-              onPress={handleTakePhoto}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Take a photo"
-            >
-              <Image source={APP_ICONS.camera} style={{ width: 18, height: 18 }} resizeMode="contain" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-                borderWidth: 1,
-                borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-              onPress={handlePickImage}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Choose photo from gallery"
-            >
-              <Image source={APP_ICONS.image} style={{ width: 18, height: 18 }} resizeMode="contain" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Clip list */}
+        {/* Clips */}
         <Text style={[styles.clipsHeader, bgUri && { color: 'rgba(255,255,255,0.6)' }]}>
           Clips
         </Text>
@@ -1054,7 +1017,29 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
 
                     <Text style={styles.clipDuration}>{formatTime(clip.duration)}</Text>
 
-                    {!isViewMode && (
+                    {isViewMode ? (
+                      <TouchableOpacity
+                        style={styles.clipDeleteBtn}
+                        onPress={async () => {
+                          hapticLight();
+                          try { player.pause(); } catch { /* */ }
+                          try {
+                            await Sharing.shareAsync(clip.uri, {
+                              mimeType: 'audio/mp4',
+                              dialogTitle: title || 'Voice Memo',
+                            });
+                          } catch (e) {
+                            console.error('Share failed:', e);
+                            ToastAndroid.show('Share failed', ToastAndroid.SHORT);
+                          }
+                        }}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Share clip ${displayLabel}`}
+                      >
+                        <Image source={APP_ICONS.share} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                      </TouchableOpacity>
+                    ) : (
                       <TouchableOpacity
                         style={styles.clipDeleteBtn}
                         onPress={() => handleDeleteClip(clip.id)}
@@ -1074,7 +1059,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               })
             )}
 
-            {memo && (
+            {!isViewMode && memo && (
               <TouchableOpacity
                 style={{
                   flexDirection: 'row',
@@ -1112,7 +1097,183 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 </Text>
               </TouchableOpacity>
             )}
+
+        {/* Photos — view mode inline below clips */}
+        {isViewMode && (memo?.images ?? []).length > 0 && (
+          <View style={{ marginTop: 20, marginBottom: 8 }}>
+            <Text style={{
+              fontSize: 11,
+              fontFamily: FONTS.bold,
+              color: bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary,
+              letterSpacing: 1.5,
+              marginBottom: 8,
+            }}>PHOTOS</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 10 }}
+            >
+              {(memo?.images ?? []).map((uri) => (
+                <TouchableOpacity
+                  key={uri}
+                  onPress={() => setLightboxUri(uri)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="View photo"
+                >
+                  <Image
+                    source={{ uri }}
+                    style={{ width: 120, height: 120, borderRadius: 10 }}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
+
+      {/* Attachments panel — edit mode */}
+      {!isViewMode && showAttachments && (memo?.images ?? []).length > 0 && (
+        <View style={{
+          backgroundColor: 'rgba(15, 15, 25, 0.9)',
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+        }}>
+          <Text style={{
+            fontSize: 11,
+            fontFamily: FONTS.bold,
+            color: 'rgba(255,255,255,0.4)',
+            letterSpacing: 1.5,
+            marginBottom: 8,
+          }}>PHOTOS</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 10 }}
+          >
+            {(memo?.images ?? []).map((uri) => (
+              <View key={uri} style={{ position: 'relative' }}>
+                <TouchableOpacity
+                  onPress={() => setLightboxUri(uri)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="View photo"
+                >
+                  <Image
+                    source={{ uri }}
+                    style={{ width: 120, height: 120, borderRadius: 10 }}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    position: 'absolute',
+                    top: -6,
+                    right: -6,
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    backgroundColor: colors.red,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => handleDeletePhoto(uri)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete photo"
+                >
+                  <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Bottom toolbar — edit mode */}
+      {!isViewMode && memo && (
+        <View style={{
+          flexDirection: 'row',
+          justifyContent: 'space-evenly',
+          alignItems: 'center',
+          backgroundColor: 'rgba(15, 15, 25, 0.9)',
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          paddingVertical: 10,
+          paddingBottom: 10 + insets.bottom,
+        }}>
+          <TouchableOpacity
+            style={{ alignItems: 'center' }}
+            onPress={() => { hapticLight(); setShowAttachments((v) => !v); }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle attachments"
+          >
+            <View style={{
+              width: 44, height: 44, borderRadius: 22,
+              justifyContent: 'center', alignItems: 'center',
+              backgroundColor: 'rgba(30, 30, 40, 0.7)',
+              borderWidth: showAttachments ? 1.5 : 1,
+              borderColor: showAttachments ? colors.sectionVoice : 'rgba(255, 255, 255, 0.15)',
+            }}>
+              <Image source={APP_ICONS.paperclip} style={{ width: 34, height: 34 }} resizeMode="contain" />
+              {(memo?.images ?? []).length > 0 && (
+                <View style={{
+                  position: 'absolute', top: -2, right: -4,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  backgroundColor: colors.sectionVoice,
+                  justifyContent: 'center', alignItems: 'center',
+                  paddingHorizontal: 4,
+                }}>
+                  <Text style={{ fontSize: 9, fontFamily: FONTS.bold, color: '#FFFFFF' }}>
+                    {(memo?.images ?? []).length}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: 'rgba(255, 255, 255, 0.6)', marginTop: 4 }}>Attached</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ alignItems: 'center' }}
+            onPress={() => { hapticLight(); handleTakePhoto(); }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Take a photo"
+          >
+            <View style={{
+              width: 44, height: 44, borderRadius: 22,
+              justifyContent: 'center', alignItems: 'center',
+              backgroundColor: 'rgba(30, 30, 40, 0.7)',
+              borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)',
+            }}>
+              <Image source={APP_ICONS.camera} style={{ width: 24, height: 24 }} resizeMode="contain" />
+            </View>
+            <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: 'rgba(255, 255, 255, 0.6)', marginTop: 4 }}>Camera</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ alignItems: 'center' }}
+            onPress={() => { hapticLight(); handlePickImage(); }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Choose photo from gallery"
+          >
+            <View style={{
+              width: 44, height: 44, borderRadius: 22,
+              justifyContent: 'center', alignItems: 'center',
+              backgroundColor: 'rgba(30, 30, 40, 0.7)',
+              borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)',
+            }}>
+              <Image source={APP_ICONS.image} style={{ width: 24, height: 24 }} resizeMode="contain" />
+            </View>
+            <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: 'rgba(255, 255, 255, 0.6)', marginTop: 4 }}>Gallery</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Playback controls — fixed at bottom, only visible when there's something to play */}
       {showControls && (

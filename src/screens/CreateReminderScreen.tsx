@@ -501,7 +501,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={form.existing ? 'Update reminder' : 'Save reminder'}
           >
-            <Image source={APP_ICONS.save} style={{ width: 18, height: 18 }} resizeMode="contain" />
+            <Image source={APP_ICONS.save} style={{ width: 24, height: 24 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>

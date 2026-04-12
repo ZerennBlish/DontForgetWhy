@@ -28,7 +28,7 @@ export default function HomeButton({ forceDark }: { forceDark?: boolean }) {
       accessibilityLabel="Go home"
       accessibilityRole="button"
     >
-      <Image source={APP_ICONS.house} style={{ width: 20, height: 20 }} resizeMode="contain" />
+      <Image source={APP_ICONS.house} style={{ width: 24, height: 24 }} resizeMode="contain" />
     </TouchableOpacity>
   );
 }

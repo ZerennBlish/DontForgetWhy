@@ -33,7 +33,7 @@ export default function BackButton({ onPress, forceDark }: BackButtonProps) {
       accessibilityLabel="Go back"
       accessibilityRole="button"
     >
-      <Image source={APP_ICONS.backArrow} style={{ width: 20, height: 20 }} resizeMode="contain" />
+      <Image source={APP_ICONS.backArrow} style={{ width: 22, height: 22 }} resizeMode="contain" />
     </TouchableOpacity>
   );
 }

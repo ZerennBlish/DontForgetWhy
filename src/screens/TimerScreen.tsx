@@ -721,7 +721,7 @@ export default function TimerScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Save timer"
               >
-                <Image source={APP_ICONS.save} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                <Image source={APP_ICONS.save} style={{ width: 24, height: 24 }} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleModalSave}
@@ -739,7 +739,7 @@ export default function TimerScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Save and start timer"
               >
-                <Image source={MEDIA_ICONS.play} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                <Image source={MEDIA_ICONS.play} style={{ width: 26, height: 26 }} resizeMode="contain" />
               </TouchableOpacity>
             </View>
           </View>
