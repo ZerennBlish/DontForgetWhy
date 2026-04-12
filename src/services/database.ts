@@ -492,8 +492,8 @@ function _insertVoiceMemos(db: SQLite.SQLiteDatabase, items: unknown[]): void {
       db.runSync(
         `INSERT OR IGNORE INTO voice_memos
           (id, uri, title, note, duration, noteId,
-           createdAt, updatedAt, deletedAt)
-         VALUES (?,?,?,?,?,?,?,?,?)`,
+           createdAt, updatedAt, deletedAt, images)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
         [
           v.id,
           v.uri,
@@ -504,6 +504,7 @@ function _insertVoiceMemos(db: SQLite.SQLiteDatabase, items: unknown[]): void {
           v.createdAt,
           v.updatedAt,
           v.deletedAt ?? null,
+          jsonOrNull(v.images) ?? '[]',
         ],
       );
     } catch (e) {

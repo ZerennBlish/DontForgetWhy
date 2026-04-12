@@ -49,6 +49,7 @@ interface BackupMeta {
     noteImages: number;
     alarmPhotos: number;
     backgrounds: number;
+    voiceMemoImages: number;
   };
 }
 
@@ -132,6 +133,7 @@ async function exportBackup(): Promise<string> {
           noteImages: countFilesInDir('note-images'),
           alarmPhotos: countFilesInDir('alarm-photos'),
           backgrounds: countFilesInDir('backgrounds'),
+          voiceMemoImages: countFilesInDir('voice-memo-images'),
         },
       };
       const metaFile = new File(stagingDir, META_FILENAME);

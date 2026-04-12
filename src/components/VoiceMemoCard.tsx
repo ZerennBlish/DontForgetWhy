@@ -188,7 +188,7 @@ function VoiceMemoCard({
         onPress={handlePlayPress}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel={isPlaying ? 'Pause memo' : 'Play memo'}
+        accessibilityLabel={memo.uri ? (isPlaying ? 'Pause memo' : 'Play memo') : 'Open memo'}
       >
         {isPlaying ? (
           <Image source={MEDIA_ICONS.pause} style={{ width: 18, height: 18 }} resizeMode="contain" />

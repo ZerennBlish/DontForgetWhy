@@ -23,7 +23,8 @@ interface VoiceMemoRow {
 function rowToMemo(row: VoiceMemoRow): VoiceMemo {
   let parsedImages: string[] = [];
   try {
-    parsedImages = row.images ? JSON.parse(row.images) : [];
+    const raw = row.images ? JSON.parse(row.images) : [];
+    parsedImages = Array.isArray(raw) ? raw : [];
   } catch {
     parsedImages = [];
   }

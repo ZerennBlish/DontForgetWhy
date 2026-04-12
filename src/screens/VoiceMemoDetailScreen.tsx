@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import {
   getAllVoiceMemos,
+  getVoiceMemoById,
   updateVoiceMemo,
   deleteVoiceMemo,
 } from '../services/voiceMemoStorage';
@@ -179,6 +180,14 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      const freshMemo = getVoiceMemoById(memoId);
+      if (freshMemo) {
+        setMemo(freshMemo);
+        setTitle(freshMemo.title);
+        setNote(freshMemo.note);
+        initialTitleRef.current = freshMemo.title;
+        initialNoteRef.current = freshMemo.note;
+      }
       const freshClips = getClipsForMemo(memoId);
       setClips(freshClips);
       return () => {

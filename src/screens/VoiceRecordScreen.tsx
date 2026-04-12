@@ -24,7 +24,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { hapticLight } from '../utils/haptics';
 import { deleteVoiceMemoFile, saveVoiceClipFile } from '../services/voiceMemoFileStorage';
 import { addClip, getNextClipPosition } from '../services/voiceClipStorage';
-import { addVoiceMemo, updateVoiceMemo, getVoiceMemoById } from '../services/voiceMemoStorage';
+import { addVoiceMemo, updateVoiceMemo, getVoiceMemoById, permanentlyDeleteVoiceMemo } from '../services/voiceMemoStorage';
 import { saveVoiceMemoImage } from '../services/voiceMemoImageStorage';
 import APP_ICONS from '../data/appIconAssets';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
@@ -69,6 +69,11 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transitionRef = useRef(false);
   const navigatedRef = useRef(false);
+  const capturedPhotosRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    capturedPhotosRef.current = capturedPhotos;
+  }, [capturedPhotos]);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
@@ -77,7 +82,12 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
       ToastAndroid.show('Stop recording first', ToastAndroid.SHORT);
       return;
     }
-    if (capturedPhotos.length >= 5) {
+    let existingCount = 0;
+    if (isAddClipMode && addToMemoId) {
+      const existing = getVoiceMemoById(addToMemoId);
+      existingCount = existing?.images?.length ?? 0;
+    }
+    if (capturedPhotos.length + existingCount >= 5) {
       ToastAndroid.show('5 photos max per memo', ToastAndroid.SHORT);
       return;
     }
@@ -102,6 +112,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
   };
 
   const saveAndNavigate = async (uri: string, dur: number) => {
+    const photosToSave = capturedPhotosRef.current;
     if (isAddClipMode && addToMemoId) {
       try {
         const clipId = uuidv4();
@@ -116,9 +127,9 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
           label: null,
           createdAt: new Date().toISOString(),
         });
-        if (capturedPhotos.length > 0) {
+        if (photosToSave.length > 0) {
           const savedUris: string[] = [];
-          for (const photoUri of capturedPhotos) {
+          for (const photoUri of photosToSave) {
             try {
               const saved = await saveVoiceMemoImage(addToMemoId, photoUri);
               savedUris.push(saved);
@@ -137,11 +148,12 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
           }
         }
         ToastAndroid.show('Clip added', ToastAndroid.SHORT);
+        navigation.goBack();
       } catch (e) {
         console.error('Failed to save clip:', e);
         ToastAndroid.show('Failed to save clip', ToastAndroid.SHORT);
+        navigation.goBack();
       }
-      navigation.goBack();
     } else {
       try {
         const newMemoId = uuidv4();
@@ -161,22 +173,28 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
             deletedAt: null,
             noteId: null,
           });
-          addClip({
-            id: clipId,
-            memoId: newMemoId,
-            uri: permanentUri,
-            duration: dur,
-            position: 0,
-            label: null,
-            createdAt: now,
-          });
+          try {
+            addClip({
+              id: clipId,
+              memoId: newMemoId,
+              uri: permanentUri,
+              duration: dur,
+              position: 0,
+              label: null,
+              createdAt: now,
+            });
+          } catch (clipError) {
+            await permanentlyDeleteVoiceMemo(newMemoId);
+            deleteVoiceMemoFile(permanentUri).catch(() => {});
+            throw clipError;
+          }
         } catch (metaError) {
           deleteVoiceMemoFile(permanentUri).catch(() => {});
           throw metaError;
         }
-        if (capturedPhotos.length > 0) {
+        if (photosToSave.length > 0) {
           const savedUris: string[] = [];
-          for (const photoUri of capturedPhotos) {
+          for (const photoUri of photosToSave) {
             try {
               const saved = await saveVoiceMemoImage(newMemoId, photoUri);
               savedUris.push(saved);
