@@ -70,10 +70,17 @@ function DeletedNoteCard({ note, onRestore, onPermanentDelete }: DeletedNoteCard
       marginHorizontal: 12,
     },
     cardTitle: {
-      fontSize: 14,
+      fontSize: 15,
       fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
       opacity: 0.7,
+    },
+    cardPreview: {
+      fontSize: 13,
+      fontFamily: FONTS.regular,
+      color: colors.textPrimary + '99',
+      opacity: 0.7,
+      marginTop: 2,
     },
     deletedAgo: {
       fontSize: 12,
@@ -99,9 +106,22 @@ function DeletedNoteCard({ note, onRestore, onPermanentDelete }: DeletedNoteCard
         )}
       </View>
       <View style={styles.cardCenter}>
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {note.text}
-        </Text>
+        {note.title ? (
+          <>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {note.title}
+            </Text>
+            {note.text ? (
+              <Text style={styles.cardPreview} numberOfLines={1}>
+                {note.text}
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {note.text}
+          </Text>
+        )}
         <Text style={styles.deletedAgo}>
           {formatDeletedAgo(note.deletedAt!)}
         </Text>

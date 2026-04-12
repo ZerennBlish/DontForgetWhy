@@ -112,6 +112,7 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
   try {
     db.execSync(`CREATE TABLE IF NOT EXISTS notes (
       id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
       text TEXT NOT NULL,
       color TEXT NOT NULL DEFAULT '#FFFFFF',
       icon TEXT DEFAULT '',
@@ -271,6 +272,23 @@ function _initSchema(db: SQLite.SQLiteDatabase): void {
     }
   } catch (e) {
     console.error('[DB] voice_memos images migration failed:', e);
+  }
+
+  // --- Add title column to notes if missing ---
+  try {
+    const cols = db.getAllSync<{ name: string }>(
+      `PRAGMA table_info(notes)`
+    );
+    const hasTitle = cols.some((c) => c.name === 'title');
+    if (!hasTitle) {
+      db.execSync(`ALTER TABLE notes ADD COLUMN title TEXT NOT NULL DEFAULT ''`);
+      console.log('[DB] Added title column to notes');
+    } else {
+      // Backfill any NULLs from an earlier migration that didn't enforce NOT NULL
+      db.execSync(`UPDATE notes SET title = '' WHERE title IS NULL`);
+    }
+  } catch (e) {
+    console.error('[DB] notes title migration failed:', e);
   }
 
   console.log('[DB] _initSchema complete');

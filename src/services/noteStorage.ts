@@ -17,6 +17,7 @@ export interface PendingNoteAction {
 
 interface NoteRow {
   id: string;
+  title: string | null;
   text: string;
   color: string;
   icon: string;
@@ -32,6 +33,7 @@ interface NoteRow {
 function rowToNote(row: NoteRow): Note {
   return {
     id: row.id,
+    title: row.title ?? '',
     text: row.text,
     color: row.color || '#FFFFFF',
     icon: row.icon || '',
@@ -72,9 +74,9 @@ export function getNoteById(id: string): Note | null {
 export async function addNote(note: Note): Promise<Note[]> {
   const db = getDb();
   db.runSync(
-    `INSERT INTO notes (id, text, color, icon, fontColor, pinned, images, voiceMemos, createdAt, updatedAt, deletedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [note.id, note.text, note.color, note.icon || '', note.fontColor ?? null,
+    `INSERT INTO notes (id, title, text, color, icon, fontColor, pinned, images, voiceMemos, createdAt, updatedAt, deletedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [note.id, note.title || '', note.text, note.color, note.icon || '', note.fontColor ?? null,
      note.pinned ? 1 : 0, note.images ? JSON.stringify(note.images) : null,
      note.voiceMemos ? JSON.stringify(note.voiceMemos) : null,
      note.createdAt, note.updatedAt || note.createdAt, note.deletedAt ?? null],
@@ -85,9 +87,9 @@ export async function addNote(note: Note): Promise<Note[]> {
 export async function updateNote(updated: Note): Promise<Note[]> {
   const db = getDb();
   db.runSync(
-    `UPDATE notes SET text=?, color=?, icon=?, fontColor=?, pinned=?, images=?, voiceMemos=?, updatedAt=?, deletedAt=?
+    `UPDATE notes SET title=?, text=?, color=?, icon=?, fontColor=?, pinned=?, images=?, voiceMemos=?, updatedAt=?, deletedAt=?
      WHERE id=?`,
-    [updated.text, updated.color, updated.icon || '', updated.fontColor ?? null,
+    [updated.title || '', updated.text, updated.color, updated.icon || '', updated.fontColor ?? null,
      updated.pinned ? 1 : 0, updated.images ? JSON.stringify(updated.images) : null,
      updated.voiceMemos ? JSON.stringify(updated.voiceMemos) : null,
      updated.updatedAt, updated.deletedAt ?? null, updated.id],

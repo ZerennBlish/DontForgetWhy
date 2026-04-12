@@ -580,13 +580,16 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           paddingTop: 40,
         },
         scrollContent: {
-          paddingBottom: 12,
+          flexGrow: 1,
+          justifyContent: 'space-between',
+          paddingBottom: insets.bottom + 12,
         },
         titleText: {
           fontSize: 18,
           fontFamily: FONTS.bold,
           color: colors.textPrimary,
           paddingVertical: 8,
+          textAlign: 'center',
         },
         noteText: {
           fontSize: 15,
@@ -604,6 +607,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           paddingHorizontal: 0,
           borderBottomWidth: 1,
           borderBottomColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+          textAlign: 'center',
         },
         noteInput: {
           fontSize: 16,
@@ -620,6 +624,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           color: colors.textTertiary,
           marginTop: 16,
           marginBottom: 8,
+          textAlign: 'center',
           textTransform: 'uppercase',
           letterSpacing: 1,
         },
@@ -861,7 +866,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Share voice memo"
               >
-                <Image source={APP_ICONS.share} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                <Image source={APP_ICONS.share} style={{ width: 22, height: 22 }} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={{
@@ -920,6 +925,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
+        <View>
         {/* Title & Note */}
         {isViewMode ? (
           <>
@@ -1037,7 +1043,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                         accessibilityRole="button"
                         accessibilityLabel={`Share clip ${displayLabel}`}
                       >
-                        <Image source={APP_ICONS.share} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                        <Image source={APP_ICONS.share} style={{ width: 18, height: 18 }} resizeMode="contain" />
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
@@ -1085,7 +1091,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               >
                 <Image
                   source={APP_ICONS.plus}
-                  style={{ width: 16, height: 16, marginRight: 8 }}
+                  style={{ width: 20, height: 20, marginRight: 8 }}
                   resizeMode="contain"
                 />
                 <Text style={{
@@ -1098,7 +1104,10 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               </TouchableOpacity>
             )}
 
-        {/* Photos — view mode inline below clips */}
+        </View>
+
+        <View>
+        {/* Photos — view mode pushed to bottom */}
         {isViewMode && (memo?.images ?? []).length > 0 && (
           <View style={{ marginTop: 20, marginBottom: 8 }}>
             <Text style={{
@@ -1107,11 +1116,12 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               color: bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary,
               letterSpacing: 1.5,
               marginBottom: 8,
+              textAlign: 'center',
             }}>PHOTOS</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 10 }}
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: 14 }}
             >
               {(memo?.images ?? []).map((uri) => (
                 <TouchableOpacity
@@ -1131,6 +1141,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             </ScrollView>
           </View>
         )}
+        </View>
       </ScrollView>
 
       {/* Attachments panel — edit mode */}
@@ -1139,7 +1150,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           backgroundColor: 'rgba(15, 15, 25, 0.9)',
           borderTopWidth: 1,
           borderTopColor: 'rgba(255, 255, 255, 0.1)',
-          paddingVertical: 12,
+          paddingVertical: 16,
           paddingHorizontal: 16,
         }}>
           <Text style={{
@@ -1148,11 +1159,12 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             color: 'rgba(255,255,255,0.4)',
             letterSpacing: 1.5,
             marginBottom: 8,
+            textAlign: 'center',
           }}>PHOTOS</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 10 }}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: 14, paddingTop: 8, paddingRight: 8 }}
           >
             {(memo?.images ?? []).map((uri) => (
               <View key={uri} style={{ position: 'relative' }}>
@@ -1171,15 +1183,18 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 <TouchableOpacity
                   style={{
                     position: 'absolute',
-                    top: -6,
-                    right: -6,
+                    top: 4,
+                    right: 4,
                     width: 22,
                     height: 22,
                     borderRadius: 11,
                     backgroundColor: colors.red,
                     justifyContent: 'center',
                     alignItems: 'center',
+                    borderWidth: 1.5,
+                    borderColor: 'rgba(255,255,255,0.6)',
                   }}
+                  hitSlop={{ top: 16, right: 16, bottom: 16, left: 16 }}
                   onPress={() => handleDeletePhoto(uri)}
                   activeOpacity={0.7}
                   accessibilityRole="button"

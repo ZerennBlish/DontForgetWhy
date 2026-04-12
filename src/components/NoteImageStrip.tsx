@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, Image, Alert, ScrollView, View } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { loadDrawingData } from '../services/noteImageStorage';
 import APP_ICONS from '../data/appIconAssets';
@@ -22,39 +24,71 @@ export default function NoteImageStrip({
   onEditDrawing,
   onDrawOnPhoto,
 }: NoteImageStripProps) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.thumbnailRow}>
+    <View>
+    <Text style={{
+      fontSize: 11,
+      fontFamily: FONTS.bold,
+      color: colors.textTertiary,
+      letterSpacing: 1.5,
+      marginBottom: 8,
+      textAlign: 'center',
+    }}>PHOTOS</Text>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: 14, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 }}
+    >
       {images.map((uri, idx) => (
-        <TouchableOpacity
-          key={`${uri}-${idx}`}
-          onPress={async () => {
-            const drawingData = await loadDrawingData(uri);
-            if (drawingData) {
-              Alert.alert('Drawing', '', [
-                { text: 'View', onPress: () => onViewImage(uri) },
-                { text: 'Edit', onPress: () => onEditDrawing(uri, drawingData) },
-                { text: 'Cancel', style: 'cancel' },
-              ]);
-            } else {
-              if (isViewMode) {
-                onViewImage(uri);
+        <View key={`${uri}-${idx}`} style={{ position: 'relative' }}>
+          <TouchableOpacity
+            onPress={async () => {
+              const drawingData = await loadDrawingData(uri);
+              if (drawingData) {
+                if (isViewMode) {
+                  onViewImage(uri);
+                } else {
+                  Alert.alert('Drawing', '', [
+                    { text: 'View', onPress: () => onViewImage(uri) },
+                    { text: 'Edit', onPress: () => onEditDrawing(uri, drawingData) },
+                    { text: 'Cancel', style: 'cancel' },
+                  ]);
+                }
               } else {
-                Alert.alert('Photo', '', [
-                  { text: 'View', onPress: () => onViewImage(uri) },
-                  { text: 'Draw On', onPress: () => onDrawOnPhoto(uri) },
-                  { text: 'Cancel', style: 'cancel' },
-                ]);
+                if (isViewMode) {
+                  onViewImage(uri);
+                } else {
+                  Alert.alert('Photo', '', [
+                    { text: 'View', onPress: () => onViewImage(uri) },
+                    { text: 'Draw On', onPress: () => onDrawOnPhoto(uri) },
+                    { text: 'Cancel', style: 'cancel' },
+                  ]);
+                }
               }
-            }
-          }}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="View image"
-        >
-          <Image source={{ uri }} style={styles.thumbnail} resizeMethod="resize" />
+            }}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="View image"
+          >
+            <Image source={{ uri }} style={styles.thumbnail} resizeMethod="resize" />
+          </TouchableOpacity>
           {!isViewMode && (
             <TouchableOpacity
-              style={styles.thumbnailRemove}
+              style={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                width: 22,
+                height: 22,
+                borderRadius: 11,
+                backgroundColor: colors.red,
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderWidth: 1.5,
+                borderColor: 'rgba(255,255,255,0.6)',
+              }}
+              hitSlop={{ top: 16, right: 16, bottom: 16, left: 16 }}
               onPress={() => {
                 hapticLight();
                 onRemoveImage(idx);
@@ -66,36 +100,17 @@ export default function NoteImageStrip({
               <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
             </TouchableOpacity>
           )}
-        </TouchableOpacity>
+        </View>
       ))}
+    </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  thumbnailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
   thumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  thumbnailRemove: {
-    position: 'absolute',
-    top: 2,
-    right: 10,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 120,
+    height: 120,
+    borderRadius: 10,
   },
 });

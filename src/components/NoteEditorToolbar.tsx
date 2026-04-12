@@ -15,7 +15,6 @@ interface NoteEditorToolbarProps {
   onToggleColors: () => void;
   colorsActive: boolean;
   attachmentCount: number;
-  maxAttachments: number;
 }
 
 export default function NoteEditorToolbar({
@@ -27,7 +26,6 @@ export default function NoteEditorToolbar({
   onToggleColors,
   colorsActive,
   attachmentCount,
-  maxAttachments,
 }: NoteEditorToolbarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();

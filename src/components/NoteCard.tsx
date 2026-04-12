@@ -59,9 +59,15 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
       marginHorizontal: 12,
     },
     cardTitle: {
-      fontSize: 14,
+      fontSize: 15,
       fontFamily: FONTS.semiBold,
       color: colors.textPrimary,
+    },
+    cardPreview: {
+      fontSize: 13,
+      fontFamily: FONTS.regular,
+      color: colors.textPrimary + '99',
+      marginTop: 2,
     },
     cardSubtitle: {
       fontSize: 12,
@@ -121,7 +127,7 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
           style={styles.cardCenter}
           onPress={handleCardPress}
           accessibilityRole="button"
-          accessibilityLabel={`Note: ${truncated || 'Empty note'}`}
+          accessibilityLabel={`Note: ${note.title || truncated || 'Empty note'}`}
           accessibilityHint="Long press to copy"
           onLongPress={async () => {
             hapticMedium();
@@ -134,7 +140,16 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
           }}
           activeOpacity={0.7}
         >
-          <Text style={styles.cardTitle} numberOfLines={1}>{truncated}</Text>
+          {note.title ? (
+            <>
+              <Text style={styles.cardTitle} numberOfLines={1}>{note.title}</Text>
+              {note.text ? (
+                <Text style={styles.cardPreview} numberOfLines={2}>{note.text}</Text>
+              ) : null}
+            </>
+          ) : (
+            <Text style={styles.cardTitle} numberOfLines={1}>{truncated}</Text>
+          )}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Text style={styles.cardSubtitle} numberOfLines={1}>
               {getRelativeTime(note.updatedAt)}

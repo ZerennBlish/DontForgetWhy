@@ -19,18 +19,25 @@ import { FONTS } from '../theme/fonts';
 interface ShareNoteModalProps {
   visible: boolean;
   onClose: () => void;
+  noteTitle: string;
   noteText: string;
   noteIcon: string;
   noteImages: string[];
 }
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 async function buildNoteHtml(
+  title: string,
   text: string,
   icon: string,
   images: string[],
 ): Promise<string> {
   const iconHtml = icon ? `<div style="font-size:48px;margin-bottom:16px;">${icon}</div>` : '';
-  const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const titleHtml = title.trim() ? `<h2 style="font-family:system-ui;font-size:24px;color:#1A1A2E;margin:0 0 12px 0;">${escapeHtml(title)}</h2>` : '';
+  const escapedText = escapeHtml(text);
   let imagesHtml = '';
   for (const uri of images) {
     try {
@@ -39,7 +46,7 @@ async function buildNoteHtml(
       imagesHtml += `<img src="data:${mimeType};base64,${b64}" style="display:block;width:100%;max-height:83vh;object-fit:contain;margin-top:24px;border-radius:8px;" />`;
     } catch { /* skip failed image */ }
   }
-  return `<html><head><style>@page { size: letter; margin: 0.75in; } img { page-break-inside: avoid; }</style></head><body style="background:#FFFFFF;color:#1A1A2E;font-family:system-ui;padding:32px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:#1A1A2E;margin:0;">${escapedText}</pre>${imagesHtml}</body></html>`;
+  return `<html><head><style>@page { size: letter; margin: 0.75in; } img { page-break-inside: avoid; }</style></head><body style="background:#FFFFFF;color:#1A1A2E;font-family:system-ui;padding:32px;">${iconHtml}${titleHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:#1A1A2E;margin:0;">${escapedText}</pre>${imagesHtml}</body></html>`;
 }
 
 const styles = StyleSheet.create({
@@ -97,6 +104,7 @@ const styles = StyleSheet.create({
 export default function ShareNoteModal({
   visible,
   onClose,
+  noteTitle,
   noteText,
   noteIcon,
   noteImages,
@@ -110,7 +118,11 @@ export default function ShareNoteModal({
           <TouchableOpacity style={styles.option} onPress={async () => {
             onClose();
             hapticLight();
-            const content = noteIcon ? `${noteIcon} ${noteText}` : noteText;
+            const trimmedTitle = noteTitle.trim();
+            const body = noteIcon ? `${noteIcon} ${noteText}` : noteText;
+            const content = trimmedTitle
+              ? (noteText ? `${trimmedTitle}\n\n${body}` : trimmedTitle)
+              : body;
             if (!content.trim()) { ToastAndroid.show('Nothing to share', ToastAndroid.SHORT); return; }
             Share.share({ message: content });
           }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Share note as text">
@@ -143,7 +155,7 @@ export default function ShareNoteModal({
               onClose();
               hapticLight();
               try {
-                const html = await buildNoteHtml(noteText, noteIcon, noteImages);
+                const html = await buildNoteHtml(noteTitle, noteText, noteIcon, noteImages);
                 const pdf = await Print.printToFileAsync({ html });
                 await Sharing.shareAsync(pdf.uri, { mimeType: 'application/pdf' });
               } catch {
@@ -161,11 +173,12 @@ export default function ShareNoteModal({
             try {
               const hasImages = noteImages.length > 0;
               const html = hasImages
-                ? await buildNoteHtml(noteText, noteIcon, noteImages)
+                ? await buildNoteHtml(noteTitle, noteText, noteIcon, noteImages)
                 : (() => {
                     const iconHtml = noteIcon ? `<div style="font-size:48px;margin-bottom:16px;">${noteIcon}</div>` : '';
-                    const escapedText = noteText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    return `<html><head><style>@page{size:letter;margin:0.75in;}img{page-break-inside:avoid;}</style></head><body style="background:#FFFFFF;color:#1A1A2E;font-family:system-ui;padding:32px;">${iconHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:#1A1A2E;margin:0;">${escapedText}</pre></body></html>`;
+                    const titleHtml = noteTitle.trim() ? `<h2 style="font-family:system-ui;font-size:24px;color:#1A1A2E;margin:0 0 12px 0;">${escapeHtml(noteTitle)}</h2>` : '';
+                    const escapedText = escapeHtml(noteText);
+                    return `<html><head><style>@page{size:letter;margin:0.75in;}img{page-break-inside:avoid;}</style></head><body style="background:#FFFFFF;color:#1A1A2E;font-family:system-ui;padding:32px;">${iconHtml}${titleHtml}<pre style="white-space:pre-wrap;font-family:system-ui;font-size:16px;color:#1A1A2E;margin:0;">${escapedText}</pre></body></html>`;
                   })();
               await Print.printAsync({ html });
             } catch {

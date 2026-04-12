@@ -4,6 +4,7 @@ import {
   ToastAndroid, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import type { Note } from '../types/note';
@@ -22,7 +23,7 @@ import { useNoteEditor } from '../hooks/useNoteEditor';
 interface NoteEditorModalProps {
   visible: boolean;  note: Note | null;
   customBgColor: string | null;  customFontColor: string | null;
-  onSave: (note: { text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string; images: string[]; voiceMemos: string[] }) => void;
+  onSave: (note: { title: string; text: string; color: string; fontColor: string | null; icon: string; isNew: boolean; noteId?: string; images: string[]; voiceMemos: string[] }) => void;
   onDelete: (noteId: string) => void;  onClose: () => void;
   onCustomBgColorChange: (color: string) => void;  onCustomFontColorChange: (color: string) => void;
   dirtyRef?: React.MutableRefObject<boolean>;
@@ -46,6 +47,21 @@ export default function NoteEditorModal({
     topBarPad: { height: insets.top + 58 },
     inputArea: { paddingHorizontal: 20, paddingTop: 8 },
     input: { fontSize: 18, color: colors.textPrimary, textAlignVertical: 'top', lineHeight: 28 },
+    titleText: {
+      fontSize: 22,
+      fontFamily: FONTS.bold,
+      paddingVertical: 8,
+      textAlign: 'center',
+      marginBottom: 4,
+    },
+    titleInput: {
+      fontSize: 22,
+      fontFamily: FONTS.bold,
+      paddingVertical: 8,
+      paddingHorizontal: 0,
+      textAlign: 'center',
+      marginBottom: 4,
+    },
     attachmentsPanel: {
       backgroundColor: colors.card,
       borderTopWidth: 1,
@@ -118,28 +134,55 @@ export default function NoteEditorModal({
               {editor.isViewMode ? (
                 <ScrollView
                   style={styles.inputArea}
-                  contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+                  contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingBottom: insets.bottom + 12 }}
                   keyboardShouldPersistTaps="handled"
                 >
-                  {editor.editorIcon ? <Text style={{ fontSize: 28, marginBottom: 8 }}>{editor.editorIcon}</Text> : null}
-                  <Text style={[styles.input, { color: editor.resolvedFontColor }]}>{linkedText}</Text>
-                  {editor.editorImages.length > 0 && (
-                    <NoteImageStrip
-                      images={editor.editorImages}
-                      isViewMode
-                      onRemoveImage={() => {}}
-                      onViewImage={(uri) => editor.setLightboxUri(uri)}
-                      onEditDrawing={() => {}}
-                      onDrawOnPhoto={() => {}}
-                    />
-                  )}
-                  {voiceMemoBlock}
+                  <View>
+                    {editor.editorIcon ? <Text style={{ fontSize: 28, marginBottom: 8, textAlign: 'center' }}>{editor.editorIcon}</Text> : null}
+                    {editor.editorTitle ? (
+                      <Text style={[styles.titleText, { color: editor.resolvedFontColor }]} numberOfLines={2}>
+                        {editor.editorTitle}
+                      </Text>
+                    ) : null}
+                    <Text style={[styles.input, { color: editor.resolvedFontColor }]}>{linkedText}</Text>
+                  </View>
+                  <View>
+                    {editor.editorImages.length > 0 && (
+                      <NoteImageStrip
+                        images={editor.editorImages}
+                        isViewMode
+                        onRemoveImage={() => {}}
+                        onViewImage={(uri) => editor.setLightboxUri(uri)}
+                        onEditDrawing={() => {}}
+                        onDrawOnPhoto={() => {}}
+                      />
+                    )}
+                    {voiceMemoBlock}
+                  </View>
                 </ScrollView>
               ) : (
-                <View style={[styles.inputArea, { flex: 1 }]}>
+                <View style={[styles.inputArea, {
+                  flex: (editor.editorImages.length > 0 || editor.editorVoiceMemos.length > 0) ? undefined : 1,
+                }]}>
+                  <TextInput
+                    style={[styles.titleInput, { color: editor.resolvedFontColor }]}
+                    value={editor.editorTitle}
+                    onChangeText={editor.setEditorTitle}
+                    placeholder="Add a title..."
+                    placeholderTextColor={editor.resolvedFontColor + '60'}
+                    maxLength={100}
+                    returnKeyType="next"
+                    onFocus={() => { editor.dismissColorPicker(); editor.dismissAttachments(); }}
+                  />
                   <TextInput
                     ref={editor.textInputRef}
-                    style={[styles.input, { color: editor.resolvedFontColor, flex: 1 }]}
+                    style={[
+                      styles.input,
+                      { color: editor.resolvedFontColor },
+                      (editor.editorImages.length > 0 || editor.editorVoiceMemos.length > 0)
+                        ? { maxHeight: 300 }
+                        : { flex: 1 },
+                    ]}
                     value={editor.editorText}
                     onChangeText={editor.setEditorText}
                     placeholder={editor.editorPlaceholder}
@@ -197,7 +240,6 @@ export default function NoteEditorModal({
                 onToggleColors={editor.handleToggleColors}
                 colorsActive={editor.showColorPicker}
                 attachmentCount={editor.editorImages.length + editor.editorVoiceMemos.length}
-                maxAttachments={5}
               />
             )}
 
@@ -223,6 +265,7 @@ export default function NoteEditorModal({
       <ShareNoteModal
         visible={editor.showShareModal}
         onClose={() => editor.setShowShareModal(false)}
+        noteTitle={editor.editorTitle}
         noteText={editor.editorText}
         noteIcon={editor.editorIcon}
         noteImages={editor.editorImages}

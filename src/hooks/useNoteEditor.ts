@@ -25,6 +25,7 @@ interface UseNoteEditorParams {
   customBgColor: string | null;
   customFontColor: string | null;
   onSave: (note: {
+    title: string;
     text: string;
     color: string;
     fontColor: string | null;
@@ -55,6 +56,7 @@ export function useNoteEditor({
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   // ── State ──────────────────────────────────────────────────────────
+  const [editorTitle, setEditorTitle] = useState('');
   const [editorText, setEditorText] = useState('');
   const [editorColor, setEditorColor] = useState(NOTE_COLORS[0]);
   const [editorIcon, setEditorIcon] = useState('');
@@ -108,6 +110,7 @@ export function useNoteEditor({
       return;
     }
     if (note) {
+      setEditorTitle(note.title ?? '');
       setEditorText(note.text);
       setEditorColor(note.color);
       setEditorIcon(note.icon);
@@ -116,6 +119,7 @@ export function useNoteEditor({
       setEditorVoiceMemos(note.voiceMemos || []);
       setIsViewMode(true);
       loadedSnapshotRef.current = JSON.stringify({
+        title: note.title ?? '',
         text: note.text,
         color: note.color,
         icon: note.icon,
@@ -124,6 +128,7 @@ export function useNoteEditor({
         voiceMemos: note.voiceMemos || [],
       });
     } else {
+      setEditorTitle('');
       setEditorText('');
       setEditorColor(colors.background);
       setEditorIcon('');
@@ -132,6 +137,7 @@ export function useNoteEditor({
       setEditorVoiceMemos([]);
       setIsViewMode(false);
       loadedSnapshotRef.current = JSON.stringify({
+        title: '',
         text: '',
         color: colors.background,
         icon: '',
@@ -153,6 +159,7 @@ export function useNoteEditor({
     if (!dirtyRef) return;
     if (!loadedSnapshotRef.current) return;
     const current = JSON.stringify({
+      title: editorTitle,
       text: editorText,
       color: editorColor,
       icon: editorIcon,
@@ -163,6 +170,7 @@ export function useNoteEditor({
     dirtyRef.current = current !== loadedSnapshotRef.current;
   }, [
     visible,
+    editorTitle,
     editorText,
     editorColor,
     editorIcon,
@@ -223,6 +231,7 @@ export function useNoteEditor({
   const hasUnsavedChanges = (): boolean => {
     if (note) {
       return (
+        editorTitle !== (note.title ?? '') ||
         editorText !== note.text ||
         editorColor !== note.color ||
         editorIcon !== note.icon ||
@@ -232,6 +241,7 @@ export function useNoteEditor({
       );
     }
     return (
+      editorTitle.trim().length > 0 ||
       editorText.trim().length > 0 ||
       editorColor !== colors.background ||
       editorIcon !== '' ||
@@ -242,6 +252,14 @@ export function useNoteEditor({
   };
 
   const confirmClose = () => {
+    if (showColorPicker) {
+      setShowColorPicker(false);
+      return;
+    }
+    if (showAttachments) {
+      setShowAttachments(false);
+      return;
+    }
     if (!hasUnsavedChanges()) {
       onClose();
       return;
@@ -283,12 +301,14 @@ export function useNoteEditor({
 
   const handleSave = () => {
     hapticMedium();
+    const trimmedTitle = editorTitle.trim();
     const trimmed = editorText.trim();
-    if (!trimmed && editorImages.length === 0 && editorVoiceMemos.length === 0) {
+    if (!trimmedTitle && !trimmed && editorImages.length === 0 && editorVoiceMemos.length === 0) {
       ToastAndroid.show('Write something down before you forget. Oh wait, too late.', ToastAndroid.LONG);
       return;
     }
     onSave({
+      title: trimmedTitle,
       text: trimmed,
       color: editorColor,
       fontColor: editorFontColor,
@@ -306,7 +326,7 @@ export function useNoteEditor({
   };
 
   const handleShare = () => {
-    const hasText = !!editorText.trim();
+    const hasText = !!editorTitle.trim() || !!editorText.trim();
     const hasImages = editorImages.length > 0;
     if (!hasText && !hasImages) {
       ToastAndroid.show('Nothing to share', ToastAndroid.SHORT);
@@ -390,6 +410,7 @@ export function useNoteEditor({
 
   return {
     // Text
+    editorTitle, setEditorTitle,
     editorText, setEditorText, editorColor, setEditorColor,
     editorIcon, editorFontColor, setEditorFontColor,
     editorPlaceholder,

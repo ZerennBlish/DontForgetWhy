@@ -533,6 +533,8 @@ export default function TimerScreen({ navigation }: Props) {
         <TouchableOpacity
           onPress={() => { hapticLight(); setTimerSoundPickerVisible(true); }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Select timer sound"
           style={{ backgroundColor: colors.card, borderRadius: 20, borderWidth: 1, borderColor: colors.accent, paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
         >
           <Text style={{ fontSize: 13, fontFamily: FONTS.regular, color: colors.accent }}>Timer Sound</Text>
@@ -551,6 +553,8 @@ export default function TimerScreen({ navigation }: Props) {
                     style={styles.emojiCircle}
                     onPress={() => { hapticLight(); iconInputRef.current?.focus(); }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Choose emoji"
                   >
                     {newTimerIcon === '\u{1F60A}' ? (
                       <Image source={APP_ICONS.plus} style={{ width: 24, height: 24 }} resizeMode="contain" />

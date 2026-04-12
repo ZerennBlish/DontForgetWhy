@@ -957,7 +957,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
         )}
 
         <View style={styles.soundRow}>
-          <View style={{ alignItems: 'center' }}>
+          <View style={{ alignItems: 'center', marginLeft: -8 }}>
             <TouchableOpacity
               onPress={() => {
                 form.setSoundMode((prev: SoundMode) => {
@@ -972,7 +972,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel={`Sound mode: ${getSoundModeLabel(form.soundMode)}`}
             >
-              <Image source={getSoundModeIcon(form.soundMode)} style={{ width: 18, height: 18 }} resizeMode="contain" />
+              <Image source={getSoundModeIcon(form.soundMode)} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </TouchableOpacity>
             <Text style={{ fontSize: 11, fontFamily: FONTS.regular, color: colors.textTertiary, marginTop: 4 }}>
               {getSoundModeLabel(form.soundMode)}

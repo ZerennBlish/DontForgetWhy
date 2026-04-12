@@ -42,6 +42,7 @@ const SAVE_TOASTS = [
 ];
 
 interface EditorSaveData {
+  title: string;
   text: string;
   color: string;
   fontColor: string | null;
@@ -150,6 +151,7 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadResult 
       const now = new Date().toISOString();
       const welcomeNote: Note = {
         id: uuidv4(),
+        title: '',
         text: "Welcome to Notes! Quick capture, right from your home screen. Pin notes to your widget so you never forget.\n\nTip: Long-press a note to copy it. Tap the color dot to make it yours.",
         color: '#FECA57',
         icon: '\u{1F44B}',
@@ -317,6 +319,7 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadResult 
         try {
           const newNote: Note = {
             id: noteId,
+            title: data.title,
             text: data.text,
             color: data.color,
             fontColor: data.fontColor,
@@ -370,6 +373,7 @@ export function useNotepad({ routeParams }: UseNotepadParams): UseNotepadResult 
             const finalMemos = [...keptMemos, ...savedNewMemos];
             await updateNote({
               ...existing,
+              title: data.title,
               text: data.text,
               color: data.color,
               fontColor: data.fontColor,
