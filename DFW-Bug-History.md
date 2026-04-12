@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 26 (April 11, 2026)
+**Last updated:** Session 27 (April 12, 2026)
 
 ---
 
@@ -700,3 +700,45 @@
 - Non-contiguous clip positions after deletion — `ORDER BY position` works fine even with gaps, position renumbering deferred to future scope
 - Redundant `NOT NULL` on `voice_memos.uri`/`duration` — kept for backwards compat with the legacy schema, harmless empty/0 defaults
 - `validateBackup` not checking `voiceMemoImages` field — cosmetic, the folder zips/unzips correctly regardless of whether the count field is validated
+
+### Session 27 — NoteEditorModal Redesign + Note Titles Audit Findings
+
+**Bug: View-mode drawing tap showed dead Edit action**
+- Found: Session 27 audit
+- Cause: `NoteImageStrip` offered an Edit option on drawings in view mode, but the handler was a no-op since the editor wasn't in edit mode. Also showed a "Draw On" option on plain photos even in view mode
+- Fix: View-mode taps go straight to lightbox. Drawing alert (with Edit) and Photo alert (with Draw On) only shown in edit mode
+
+**Bug: TextInput didn't cap height with attachments**
+- Found: Session 27 audit
+- Cause: Edit-mode `TextInput` always had `flex: 1`, pushing images off-screen when attachments existed. With up to 5 attachments, the attachment strip became unreachable
+- Fix: Conditional `maxHeight: 300` on the TextInput (and matching `flex: undefined` on its container) when `editorImages.length > 0 || editorVoiceMemos.length > 0`
+
+**Bug: Image strip overflow with 5 attachments**
+- Found: Session 27 audit
+- Cause: Fixed horizontal row (`flexDirection: 'row', justifyContent: 'space-evenly'`) with no wrapping or scroll couldn't fit 5 thumbnails on typical phone widths
+- Fix: Wrapped in horizontal `ScrollView` with `flexGrow: 1, justifyContent: 'center', gap: 14` so <3 thumbnails center and 3+ thumbnails scroll naturally
+
+**Bug: confirmClose didn't dismiss panels**
+- Found: Session 27 audit
+- Cause: Top-left back button (which calls `confirmClose` rather than `onRequestClose`) triggered the unsaved-changes prompt even when the color picker or attachments panel was open. Hardware back (`onRequestClose`) already peeled panels first, but the UI back button skipped that check
+- Fix: `confirmClose` in the hook now peels `showColorPicker` → `showAttachments` → unsaved-changes check, matching `onRequestClose` behavior
+
+**Bug: TimerScreen missing accessibility**
+- Found: Session 27 audit
+- Cause: "Timer Sound" selector and "Emoji Circle" button in the timer creation modal lacked `accessibilityRole` and `accessibilityLabel` — the a11y pass from Session 24 missed them because they're inside a modal that isn't part of the main screen render
+- Fix: Added `accessibilityRole="button"` + `accessibilityLabel="Select timer sound"` / `accessibilityLabel="Choose emoji"` to both
+
+**Bug: Note title nullable across schema**
+- Found: Session 27 audit (title feature)
+- Cause: `title` column was added as `TEXT` without `NOT NULL DEFAULT ''`, `Note` type had `title?: string` optional, storage mapped NULL to undefined. Three-way nullable state (undefined vs null vs '') caused defensive `?? ''` sprinkled across render sites
+- Fix: Migration upgraded to `NOT NULL DEFAULT ''` + backfill of any NULLs from earlier migration runs. `Note.title` changed from optional to required `string`. `rowToNote` normalizes via `row.title ?? ''`. `addNote`/`updateNote` write `title || ''`. Empty string is the canonical "no title" sentinel
+
+**Bug: NoteCard/DeletedNoteCard ignored title field**
+- Found: Session 27 audit (title feature)
+- Cause: Both cards derived display text from `note.text` only (first line, truncated). A note with a title but empty body showed nothing; a note with both title and body showed the body preview where the title should be
+- Fix: Title-first render — `note.title` as primary line (15pt semiBold) when non-empty, `note.text` as 2-line preview (13pt regular, 60% opacity) below. Falls back to truncated text when title is empty. Accessibility label prefers title. DeletedNoteCard gets same treatment with opacity 0.7 to match dimmed look
+
+**Bug: Title not wired into share**
+- Found: Session 27 audit (title feature)
+- Cause: `ShareNoteModal` only received `noteText`, `noteIcon`, and `noteImages`. A title-only note (no body, no images) failed the share eligibility check and showed "Nothing to share", and even with a body, the title was missing from every share output (text share, PDF, Print)
+- Fix: `handleShare` eligibility includes `editorTitle.trim()`. `NoteEditorModal` passes `noteTitle={editor.editorTitle}` to `ShareNoteModal`. Added `noteTitle: string` prop. `buildNoteHtml` renders title as `<h2>` above the body `<pre>` when non-empty. Text share prepends title with newline separator. Print fallback (no-images branch) mirrors the same title HTML inline

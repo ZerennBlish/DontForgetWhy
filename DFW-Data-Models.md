@@ -42,15 +42,17 @@ interface Reminder {
 
 ```typescript
 interface Note {
-  id: string; text: string; icon: string; color: string;
+  id: string; title: string; text: string; icon: string; color: string;
   fontColor?: string | null; pinned: boolean; createdAt: string;
   updatedAt: string; deletedAt?: string | null;
-  images?: string[];  // file:// URIs to locally stored images (max 3)
-  voiceMemos?: string[];  // file:// URIs to note-attached voice memos (max 3 shared with images)
+  images?: string[];  // file:// URIs to locally stored images (max 5 shared, Session 27)
+  voiceMemos?: string[];  // file:// URIs to legacy note-attached voice memos (recording removed Session 27, playback only)
 }
 ```
 
-**Voice memo column:** `voiceMemos TEXT` in SQLite (JSON array). Shares the 3-attachment limit with images. Managed by `noteVoiceMemoStorage.ts`.
+**Title field (Session 27):** `title TEXT NOT NULL DEFAULT ''` — optional display title shown above the body text in both edit and view modes. Added via `ALTER TABLE notes ADD COLUMN title TEXT NOT NULL DEFAULT ''` migration + NULL backfill. Empty string sentinel means "no title". NoteCard displays title as the primary line when non-empty, body text as a 2-line preview below.
+
+**Voice memo column:** `voiceMemos TEXT` in SQLite (JSON array). Shares the 5-attachment limit with images. Managed by `noteVoiceMemoStorage.ts`. **Note (Session 27):** Voice recording inside notes was removed — no new voice memos can be added. `MemoCard` legacy playback kept for existing notes until the data is fully migrated away.
 
 **Image storage:** Images stored on filesystem at `${FileSystem.documentDirectory}note-images/`. Photos: `${noteId}_${timestamp}_${uuid8}.jpg`. Drawings: `${noteId}_${timestamp}_${uuid8}.png` + companion `.json` (stroke data for re-editing). Service: `src/services/noteImageStorage.ts` — `saveNoteImage` detects .png/.jpg extension, copies companion .json alongside PNGs. `deleteNoteImage` also deletes companion .json. `loadDrawingData` reads companion .json (early-returns null for .jpg). `getDrawingJsonUri` derives .json path from .png path. All use directory-based File constructors (`new File(dir, filename)`) for reliability. `noteStorage.ts` auto-cleans images on permanent delete and 30-day purge.
 

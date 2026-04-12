@@ -1,6 +1,15 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 26 (April 11, 2026)
+**Last updated:** Session 27 (April 12, 2026)
+
+### Session 27 Additions
+
+- **NoteEditorModal decomposition over incremental fixes** — At 1268 lines, NoteEditorModal was the app's largest file and growing. Rather than patching it further, extracted all state/logic into `useNoteEditor` hook and broke the JSX into 5 focused components. The thin-shell pattern matches the rest of the app (useCheckers, useChess, useSudoku, etc.) and makes future changes surgical.
+- **Voice recording removed from notes** — Voice memos have their own dedicated system (VoiceRecordScreen, VoiceMemoDetailScreen, clips, playback modes, photos) built in Session 26. Keeping a lesser recording feature inside notes created confusion — two places to record audio, one clearly better. Removed recording; kept `MemoCard` for legacy playback of existing note voice memos. Plan to remove legacy playback entirely in ~1 month when existing recordings are obsolete.
+- **Text limits removed** — Notes were capped at 999 characters, voice memo notes at 200. With SQLite TEXT columns (no practical size limit) and `TextInput` handling thousands of characters fine, there's no technical reason to restrict. Users may want to write long notes for school, journaling, etc. The app's purpose has evolved beyond alarms/timers into a full memory/productivity tool. `renderLinkedText` regex parser is memoized, so long text in view mode is not a performance concern.
+- **Bottom toolbar over dropdown menu** — The old dropdown (plus button → 5 menu items) hid capabilities behind an extra tap. A persistent bottom toolbar makes Camera, Gallery, Draw, Colors, and Attached discoverable at a glance. Same pattern every good note app uses — tools live where the thumb already is.
+- **Attachments panel pattern** — Images in the main content area compete with text for screen space. Moving them behind an "Attached" button (paperclip icon) in edit mode keeps the writing area clean while still showing count/access. View mode displays images inline since the user is reading, not writing. Same pattern planned for VoiceMemoDetailScreen.
+- **Note titles** — Notes previously had only a body text field. Adding an optional title gives users a way to label and scan their notes quickly in the list view. Title column added to the notes table with `NOT NULL DEFAULT ''` so existing notes are unaffected. Stored as empty-string sentinel rather than nullable — simpler type (required `string`) and no `?? ''` branching in rendering paths beyond the defensive normalization in `rowToNote`.
 
 ### Session 26 Additions
 

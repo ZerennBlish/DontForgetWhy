@@ -365,6 +365,33 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 | `assets/icons/pencil.webp` | NEW | Chrome edit icon (`APP_ICONS.edit`) — replaces all "Edit" text buttons |
 | `src/data/appIconAssets.ts` | MODIFIED | Added `save` (floppy-disk) and `edit` (pencil) entries |
 
+### New/Modified Files in Session 27
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/hooks/useNoteEditor.ts` | NEW | NoteEditorModal state + logic (Session 27). All state (editorTitle, editorText, color, font, images, voice memos, panel toggles), effects (visibility/load, dirty tracking, player watchers), and handlers (confirmClose, handleSave, handleShare, handleDraw, toggleAttachments, toggleColorPicker, pickImage, takePhoto, dismissColorPicker, dismissAttachments). Legacy voice-memo playback via `useAudioPlayer` preserved; recording removed. Mutual-exclusion panel toggles (attachments vs color picker) |
+| `src/components/NoteEditorTopBar.tsx` | NEW | Editor top bar — view/edit mode variants (Session 27). View mode: Back, Home, Edit, Share, Delete. Edit mode: Back, Home, Save (conditional), Delete. Absolute positioning, `rgba(0,0,0,0.3)` overlay bg, self-contained 40×40 circle button styles |
+| `src/components/NoteEditorToolbar.tsx` | NEW | Editor bottom toolbar — Camera, Gallery, Draw, Colors, Attached (Session 27). Persistent row replacing the old dropdown menu. Paperclip icon with active state and count badge. Edit mode only. Icon sizes: paperclip 34, camera 24, gallery 24, draw 28, palette 38 |
+| `src/components/NoteColorPicker.tsx` | NEW | Editor color picker overlay — bg + font colors (Session 27). Extracted from inline JSX: background color row (presets + custom slot + picker button), font color row (presets + auto option + custom slot + picker button). Self-contained styles |
+| `src/components/NoteImageStrip.tsx` | NEW | Editor image thumbnail strip — horizontal scrollable (Session 27). 120×120 thumbnails, red X delete with white border + 16px hitSlop. Centered via `flexGrow: 1, justifyContent: 'center'`. Used in both view-mode scroll and edit-mode attachments panel. View-mode suppresses drawing Edit and photo Draw-On alerts |
+| `src/components/NoteEditorModal.tsx` | REWRITTEN | Thin render shell (~250 lines, was 1268). Calls `useNoteEditor(props)` for all state and handlers. JSX composes TopBar + body area + AttachmentsPanel + ColorPicker + Toolbar + sub-modals. View-mode ScrollView uses `justifyContent: 'space-between'` to push images to bottom. Edit-mode TextInput caps at `maxHeight: 300` when attachments exist. Hardware back peels attachments panel → color picker → confirm close |
+| `src/hooks/useNotepad.ts` | MODIFIED | `EditorSaveData` extended with `title: string`. `handleEditorSave` writes `title` on both add and update paths. Welcome note constructor updated with `title: ''` |
+| `src/types/note.ts` | MODIFIED | Added `title: string` (required) to `Note` type |
+| `src/services/database.ts` | MODIFIED | Added `title TEXT NOT NULL DEFAULT ''` to notes CREATE TABLE. Migration: `ALTER TABLE notes ADD COLUMN title TEXT NOT NULL DEFAULT ''` + `UPDATE notes SET title = '' WHERE title IS NULL` backfill for any prior nullable columns |
+| `src/services/noteStorage.ts` | MODIFIED | `NoteRow.title` + `rowToNote` normalizes `row.title ?? ''`. `addNote`/`updateNote` write `title || ''` |
+| `src/components/NoteCard.tsx` | MODIFIED | Title-first render: `note.title` as primary line (15pt semiBold), `note.text` as 2-line preview (13pt regular, 60% opacity). Falls back to truncated first line when title is empty. Accessibility label prefers title |
+| `src/components/DeletedNoteCard.tsx` | MODIFIED | Same title-first treatment as NoteCard. 15pt cardTitle + cardPreview at 0.7 opacity to match dimmed deleted-card look |
+| `src/components/NoteVoiceMemo.tsx` | MODIFIED | Dead `RecordingControls` component and its styles removed — recording no longer exists in notes. `MemoCard` + `voiceMemoStyles` retained for legacy playback |
+| `src/components/ShareNoteModal.tsx` | MODIFIED | Added `noteTitle: string` prop. `buildNoteHtml` renders title as `<h2>` above the body `<pre>`. Text-share prepends title + newline separator. Share eligibility check and Print fallback include title |
+| `src/components/HomeButton.tsx` | MODIFIED | Icon 20 → 24 (Session 27 icon consistency pass) |
+| `src/components/BackButton.tsx` | MODIFIED | Icon 20 → 22 (Session 27 icon consistency pass) |
+| `src/screens/VoiceMemoDetailScreen.tsx` | MODIFIED | Removed `maxLength={200}` from note TextInput. Added share button + per-clip share icon. Title/clips header/photos header all centered. Photo delete button inset with `top:4, right:4` red with white border + 16px hitSlop |
+| `src/screens/CreateAlarmScreen.tsx` | MODIFIED | Save icon 18 → 24, sound mode icon 18 → 24 + shifted left with `marginLeft: -8` (Session 27) |
+| `src/screens/CreateReminderScreen.tsx` | MODIFIED | Save icon 18 → 24 (Session 27) |
+| `src/screens/TimerScreen.tsx` | MODIFIED | Save icon 22 → 24, play icon 24 → 26, Timer Sound selector + Emoji Circle accessibility labels added (Session 27) |
+| `assets/app-icons/paperclip.webp` | NEW | Chrome paperclip icon (`APP_ICONS.paperclip`) — toolbar Attached button |
+| `assets/icons/paperclip.png` | DELETED | Legacy PNG removed after webp conversion |
+
 ### Two-Tier Icon System (established Session 20, expanded Session 24)
 
 The app has two distinct visual languages for icons:
@@ -439,7 +466,7 @@ The app has two distinct visual languages for icons:
 ### Playback
 - **VoiceMemoDetailScreen:** seekable progress bar (44px touch target, 6px visual bar), back/forward 5s, `useFocusEffect` cleanup pauses on screen blur. `Number.isFinite` validation on all seek values with try/catch on `seekTo`. View-based play/pause icons (CSS border triangle for play, dual bars for pause). Play button color: #4CAF50 (Material Design green)
 - **NotepadScreen (inline):** single player instance in `useRef` via `createAudioPlayer` (imperative, not hooks). `addListener('playbackStatusUpdate')` for finish detection. Listener ref (`playerListenerRef`) cleaned up before `player.release()` in `stopPlayback`. Focus cleanup via `useFocusEffect` stops playback when screen loses focus. Stale progress reset: when switching memos, previous memo's progress set to 0 before starting new playback
-- **NoteEditorModal (note-attached):** `useAudioPlayer`/`useAudioPlayerStatus` hooks for per-note voice memo playback. Seekable via touch responders. Shared 3-attachment limit (images + voice memos)
+- **NoteEditorModal (note-attached):** `useAudioPlayer`/`useAudioPlayerStatus` hooks for per-note voice memo playback (legacy — recording removed in Session 27, playback kept for existing notes). Seekable via touch responders. Shared 5-attachment limit (images + legacy voice memos) — raised from 3 in Session 27
 
 ### Key distinction from Voice Roasts
 Voice roasts use the native `AlarmChannelModule` on ALARM stream because they play during alarm fires and must be audible regardless of ringer mode. Voice memos are user-initiated — MEDIA stream via expo-audio is correct.
@@ -471,6 +498,8 @@ Large screens decomposed into thin render shells + state/logic hooks:
 - SettingsScreen → useSettings (Session 22, navigation passed as parameter for handleImport)
 
 NoteEditorModal cleanup (Session 22): extracted linkedText.tsx (link detection + rendering), NoteVoiceMemo.tsx (recording controls + playback cards + voiceMemoStyles), ColorPickerModal.tsx (reusable color picker modal).
+
+NoteEditorModal full redesign (Session 27): NoteEditorModal is a thin render shell (~250 lines, down from 1268). All state and logic lives in `useNoteEditor` hook. Sub-components: `NoteEditorTopBar` (view/edit mode top bar), `NoteEditorToolbar` (bottom action bar, edit mode only), `NoteColorPicker` (color picker overlay panel), `NoteImageStrip` (horizontal scrollable image thumbnails). The old dropdown menu (plus button → Colors/Photo Library/Take Photo/Draw/Record) was replaced by the persistent bottom toolbar. Voice recording was removed — legacy playback via `MemoCard` kept for existing notes. Images display inline in view mode but move behind an "Attached" panel (paperclip button) in edit mode. Hardware back button peels panels (attachments → color picker → confirmClose).
 
 ### Icon System (Session 9)
 - `src/components/Icons.tsx`: 29+ View-based icons replacing emoji throughout app

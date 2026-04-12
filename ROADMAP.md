@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 26 (April 11, 2026)
+### Source of Truth · Updated: Session 27 (April 12, 2026)
 
 ---
 
@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.18.0 (versionCode 35) — Session 26 complete |
+| **Current Version** | v1.18.0 (versionCode 35) — Session 27 work on `dev`, not yet shipped |
 | **Branch** | `dev` |
-| **Production Status** | v1.18.0 on Play Store. Session 26 voice-memo-clips work + audit fixes sitting on `dev` ready for device testing then ship. |
-| **Current Focus** | Session 26: Voice memo clips (memos as containers for multiple audio clips), clip playback modes (stop/play-all/repeat), voice memo photos (camera + gallery), recording flow rewrite (VoiceRecordScreen creates memo + first clip directly, eliminates `tempUri` handoff), icon overhaul (7 new chrome/media icons, Edit/Save text buttons → circle icon buttons across all create/edit screens, timer modal redesigned with 3 circle action buttons). Dual audit (Codex + Gemini) — 8 findings fixed, re-audit clean. |
+| **Production Status** | v1.18.0 on Play Store. Session 26 voice-memo-clips work + Session 27 NoteEditorModal redesign + note titles sitting on `dev` ready for device testing then ship. |
+| **Current Focus** | Session 27: NoteEditorModal full redesign (1268-line monolith → useNoteEditor hook + 5 sub-components + bottom toolbar), voice recording removed from notes, text limits removed, note title feature added (new DB column + type + UI), icon size consistency pass, attachments panel pattern, audit fixes. |
 | **Blocked By** | Nothing |
-| **Next Action** | Device testing of voice memo clips + photos. Then version bump → ship. After that: P5.5 Premium Foundation (expo-iap, entitlement system, ProGate), Checkers polish (P6.3). |
+| **Next Action** | Session 27 polish + audit of title feature, then version bump → ship. Prompt 4 (VoiceMemoDetailScreen layout reorder + share + attachments panel) deferred to Session 28. |
 | **EAS Credits** | ~25 remaining (reset April 12) |
 | **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — 68 clips shipped |
@@ -319,6 +319,7 @@
 - [x] **NoteCard silver fallback** — `NoteCard.tsx` + `DeletedNoteCard.tsx` now render `APP_ICONS.notepad` (22×22 natural silver) when `note.icon` is empty, instead of the `📝` emoji fallback
 
 ### Stranded Work (reverted, not yet deleted)
+- [ ] **Prompt 4 deferred (Session 27)** — VoiceMemoDetailScreen layout reorder (clips-first), bottom toolbar (Attached/Camera/Gallery), share button + per-clip share, photos in attachments panel. Prompt file written and ready.
 - [ ] **GameNavButtons component** — file at `src/components/GameNavButtons.tsx` exists but `APP_ICONS.gameBack`/`gameHome` were not added to `appIconAssets.ts`. TypeScript errors. Not imported anywhere. Either wire it or delete it.
 - [ ] **Game icon exports** — 8 character icons on disk in `assets/icons/` (icon-hourglass, icon-pencil, icon-erase, icon-chevron-left, icon-chevron-right, icon-game-back, icon-game-home, icon-smiley) but none exported from `appIconAssets.ts`
 - [ ] **Chrome icon exports** — `lock.webp` + `checkmark.webp` in `assets/app-icons/` but not in `appIconAssets.ts`
@@ -527,4 +528,5 @@
 | Apr 8 | Session 22 font rollout + hook extractions. v1.17.0 (versionCode 34). Phase 2 font: Montserrat Alternates applied to all body text across 25 screens + 16 components + buttonStyles. Font swap Nunito→Montserrat Alternates. Font size reduction pass. Hook extractions: useSudoku, useTimerScreen, useDailyRiddle, useSettings. NoteEditorModal cleanup: linkedText, NoteVoiceMemo, ColorPickerModal extracted. Quick Capture renamed. Splash bg dark. Play Store refresh. Dual audit (11 fixes). |
 | Apr 9 | Session 23 game sounds + media control icons + close-x. v1.18.0 (versionCode 35). 11 wav files wired via gameSounds.ts, 5 media control WebP assets, GlowIcon component, FAB glow, close-x chrome icon (15 replacements), checkmate banner, take back label fix, chess light mode fix. 3 audit rounds, 6 fixes. |
 | Apr 10 | Session 24 full codebase audit sweep. 8-category dual audit (Codex + Gemini). Dead code removed (alarmSounds.ts + 26 icon exports + orphan styles across 13 files + dead exports across 27 files). Theme tokens added (success + overlaySecondary). Accessibility pass across critical screens/cards/modals/forms/games. FlatList perf configs. Data safety: safeParse + asyncMutex utilities wired across 13 storage files, restore mutex, never-throw autoBackup. Navigation beforeRemove guards with savedRef bypass. Type safety in migrations/forms/hooks. `audioCompat.ts` type-compat layer scaffolded (not yet imported). `GameNavButtons.tsx` + 8 game icons + 5 new trivia/sudoku sounds + lock/checkmark chrome icons on disk but wiring was reverted after laptop issues (stranded files: broken icon refs in GameNavButtons). Visual fixes: FAB chrome circle on 4 list screens, silver notepad fallback on NoteCard/DeletedNoteCard. No version bump — audit sits on dev unshipped. |
+| Apr 12 | Session 27 NoteEditorModal redesign + note titles. NoteEditorModal rewritten: useNoteEditor hook extraction (all state + logic), 5 sub-components (NoteEditorTopBar, NoteEditorToolbar, NoteColorPicker, NoteImageStrip), bottom toolbar (Camera, Gallery, Draw, Colors, Attached), dropdown menu eliminated. Voice recording removed from notes (legacy playback kept via MemoCard). Text limits removed (notes unlimited, voice memo notes unlimited, titles stay 100). Note title feature: new `title` column on notes table, Note type updated, wired through useNoteEditor + useNotepad + NoteEditorModal save flow, title UI in editor. Attachments panel: images behind paperclip button in edit mode, inline in view mode. Scrollable image strip (horizontal ScrollView). Icon size consistency pass across 10+ files (save=24, edit=24, trash=20, toolbar circles ~56, icons ~28, HomeButton=24, BackButton=22). New asset: paperclip.webp. Dual audit (Codex + Gemini) — 6 findings fixed. Visual polish: image positioning, centering, title layout. |
 | Apr 11 | Session 26 voice memo clips + photos + icon overhaul. Memos are now containers holding multiple audio clips (`voice_clips` table, `VoiceClip` type, `voiceClipStorage` service, automatic legacy migration). Clip playback modes (Stop/Play All/Repeat). Voice memo photos via camera (record screen) + gallery (detail screen), 5-photo cap, ImageLightbox view, new `voice-memo-images/` folder + `images TEXT` column on voice_memos. Recording flow rewrite: VoiceRecordScreen creates memo + first clip directly, eliminates `tempUri` handoff path entirely, atomic save with rollback on clip failure. Icon overhaul: floppy-disk (save) + pencil (edit) icons, replaced text Edit/Save buttons with circle icon buttons across VoiceMemoDetail/NoteEditorModal/CreateAlarm/CreateReminder, timer modal redesigned (3 circle action buttons: red cancel / accent save-only / success start with new `handleModalSaveOnly`), sound/bell + emoji circles got tappable treatment, reminder/timer/alarm icon-picker fallbacks show silver `+`, calendar inline icons restructured into proper flex rows. Dual audit (Codex + Gemini) — 8 findings fixed (HIGH: focus reload missed memo, non-atomic save, stale capturedPhotos closure; MEDIUM: 5-photo cap, backup meta count, migration inserter; LOW: a11y label, Array.isArray). Re-audit clean. 315 tests passing, tsc clean. Ready for device testing then ship. |
