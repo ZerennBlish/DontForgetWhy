@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 25 (April 11, 2026)
+**Last updated:** Session 26 (April 11, 2026)
 
 ---
 
@@ -341,6 +341,30 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 | `assets/app-icons/lock.webp` | NEW (unexported) | Chrome lock icon — deferred until PIN system ships |
 | `assets/app-icons/checkmark.webp` | NEW (unexported) | Chrome checkmark icon |
 
+### New/Modified Files in Session 26
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/types/voiceClip.ts` | NEW | `VoiceClip` interface — id, memoId, uri, duration, position, label, createdAt |
+| `src/services/voiceClipStorage.ts` | NEW | CRUD for `voice_clips` table — `getClipsForMemo`, `getClipSummaries` (batch), `addClip`, `deleteClip`, `updateClipLabel`, `getNextClipPosition`, `deleteAllClipsForMemo` |
+| `src/services/voiceMemoFileStorage.ts` | NEW | Per-clip audio file persistence — `saveVoiceClipFile` (cache → permanent copy), `deleteVoiceMemoFile`, `deleteAllVoiceMemoFiles`. Permanent files at `${Paths.document}voice-memos/{clipId}_{timestamp}.m4a` |
+| `src/services/voiceMemoImageStorage.ts` | NEW | Photo persistence for voice memos — `saveVoiceMemoImage(memoId, sourceUri)`, `deleteVoiceMemoImage`, `deleteAllVoiceMemoImages`. Files at `${Paths.document}voice-memo-images/{memoId}_{timestamp}_{shortId}.{jpg\|png}`. No companion JSON, no drawing support |
+| `src/services/database.ts` | MODIFIED | Added `voice_clips` `CREATE TABLE`, `images` column migration on `voice_memos` (`PRAGMA table_info` check + `ALTER TABLE`), legacy `voice_memos.uri → voice_clips` migration block, `images` added to `_insertVoiceMemos` migration inserter |
+| `src/services/voiceMemoStorage.ts` | MODIFIED | `images` added to `VoiceMemoRow`, `rowToMemo` parses with try/catch + `Array.isArray` guard, `addVoiceMemo`/`updateVoiceMemo` write `JSON.stringify(images ?? [])`, `permanentlyDeleteVoiceMemo` deletes images via `deleteAllVoiceMemoImages` before the row delete |
+| `src/types/voiceMemo.ts` | MODIFIED | Added optional `images?: string[]`, `clips?: VoiceClip[]`, `clipCount?: number`, `totalDuration?: number` (clips/clipCount/totalDuration populated at read time by `getVoiceMemos`/`getClipSummaries`) |
+| `src/services/backupRestore.ts` | MODIFIED | `voice-memo-images` added to `MEDIA_FOLDERS`, `voiceMemoImages: number` added to `BackupMeta.contents`, exportBackup populates the count via `countFilesInDir` |
+| `src/screens/VoiceRecordScreen.tsx` | REWRITTEN | New flow: creates memo + first clip directly via `saveAndNavigate`. Two modes (new memo / add-clip). Camera button bottom-right corner, always visible. Photo thumbnail strip, `capturedPhotos` state + `capturedPhotosRef` mirror for background-handler closures. Atomic rollback on clip insert failure |
+| `src/screens/VoiceMemoDetailScreen.tsx` | REWRITTEN | Accepts `{ memoId }` only (`tempUri` path removed). Title/note edit + Clips list with playback controls + photo strip + ImageLightbox. Edit/Save circle icon buttons in header. `useFocusEffect` reloads BOTH memo and clips. Playback mode pills (Stop/Play All/Repeat) persisted via kv `clipPlaybackMode` |
+| `src/hooks/useTimerScreen.ts` | MODIFIED | Added `handleSaveCustomOnly`, `handleSaveNewTimerOnly`, `handleSaveEditTimerOnly`, dispatcher `handleModalSaveOnly`. Mirrors save handlers minus the start/`handleAddTimer` step. Toast feedback on success |
+| `src/screens/TimerScreen.tsx` | MODIFIED | Modal redesigned with 3 circle action buttons (red cancel / accent save-only / success start), 48×48 sound mode + emoji circles, hint text restructured to "Tap [+] to set [😊]", emoji-circle default shows silver `+` instead of `😊` until user picks |
+| `src/screens/CreateAlarmScreen.tsx` | MODIFIED | Header text Save → 40×40 accent-border circle with floppy-disk icon, sound mode button gets standard 40×40 chrome circle, calendar inline icons restructured into proper flex `<View>` rows, icon-picker fallback shows silver `+` |
+| `src/screens/CreateReminderScreen.tsx` | MODIFIED | Header text Save → 40×40 accent-border circle with floppy-disk icon (with `editReady` opacity/disabled), calendar inline icons restructured into flex rows, icon-picker fallback shows silver `+` (treating notepad emoji `\u{1F4DD}` sentinel as "no choice") |
+| `src/components/NoteEditorModal.tsx` | MODIFIED | Edit/Save text capsules in topBar replaced with 40×40 circle icon buttons, moved from `topBarCenter` into `topBarRight`. `editorTrashBtn` upsized to 40×40 with red border |
+| `src/components/VoiceMemoCard.tsx` | MODIFIED | Accessibility label conditional on `memo.uri` — `'Open memo'` when uri empty (clips-based), `'Play memo'`/`'Pause memo'` otherwise |
+| `assets/icons/floppy-disk.webp` | NEW | Chrome save icon (`APP_ICONS.save`) — replaces all "Save" text buttons |
+| `assets/icons/pencil.webp` | NEW | Chrome edit icon (`APP_ICONS.edit`) — replaces all "Edit" text buttons |
+| `src/data/appIconAssets.ts` | MODIFIED | Added `save` (floppy-disk) and `edit` (pencil) entries |
+
 ### Two-Tier Icon System (established Session 20, expanded Session 24)
 
 The app has two distinct visual languages for icons:
@@ -380,18 +404,37 @@ The app has two distinct visual languages for icons:
 - Pause/resume: `isPausedRef` (useRef) for synchronous state — prevents rapid-tap race creating duplicate intervals. `recorder.pause()` / `recorder.record()` toggle. Existing interval always cleared before creating new one on resume
 - `recorder.stop()` is `await`ed everywhere before reading status/URI/duration — non-awaited stop reads stale data
 - AppState listener stops recording on app background, navigates to VoiceMemoDetailScreen with partial recording (same as normal stop)
-- VoiceRecordScreen has NO post-recording UI — after `stopRecording` completes, immediately calls `navigation.replace('VoiceMemoDetail', { tempUri, duration })`. Screen only shows idle state and recording state
+- **Session 26 recording flow rewrite:** VoiceRecordScreen creates the memo + first clip directly via `saveAndNavigate`, then navigates to detail with `{ memoId }`. Eliminated the `tempUri`/`isNewRecording` handoff path entirely. Two modes: new memo (creates memo row + clip + photos atomically with rollback on clip insert failure via `permanentlyDeleteVoiceMemo`) and add-clip mode (`route.params.addToMemoId` — appends clip + photos to existing memo). VoiceRecordScreen has no post-recording UI — only idle and recording states
 - `beforeRemove` navigation listener intercepts hardware back, gesture back, and custom back button. During recording: stops, discards temp file, dispatches original action. Uses `navigatedRef` to allow programmatic `replace` navigation through
+- **`capturedPhotosRef` (Session 26):** mirror ref kept in sync with `capturedPhotos` state via useEffect, so the AppState background handler's `saveAndNavigate` closure can read fresh photo URIs instead of the stale captured-at-mount value
 
-### VoiceMemoDetailScreen — View/Edit Mode (Session 13 redesign)
-- Accepts `{ tempUri: string; duration: number }` for new recordings OR `{ memoId: string }` for existing memos. Mode detected via `'tempUri' in params`
-- `isViewMode` state: defaults true for existing memos, false for new recordings
-- **View mode:** read-only Text for title/note, centered "Edit" accent pill in headerCenter. Tap Edit → enters edit mode
-- **Edit mode:** TextInput fields with bgUri-aware placeholder colors, centered "Save" accent pill (only when `hasUnsavedChanges`). Save returns to view mode
-- Header: headerLeft (Back + Home), headerCenter (Edit/Save pill), headerRight (Trash). No title text — redundant
-- **New recordings:** always edit mode, Save/Discard buttons at bottom. Save: transactional — `saveVoiceMemoFile` copies temp to permanent, then `addVoiceMemo` writes metadata. If metadata fails, permanent copy deleted, temp file preserved for retry. `savingRef` blocks exit during save
+### Voice Memo Clips (Session 26)
+- **Memos as containers:** A voice memo is now a container holding zero or more `VoiceClip` rows. Legacy `voice_memos.uri`/`duration` columns kept for backward compat (set empty/0 for new memos), all audio data lives in `voice_clips`
+- **`voice_clips` table:** `id TEXT PK, memoId TEXT FK→voice_memos(id) ON DELETE CASCADE, uri TEXT, duration INTEGER, position INTEGER, label TEXT NULL, createdAt TEXT`
+- **`voiceClipStorage.ts`:** `getClipsForMemo(memoId)` (ORDER BY position), `getClipSummaries(memoIds)` (batch — clipCount + totalDuration per memo for the list screen), `addClip(clip)`, `deleteClip(id)` (also deletes the clip's audio file), `updateClipLabel(id, label)`, `getNextClipPosition(memoId)` (max+1), `deleteAllClipsForMemo(memoId)` (cascade)
+- **Legacy migration:** `_initSchema` scans `voice_memos` rows with non-empty `uri`, creates a corresponding `voice_clips` row at position 0, then clears `uri`/`duration` on the memo. Idempotent — checks for existing clips before inserting
+- **Clip labels:** `null` displays as formatted `createdAt` timestamp ("Apr 11, 4:18 PM"). Tappable in edit mode to rename via inline TextInput. Empty submission or matching the formatted-default reverts to `null`
+- **Playback modes:** Stop (selected clip plays once), Play All (auto-advances to next clip on `didJustFinish`), Repeat (loops current). Persisted globally in `kv_store` under `clipPlaybackMode`. Toggle pills below the playback controls in detail screen
+
+### Voice Memo Photos (Session 26)
+- **`voice_memos.images TEXT NOT NULL DEFAULT '[]'`:** JSON array of file URIs. Migration in `_initSchema` checks `PRAGMA table_info(voice_memos)` for the column and `ALTER TABLE` adds it if missing
+- **Storage:** `voice-memo-images/` directory under `Paths.document`. Filename: `${memoId}_${Date.now()}_${shortId}.{jpg|png}`
+- **`voiceMemoImageStorage.ts`:** `saveVoiceMemoImage(memoId, sourceUri)` (copy from camera/picker temp), `deleteVoiceMemoImage(uri)`, `deleteAllVoiceMemoImages(uris[])`. Simpler than `noteImageStorage.ts` — no companion JSON, no drawing support
+- **Cleanup:** `permanentlyDeleteVoiceMemo` reads images from the row before delete and calls `deleteAllVoiceMemoImages` so the files are removed alongside the audio + DB row
+- **Backup:** `voice-memo-images` added to `MEDIA_FOLDERS` in `backupRestore.ts` so the folder is zipped/restored. `BackupMeta.contents.voiceMemoImages` count added to the manifest
+- **JSON validation:** `rowToMemo` parses with try/catch AND `Array.isArray` guard so a malformed `images` cell can't crash callers — falls back to `[]`
+- **5-photo cap:** enforced in both VoiceRecordScreen `takePhoto` (counts captured + existing memo images in add-clip mode) and VoiceMemoDetailScreen `handleTakePhoto`/`handlePickImage`. UI shows toast on overflow
+
+### VoiceMemoDetailScreen — View/Edit Mode (Session 13 redesign + Session 26 updates)
+- Accepts `{ memoId: string }` only (Session 26: `{ tempUri }` path removed)
+- `isViewMode` state: defaults true; users tap the header edit-circle to enter edit mode
+- **View mode:** read-only Text for title/note, edit circle icon (silver pencil) in headerRight next to trash. Tap → enters edit mode
+- **Edit mode:** TextInput fields with bgUri-aware placeholder colors, save circle icon (silver floppy disk) in headerRight. Save returns to view mode
+- Header: headerLeft (Back + Home), headerCenter (empty flex spacer), headerRight (edit-or-save circle + trash circle with red border)
 - `handleSaveExisting` returns `Promise<boolean>` — false on failure prevents "Save & Exit" from navigating away
-- `beforeRemove` navigation listener: blocks during save (`savingRef`), new recordings get "Discard recording?" alert, existing with unsaved changes get "Unsaved changes" alert with Cancel/Discard/Save & Exit. `exitingRef` prevents re-triggering on intentional exits
+- `useFocusEffect` (Session 26 fix): reloads BOTH the memo and its clips on focus, not just clips. Without the memo reload, photos saved during the add-clip flow could be overwritten by stale `memo.images` state on the next photo edit
+- **Photos UI:** "PHOTOS" strip between title/note and the Clips header, 80×80 thumbnails with rounded corners. Tap opens `ImageLightbox`. Edit mode shows red X delete badges and a camera + gallery 40×40 button row below the strip
+- `beforeRemove` navigation listener: existing with unsaved changes get "Unsaved changes" alert with Cancel/Discard/Save & Exit. `exitingRef` prevents re-triggering on intentional exits
 
 ### Playback
 - **VoiceMemoDetailScreen:** seekable progress bar (44px touch target, 6px visual bar), back/forward 5s, `useFocusEffect` cleanup pauses on screen blur. `Number.isFinite` validation on all seek values with try/catch on `seekTo`. View-based play/pause icons (CSS border triangle for play, dual bars for pause). Play button color: #4CAF50 (Material Design green)

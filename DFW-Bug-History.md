@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 25 (April 11, 2026)
+**Last updated:** Session 26 (April 11, 2026)
 
 ---
 
@@ -645,3 +645,58 @@
 - Found: Session 25 Zerenn, live device
 - Cause: `showTimerCountdownNotification` set `pressAction.id = 'default'` but provided no data, so the press handler in `useNotificationRouting.ts` couldn't find a `timerId` or `alarmId` and did nothing
 - Fix: ID-prefix routing. On `EventType.PRESS`, both background and foreground handlers detect `countdown-` prefix and either navigate directly to the `Timers` route (if nav is ready) or store `pendingTimerAction` for the next foreground tick to drain
+
+### Session 26 — Voice Memo Clips + Photos Audit (Codex + Gemini)
+
+8 findings fixed across two audit rounds. Re-audit clean.
+
+**Bug: useFocusEffect only reloaded clips, not the full memo (HIGH — data loss)**
+- Found: Session 26 audit (Codex)
+- Cause: `VoiceMemoDetailScreen.useFocusEffect` reloaded `clips` via `getClipsForMemo(memoId)` but never re-read the memo row itself. If the user added clips via the add-clip flow which also wrote photos to `voice_memos.images`, the detail screen's `memo` state was stale on focus. The next photo add or delete from the detail screen would write back `memo.images` from the stale state and silently drop the photos that were saved during add-clip
+- Fix: `useFocusEffect` now reloads BOTH the memo (`getVoiceMemoById`) and clips. Title/note state and `initialTitleRef`/`initialNoteRef` are also refreshed so the unsaved-changes detector doesn't false-positive after a focus refresh
+
+**Bug: Non-atomic save in VoiceRecordScreen (HIGH — orphan rows)**
+- Found: Session 26 audit (Codex)
+- Cause: `saveAndNavigate` for new-memo mode called `addVoiceMemo` then `addClip` sequentially. If `addClip` threw (constraint violation, disk full, etc.), the memo row was left as an empty shell with no clips — orphaned in the DB
+- Fix: Wrapped `addClip` in its own try/catch. On clip failure, the memo row is rolled back via `permanentlyDeleteVoiceMemo(newMemoId)` and the audio file is deleted. Outer catch handles `addVoiceMemo` failures separately
+
+**Bug: VoiceRecordScreen add-clip path navigated on failure (HIGH)**
+- Found: Session 26 audit (Codex)
+- Cause: The `isAddClipMode` branch had `navigation.goBack()` outside the try block, so even when the clip save threw, the user got bounced back to the detail screen with a failure toast and no clip — but no indication anything was unrecoverable. Worse, the toast flashed past as the screen tore down
+- Fix: Moved `navigation.goBack()` inside the success branch of the try. The catch branch logs, shows the failure toast, and still navigates back (so the user isn't trapped on the record screen) but the success/failure paths are now distinct
+
+**Bug: Stale closure for `capturedPhotos` in AppState background handler (HIGH — photos lost)**
+- Found: Session 26 audit (Gemini)
+- Cause: The `AppState` background handler captures the `saveAndNavigate` closure created at mount. `saveAndNavigate` reads `capturedPhotos` from state. Photos taken before recording started weren't in the closure's view of state, so when the user backgrounded the app mid-recording and the auto-save fired, the photos were silently dropped
+- Fix: Added `capturedPhotosRef` (useRef), kept in sync via a useEffect that mirrors `capturedPhotos`. `saveAndNavigate` reads `photosToSave = capturedPhotosRef.current` instead of the state. The background closure now sees the latest photo array regardless of when it was captured
+
+**Bug: 5-photo cap ignored existing memo photos in add-clip mode (MEDIUM)**
+- Found: Session 26 audit (Codex)
+- Cause: `takePhoto` on VoiceRecordScreen only checked `capturedPhotos.length >= 5`. In add-clip mode, the user could already have 5 photos on the existing memo and capture 5 more during the add-clip flow — the cap was effectively 10
+- Fix: In add-clip mode, `takePhoto` loads `getVoiceMemoById(addToMemoId).images?.length` and checks `captured + existing >= 5`
+
+**Bug: Backup metadata missing voiceMemoImages count (MEDIUM)**
+- Found: Session 26 audit (Codex)
+- Cause: `BackupMeta.contents` had counts for `voiceMemos`, `noteImages`, `alarmPhotos`, `backgrounds` but not the new `voice-memo-images` directory. The folder was added to `MEDIA_FOLDERS` (so it zipped/unzipped correctly) but the manifest counts were stale
+- Fix: Added `voiceMemoImages: number` to `BackupMeta.contents` and `exportBackup` populates it via `countFilesInDir('voice-memo-images')`
+
+**Bug: AsyncStorage migration inserter missing images column (MEDIUM)**
+- Found: Session 26 audit (Codex)
+- Cause: `_insertVoiceMemos` (the AsyncStorage → SQLite migration helper) hadn't been updated for the new `images` column. On migration of legacy AsyncStorage data, the `INSERT` would either fail (NOT NULL constraint) or insert NULL — silently dropping any photo state from old backups
+- Fix: Added `images` to the column list and values, defaulting to `'[]'` via `jsonOrNull(v.images) ?? '[]'`
+
+**Bug: VoiceMemoCard accessibility label wrong for clips-based memos (LOW)**
+- Found: Session 26 audit (Gemini)
+- Cause: The play button on VoiceMemoCard used the label `'Play memo'`/`'Pause memo'` regardless of whether `memo.uri` was set. For clips-based memos (`uri === ''`), tapping the button navigates to the detail screen instead of playing — but screen readers announced it as a play button
+- Fix: Conditional label: `memo.uri ? (isPlaying ? 'Pause memo' : 'Play memo') : 'Open memo'`
+
+**Bug: `images` JSON parse missing Array.isArray validation (LOW)**
+- Found: Session 26 audit (Gemini)
+- Cause: `rowToMemo` parsed `row.images` with try/catch but assigned the result directly. If a malformed row stored a JSON string like `"null"` or `"42"` (e.g., from a botched migration), the parse would succeed and `images` would be set to a non-array value, crashing downstream `.map`/`.length` calls
+- Fix: Added `Array.isArray` guard after the parse: `parsedImages = Array.isArray(raw) ? raw : []`
+
+**Accepted/deferred:**
+- Foreign keys `PRAGMA foreign_keys = ON` not enabled — application code (`permanentlyDeleteVoiceMemo` → `deleteAllClipsForMemo`) handles the cascade. Enabling the PRAGMA could have side effects on other tables that weren't designed with FK constraints in mind
+- Non-contiguous clip positions after deletion — `ORDER BY position` works fine even with gaps, position renumbering deferred to future scope
+- Redundant `NOT NULL` on `voice_memos.uri`/`duration` — kept for backwards compat with the legacy schema, harmless empty/0 defaults
+- `validateBackup` not checking `voiceMemoImages` field — cosmetic, the folder zips/unzips correctly regardless of whether the count field is validated

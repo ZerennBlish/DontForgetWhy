@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 25 (April 11, 2026)
+**Last updated:** Session 26 (April 11, 2026)
 
 ---
 
@@ -14,7 +14,10 @@
 - **Timers** — standalone TimerScreen (extracted from AlarmListScreen in v1.9.0). 19+ presets + saveable custom timers with name/emoji, recently used (max 3) one-tap quick start, sound mode per timer, pinnable to widget, Timer Sound capsule. Pin redesign (Session 12): small "Pin"/"Pinned" capsule overlay on upper-left of all preset cards — no emoji pins, no modal pin button.
   - Notification action buttons: "Dismiss" button on timer completion notification
 - **Notepad** — 999-char notes, 10 bg colors + custom, font color presets + custom (reanimated-color-picker), keyboard emoji input, hyperlinks (email/phone/URL), view mode with tappable links, share + print, soft delete with undo, pin to widget (max 4), image attachments (max 3 per note, gallery pick via expo-image-picker, JPEG quality 0.7). Notes-only (voice memos have own screen since v1.9.0). Card style with green section-colored border. Note icon circle uses the note's own color. Text capsule pin/delete buttons. Note editor dropdown: consolidated draw/photo/record/color into single "+" dropdown menu with labeled rows and View-based icons. NoteEditorModal: view/edit mode with centered accent pills — "Edit" in view mode (moved from topBarRight to topBarCenter, Session 13), "Save" only when `hasUnsavedChanges()`. Recording controls (Session 12): proper pause (green) + stop (red) button row. Home button in modal with unsaved changes guard. Voice memos stored as `voiceMemos TEXT` column in notes table (JSON array).
-- **Voice Memos** — standalone VoiceMemoListScreen (separated from Notepad in v1.9.0). VoiceRecordScreen (tap-to-record/stop, pause/resume), VoiceMemoDetailScreen (view/edit mode: existing memos open read-only with centered "Edit" pill, tap to enter edit mode with "Save" pill on changes — matches NoteEditorModal pattern), VoiceMemoCard (View-based play/pause icons, inline progress, capsule pin/delete). Pinning (max 4), soft delete with undo, dark bar card style with purple left border accent (#A29BFE). Calendar shows voice memos as purple dots. Note-attached voice memos share a 3-attachment limit with images.
+- **Voice Memos** — standalone VoiceMemoListScreen (separated from Notepad in v1.9.0). VoiceRecordScreen (tap-to-record/stop, pause/resume; Session 26: camera button bottom-right corner for in-flow photo capture), VoiceMemoDetailScreen (view/edit mode with circle Edit/Save icon buttons in headerRight matching NoteEditorModal pattern), VoiceMemoCard (View-based play/pause icons, inline progress, capsule pin/delete). Pinning (max 4), soft delete with undo, dark bar card style with purple left border accent (#A29BFE). Calendar shows voice memos as purple dots. Note-attached voice memos share a 3-attachment limit with images.
+  - **Voice memo clips (Session 26):** A memo is a container holding multiple audio clips. Each clip has its own audio file, duration, position ordering, and optional label (default shows formatted createdAt timestamp, tappable in edit mode to rename). "Add Clip" button on detail screen navigates to VoiceRecordScreen in `addToMemoId` mode to append a clip. Clip rows show play/pause icon + label + duration + delete X (edit mode). Legacy single-uri memos auto-migrate to clip rows on first launch
+  - **Clip playback modes (Session 26):** Stop (selected clip plays once and stops), Play All (auto-advances to next clip when current finishes), Repeat (loops the current clip). Toggle pills below the playback controls in detail screen. Persisted globally in kv `clipPlaybackMode` — most users pick one mode and leave it
+  - **Voice memo photos (Session 26):** Camera button on VoiceRecordScreen for in-flow capture (always visible, blocked during recording), camera + gallery buttons on VoiceMemoDetailScreen edit mode for picker workflows. Photo strip (80×80 thumbnails) sits between title/note and the Clips list. Tap any photo to open `ImageLightbox`. Edit mode shows red X delete badges on each thumbnail. 5-photo cap per memo (counts existing + newly captured in add-clip flow). Photos stored in `voice-memo-images/`, included in backup/restore
 - **Calendar** — In-app calendar view (CalendarScreen) accessible from main screen nav card. Uses react-native-calendars (JS-only). Month view with colored dot indicators: red=alarms, blue=reminders, green=notes. Custom dayComponent dims past dates. Three view modes (Day/Week/Month) with capsule tabs. Filter by type (All/Alarms/Reminders/Notes) in Week and Month views. Create buttons (+Alarm/+Reminder) prefill selected date via initialDate param. Handles one-time alarms, recurring weekly, recurring daily (empty days), reminders (all patterns), notes (local timezone bucketing). Week view locked to current week (always shows Sunday–Saturday containing today). Tapping a date outside current week while in week view auto-switches to day view. Supports initialDate route param for deep-linking from widget or other screens.
   - **Calendar empty state art (Session 21):** Three color cartoon illustrations replacing emoji — hammock (day view), beach chair (week view), couch (month view). Calendar chrome icon refresh: grid-based calendar replacing "15" number icon.
   - **Calendar fixes (dev):** Tappable event cards — alarm cards navigate to CreateAlarm, reminder cards to CreateReminder, note cards to Notepad. Annual/date-specific recurring reminders now correctly show only on matching month/day (previously showed on every day due to missing dueDate check).
@@ -105,6 +108,41 @@ borderColor:    colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 
 ### NoteCard Silver Fallback (Session 24)
 - `NoteCard.tsx` + `DeletedNoteCard.tsx` iconCircle: when `note.icon` is set, renders it as `<Text>`. When empty, falls back to `<Image source={APP_ICONS.notepad} size=22 />` — natural silver-metallic notepad (no `tintColor`) instead of the `📝` emoji
 - `DeletedNoteCard.tsx` gained `Image` import + `APP_ICONS` import
+
+### Voice Memo Clips (Session 26)
+- Memos act as containers holding multiple audio clips. Each clip has its own audio file, position, duration, and optional label
+- Default label = formatted createdAt timestamp (`Apr 11, 4:18 PM`); tap in edit mode to rename via inline TextInput. Empty submission reverts to the default
+- "Add Clip" button on detail screen navigates to VoiceRecordScreen in `addToMemoId` mode — append a clip without creating a new memo
+- Clip rows: play/pause icon · label · duration · delete X (edit mode only)
+- Clips persist across the app close — no in-memory state, all reads via `voiceClipStorage.getClipsForMemo(memoId)`
+
+### Clip Playback Modes (Session 26)
+- **Stop:** plays the selected clip, then stops
+- **Play All:** auto-advances to the next clip when the current finishes (does not loop back at end)
+- **Repeat:** loops the current clip forever
+- Three toggle pills below the playback controls in detail screen
+- Persisted globally in kv `clipPlaybackMode` — most users pick one mode and leave it
+
+### Voice Memo Photos (Session 26)
+- Camera button on VoiceRecordScreen (bottom-right corner, always visible — even during recording, where it shows a "Stop recording first" toast)
+- Camera + gallery 40×40 button row on VoiceMemoDetailScreen edit mode
+- Photo strip (80×80 thumbnails) sits between title/note and the Clips list, both view and edit modes
+- Tap any photo to view it in `ImageLightbox` (full-screen modal)
+- Edit mode shows red X delete badges on each thumbnail with Alert confirmation
+- 5 photos max per memo (counts existing + newly captured in add-clip flow)
+- Stored in `voice-memo-images/`, included in backup/restore round-trip
+
+### Timer Save vs Start (Session 26)
+- Timer modal redesigned with three circle action buttons: red **cancel** (`closeX` icon), accent **save-only** (`save` floppy-disk icon), success **start** (`MEDIA_ICONS.play` icon)
+- New `handleModalSaveOnly` saves the user timer preset (or updates an existing one, or sets a custom duration on a built-in preset) without auto-starting it. Three internal variants: `handleSaveCustomOnly`, `handleSaveNewTimerOnly`, `handleSaveEditTimerOnly`
+- Toast feedback on success ("Saved", "Timer saved", "Timer updated")
+
+### Icon Overhaul (Session 26)
+- Two new chrome icons: `APP_ICONS.save` (floppy-disk) and `APP_ICONS.edit` (pencil), both 512×512 WebP. Stored in `assets/icons/` (next to existing chrome utility icons)
+- Edit/Save text capsule buttons replaced with 40×40 circle icon buttons across **VoiceMemoDetailScreen**, **NoteEditorModal**, **CreateAlarmScreen**, **CreateReminderScreen**. Save circles use accent border to signal action; trash buttons use red border on those screens that gained the new pattern
+- Sound mode + emoji circles in TimerScreen + CreateAlarmScreen got the standard tappable chrome circle treatment (mode-aware dark fill + 1.5px border, 40-48px depending on context)
+- Reminder + Timer + Alarm icon-picker fallback shows silver `+` instead of the default emoji until the user picks one (Reminder treats the notepad emoji `\u{1F4DD}` sentinel as "no choice")
+- Calendar inline icons next to "Set date" restructured into proper flex `<View>` rows with the Image and Text as siblings (was inline `<Image>` inside `<Text>` with broken Android baseline alignment)
 
 ### Play Store Listing (Session 22)
 - 8 screenshots: Home, Alarms/Reminders/Calendar, Chess/Checkers/Memory, Notes, Timers, Settings, Widgets, Alarm Fire
