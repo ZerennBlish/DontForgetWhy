@@ -52,6 +52,7 @@ export default function SettingsScreen({ navigation }: Props) {
     handleExport, handleImport,
     handleAutoBackupToggle, handleChangeFolder, handleFrequencyChange,
     handleSendFeedback,
+    handleResetTutorials,
   } = useSettings(navigation);
 
   const btn = getButtonStyles(colors);
@@ -454,6 +455,22 @@ export default function SettingsScreen({ navigation }: Props) {
           Sound effects for chess, checkers, and memory match.
         </Text>
       </View>
+
+      <TouchableOpacity
+        style={[styles.card, { marginTop: 16 }]}
+        onPress={handleResetTutorials}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Reset tutorial guide"
+      >
+        <View style={styles.aboutRow}>
+          <Text style={styles.label}>Tutorial Guide</Text>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
+        </View>
+        <Text style={styles.description}>
+          Show feature tips again
+        </Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.card, { marginTop: 16 }]}

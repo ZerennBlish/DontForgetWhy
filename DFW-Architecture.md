@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 26 (April 11, 2026)
+**Last updated:** Session 28 (April 13, 2026)
 
 ---
 
@@ -392,6 +392,30 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 | `assets/app-icons/paperclip.webp` | NEW | Chrome paperclip icon (`APP_ICONS.paperclip`) — toolbar Attached button |
 | `assets/icons/paperclip.png` | DELETED | Legacy PNG removed after webp conversion |
 
+### New/Modified Files in Session 28
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/hooks/useTutorial.ts` | NEW | Tutorial system hook — per-screen dismissal via `kv_store`, lazy `useState` initializer (synchronous `kvGet`, no flash), exports `resetAllTutorials()` utility |
+| `src/components/TutorialOverlay.tsx` | NEW | Tutorial overlay — wrapper View with backdrop/card sibling structure (Session 28 TalkBack fix), section-colored left accent + thin border, dot indicators (hidden for single-tip screens), nav buttons with `hapticLight()`, `importantForAccessibility="no-hide-descendants"` on backdrop + `accessibilityViewIsModal={true}` on card. Voice playback via `expo-audio` MEDIA stream: `Asset.fromModule + downloadAsync`, `PlayerWithEvents` cast, `cancelled`-flag race protection, `AppState` listener pauses on background, `stopClip()` called on tip advance/dismiss/unmount/background |
+| `src/data/tutorialTips.ts` | NEW | Tutorial tip data for 7 screens (alarmList:3, reminders:2, notepad:3, voiceMemoList:3, calendar:1, timers:2, games:1). Every tip has a `clipKey` matching its MP3 filename in `assets/voice/tutorial/` |
+| `src/data/tutorialClips.ts` | NEW | Voice clip registry — `Record<string, number>` mapping each `clipKey` to a `require('../../assets/voice/tutorial/tutorial_{screenKey}_{NN}.mp3')` module ID. 15 entries, one per tip |
+| `assets/voice/tutorial/` | NEW | 15 ElevenLabs v3 MP3 tutorial voice clips (same male early-30s character as existing fire/snooze/timer clips, sarcastic tone, v3 audio tags for emotional direction). Filename pattern `tutorial_{screenKey}_{NN}.mp3` |
+| `__tests__/tutorialTips.test.ts` | NEW | Jest data validation — ≥7 screen keys, non-empty title/body, letter-only keys, optional `clipKey` typecheck |
+| `src/utils/audioCompat.ts` | MODIFIED | `PlayerWithEvents` adopted across `src/utils/gameSounds.ts`, `src/utils/soundFeedback.ts`, `src/screens/VoiceMemoListScreen.tsx`, and `src/components/TutorialOverlay.tsx` (4 files). All `as any` casts on `addListener`/`release` eliminated. `.release()` → `.remove()` everywhere |
+| `src/services/backupRestore.ts` | MODIFIED | `validateBackup` treats missing `voiceMemoImages` field as 0 (old .dfw backward compat). `BackupMeta.contents.voiceMemoImages` changed from required to optional `number?`. Export side still writes the count for new backups |
+| `src/screens/VoiceMemoDetailScreen.tsx` | MODIFIED | Layout reorder (clips-first), bottom toolbar (Attached/Camera/Gallery), photos in attachments panel, share button + per-clip share via scrollable Modal (replaced `Alert.alert` 3-button Android limit), bigger 120px thumbnails. `useFocusEffect` only reloads clips/images on re-focus, `firstLoadRef` gates title/note seed so user edits aren't clobbered. Back button peels attachments panel before unsaved-changes dialog. Attachments panel dismisses on title/note focus + empty-photo guard. Toolbar/panel uses theme colors instead of hardcoded dark rgba. Share picker modal backdrop uses `colors.modalOverlay`, count badge text + photo delete border are mode-aware |
+| `src/screens/VoiceRecordScreen.tsx` | MODIFIED | `beforeRemove` guard now also fires on `capturedPhotosRef.current.length > 0` — photos taken before starting a recording no longer vanish silently. Alert message/title/cancel label adapt to recording-only vs photos-only vs both |
+| `src/screens/AlarmListScreen.tsx` | MODIFIED | Tutorial overlay wired (`useTutorial('alarmList')`, `colors.sectionAlarm`) |
+| `src/screens/ReminderScreen.tsx` | MODIFIED | Tutorial overlay wired (`useTutorial('reminders')`, `colors.sectionReminder`) |
+| `src/screens/NotepadScreen.tsx` | MODIFIED | Tutorial overlay wired (`useTutorial('notepad')`, `colors.sectionNotepad`) |
+| `src/screens/VoiceMemoListScreen.tsx` | MODIFIED | Tutorial overlay wired (`useTutorial('voiceMemoList')`, `colors.sectionVoice`) + `PlayerWithEvents` adoption |
+| `src/screens/CalendarScreen.tsx` | MODIFIED | Tutorial overlay wired (`useTutorial('calendar')`, `colors.sectionCalendar`) |
+| `src/screens/TimerScreen.tsx` | MODIFIED | Tutorial overlay wired (`useTutorial('timers')`, `colors.sectionTimer`) |
+| `src/screens/GamesScreen.tsx` | MODIFIED | Tutorial overlay wired (`useTutorial('games')`, `colors.sectionGames`) |
+| `src/screens/SettingsScreen.tsx` | MODIFIED | New "Tutorial Guide" card row in General section above Send Feedback. `onPress={handleResetTutorials}`, subtitle "Show feature tips again", chevron-right indicator |
+| `src/hooks/useSettings.ts` | MODIFIED | Added `handleResetTutorials` — calls `resetAllTutorials()` from `useTutorial.ts`, toasts "Tutorials reset — visit any screen to see tips again", fires `hapticLight()`. Returned from `UseSettingsResult` for SettingsScreen |
+
 ### Two-Tier Icon System (established Session 20, expanded Session 24)
 
 The app has two distinct visual languages for icons:
@@ -540,6 +564,82 @@ NoteEditorModal full redesign (Session 27): NoteEditorModal is a thin render she
 
 ---
 
+## 7.5 Tutorial Overlay System (Session 28)
+
+Per-screen first-visit tip carousel. Each wired screen remembers its own dismissal in `kv_store` under `tutorial_dismissed_{screenKey}`. Settings has a "Tutorial Guide" reset row that wipes every dismissal key so all overlays re-appear on next screen visit.
+
+### Hook — `useTutorial(screenKey)` (`src/hooks/useTutorial.ts`)
+- Pure logic. No UI imports (no `View`, `Text`, `TouchableOpacity`, no `useTheme`, no `useSafeAreaInsets`). Matches the hook rules from Session 15's decomposition pattern.
+- Reads `kvGet('tutorial_dismissed_' + screenKey)` via a **lazy `useState` initializer** — synchronous, no effect round-trip, no one-frame flash between first paint and overlay mount. `kvGet` is synchronous (`expo-sqlite`), so the initializer can read storage inline.
+- Returns `{ showTutorial, tips, currentIndex, nextTip, prevTip, dismiss }`. `nextTip` / `prevTip` are stable `useCallback`s. `tips` comes from `TUTORIAL_TIPS[screenKey]` and falls back to `[]` if the key is unknown — unknown keys return `showTutorial=false` silently (no crash, no render).
+- `nextTip` increments `currentIndex` with a cap at the last tip (no wrap). `prevTip` decrements with a floor at 0. `dismiss` writes `kvSet('tutorial_dismissed_' + screenKey, 'true')` and flips `showTutorial` to `false`.
+- Module also exports `resetAllTutorials()`: iterates `Object.keys(TUTORIAL_TIPS)` and calls `kvRemove('tutorial_dismissed_' + key)` for each. Called by `useSettings.handleResetTutorials` from the "Tutorial Guide" row.
+
+### Component — `TutorialOverlay` (`src/components/TutorialOverlay.tsx`)
+- Absolute overlay, `zIndex: 999`, rendered as the last child of each wired screen's outermost `<View>` so it draws above the FlatList/ScrollView content.
+- **Structural layout (Session 28 TalkBack fix, iteration 3):** wrapper `<View>` contains the backdrop `TouchableOpacity` and the card `View` as **siblings**, not parent/child. The earlier nested-child approach meant `importantForAccessibility="no-hide-descendants"` on the backdrop also hid the card from TalkBack. Siblings let the backdrop stay hidden from TalkBack while the card remains traversable.
+- **Backdrop** `<TouchableOpacity>`: fills the wrapper, `rgba(0,0,0,0.85)` dim, self-closing with `onPress={onDismiss}` and `importantForAccessibility="no-hide-descendants"`. Touch input still works — `no-hide-descendants` only affects the accessibility tree.
+- **Card** `<View>`: `colors.card` background, `borderRadius: 16`, `padding: 24`, `width: '85%'`, `maxWidth: 320`. Thin `sectionColor + '40'` full border + 3px `sectionColor` left accent matching the rest of the app's card pattern. `elevation: 4`, shadow offset `{0, 4}`, opacity `0.3`, radius `8`. Has `accessibilityViewIsModal={true}` so TalkBack focus stays within the card; **no** `accessibilityLabel` on the card itself (that collapses title + body + buttons into a single announced element). Card has no onPress — as a sibling of the backdrop, card-area taps don't propagate to the backdrop naturally.
+- **Title**: `FONTS.bold` 18pt, `colors.textPrimary`. **Body**: `FONTS.regular` 14pt, `colors.textSecondary`, `lineHeight: 22`.
+- **Dot indicators**: only rendered when `tips.length > 1` (single-tip screens get no row). Active dot `width: 24, sectionColor`; inactive dots `width: 8, colors.border`; height 8, `marginHorizontal: 4`. Row has `importantForAccessibility="no"` so TalkBack skips the decorative dots.
+- **Nav row**: `Back` (`colors.textTertiary`, hidden on first tip via `navSpacer`) + `Next`/`Got it` (`sectionColor`, `Got it` fires `onDismiss`). `FONTS.semiBold` 15pt, `paddingVertical: 8, paddingHorizontal: 16`. All three buttons fire `hapticLight()`. Buttons carry `accessibilityRole="button"` + `accessibilityLabel`.
+- Haptics import lives in `TutorialOverlay.tsx`, **not** `useTutorial.ts` (pure logic hook rule).
+- **Audio playback (Session 28):** Uses `createAudioPlayer` from `expo-audio` on the **MEDIA stream** — not routed through the native `AlarmChannelModule` (ALARM stream) because tutorials are user-initiated, not alarm fires. Asset resolution via `Asset.fromModule(require(...)).downloadAsync()` → `localUri` → `createAudioPlayer({ uri })` — same production URI pattern as `voicePlayback.ts`. Player cast to `PlayerWithEvents` from `audioCompat.ts`, stored in a `useRef<PlayerWithEvents | null>`, `volume: 1.0` (system volume controls loudness).
+- **Lifecycle:** a single `useEffect` keyed on `[currentIndex, tips, stopClip]` stops the current clip via `stopClip()`, then kicks off an async IIFE that downloads + creates + plays the clip for the current tip. `playerRef.current = player` is assigned **before** `player.play()` so any unmount or tip-change cleanup between assignment and play still finds the player. Effect cleanup flips a `cancelled` flag and calls `stopClip()`. Second `useEffect` subscribes to `AppState.addEventListener('change', ...)` and calls `stopClip()` on any state other than `'active'` (pause on app background). `handleNext` / `handlePrev` call `stopClip()` explicitly before `hapticLight()` so audio stops on user tap, not on the effect-cleanup tick. `handleGotIt` and `handleBackdropPress` also call `stopClip()` before `onDismiss()`.
+- **Race protection:** the effect's async IIFE closes over a local `cancelled` flag. After `await asset.downloadAsync()`, the flag is re-checked before `createAudioPlayer` runs. If the effect cleans up mid-download, the async resumes, sees `cancelled = true`, and returns without creating a player — so rapid tip advancement never leaks players or double-plays clips.
+- **`stopClip()`**: `useCallback([])` that calls `pause()` then `remove()` on `playerRef.current` (each wrapped in its own try/catch), then nulls the ref. Safe as a no-op when the ref is already null. Audio errors never propagate — a failed `play()`, `pause()`, or `remove()` can't prevent dismissal.
+
+### Data — `src/data/tutorialTips.ts`
+- `export interface TutorialTip { title: string; body: string; clipKey?: string }`
+- `export const TUTORIAL_TIPS: Record<string, TutorialTip[]>` keyed by screen. Session 28 ships 7 screens:
+  - `alarmList` (3 tips)
+  - `reminders` (2 tips)
+  - `notepad` (3 tips)
+  - `voiceMemoList` (3 tips)
+  - `calendar` (1 tip)
+  - `timers` (2 tips)
+  - `games` (1 tip)
+- `clipKey` field now wired (Session 28): each of the 15 tips has a `clipKey` matching its filename in `assets/voice/tutorial/` (e.g. `tutorial_alarmList_01`). Empty tips can still set `clipKey: undefined` to skip audio — the overlay's play logic short-circuits on falsy `clipKey`.
+- Copy is written in the sarcastic DFW personality voice from day one (matches `snoozeMessages.ts`, `homeBannerQuotes.ts`, `chessRoasts.ts`), not neutral placeholder text — rewriting to voice later would mean rewriting every string.
+
+### Voice clip registry — `src/data/tutorialClips.ts`
+- `Record<string, number>` mapping `clipKey` → `require('../../assets/voice/tutorial/...')` module ID. 15 entries, 1-to-1 with the tips.
+- Asset files live at `assets/voice/tutorial/tutorial_{screenKey}_{NN}.mp3` (e.g. `tutorial_alarmList_01.mp3`, `tutorial_games_01.mp3`). 15 MP3s total.
+- Voice talent: ElevenLabs v3, same voice character as `assets/voice/` fire/snooze/timer clips (male, early 30s, American, tired/sarcastic). Scripts use v3 audio tags for emotional direction: `[sighs]`, `[sarcastic]`, `[deadpan]`, `[annoyed]`, `[tired]`, `[resigned]`, `[exhausted]`, `[matter of fact]`, `[under his breath]`, `[condescending baby talk]`, `[like reading instructions]`, `[like someone who's heard too much]`, `[disturbed]`, `[like being honest for the first time]`, `[catching himself]`.
+- Clips are independent from the tip body text — they add extra personality and humor rather than narrating the visible copy verbatim.
+
+### Screen wiring (7 screens)
+Each screen imports `useTutorial` + `TutorialOverlay`, calls the hook once at the top of the component, and renders the overlay at the end of the outermost `<View>`:
+
+| Screen file | screenKey | sectionColor |
+|---|---|---|
+| `src/screens/AlarmListScreen.tsx` | `alarmList` | `colors.sectionAlarm` |
+| `src/screens/ReminderScreen.tsx` | `reminders` | `colors.sectionReminder` |
+| `src/screens/NotepadScreen.tsx` | `notepad` | `colors.sectionNotepad` |
+| `src/screens/VoiceMemoListScreen.tsx` | `voiceMemoList` | `colors.sectionVoice` |
+| `src/screens/CalendarScreen.tsx` | `calendar` | `colors.sectionCalendar` |
+| `src/screens/TimerScreen.tsx` | `timers` | `colors.sectionTimer` |
+| `src/screens/GamesScreen.tsx` | `games` | `colors.sectionGames` |
+
+### Settings reset
+`useSettings.handleResetTutorials` calls `resetAllTutorials()` from `useTutorial.ts`, then `ToastAndroid.show('Tutorials reset — visit any screen to see tips again', SHORT)`, then `hapticLight()`. `SettingsScreen` renders a "Tutorial Guide" card row (subtitle "Show feature tips again") in the General section above Send Feedback, styled like the existing clickable cards.
+
+### kv_store keys (Session 28)
+- `tutorial_dismissed_alarmList`
+- `tutorial_dismissed_reminders`
+- `tutorial_dismissed_notepad`
+- `tutorial_dismissed_voiceMemoList`
+- `tutorial_dismissed_calendar`
+- `tutorial_dismissed_timers`
+- `tutorial_dismissed_games`
+
+Value is the literal string `'true'` when dismissed, absent otherwise. Lazy init reads `kvGet(...)` and treats any non-null return as dismissed.
+
+### Tests — `__tests__/tutorialTips.test.ts`
+Data-validation only (no React/UI). Asserts: ≥7 screen keys, every screen has ≥1 tip, every tip has non-empty title + body, keys are lowercase alphanumeric (`/^[a-zA-Z]+$/`), `clipKey` is either undefined or a non-empty string.
+
+---
+
 ## 8. Storage Layer (SQLite)
 
 ### Migration from AsyncStorage (Session 12)
@@ -564,10 +664,11 @@ All persistent storage migrated from `@react-native-async-storage/async-storage`
 Note: `forget_log` table removed in Session 12 (ForgetLog feature deleted).
 
 ### KV store keys (partial list)
-Settings: `appSettings`, `appTheme`, `onboardingComplete`, `hapticsEnabled`, `voiceRoastsEnabled`, `voiceIntroPlayed`, `silenceAllAlarms`, `defaultTimerSound`, `bg_main`, `bg_overlay_opacity`, `note_custom_bg_color`, `note_custom_font_color`
+Settings: `appSettings`, `appTheme`, `onboardingComplete`, `hapticsEnabled`, `voiceRoastsEnabled`, `voiceIntroPlayed`, `silenceAllAlarms`, `defaultTimerSound`, `bg_main`, `bg_overlay_opacity`, `note_custom_bg_color`, `note_custom_font_color`, `clipPlaybackMode` (Session 26)
 Game stats: `guessWhyStats`, `memoryMatchScores`, `sudokuBestScores`, `sudokuCurrentGame`, `dailyRiddleStats`, `triviaStats`, `triviaSeenQuestions`, `chessStats` (Session 16: `{gamesPlayed, wins, losses, draws, totalPoints}`), `checkersStats` (Session 18: `{gamesPlayed, wins, losses, totalPoints}`)
 Widget pins: `widgetPinnedPresets`, `widgetPinnedAlarms`, `widgetPinnedReminders`, `widgetPinnedNotes`, `widgetPinnedVoiceMemos`
 Pending actions: `pendingNoteAction`, `pendingAlarmAction`, `pendingReminderAction`, `pendingTimerAction`, `pendingCalendarAction`, `pendingVoiceAction`, `pendingAlarmListAction`, `pendingReminderListAction`
+Tutorial dismissals (Session 28): `tutorial_dismissed_alarmList`, `tutorial_dismissed_reminders`, `tutorial_dismissed_notepad`, `tutorial_dismissed_voiceMemoList`, `tutorial_dismissed_calendar`, `tutorial_dismissed_timers`, `tutorial_dismissed_games` — value is `'true'` when dismissed, absent otherwise. Wiped en masse by `resetAllTutorials()` from the Settings "Tutorial Guide" row.
 Ephemeral: `snoozing_{alarmId}`, `snoozeCount_{alarmId}`, `handledNotifIds`
 
 ### Key API

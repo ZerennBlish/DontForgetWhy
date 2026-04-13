@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Modal,
   ToastAndroid,
   Image,
   Keyboard,
@@ -97,12 +98,19 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('stop');
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [showAttachments, setShowAttachments] = useState(false);
+  const [showSharePicker, setShowSharePicker] = useState(false);
 
   const initialTitleRef = useRef('');
   const initialNoteRef = useRef('');
   const barWidthRef = useRef(0);
   const exitingRef = useRef(false);
   const prevClipRef = useRef<string | null>(null);
+  const firstLoadRef = useRef(true);
+
+  // Reset first-load flag when navigating to a different memo
+  useEffect(() => {
+    firstLoadRef.current = true;
+  }, [memoId]);
 
   const activeClip = useMemo(
     () => clips.find((c) => c.id === activeClipId) ?? null,
@@ -185,10 +193,16 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       const freshMemo = getVoiceMemoById(memoId);
       if (freshMemo) {
         setMemo(freshMemo);
-        setTitle(freshMemo.title);
-        setNote(freshMemo.note);
-        initialTitleRef.current = freshMemo.title;
-        initialNoteRef.current = freshMemo.note;
+        // Only seed title/note from DB on the first load. On subsequent
+        // focus events (e.g. returning from VoiceRecordScreen after adding
+        // a clip) we must not clobber unsaved text edits.
+        if (firstLoadRef.current) {
+          setTitle(freshMemo.title);
+          setNote(freshMemo.note);
+          initialTitleRef.current = freshMemo.title;
+          initialNoteRef.current = freshMemo.note;
+          firstLoadRef.current = false;
+        }
       }
       const freshClips = getClipsForMemo(memoId);
       setClips(freshClips);
@@ -235,6 +249,14 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (exitingRef.current) return;
 
+      // Peel the attachments panel before doing anything else, so back
+      // dismisses overlays before the unsaved-changes guard kicks in.
+      if (showAttachments) {
+        e.preventDefault();
+        setShowAttachments(false);
+        return;
+      }
+
       const hasChanges = memo &&
         (title !== initialTitleRef.current || note !== initialNoteRef.current);
       if (hasChanges) {
@@ -270,10 +292,14 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     });
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, memo, title, note]);
+  }, [navigation, memo, title, note, showAttachments]);
 
   const handleBack = () => {
     Keyboard.dismiss();
+    if (showAttachments) {
+      setShowAttachments(false);
+      return;
+    }
     try { player.pause(); } catch { /* */ }
     navigation.goBack();
   };
@@ -318,6 +344,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const handleClipLabelPress = (clip: VoiceClip) => {
     if (isViewMode) return;
     hapticLight();
+    setShowAttachments(false);
     setEditingLabelText(clip.label ?? formatClipTimestamp(clip.createdAt));
     setEditingClipId(clip.id);
   };
@@ -468,30 +495,32 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       return;
     }
 
-    const options = clips.map((clip) => ({
-      text: clip.label ?? formatClipTimestamp(clip.createdAt),
-      onPress: async () => {
-        try {
-          await Sharing.shareAsync(clip.uri, {
-            mimeType: 'audio/mp4',
-            dialogTitle: title || 'Voice Memo',
-          });
-        } catch (e) {
-          console.error('Share failed:', e);
-          ToastAndroid.show('Share failed', ToastAndroid.SHORT);
-        }
-      },
-    }));
-
-    Alert.alert(
-      'Share Clip',
-      'Which clip do you want to share?',
-      [
-        ...options.map((opt) => ({ text: opt.text, onPress: opt.onPress })),
-        { text: 'Cancel', style: 'cancel' as const },
-      ],
-    );
+    // Android Alert.alert only renders 3 buttons, so use a state-driven modal
+    // for memos with 3+ clips.
+    setShowSharePicker(true);
   }, [clips, player, title]);
+
+  const shareClipFromPicker = useCallback(async (clip: VoiceClip) => {
+    setShowSharePicker(false);
+    try {
+      await Sharing.shareAsync(clip.uri, {
+        mimeType: 'audio/mp4',
+        dialogTitle: title || 'Voice Memo',
+      });
+    } catch (e) {
+      console.error('Share failed:', e);
+      ToastAndroid.show('Share failed', ToastAndroid.SHORT);
+    }
+  }, [title]);
+
+  const handleToggleAttachments = () => {
+    hapticLight();
+    if (!showAttachments && (memo?.images ?? []).length === 0) {
+      ToastAndroid.show('No photos yet \u2014 use Camera or Gallery to add some.', ToastAndroid.SHORT);
+      return;
+    }
+    setShowAttachments((v) => !v);
+  };
 
   const togglePlay = () => {
     hapticLight();
@@ -942,6 +971,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               style={[styles.titleInput, bgUri && { color: colors.overlayText }]}
               value={title}
               onChangeText={setTitle}
+              onFocus={() => setShowAttachments(false)}
               placeholder="Add a title..."
               placeholderTextColor={bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary}
               maxLength={100}
@@ -952,6 +982,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               style={[styles.noteInput, bgUri && { color: 'rgba(255,255,255,0.7)' }]}
               value={note}
               onChangeText={setNote}
+              onFocus={() => setShowAttachments(false)}
               placeholder="Add a note..."
               placeholderTextColor={bgUri ? 'rgba(255,255,255,0.4)' : colors.textTertiary}
               multiline
@@ -1147,16 +1178,16 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
       {/* Attachments panel — edit mode */}
       {!isViewMode && showAttachments && (memo?.images ?? []).length > 0 && (
         <View style={{
-          backgroundColor: 'rgba(15, 15, 25, 0.9)',
+          backgroundColor: colors.card,
           borderTopWidth: 1,
-          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          borderTopColor: colors.border,
           paddingVertical: 16,
           paddingHorizontal: 16,
         }}>
           <Text style={{
             fontSize: 11,
             fontFamily: FONTS.bold,
-            color: 'rgba(255,255,255,0.4)',
+            color: colors.textTertiary,
             letterSpacing: 1.5,
             marginBottom: 8,
             textAlign: 'center',
@@ -1192,7 +1223,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                     justifyContent: 'center',
                     alignItems: 'center',
                     borderWidth: 1.5,
-                    borderColor: 'rgba(255,255,255,0.6)',
+                    borderColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.3)',
                   }}
                   hitSlop={{ top: 16, right: 16, bottom: 16, left: 16 }}
                   onPress={() => handleDeletePhoto(uri)}
@@ -1214,25 +1245,28 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           flexDirection: 'row',
           justifyContent: 'space-evenly',
           alignItems: 'center',
-          backgroundColor: 'rgba(15, 15, 25, 0.9)',
+          backgroundColor: colors.card,
           borderTopWidth: 1,
-          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          borderTopColor: colors.border,
           paddingVertical: 10,
           paddingBottom: 10 + insets.bottom,
         }}>
           <TouchableOpacity
             style={{ alignItems: 'center' }}
-            onPress={() => { hapticLight(); setShowAttachments((v) => !v); }}
+            onPress={handleToggleAttachments}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="Toggle attachments"
+            accessibilityLabel={showAttachments ? 'Hide attachments' : 'Show attachments'}
+            accessibilityState={{ expanded: showAttachments }}
           >
             <View style={{
               width: 44, height: 44, borderRadius: 22,
               justifyContent: 'center', alignItems: 'center',
-              backgroundColor: 'rgba(30, 30, 40, 0.7)',
+              backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
               borderWidth: showAttachments ? 1.5 : 1,
-              borderColor: showAttachments ? colors.sectionVoice : 'rgba(255, 255, 255, 0.15)',
+              borderColor: showAttachments
+                ? colors.sectionVoice
+                : (colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'),
             }}>
               <Image source={APP_ICONS.paperclip} style={{ width: 34, height: 34 }} resizeMode="contain" />
               {(memo?.images ?? []).length > 0 && (
@@ -1243,13 +1277,13 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                   justifyContent: 'center', alignItems: 'center',
                   paddingHorizontal: 4,
                 }}>
-                  <Text style={{ fontSize: 9, fontFamily: FONTS.bold, color: '#FFFFFF' }}>
+                  <Text style={{ fontSize: 9, fontFamily: FONTS.bold, color: colors.mode === 'dark' ? '#FFFFFF' : '#000000' }}>
                     {(memo?.images ?? []).length}
                   </Text>
                 </View>
               )}
             </View>
-            <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: 'rgba(255, 255, 255, 0.6)', marginTop: 4 }}>Attached</Text>
+            <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textSecondary, marginTop: 4 }}>Attached</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1262,12 +1296,13 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             <View style={{
               width: 44, height: 44, borderRadius: 22,
               justifyContent: 'center', alignItems: 'center',
-              backgroundColor: 'rgba(30, 30, 40, 0.7)',
-              borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)',
+              backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+              borderWidth: 1,
+              borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
             }}>
               <Image source={APP_ICONS.camera} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </View>
-            <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: 'rgba(255, 255, 255, 0.6)', marginTop: 4 }}>Camera</Text>
+            <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textSecondary, marginTop: 4 }}>Camera</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1280,12 +1315,13 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             <View style={{
               width: 44, height: 44, borderRadius: 22,
               justifyContent: 'center', alignItems: 'center',
-              backgroundColor: 'rgba(30, 30, 40, 0.7)',
-              borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)',
+              backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
+              borderWidth: 1,
+              borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
             }}>
               <Image source={APP_ICONS.image} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </View>
-            <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: 'rgba(255, 255, 255, 0.6)', marginTop: 4 }}>Gallery</Text>
+            <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textSecondary, marginTop: 4 }}>Gallery</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -1402,6 +1438,115 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           </View>
         </View>
       )}
+
+      <Modal
+        visible={showSharePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSharePicker(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: colors.modalOverlay,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 24,
+          }}
+          activeOpacity={1}
+          onPress={() => setShowSharePicker(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss share picker"
+        >
+          <View
+            accessible={false}
+            onStartShouldSetResponder={() => true}
+            style={{
+              width: '100%',
+              maxWidth: 360,
+              maxHeight: 400,
+              backgroundColor: colors.card,
+              borderRadius: 16,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Text style={{
+              fontSize: 16,
+              fontFamily: FONTS.semiBold,
+              color: colors.textPrimary,
+              marginBottom: 12,
+              textAlign: 'center',
+            }}>
+              Share Clip
+            </Text>
+            <ScrollView>
+              {clips.map((clip) => {
+                const label = clip.label ?? formatClipTimestamp(clip.createdAt);
+                return (
+                  <TouchableOpacity
+                    key={clip.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: 12,
+                      paddingHorizontal: 8,
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.border,
+                    }}
+                    onPress={() => shareClipFromPicker(clip)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Share ${label}`}
+                  >
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontSize: 14,
+                        fontFamily: FONTS.semiBold,
+                        color: colors.textPrimary,
+                        marginRight: 12,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {label}
+                    </Text>
+                    <Text style={{
+                      fontSize: 12,
+                      fontFamily: FONTS.semiBold,
+                      color: colors.textSecondary,
+                      fontVariant: ['tabular-nums'],
+                    }}>
+                      {formatTime(clip.duration)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity
+              style={{
+                marginTop: 12,
+                paddingVertical: 12,
+                alignItems: 'center',
+              }}
+              onPress={() => setShowSharePicker(false)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel share picker"
+            >
+              <Text style={{
+                fontSize: 14,
+                fontFamily: FONTS.semiBold,
+                color: colors.textSecondary,
+              }}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <ImageLightbox
         visible={!!lightboxUri}

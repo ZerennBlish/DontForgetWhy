@@ -256,13 +256,20 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (navigatedRef.current) return;
-      if (!isRecordingRef.current) return;
+      const hasRecording = isRecordingRef.current;
+      const hasPhotos = capturedPhotosRef.current.length > 0;
+      if (!hasRecording && !hasPhotos) return;
       e.preventDefault();
+      const title = hasRecording ? 'Discard recording?' : 'Discard photos?';
+      const message = hasRecording
+        ? `Your recording${hasPhotos ? ' and photos' : ''} will be lost if you leave now.`
+        : 'You have unsaved photos. Discard them?';
+      const cancelText = hasRecording ? 'Keep recording' : 'Keep photos';
       Alert.alert(
-        'Discard recording?',
-        'Your recording will be lost if you leave now.',
+        title,
+        message,
         [
-          { text: 'Keep recording', style: 'cancel' },
+          { text: cancelText, style: 'cancel' },
           {
             text: 'Discard',
             style: 'destructive',
@@ -276,11 +283,13 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
                 clearInterval(timerRef.current);
                 timerRef.current = null;
               }
-              try {
-                await recorder.stop();
-                const status = recorder.getStatus();
-                if (status.url) deleteVoiceMemoFile(status.url).catch(() => {});
-              } catch { /* */ }
+              if (hasRecording) {
+                try {
+                  await recorder.stop();
+                  const status = recorder.getStatus();
+                  if (status.url) deleteVoiceMemoFile(status.url).catch(() => {});
+                } catch { /* */ }
+              }
               navigation.dispatch(e.data.action);
             },
           },
@@ -389,20 +398,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
     }
   };
 
-  const handleBack = async () => {
-    if (isRecordingRef.current) {
-      isRecordingRef.current = false;
-      setIsRecording(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      try {
-        await recorder.stop();
-        const status = recorder.getStatus();
-        if (status.url) deleteVoiceMemoFile(status.url).catch(() => {});
-      } catch { /* best-effort */ }
-    }
+  const handleBack = () => {
     navigation.goBack();
   };
 

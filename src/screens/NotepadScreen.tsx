@@ -13,6 +13,8 @@ import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import { useNotepad } from '../hooks/useNotepad';
+import { useTutorial } from '../hooks/useTutorial';
+import TutorialOverlay from '../components/TutorialOverlay';
 import NoteCard from '../components/NoteCard';
 import DeletedNoteCard from '../components/DeletedNoteCard';
 import UndoToast from '../components/UndoToast';
@@ -29,6 +31,7 @@ export default function NotepadScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const notepad = useNotepad({ routeParams: route.params });
+  const tutorial = useTutorial('notepad');
 
   const styles = useMemo(() => StyleSheet.create({
     outerContainer: {
@@ -318,6 +321,17 @@ export default function NotepadScreen({ navigation, route }: Props) {
         onCustomFontColorChange={notepad.onCustomFontColorChange}
         dirtyRef={notepad.editorDirtyRef}
       />
+
+      {tutorial.showTutorial && (
+        <TutorialOverlay
+          tips={tutorial.tips}
+          currentIndex={tutorial.currentIndex}
+          onNext={tutorial.nextTip}
+          onPrev={tutorial.prevTip}
+          onDismiss={tutorial.dismiss}
+          sectionColor={colors.sectionNotepad}
+        />
+      )}
     </View>
   );
 }

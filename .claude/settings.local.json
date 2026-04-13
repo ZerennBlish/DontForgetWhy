@@ -84,7 +84,8 @@
       "Bash(cmd.exe /c \"where python\")",
       "Bash(python.exe:*)",
       "Bash(cmd.exe /c \"where py\")",
-      "Bash(py -c \"from PIL import Image; print\\('ok'\\)\")"
+      "Bash(py -c \"from PIL import Image; print\\('ok'\\)\")",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }

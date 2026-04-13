@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 27 (April 12, 2026)
+**Last updated:** Session 28 (April 13, 2026)
 
 ---
 
@@ -742,3 +742,73 @@
 - Found: Session 27 audit (title feature)
 - Cause: `ShareNoteModal` only received `noteText`, `noteIcon`, and `noteImages`. A title-only note (no body, no images) failed the share eligibility check and showed "Nothing to share", and even with a body, the title was missing from every share output (text share, PDF, Print)
 - Fix: `handleShare` eligibility includes `editorTitle.trim()`. `NoteEditorModal` passes `noteTitle={editor.editorTitle}` to `ShareNoteModal`. Added `noteTitle: string` prop. `buildNoteHtml` renders title as `<h2>` above the body `<pre>` when non-empty. Text share prepends title with newline separator. Print fallback (no-images branch) mirrors the same title HTML inline
+
+### Session 28 — Tutorial Overlay + VoiceMemoDetail Overhaul Audit Findings
+
+Triple audit (Codex + Claude + Gemini) on Session 28 work across two rounds. Round 1 (9 findings) covered the full Session 28 surface; Round 2 (3 findings) covered the tutorial voice clip wiring after the clips landed. All 12 findings fixed.
+
+#### Round 1 — Full Session 28 audit (9 findings)
+
+**Bug 1: Backup validation breaks old .dfw files (P1)**
+- Found: Session 28 audit
+- Cause: Session 26 added `voiceMemoImages` as a required field in `BackupMeta.contents` and `validateBackup` rejected any manifest missing it. Users importing `.dfw` files exported before Session 26 hit "Backup manifest has malformed contents" and couldn't restore
+- Fix: `BackupMeta.contents.voiceMemoImages` changed from `number` to `number?` (optional). Validator relaxed to `(meta.contents.voiceMemoImages !== undefined && typeof meta.contents.voiceMemoImages !== 'number')` — missing is valid, present-and-non-number still fails. Export side unchanged (new backups still write the count)
+
+**Bug 2: VoiceRecordScreen discards photos silently on Back (P1)**
+- Found: Session 28 audit
+- Cause: `beforeRemove` guard only triggered when `isRecordingRef.current === true`. Photos taken via the camera FAB (only usable in idle state, before recording starts) were stored in `capturedPhotos` state + `capturedPhotosRef` mirror — hitting Back without starting a recording bypassed the guard and the photos vanished with no warning
+- Fix: Guard extended to `const hasRecording = isRecordingRef.current; const hasPhotos = capturedPhotosRef.current.length > 0; if (!hasRecording && !hasPhotos) return;`. Alert title/message/cancel label dynamically adapt to recording-only ("Discard recording?"), photos-only ("Discard photos? / You have unsaved photos..."), or both ("Your recording and photos will be lost..."). Discard onPress only calls `recorder.stop()` when `hasRecording` was true
+
+**Bug 3: Share picker modal backdrop not theme-aware (P2)**
+- Found: Session 28 audit
+- Cause: The new scrollable share-picker modal (added to replace the Alert.alert 3-button Android limit for memos with 3+ clips) used hardcoded `backgroundColor: 'rgba(0,0,0,0.6)'` for the backdrop. Every other modal in the app uses `colors.modalOverlay`, which ranges from 0.5 in light themes to 0.85 in High Contrast. Fixed 0.6 was too dark in light themes and too light in High Contrast
+- Fix: `colors.modalOverlay` token used directly on the share-picker backdrop `TouchableOpacity`
+
+**Bug 4: Attachments count badge text hardcoded white (P3)**
+- Found: Session 28 audit
+- Cause: The little count badge on the bottom-toolbar paperclip button had `color: '#FFFFFF'` on top of a `sectionVoice`-colored circle. On Vivid theme where `sectionVoice` is `#42C6FF` (light cyan), white text was nearly invisible
+- Fix: `color: colors.mode === 'dark' ? '#FFFFFF' : '#000000'` — black on light themes, white on dark
+
+**Bug 5: Photo delete button border hardcoded white (P3)**
+- Found: Session 28 audit
+- Cause: The red X delete badge on edit-mode photo thumbnails had `borderColor: 'rgba(255,255,255,0.6)'` — fine on dark themes where the red-on-white-ring contrast works, but on light themes the white border on the red circle was low contrast against the light background
+- Fix: `borderColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.3)'`
+
+**Bug 6: Reminders tutorial tip said "6 hours" when actual is midnight next day (P3)**
+- Found: Session 28 audit
+- Cause: The "Mark Complete" tip body asserted "One-time ones get crossed off and hidden after 6 hours so they stop haunting you." The actual code (`ReminderScreen.tsx:292-298`) hides completed one-time reminders until midnight the next calendar day. `SIX_HOURS` exists as a constant but is used elsewhere (nearness-to-due calculations), not for the hide rule
+- Fix: Tip body rewritten to "tucked away after midnight so they stop haunting you by morning"
+
+**Bug 7: Calendar tutorial tip omitted voice memos (P3)**
+- Found: Session 28 audit
+- Cause: The "It's a Calendar" tip body said "It shows your alarms, reminders, and notes by date" but `CalendarScreen` also renders voice memos as purple dots. Users tapping the tutorial on the calendar screen would have been told their voice memos don't show there
+- Fix: Body updated to "It shows your alarms, reminders, notes, and voice memos by date"
+
+**Bug 8: Tutorial overlay flashed one frame before appearing (P3)**
+- Found: Session 28 audit
+- Cause: `useTutorial` started with `useState(false)` and flipped to `true` inside a `useEffect` that read `kvGet`. First render painted the screen without the overlay; the effect ran after commit and scheduled a second render with the overlay mounted. Visible as a one-frame flash where the screen was briefly unblocked
+- Fix: Replaced the effect with a lazy `useState` initializer that reads `kvGet` synchronously on mount. `expo-sqlite` is synchronous, so the correct initial state is known before the first render. `useEffect` import removed from the file
+
+**Bug 9: Tutorial TalkBack focus broken by backdrop parent + no-op card TouchableOpacity (P3)**
+- Found: Session 28 audit + follow-up TalkBack fix iterations
+- Cause: Two separate issues that compounded. **(A)** The card was wrapped in a `<TouchableOpacity activeOpacity={1} onPress={() => {}}>` purely to swallow taps so the backdrop's onDismiss wouldn't fire on card-area taps. Screen readers saw it as a real button with no action. **(B)** The card was nested inside the backdrop `TouchableOpacity`. The initial TalkBack fix attempted `importantForAccessibility="no-hide-descendants"` on the backdrop, but that property propagates to descendants, hiding the card content too. The fallback attempt (`importantForAccessibility="yes"` on the card) couldn't override the ancestor's `no-hide-descendants` per Android's accessibility tree rules. TalkBack users got either "exit tutorial, button" announced for the entire overlay (focus trapped on the backdrop) or complete silence (focus trapped on nothing)
+- Fix: Structural rewrite. Backdrop `TouchableOpacity` and card `View` are now **siblings** inside a wrapper `<View>`, not parent/child. The wrapper owns positioning (`position: 'absolute'`, `zIndex: 999`, flex centering); the backdrop is `position: 'absolute'` filling the wrapper with the dim background; the card is laid out by the wrapper's flex `justifyContent: 'center' / alignItems: 'center'`. Backdrop keeps `importantForAccessibility="no-hide-descendants"` (hidden from accessibility, still handles touch onPress). Card has `accessibilityViewIsModal={true}` but **no** `accessibilityLabel` (that collapses children into one focusable). Card-area taps don't propagate since backdrop is a sibling, not an ancestor. Dot row has `importantForAccessibility="no"`. TalkBack walks the card's children in order: title → body → Back (if visible) → Next/Got it
+
+#### Round 2 — Voice clip wiring audit (3 findings)
+
+Audit after the 15 ElevenLabs tutorial clips were wired through `tutorialClips.ts` and `TutorialOverlay.tsx`. All three findings are P3 polish but worth fixing before ship.
+
+**Bug 10: `handleNext` / `handlePrev` didn't stop the current clip synchronously (P3)**
+- Found: Round 2 audit
+- Cause: Audio stop only happened inside the `useEffect` cleanup tick when `currentIndex` changed. Between the user's tap and React committing the index change + running cleanup, the old clip kept playing for a few milliseconds — audible as a tail overlapping the start of the next clip on rapid advances
+- Fix: Added `stopClip()` at the top of `handleNext` and `handlePrev`, before `hapticLight()`. The ref-stored player is paused + removed synchronously the instant the user taps, so the tail is gone before the new clip fires. Same pattern already used in `handleGotIt` and `handleBackdropPress`
+
+**Bug 11: `playerRef.current = player` assigned after `player.play()` (P3)**
+- Found: Round 2 audit
+- Cause: The original async IIFE flow was `createAudioPlayer → volume → cancelled check → play() → assign ref`. Even though lines 155 and 156 are synchronous and no real yield happens between them, the theoretical window between `play()` starting and the ref being assigned meant a cleanup fired at exactly the wrong microtask couldn't find the player via `playerRef.current` to stop it. Defensive concern, not a reproducible leak
+- Fix: Moved `playerRef.current = player` to **immediately after** `createAudioPlayer` returns (before `volume = 1.0`, before the second `cancelled` check). The ref now points at the player from the instant it exists. The cancelled-branch was updated to also `playerRef.current = null` after the inline `player.remove()` so the ref doesn't dangle. `play()` fires last
+
+**Bug 12: No AppState listener — audio keeps playing in background (P3)**
+- Found: Round 2 audit
+- Cause: If the user backgrounded the app mid-tip, the MEDIA-stream clip kept playing (unlike alarm-stream clips which Android pauses on background automatically). No UI way to stop it from the lock screen since the tutorial overlay isn't a system notification
+- Fix: Added a second `useEffect([stopClip])` that subscribes to `AppState.addEventListener('change', ...)` and calls `stopClip()` whenever the next state is anything other than `'active'`. Cleanup returns `sub.remove()`. Matches the VoiceRecordScreen AppState pattern

@@ -22,6 +22,8 @@ import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAlarmList } from '../hooks/useAlarmList';
+import { useTutorial } from '../hooks/useTutorial';
+import TutorialOverlay from '../components/TutorialOverlay';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlarmList'>;
@@ -30,6 +32,7 @@ export default function AlarmListScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const al = useAlarmList();
+  const tutorial = useTutorial('alarmList');
 
   const handleEdit = useCallback((alarm: Alarm) => {
     navigation.navigate('CreateAlarm', { alarm });
@@ -374,6 +377,17 @@ export default function AlarmListScreen({ navigation }: Props) {
         onUndo={al.handleUndoDelete}
         onDismiss={al.handleUndoDismiss}
       />
+
+      {tutorial.showTutorial && (
+        <TutorialOverlay
+          tips={tutorial.tips}
+          currentIndex={tutorial.currentIndex}
+          onNext={tutorial.nextTip}
+          onPrev={tutorial.prevTip}
+          onDismiss={tutorial.dismiss}
+          sectionColor={colors.sectionAlarm}
+        />
+      )}
     </View>
   );
 }

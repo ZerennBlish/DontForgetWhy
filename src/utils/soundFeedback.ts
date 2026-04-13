@@ -1,4 +1,5 @@
 import { createAudioPlayer } from 'expo-audio';
+import type { PlayerWithEvents } from './audioCompat';
 
 const chirpSource = require('../../assets/chirp.mp3');
 
@@ -7,10 +8,10 @@ export async function playChirp(): Promise<void> {
     const player = createAudioPlayer(chirpSource);
     player.volume = 0.3;
 
-    const sub = (player as any).addListener('playbackStatusUpdate', (status: any) => {
+    const sub = (player as PlayerWithEvents).addListener('playbackStatusUpdate', (status) => {
       if (status.didJustFinish) {
         sub.remove();
-        (player as any).release();
+        player.remove();
       }
     });
 

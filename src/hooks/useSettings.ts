@@ -16,6 +16,7 @@ import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExp
 import { getVoiceEnabled, setVoiceEnabled } from '../services/voicePlayback';
 import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/haptics';
 import { refreshGameSoundsSetting } from '../utils/gameSounds';
+import { resetAllTutorials } from './useTutorial';
 import { saveBackground, loadBackground, clearBackground, getOverlayOpacity, setOverlayOpacity } from '../services/backgroundStorage';
 import {
   shareBackup, importBackup, getLastBackupDate,
@@ -83,6 +84,7 @@ interface UseSettingsResult {
   handleChangeFolder: () => Promise<void>;
   handleFrequencyChange: (freq: BackupFrequency) => void;
   handleSendFeedback: () => void;
+  handleResetTutorials: () => void;
 }
 
 export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
@@ -451,6 +453,12 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     await setOverlayOpacity(val);
   };
 
+  const handleResetTutorials = () => {
+    resetAllTutorials();
+    ToastAndroid.show('Tutorials reset \u2014 visit any screen to see tips again', ToastAndroid.SHORT);
+    hapticLight();
+  };
+
   const handleSendFeedback = () => {
     hapticLight();
     const version =
@@ -519,5 +527,6 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     handleChangeFolder,
     handleFrequencyChange,
     handleSendFeedback,
+    handleResetTutorials,
   };
 }

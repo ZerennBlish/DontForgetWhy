@@ -49,7 +49,7 @@ interface BackupMeta {
     noteImages: number;
     alarmPhotos: number;
     backgrounds: number;
-    voiceMemoImages: number;
+    voiceMemoImages?: number;
   };
 }
 
@@ -210,7 +210,8 @@ export async function validateBackup(fileUri: string): Promise<BackupMeta> {
       typeof meta.contents.voiceMemos !== 'number' ||
       typeof meta.contents.noteImages !== 'number' ||
       typeof meta.contents.alarmPhotos !== 'number' ||
-      typeof meta.contents.backgrounds !== 'number'
+      typeof meta.contents.backgrounds !== 'number' ||
+      (meta.contents.voiceMemoImages !== undefined && typeof meta.contents.voiceMemoImages !== 'number')
     ) {
       throw new Error('Backup manifest has malformed contents \u2014 expected counts for all media types.');
     }

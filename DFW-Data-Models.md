@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 26 (April 11, 2026)
+**Last updated:** Session 28 (April 13, 2026)
 
 ---
 
@@ -192,7 +192,7 @@ Included in every .dfw backup file.
 | contents.noteImages | number | Count of note image files |
 | contents.alarmPhotos | number | Count of alarm photo files |
 | contents.backgrounds | number | Count of background image files |
-| contents.voiceMemoImages | number | Count of voice-memo photo files (Session 26) |
+| contents.voiceMemoImages | number? | Count of voice-memo photo files (Session 26). **Session 28:** field made optional in `BackupMeta` type and `validateBackup` — treats a missing value as 0 so pre-Session-28 .dfw exports still import. New backups still write the count |
 
 ---
 
@@ -206,6 +206,43 @@ Included in every .dfw backup file.
 | autoBackupFolderUri | string | SAF directory URI |
 | autoBackupFolderName | string | Human-readable folder name |
 | autoBackupFrequency | string | 'daily'/'weekly'/'monthly' |
+
+## 8.5 Tutorial Dismissal kv_store Keys (Session 28)
+
+Per-screen first-visit tip carousel dismissal state. Written by `useTutorial.dismiss()`, read by the same hook's lazy `useState` initializer, wiped en masse by `resetAllTutorials()` from the Settings "Tutorial Guide" row. Value is the literal string `'true'` when dismissed, absent (null) otherwise — the presence check is `dismissed == null`.
+
+| Key | Screen |
+|-----|--------|
+| `tutorial_dismissed_alarmList` | AlarmListScreen |
+| `tutorial_dismissed_reminders` | ReminderScreen |
+| `tutorial_dismissed_notepad` | NotepadScreen |
+| `tutorial_dismissed_voiceMemoList` | VoiceMemoListScreen |
+| `tutorial_dismissed_calendar` | CalendarScreen |
+| `tutorial_dismissed_timers` | TimerScreen |
+| `tutorial_dismissed_games` | GamesScreen |
+
+## 8.6 Tutorial Voice Clip Registry (Session 28)
+
+`src/data/tutorialClips.ts` — `Record<string, number>` mapping each `TutorialTip.clipKey` to a `require()`-resolved module ID. 15 entries total, 1-to-1 with the 15 tips in `tutorialTips.ts`.
+
+```typescript
+const TUTORIAL_CLIPS: Record<string, number> = {
+  tutorial_alarmList_01: require('../../assets/voice/tutorial/tutorial_alarmList_01.mp3'),
+  // ... 14 more
+};
+```
+
+| clipKey pattern | Screen | Count |
+|-----------------|--------|-------|
+| `tutorial_alarmList_{01..03}` | AlarmListScreen | 3 |
+| `tutorial_reminders_{01..02}` | ReminderScreen | 2 |
+| `tutorial_notepad_{01..03}` | NotepadScreen | 3 |
+| `tutorial_voiceMemoList_{01..03}` | VoiceMemoListScreen | 3 |
+| `tutorial_calendar_01` | CalendarScreen | 1 |
+| `tutorial_timers_{01..02}` | TimerScreen | 2 |
+| `tutorial_games_01` | GamesScreen | 1 |
+
+Assets live at `assets/voice/tutorial/tutorial_{screenKey}_{NN}.mp3`. Resolution pipeline: `Asset.fromModule(TUTORIAL_CLIPS[clipKey]).downloadAsync()` → `asset.localUri` → `createAudioPlayer({ uri })`. Matches the `voicePlayback.ts` URI pattern for dev + production compatibility. Unlike voice roasts, tutorial clips play through the **MEDIA stream** (expo-audio, not the native `AlarmChannelModule`).
 
 ### WidgetTheme Interface (Session 11)
 
@@ -435,5 +472,5 @@ type PlayerWithEvents = AudioPlayer & {
 };
 ```
 - Patches expo-audio 55.x type drift. `AudioPlayer extends SharedObject<AudioEvents>`, but the re-export chain prevents TypeScript from inheriting `addListener` and `release` onto `AudioPlayer`. Runtime methods still work — only the type is broken
-- Call sites should cast `createAudioPlayer(...) as PlayerWithEvents` and prefer `player.remove()` (declared directly on `AudioPlayer`) over `player.release()`
-- **Currently unused** — `gameSounds.ts`, `soundFeedback.ts`, and `VoiceMemoListScreen.tsx` still use the raw type and throw TS errors. Adoption is on the Session 24 punch list
+- Call sites cast `createAudioPlayer(...) as PlayerWithEvents` and prefer `player.remove()` (declared directly on `AudioPlayer`) over `player.release()`
+- **Adopted in Session 28** — `gameSounds.ts`, `soundFeedback.ts`, and `VoiceMemoListScreen.tsx` now import `PlayerWithEvents` and cast at the createAudioPlayer call sites. All `as any` casts on `addListener`/`release` eliminated, all `.release()` swapped to `.remove()`. `npx tsc --noEmit` clean across the three files

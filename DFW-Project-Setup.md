@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 24 (April 10, 2026) — no build/setup changes; version still v1.18.0 (versionCode 35)
+**Last updated:** Session 28 (April 13, 2026) — v1.20.0 (versionCode 37) on `dev`, ready for production build. v1.19.0 (versionCode 36) still live on Play Store.
 
 ---
 
@@ -88,7 +88,7 @@ DontForgetWhy/
 ├── DFW-Decisions.md
 ├── DFW-Project-Setup.md
 ├── assets/
-│   └── voice/                     # 63 bundled MP3 voice clips
+│   └── voice/                     # 68 original MP3 clips + tutorial/ (15 MP3 tutorial clips, Session 28)
 └── src/
     ├── components/
     │   ├── AlarmCard.tsx
@@ -320,8 +320,8 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.14.0 (versionCode 31) — P6 Chess + Checkers |
-| Production status | v1.14.0 submitted to Google Play |
+| Current version | v1.20.0 (versionCode 37) on `dev`, ready for production build |
+| Production status | v1.19.0 live on Google Play; v1.20.0 ready to upload |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
@@ -330,9 +330,11 @@ DontForgetWhy/
 | Phase 4 (The Vault) | COMPLETE |
 | Phase 4.5 (Stability Sprint) | COMPLETE |
 | Phase 6 (Chess + Checkers) | COMPLETE |
-| Audit status | Session 18 checkers audit complete, 3 findings fixed |
-| Jest tests | 10 suites passing: time, timeUtils, noteColors, soundModeUtils, backupRestore, widgetPins, settings, chessAI (69 tests), checkersAI (52 tests) — ts-jest, node env |
-| EAS build credits | ~27 remaining (reset April 12) |
+| Audit status | Session 28 triple audit (Codex + Claude + Gemini) complete — Round 1: 9 findings fixed + TalkBack structural fix; Round 2 (voice clip wiring): 3 findings fixed |
+| Jest tests | 13 suites / 320 tests passing: time, timeUtils, noteColors, soundModeUtils, safeParse, asyncMutex, backupRestore, widgetPins, settings, voiceClipStorage, chessAI (69), checkersAI (52), tutorialTips (Session 28, 5 tests) — ts-jest, node env |
+| Voice clips | 83 total (68 original fire/snooze/timer/guess/dismiss/intro + 15 tutorial). ElevenLabs v3, same voice character throughout. `assets/voice/*.mp3` + `assets/voice/tutorial/*.mp3` |
+| EAS build credits | ~30 available (reset April 12) |
+| ElevenLabs | Subscription active — 83 clips shipped (68 original + 15 tutorial) |
 
 ### Packages Added (Session 12)
 - `expo-sqlite` — synchronous SQLite database (replaced AsyncStorage for all persistent storage)
@@ -365,16 +367,22 @@ DontForgetWhy/
 ### App.tsx Changes (Session 12)
 - `migrateFromAsyncStorage()` gate: migration runs before any screens render, App returns null until `dbReady` is true
 
-### Jest Setup (Session 11, expanded Session 15)
+### Jest Setup (Session 11, expanded Session 15, 24, 28)
 - **Preset:** `ts-jest` with `node` test environment
-- **Tests:** `__tests__/` at project root — 7 suites, 162 tests total:
+- **Tests:** `__tests__/` at project root — 13 suites, 320 tests total:
   - `time.test.ts` — formatTime (12h/24h)
   - `timeUtils.test.ts` — getRelativeTime, formatDeletedAgo (with fake timers)
   - `noteColors.test.ts` — getTextColor contrast
   - `soundModeUtils.test.ts` — 5 pure sound mode functions
+  - `safeParse.test.ts` — `safeParse<T>` + `safeParseArray<T>` (Session 24)
+  - `asyncMutex.test.ts` — `withLock` per-key async mutex (Session 24)
   - `backupRestore.test.ts` — backup validation, auto-backup settings
   - `widgetPins.test.ts` — all 4 pin categories (alarm, note, reminder, voice memo) with in-memory kv mock
   - `settings.test.ts` — settings CRUD, onboarding, silence-all, timer sound (with fake timers)
+  - `voiceClipStorage.test.ts` — clip CRUD, ordering, summaries (Session 26)
+  - `chessAI.test.ts` — 69 tests
+  - `checkersAI.test.ts` — 52 tests
+  - `tutorialTips.test.ts` — data validation for `TUTORIAL_TIPS` (Session 28): ≥7 screen keys, ≥1 tip per screen, non-empty title/body, letter-only keys, `clipKey` is undefined or non-empty string
 - **Run:** `npm test` or `npx jest`
 - **Config:** `package.json` `"jest"` section with `moduleNameMapper` for `src/` paths
 - **Scope:** Pure utility functions AND pure service files (those whose only side-effect is `kvGet`/`kvSet`/`kvRemove`, mocked with in-memory Map). No React Native, no SQLite, no native modules. Game engines (chessAI, checkersAI) tested directly (pure JS, no native deps).

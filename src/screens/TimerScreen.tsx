@@ -21,6 +21,8 @@ import { playChirp } from '../utils/soundFeedback';
 import { cycleSoundMode, getSoundModeIcon, getSoundModeLabel } from '../utils/soundModeUtils';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import TutorialOverlay from '../components/TutorialOverlay';
+import { useTutorial } from '../hooks/useTutorial';
 import APP_ICONS from '../data/appIconAssets';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import TimePicker from '../components/TimePicker';
@@ -33,6 +35,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Timers'>;
 export default function TimerScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const tutorial = useTutorial('timers');
   const { width: screenWidth } = useWindowDimensions();
   const presetCardWidth = (screenWidth - 32 - 16) / 3;
 
@@ -757,6 +760,17 @@ export default function TimerScreen({ navigation }: Props) {
         currentSoundID={timerSoundID}
       />
     </ScrollView>
+
+    {tutorial.showTutorial && (
+      <TutorialOverlay
+        tips={tutorial.tips}
+        currentIndex={tutorial.currentIndex}
+        onNext={tutorial.nextTip}
+        onPrev={tutorial.prevTip}
+        onDismiss={tutorial.dismiss}
+        sectionColor={colors.sectionTimer}
+      />
+    )}
     </View>
   );
 }

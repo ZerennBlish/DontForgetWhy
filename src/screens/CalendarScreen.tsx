@@ -14,6 +14,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
+import TutorialOverlay from '../components/TutorialOverlay';
+import { useTutorial } from '../hooks/useTutorial';
 import { loadAlarms } from '../services/storage';
 import { getReminders } from '../services/reminderStorage';
 import { getNotes } from '../services/noteStorage';
@@ -265,6 +267,7 @@ const dayCellStyles = StyleSheet.create({
 
 export default function CalendarScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
+  const tutorial = useTutorial('calendar');
   const insets = useSafeAreaInsets();
 
   const DOT_ALARM = colors.sectionAlarm;
@@ -1171,6 +1174,17 @@ export default function CalendarScreen({ navigation, route }: Props) {
         initialNumToRender={8}
         contentContainerStyle={styles.listContent}
       />
+
+      {tutorial.showTutorial && (
+        <TutorialOverlay
+          tips={tutorial.tips}
+          currentIndex={tutorial.currentIndex}
+          onNext={tutorial.nextTip}
+          onPrev={tutorial.prevTip}
+          onDismiss={tutorial.dismiss}
+          sectionColor={colors.sectionCalendar}
+        />
+      )}
     </View>
   );
 }

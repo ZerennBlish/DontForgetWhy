@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 26 (April 11, 2026)
+**Last updated:** Session 28 (April 13, 2026)
 
 ---
 
@@ -65,9 +65,10 @@
 - **Checkers** (Session 18) — vs CPU, 5 difficulty levels (Beginner through Expert), American rules (forced captures, promotion ends turn). Pure JS engine: minimax with alpha-beta, transposition table, killer moves, iterative deepening. No external deps. Checker piece PNGs (red, red-king, black, black-king) + weathered wood table background (WebP). Player picks color + difficulty. No blunder roasts, no take-back. Game state persists to SQLite. Memory Score: same point scale as chess.
 - **Memory Score** (now 7 games — Chess added Session 16, Checkers added Session 18. Max 140 points. Ranks from "Who Are You Again?" to "The One Who Remembers"). Header text-only (emoji stripped Session 12). Breakdown bars and detailed stat sections for all 7 games ordered: Guess Why, Daily Riddle, Chess, Checkers, Trivia, Sudoku, Memory Match.
 
-### Game Sound Effects (Session 23)
+### Game Sound Effects (Session 23, audioCompat adoption Session 28)
 - 11 sound files in `assets/sounds/` (wav format, bundled via metro.config.js assetExts)
 - `gameSounds.ts` — cached toggle pattern matching haptics.ts, fire-and-forget via `createAudioPlayer` (expo-audio)
+- **audioCompat adoption (Session 28):** `PlayerWithEvents` from `src/utils/audioCompat.ts` imported across `gameSounds.ts`, `soundFeedback.ts`, `VoiceMemoListScreen.tsx`, and `TutorialOverlay.tsx` (4 consumer files). All `as any` casts on `addListener`/`release` eliminated. `.release()` swapped to `.remove()` everywhere. `npx tsc --noEmit` clean across all four consumers
 - `VOLUMES: Record<SoundName, number>` map for per-sound volume control
 - Settings toggle: "Game Sounds" (default ON, stored in kv as `gameSoundsEnabled`)
 - Sound mapping:
@@ -154,6 +155,19 @@ borderColor:    colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 
 - **Color picker dismissal** — auto-dismisses on: hardware back, text input focus, Camera/Gallery/Draw actions. The toggle itself swaps state.
 - **Icon size consistency pass** — save/edit bumped from 18 → 24, trash → 20 (circle buttons), toolbar icons unified (paperclip 34, camera/gallery 24, draw 28, palette 38), HomeButton 20 → 24, BackButton 20 → 22 across 10+ files.
 - **Share integration** — title wired through `handleShare` eligibility check, passed to `ShareNoteModal` as `noteTitle` prop, rendered as `<h2>` in the HTML PDF/Print export, prepended with a newline separator in the text share option.
+
+### Tutorial Overlay System (Session 28)
+- Per-screen first-visit tip carousel. 7 screens each get their own short tour the first time the user visits them: **alarmList** (3 tips), **reminders** (2 tips), **notepad** (3 tips), **voiceMemoList** (3 tips), **calendar** (1 tip), **timers** (2 tips), **games** (1 tip). Dismissal is per-screen, stored in `kv_store` under `tutorial_dismissed_{screenKey}`, and never shown again until the user resets.
+- **Settings reset:** "Tutorial Guide" card row in the General section (subtitle "Show feature tips again") calls `resetAllTutorials()` which wipes every `tutorial_dismissed_*` key. Next visit to any wired screen re-renders the tip carousel. Toast: "Tutorials reset — visit any screen to see tips again".
+- **Sarcastic DFW voice copy from day one** — tips are written in the same personality voice as `snoozeMessages.ts`, `homeBannerQuotes.ts`, and `chessRoasts.ts`. No placeholder text. (Example: the swipe-to-delete tip reads "There's a 5-second undo toast in case your thumb moved faster than your brain, plus 30 days in the Deleted filter for the truly indecisive.")
+- **Voice clips (15 total)** — every tip has a `clipKey` mapping to a matching MP3 in `assets/voice/tutorial/`. The Alarm Guy character (same male early-30s ElevenLabs v3 voice as the existing fire/snooze/timer/dismiss clips) fires a one-liner each time a tip appears. Scripts use v3 audio tags (`[sighs]`, `[sarcastic]`, `[deadpan]`, `[annoyed]`, `[tired]`, `[resigned]`, `[condescending baby talk]`, etc.) for emotional direction. Clips riff independently from the body text — they add personality rather than narrating verbatim. Playback is through the **MEDIA stream** via `expo-audio` (user-initiated, not ALARM stream) using the same `Asset.fromModule + downloadAsync` production URI pattern as `voicePlayback.ts`. Player cast to `PlayerWithEvents` from `audioCompat.ts`. Clips can be skipped by dismissing or advancing — no auto-resume.
+- **Cancelled-flag race protection** — tapping Next rapidly can't leak players or double-stack audio. The effect's async IIFE closes over a local `cancelled` flag that's re-checked after `await asset.downloadAsync()`. If cleanup fires mid-download (because the user advanced to the next tip), the post-await branch returns before `createAudioPlayer` runs. `stopClip()` is called explicitly at the start of `handleNext` / `handlePrev` so the current clip silences on tap rather than on the effect-cleanup tick. `playerRef.current = player` is set **before** `player.play()` so any tip-change or unmount that fires between the two lines still finds the player for cleanup.
+- **AppState background pause** — a second `useEffect` subscribes to `AppState.addEventListener('change', ...)` and calls `stopClip()` on any state other than `'active'`. If the user backgrounds the app mid-tip, the clip stops instead of continuing to play into the system audio sink. Cleanup removes the listener on unmount.
+- **Hook** (`src/hooks/useTutorial.ts`) — pure logic (no UI imports, no audio imports — stays pure). Lazy `useState` initializer reads `kvGet` synchronously on first render, so the overlay is painted with the rest of the screen rather than flashing in a frame later. Returns `{ showTutorial, tips, currentIndex, nextTip, prevTip, dismiss }` plus the module-level `resetAllTutorials()` utility.
+- **Component** (`src/components/TutorialOverlay.tsx`) — section-colored card (thin `sectionColor + '40'` full border + 3px `sectionColor` left accent, `colors.card` background, 85% width, 320px max, 16px radius). Dot indicators only render when `tips.length > 1` (single-tip screens skip the row). Nav row: Back (left, fades to spacer on first tip) and Next/Got it (right, `Got it` on last tip fires dismiss). `hapticLight()` on every button.
+- **Backdrop/card sibling structure** — the backdrop `TouchableOpacity` and the card `View` are **siblings** inside a wrapper View, not parent/child. The earlier nested approach meant `importantForAccessibility="no-hide-descendants"` on the backdrop also hid the card from TalkBack. Siblings let the backdrop stay hidden from TalkBack while the card stays traversable. Card-area taps don't propagate to the backdrop since they're siblings, not ancestor/descendant.
+- **TalkBack behavior** — backdrop carries `importantForAccessibility="no-hide-descendants"` (hidden from accessibility tree, still handles touch `onPress`). Card carries `accessibilityViewIsModal={true}` (TalkBack focus trap) but **no** `accessibilityLabel` (that would collapse title + body + buttons into a single announced element). Decorative dot row carries `importantForAccessibility="no"`. TalkBack walks the card children in order: title → body → Back (if visible) → Next/Got it.
+- **Tests** — `__tests__/tutorialTips.test.ts` validates the data shape: ≥7 screen keys, every screen has ≥1 tip, non-empty title + body, letter-only keys, `clipKey` is either undefined or a non-empty string.
 
 ### Play Store Listing (Session 22)
 - 8 screenshots: Home, Alarms/Reminders/Calendar, Chess/Checkers/Memory, Notes, Timers, Settings, Widgets, Alarm Fire

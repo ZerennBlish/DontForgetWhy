@@ -31,8 +31,10 @@ import HomeButton from '../components/HomeButton';
 import SwipeableRow from '../components/SwipeableRow';
 import VoiceMemoCard from '../components/VoiceMemoCard';
 import UndoToast from '../components/UndoToast';
+import TutorialOverlay from '../components/TutorialOverlay';
+import { useTutorial } from '../hooks/useTutorial';
 import { createAudioPlayer } from 'expo-audio';
-import type { AudioStatus } from 'expo-audio';
+import type { PlayerWithEvents } from '../utils/audioCompat';
 import type { VoiceMemo } from '../types/voiceMemo';
 import APP_ICONS from '../data/appIconAssets';
 import type { RootStackParamList } from '../navigation/types';
@@ -68,6 +70,7 @@ function formatDeletedAgo(deletedAt: string): string {
 export default function VoiceMemoListScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const tutorial = useTutorial('voiceMemoList');
 
   const [emptyMsg] = useState(() => EMPTY_MESSAGES[Math.floor(Math.random() * EMPTY_MESSAGES.length)]);
   const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
@@ -123,7 +126,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     if (playerRef.current) {
       try {
         playerRef.current.pause();
-        (playerRef.current as any).release();
+        playerRef.current.remove();
       } catch { /* */ }
       playerRef.current = null;
     }
@@ -157,7 +160,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     playerRef.current = p;
     playbackProgressRef.current = 0;
     setPlayingMemoId(memo.id);
-    const sub = (p as any).addListener('playbackStatusUpdate', (status: any) => {
+    const sub = (p as PlayerWithEvents).addListener('playbackStatusUpdate', (status) => {
       if (status.didJustFinish) {
         playerListenerRef.current = null;
         sub.remove();
@@ -621,6 +624,17 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           onDismiss={handleUndoDismiss}
         />
       </View>
+
+      {tutorial.showTutorial && (
+        <TutorialOverlay
+          tips={tutorial.tips}
+          currentIndex={tutorial.currentIndex}
+          onNext={tutorial.nextTip}
+          onPrev={tutorial.prevTip}
+          onDismiss={tutorial.dismiss}
+          sectionColor={colors.sectionVoice}
+        />
+      )}
     </View>
   );
 }

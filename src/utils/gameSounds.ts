@@ -1,4 +1,5 @@
 import { createAudioPlayer } from 'expo-audio';
+import type { PlayerWithEvents } from './audioCompat';
 import { kvGet } from '../services/database';
 
 const GAME_SOUNDS_KEY = 'gameSoundsEnabled';
@@ -70,10 +71,10 @@ export function playGameSound(name: SoundName): void {
     const player = createAudioPlayer(SOUNDS[name]);
     player.volume = VOLUMES[name];
 
-    const sub = (player as any).addListener('playbackStatusUpdate', (status: any) => {
+    const sub = (player as PlayerWithEvents).addListener('playbackStatusUpdate', (status) => {
       if (status.didJustFinish) {
         sub.remove();
-        (player as any).release();
+        player.remove();
       }
     });
 

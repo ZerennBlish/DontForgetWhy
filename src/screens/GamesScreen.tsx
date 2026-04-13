@@ -7,6 +7,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GameNavButtons } from '../components/GameNavButtons';
+import TutorialOverlay from '../components/TutorialOverlay';
+import { useTutorial } from '../hooks/useTutorial';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import { ChevronRightIcon } from '../components/Icons';
@@ -18,6 +20,7 @@ export default function GamesScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [riddleStreak, setRiddleStreak] = useState(0);
+  const tutorial = useTutorial('games');
 
   useFocusEffect(
     useCallback(() => {
@@ -270,6 +273,17 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
       </TouchableOpacity>
     </ScrollView>
+
+    {tutorial.showTutorial && (
+      <TutorialOverlay
+        tips={tutorial.tips}
+        currentIndex={tutorial.currentIndex}
+        onNext={tutorial.nextTip}
+        onPrev={tutorial.prevTip}
+        onDismiss={tutorial.dismiss}
+        sectionColor={colors.sectionGames}
+      />
+    )}
     </View>
     </ImageBackground>
   );

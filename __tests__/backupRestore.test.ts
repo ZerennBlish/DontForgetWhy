@@ -288,6 +288,7 @@ const VALID_META = {
     noteImages: 5,
     alarmPhotos: 1,
     backgrounds: 2,
+    voiceMemoImages: 4,
   },
 };
 
@@ -369,5 +370,6 @@ describe('validateBackup', () => {
     expect(meta.contents.noteImages).toBe(5);
     expect(meta.contents.alarmPhotos).toBe(1);
     expect(meta.contents.backgrounds).toBe(2);
+    expect(meta.contents.voiceMemoImages).toBe(4);
   });
 });

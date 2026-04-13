@@ -47,7 +47,9 @@ import UndoToast from '../components/UndoToast';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import SwipeableRow from '../components/SwipeableRow';
+import TutorialOverlay from '../components/TutorialOverlay';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
+import { useTutorial } from '../hooks/useTutorial';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Reminders'>;
@@ -122,6 +124,7 @@ function formatCompletionDates(history: CompletionEntry[]): string {
 
 export default function ReminderScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const tutorial = useTutorial('reminders');
   const insets = useSafeAreaInsets();
   const btn = getButtonStyles(colors);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -953,6 +956,17 @@ export default function ReminderScreen({ navigation }: Props) {
         onUndo={handleUndoDelete}
         onDismiss={handleUndoDismiss}
       />
+
+      {tutorial.showTutorial && (
+        <TutorialOverlay
+          tips={tutorial.tips}
+          currentIndex={tutorial.currentIndex}
+          onNext={tutorial.nextTip}
+          onPrev={tutorial.prevTip}
+          onDismiss={tutorial.dismiss}
+          sectionColor={colors.sectionReminder}
+        />
+      )}
     </View>
   );
 }
