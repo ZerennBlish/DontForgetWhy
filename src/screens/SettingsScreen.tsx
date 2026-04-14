@@ -43,6 +43,7 @@ export default function SettingsScreen({ navigation }: Props) {
     bgUri, bgOpacity,
     lastBackup, isExporting, isImporting, showNudge,
     autoBackupEnabled, autoBackupFrequency, autoBackupFolderName,
+    googleUser,
     handleTimeFormatToggle, handleTimeInputModeChange,
     handleHapticsToggle, gameSoundsEnabled, handleGameSoundsToggle,
     handleVoiceToggle,
@@ -53,6 +54,7 @@ export default function SettingsScreen({ navigation }: Props) {
     handleAutoBackupToggle, handleChangeFolder, handleFrequencyChange,
     handleSendFeedback,
     handleResetTutorials,
+    handleGoogleSignIn, handleGoogleSignOut,
   } = useSettings(navigation);
 
   const btn = getButtonStyles(colors);
@@ -503,6 +505,56 @@ export default function SettingsScreen({ navigation }: Props) {
           Version info and credits.
         </Text>
       </TouchableOpacity>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <Text style={styles.sectionLabel}>Google Account</Text>
+
+        {googleUser ? (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              {googleUser.photoURL && (
+                <Image
+                  source={{ uri: googleUser.photoURL }}
+                  style={{ width: 36, height: 36, borderRadius: 18, marginRight: 12 }}
+                />
+              )}
+              <View style={{ flex: 1 }}>
+                {googleUser.displayName && (
+                  <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.textPrimary }}>
+                    {googleUser.displayName}
+                  </Text>
+                )}
+                <Text style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.textSecondary }}>
+                  {googleUser.email}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={btn.secondary}
+              onPress={handleGoogleSignOut}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Disconnect Google account"
+            >
+              <Text style={btn.secondaryText}>Disconnect</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            style={btn.primary}
+            onPress={handleGoogleSignIn}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Connect Google account"
+          >
+            <Text style={btn.primaryText}>Connect Google Account</Text>
+          </TouchableOpacity>
+        )}
+
+        <Text style={styles.description}>
+          Optional. Enables calendar sync and future connected features. Your local data stays on your phone either way.
+        </Text>
+      </View>
 
       <View style={[styles.card, { marginTop: 16 }]}>
         <Text style={styles.sectionLabel}>Permissions</Text>

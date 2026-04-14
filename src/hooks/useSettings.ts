@@ -14,6 +14,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import notifee from '@notifee/react-native';
 import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
 import { getVoiceEnabled, setVoiceEnabled } from '../services/voicePlayback';
+import {
+  signInWithGoogle,
+  signOutGoogle,
+  getCurrentUser,
+  onAuthStateChanged,
+} from '../services/firebaseAuth';
 import { hapticLight, hapticMedium, refreshHapticsSetting } from '../utils/haptics';
 import { refreshGameSoundsSetting } from '../utils/gameSounds';
 import { resetAllTutorials } from './useTutorial';
@@ -31,6 +37,12 @@ import type { RootStackParamList } from '../navigation/types';
 
 type SettingsNavigation = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 
+interface GoogleUserSummary {
+  displayName: string | null;
+  email: string;
+  photoURL: string | null;
+}
+
 interface UseSettingsResult {
   // Settings
   timeFormat: '12h' | '24h';
@@ -38,6 +50,9 @@ interface UseSettingsResult {
   hapticsEnabled: boolean;
   gameSoundsEnabled: boolean;
   voiceRoasts: boolean;
+
+  // Google account
+  googleUser: GoogleUserSummary | null;
 
   // Permissions
   hasPermissionIssues: boolean;
@@ -85,6 +100,19 @@ interface UseSettingsResult {
   handleFrequencyChange: (freq: BackupFrequency) => void;
   handleSendFeedback: () => void;
   handleResetTutorials: () => void;
+  handleGoogleSignIn: () => Promise<void>;
+  handleGoogleSignOut: () => void;
+}
+
+function toGoogleUserSummary(
+  user: { displayName: string | null; email: string | null; photoURL: string | null } | null,
+): GoogleUserSummary | null {
+  if (!user || !user.email) return null;
+  return {
+    displayName: user.displayName,
+    email: user.email,
+    photoURL: user.photoURL,
+  };
 }
 
 export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
@@ -108,6 +136,9 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
   const [autoBackupEnabled, setAutoBackupEnabledState] = useState(false);
   const [autoBackupFrequency, setAutoBackupFrequencyState] = useState<BackupFrequency>('weekly');
   const [autoBackupFolderName, setAutoBackupFolderName] = useState<string | null>(null);
+  const [googleUser, setGoogleUser] = useState<GoogleUserSummary | null>(() =>
+    toGoogleUserSummary(getCurrentUser()),
+  );
 
   useEffect(() => {
     loadSettings().then((s) => {
@@ -459,6 +490,50 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     hapticLight();
   };
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged((user) => {
+      setGoogleUser(toGoogleUserSummary(user));
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const credential = await signInWithGoogle();
+      const email = credential.user?.email ?? 'your account';
+      hapticMedium();
+      ToastAndroid.show(`Connected as ${email}`, ToastAndroid.SHORT);
+    } catch (e) {
+      const err = e as { code?: string; message?: string };
+      if (err?.code === '-5' || err?.code === 'SIGN_IN_CANCELLED') return;
+      ToastAndroid.show(err?.message || 'Google Sign-In failed', ToastAndroid.LONG);
+    }
+  };
+
+  const handleGoogleSignOut = () => {
+    Alert.alert(
+      'Disconnect Google Account?',
+      "This won't delete any data.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Disconnect',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOutGoogle();
+              hapticLight();
+              ToastAndroid.show('Disconnected', ToastAndroid.SHORT);
+            } catch (e) {
+              const err = e as { message?: string };
+              ToastAndroid.show(err?.message || 'Sign-out failed', ToastAndroid.LONG);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleSendFeedback = () => {
     hapticLight();
     const version =
@@ -481,6 +556,9 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     hapticsEnabled,
     gameSoundsEnabled,
     voiceRoasts,
+
+    // Google account
+    googleUser,
 
     // Permissions
     hasPermissionIssues,
@@ -528,5 +606,7 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     handleFrequencyChange,
     handleSendFeedback,
     handleResetTutorials,
+    handleGoogleSignIn,
+    handleGoogleSignOut,
   };
 }
