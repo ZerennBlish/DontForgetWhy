@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "190522733985",
+    "project_id": "dont-forget-why",
+    "storage_bucket": "dont-forget-why.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:190522733985:android:345701c00ca4db138f07e0",
+        "android_client_info": {
+          "package_name": "com.zerennblish.DontForgetWhy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnzMjksy_WEai7P7ae_QAJS2GX5kzef_A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
