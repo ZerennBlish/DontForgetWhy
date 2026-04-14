@@ -19,6 +19,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#121220"
       },
+      "googleServicesFile": "./google-services.json",
       "predictiveBackGestureEnabled": false,
       "versionCode": 39,
       "package": "com.zerennblish.DontForgetWhy",
@@ -89,7 +90,15 @@
       "expo-sharing",
       "expo-sqlite",
       "expo-document-picker",
-      "expo-iap"
+      "expo-iap",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.PLACEHOLDER"
+        }
+      ]
     ],
     "extra": {
       "eas": {
