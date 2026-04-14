@@ -8,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ToastAndroid,
+  AppState,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -191,7 +192,6 @@ export default function HomeScreen({ navigation }: Props) {
         if (cancelled) return;
         const uri = asset.localUri;
         if (!uri) return;
-        if (cancelled) return;
         const player = createAudioPlayer({ uri }) as PlayerWithEvents;
         openingPlayerRef.current = player;
         player.volume = 1.0;
@@ -214,6 +214,17 @@ export default function HomeScreen({ navigation }: Props) {
         openingPlayerRef.current = null;
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active' && openingPlayerRef.current) {
+        try { openingPlayerRef.current.pause(); } catch { /* */ }
+        try { openingPlayerRef.current.remove(); } catch { /* */ }
+        openingPlayerRef.current = null;
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   useFocusEffect(
