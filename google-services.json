@@ -12,7 +12,20 @@
           "package_name": "com.zerennblish.DontForgetWhy"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "190522733985-dd47d3iscusp3khcm1g0m14o9vcdm4e6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zerennblish.DontForgetWhy",
+            "certificate_hash": "e09596396249a57b4c4cfa8031607c28c4d840fb"
+          }
+        },
+        {
+          "client_id": "190522733985-r50fan5ba955qv2ab1n0oqrgv7kak7ba.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBnzMjksy_WEai7P7ae_QAJS2GX5kzef_A"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "190522733985-r50fan5ba955qv2ab1n0oqrgv7kak7ba.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
