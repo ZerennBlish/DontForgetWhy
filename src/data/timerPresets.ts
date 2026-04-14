@@ -20,6 +20,8 @@ const defaultPresets: TimerPreset[] = [
   { id: 'grill', icon: '\u{1F969}', label: 'Grill', seconds: 900 },
   { id: 'pet', icon: '\u{1F43E}', label: 'Pet', seconds: 900 },
   { id: 'kids', icon: '\u{1F476}', label: 'Kids', seconds: 1800 },
+  { id: 'crying', icon: '\u{1F622}', label: 'Crying', seconds: 2700 },
+  { id: 'revenge', icon: '\u{1FA92}', label: 'Revenge', seconds: 14400 },
 ];
 
 export { defaultPresets };

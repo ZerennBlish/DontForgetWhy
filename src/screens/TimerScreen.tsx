@@ -24,6 +24,7 @@ import HomeButton from '../components/HomeButton';
 import TutorialOverlay from '../components/TutorialOverlay';
 import { useTutorial } from '../hooks/useTutorial';
 import APP_ICONS from '../data/appIconAssets';
+import TIMER_PRESET_IMAGES from '../data/timerPresetAssets';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import TimePicker from '../components/TimePicker';
 import SoundPickerModal from '../components/SoundPickerModal';
@@ -64,6 +65,8 @@ export default function TimerScreen({ navigation }: Props) {
     handleModalSave, handleModalSaveOnly, handleTimerSoundSelect,
     closeModal,
   } = useTimerScreen();
+
+  const getPresetImage = (id: string) => TIMER_PRESET_IMAGES[id] ?? null;
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -167,6 +170,14 @@ export default function TimerScreen({ navigation }: Props) {
     presetIcon: {
       fontSize: 20,
       marginBottom: 2,
+    },
+    presetIconImage: {
+      width: 36,
+      height: 36,
+    },
+    activeIconImage: {
+      width: 28,
+      height: 28,
     },
     presetLabel: {
       fontSize: 11,
@@ -351,7 +362,10 @@ export default function TimerScreen({ navigation }: Props) {
             {pinned ? 'Pinned' : 'Pin'}
           </Text>
         </TouchableOpacity>
-        <Text style={styles.presetIcon}>{preset.icon}</Text>
+        {getPresetImage(preset.id)
+          ? <Image source={getPresetImage(preset.id)!} style={styles.presetIconImage} resizeMode="contain" />
+          : <Text style={styles.presetIcon}>{preset.icon}</Text>
+        }
         <Text style={styles.presetLabel}>{preset.label}</Text>
         <Text style={styles.presetDuration}>
           {preset.id === 'custom' ? 'Custom' : openModal ? 'Set' : formatDuration(preset.customSeconds || preset.seconds)}
@@ -398,7 +412,10 @@ export default function TimerScreen({ navigation }: Props) {
           {activeTimers.map((timer) => (
             <View key={timer.id} style={styles.activeCard}>
               <View style={styles.activeLeft}>
-                <Text style={styles.activeIcon}>{timer.icon}</Text>
+                {getPresetImage(timer.presetId)
+                  ? <Image source={getPresetImage(timer.presetId)!} style={styles.activeIconImage} resizeMode="contain" />
+                  : <Text style={styles.activeIcon}>{timer.icon}</Text>
+                }
                 <Text style={styles.activeLabel}>{timer.label}</Text>
               </View>
               <View style={styles.activeRight}>
@@ -499,7 +516,10 @@ export default function TimerScreen({ navigation }: Props) {
                 >
                   <Text style={[styles.cardPinOverlayText, { color: colors.accent }]}>Pinned</Text>
                 </TouchableOpacity>
-                <Text style={styles.presetIcon}>{p.icon}</Text>
+                {getPresetImage(p.id)
+                  ? <Image source={getPresetImage(p.id)!} style={styles.presetIconImage} resizeMode="contain" />
+                  : <Text style={styles.presetIcon}>{p.icon}</Text>
+                }
                 <Text style={styles.presetLabel}>{p.label}</Text>
                 <Text style={styles.presetDuration}>
                   {formatDuration(p.customSeconds || p.seconds)}

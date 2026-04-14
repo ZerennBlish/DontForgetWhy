@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,10 @@ import { getVoiceMemos } from '../services/voiceMemoStorage';
 import { loadActiveTimers } from '../services/timerStorage';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { loadSettings } from '../services/settings';
+import { kvGet, kvSet } from '../services/database';
+import { createAudioPlayer } from 'expo-audio';
+import { Asset } from 'expo-asset';
+import type { PlayerWithEvents } from '../utils/audioCompat';
 import { formatTime } from '../utils/time';
 import { getRandomBannerQuote } from '../data/homeBannerQuotes';
 import type { BannerQuote } from '../data/homeBannerQuotes';
@@ -171,6 +175,46 @@ export default function HomeScreen({ navigation }: Props) {
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [bannerQuote] = useState<BannerQuote>(getRandomBannerQuote);
   const [emptyLine] = useState(() => EMPTY_TODAY_LINES[Math.floor(Math.random() * EMPTY_TODAY_LINES.length)]);
+
+  const openingPlayerRef = useRef<PlayerWithEvents | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (kvGet('opening_clip_played')) return;
+    kvSet('opening_clip_played', 'true');
+
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../../assets/voice/Opening.mp3'));
+        await asset.downloadAsync();
+        if (cancelled) return;
+        const uri = asset.localUri;
+        if (!uri) return;
+        if (cancelled) return;
+        const player = createAudioPlayer({ uri }) as PlayerWithEvents;
+        openingPlayerRef.current = player;
+        player.volume = 1.0;
+        if (cancelled) {
+          try { player.remove(); } catch { /* */ }
+          openingPlayerRef.current = null;
+          return;
+        }
+        player.play();
+      } catch (e) {
+        console.warn('[HomeScreen] opening clip error:', e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (openingPlayerRef.current) {
+        try { openingPlayerRef.current.pause(); } catch { /* */ }
+        try { openingPlayerRef.current.remove(); } catch { /* */ }
+        openingPlayerRef.current = null;
+      }
+    };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -480,7 +524,7 @@ export default function HomeScreen({ navigation }: Props) {
             accessibilityRole="button"
           >
             <View style={styles.gearCircle}>
-              <Image source={APP_ICONS.gear} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={APP_ICONS.gear} style={{ width: 26, height: 26 }} resizeMode="contain" />
             </View>
           </TouchableOpacity>
         </View>
