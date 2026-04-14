@@ -31,17 +31,20 @@ import { loadSettings } from '../services/settings';
 import { hapticLight } from '../utils/haptics';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import APP_ICONS from '../data/appIconAssets';
+import { fetchCalendarEvents, getEventsForDate, type GoogleCalendarEvent } from '../services/googleCalendar';
+import { getCurrentUser } from '../services/firebaseAuth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>;
 
 type ViewMode = 'day' | 'week' | 'month';
-type FilterType = 'all' | 'alarms' | 'reminders' | 'notes' | 'voice';
+type FilterType = 'all' | 'alarms' | 'reminders' | 'notes' | 'voice' | 'google';
 
 type DayItem =
   | { type: 'alarm'; data: Alarm }
   | { type: 'reminder'; data: Reminder }
   | { type: 'note'; data: Note }
-  | { type: 'voiceMemo'; data: VoiceMemo };
+  | { type: 'voiceMemo'; data: VoiceMemo }
+  | { type: 'googleCal'; data: GoogleCalendarEvent };
 
 type ListRow =
   | { rowType: 'dateHeader'; dateStr: string; label: string }
@@ -75,7 +78,7 @@ const WEEKDAY_MAP: Record<number, AlarmDay> = {
 };
 
 const VIEW_MODES: ViewMode[] = ['day', 'week', 'month'];
-const FILTER_TYPES: FilterType[] = ['all', 'alarms', 'reminders', 'notes', 'voice'];
+const FILTER_TYPES: FilterType[] = ['all', 'alarms', 'reminders', 'notes', 'voice', 'google'];
 
 function getDaysInMonth(year: number, month: number): Date[] {
   const days: Date[] = [];
@@ -141,6 +144,7 @@ function getItemsForDate(
   reminderList: Reminder[],
   noteList: Note[],
   voiceMemoList: VoiceMemo[],
+  googleEventList: GoogleCalendarEvent[],
 ): DayItem[] {
   const items: DayItem[] = [];
   const d = new Date(dateStr + 'T00:00:00');
@@ -198,12 +202,48 @@ function getItemsForDate(
     }
   }
 
+  const googleForDate = getEventsForDate(dateStr, googleEventList);
+  for (const event of googleForDate) {
+    items.push({ type: 'googleCal', data: event });
+  }
+
   return items;
+}
+
+function getEventDateStrings(
+  event: GoogleCalendarEvent,
+  year: number,
+  month: number,
+): string[] {
+  const dates: string[] = [];
+  const prefix = `${year}-${String(month).padStart(2, '0')}`;
+  if (event.isAllDay) {
+    const startDateStr = event.startTime.slice(0, 10);
+    const endDateStr = event.endTime.slice(0, 10);
+    const start = new Date(startDateStr + 'T00:00:00');
+    const end = new Date(endDateStr + 'T00:00:00');
+    const cursor = new Date(start);
+    while (cursor < end) {
+      const ds = toDateString(cursor);
+      if (ds.startsWith(prefix)) dates.push(ds);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  } else {
+    const d = new Date(event.startTime);
+    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (ds.startsWith(prefix)) dates.push(ds);
+  }
+  return dates;
 }
 
 function getItemSortTime(item: DayItem): string {
   if (item.type === 'alarm') return item.data.time;
   if (item.type === 'reminder') return item.data.dueTime || '\xff';
+  if (item.type === 'googleCal') {
+    if (item.data.isAllDay) return '00:00';
+    const d = new Date(item.data.startTime);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
   const d = new Date(item.data.createdAt);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
@@ -221,6 +261,7 @@ function applyFilter(items: DayItem[], filter: FilterType): DayItem[] {
   if (filter === 'alarms') return items.filter((i) => i.type === 'alarm');
   if (filter === 'reminders') return items.filter((i) => i.type === 'reminder');
   if (filter === 'voice') return items.filter((i) => i.type === 'voiceMemo');
+  if (filter === 'google') return items.filter((i) => i.type === 'googleCal');
   return items.filter((i) => i.type === 'note');
 }
 
@@ -274,11 +315,14 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const DOT_REMINDER = colors.sectionReminder;
   const DOT_NOTE = colors.sectionNotepad;
   const DOT_VOICE = colors.sectionVoice;
+  const DOT_GOOGLE_CAL = colors.sectionCalendar;
 
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
+  const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([]);
+  const [isSignedIn, setIsSignedIn] = useState<boolean>(() => !!getCurrentUser());
   const today = toDateString(new Date());
   const initialDate = route.params?.initialDate || today;
   const [selectedDate, setSelectedDate] = useState(initialDate);
@@ -303,6 +347,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      let cancelled = false;
       (async () => {
         const [a, r, n, s, vm] = await Promise.all([
           loadAlarms(),
@@ -311,6 +356,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
           loadSettings(),
           getVoiceMemos(),
         ]);
+        if (cancelled) return;
         setAlarms(a.filter((x) => !x.deletedAt));
         setReminders(r.filter((x) => !x.deletedAt));
         setNotes(n.filter((x) => !x.deletedAt));
@@ -319,8 +365,41 @@ export default function CalendarScreen({ navigation, route }: Props) {
       })();
       loadBackground().then(setBgUri);
       getOverlayOpacity().then(setBgOpacity);
-    }, []),
+      const signedIn = !!getCurrentUser();
+      setIsSignedIn(signedIn);
+      if (signedIn) {
+        const year = parseInt(currentMonth.slice(0, 4), 10);
+        const month = parseInt(currentMonth.slice(5, 7), 10);
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        fetchCalendarEvents(startDate, endDate).then((events) => {
+          if (!cancelled) setGoogleEvents(events);
+        });
+      } else {
+        setGoogleEvents([]);
+      }
+      return () => {
+        cancelled = true;
+      };
+    }, [currentMonth]),
   );
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    let cancelled = false;
+    const year = parseInt(currentMonth.slice(0, 4), 10);
+    const month = parseInt(currentMonth.slice(5, 7), 10);
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    fetchCalendarEvents(startDate, endDate).then((events) => {
+      if (!cancelled) setGoogleEvents(events);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentMonth, isSignedIn]);
 
   // ── Marked dates for calendar dots (unchanged logic) ──
   const markedDates = useMemo(() => {
@@ -446,6 +525,17 @@ export default function CalendarScreen({ navigation, route }: Props) {
       }
     }
 
+    // Google Calendar events
+    for (const event of googleEvents) {
+      const eventDates = getEventDateStrings(event, year, month);
+      for (const ds of eventDates) {
+        ensure(ds);
+        if (!hasDot(ds, 'googleCal')) {
+          marks[ds].dots.push({ key: 'googleCal', color: DOT_GOOGLE_CAL });
+        }
+      }
+    }
+
     // Mark selected date
     if (marks[selectedDate]) {
       marks[selectedDate].selected = true;
@@ -454,13 +544,13 @@ export default function CalendarScreen({ navigation, route }: Props) {
     }
 
     return marks;
-  }, [alarms, reminders, notes, voiceMemos, currentMonth, selectedDate]);
+  }, [alarms, reminders, notes, voiceMemos, googleEvents, currentMonth, selectedDate]);
 
   // ── Day view items ──
   const dayRows = useMemo<ListRow[]>(() => {
-    const items = sortItems(getItemsForDate(selectedDate, alarms, reminders, notes, voiceMemos));
+    const items = sortItems(getItemsForDate(selectedDate, alarms, reminders, notes, voiceMemos, googleEvents));
     return items.map((item) => ({ rowType: 'event' as const, item }));
-  }, [alarms, reminders, notes, voiceMemos, selectedDate]);
+  }, [alarms, reminders, notes, voiceMemos, googleEvents, selectedDate]);
 
   // ── Week view items (always current week — the week containing today) ──
   const weekRows = useMemo<ListRow[]>(() => {
@@ -468,7 +558,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
     const dates = getDatesInRange(start, end);
     const rows: ListRow[] = [];
     for (const ds of dates) {
-      let items = getItemsForDate(ds, alarms, reminders, notes, voiceMemos);
+      let items = getItemsForDate(ds, alarms, reminders, notes, voiceMemos, googleEvents);
       items = applyFilter(items, filterType);
       items = sortItems(items);
       if (items.length > 0) {
@@ -479,7 +569,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       }
     }
     return rows;
-  }, [alarms, reminders, notes, voiceMemos, today, filterType]);
+  }, [alarms, reminders, notes, voiceMemos, googleEvents, today, filterType]);
 
   // ── Month view items ──
   const monthRows = useMemo<ListRow[]>(() => {
@@ -488,7 +578,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
     const dates = getDaysInMonth(year, month).map(toDateString);
     const rows: ListRow[] = [];
     for (const ds of dates) {
-      let items = getItemsForDate(ds, alarms, reminders, notes, voiceMemos);
+      let items = getItemsForDate(ds, alarms, reminders, notes, voiceMemos, googleEvents);
       items = applyFilter(items, filterType);
       items = sortItems(items);
       if (items.length > 0) {
@@ -499,7 +589,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       }
     }
     return rows;
-  }, [alarms, reminders, notes, voiceMemos, currentMonth, filterType]);
+  }, [alarms, reminders, notes, voiceMemos, googleEvents, currentMonth, filterType]);
 
   const listData = viewMode === 'day' ? dayRows : viewMode === 'week' ? weekRows : monthRows;
 
@@ -539,8 +629,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
         },
         legendRow: {
           flexDirection: 'row',
+          flexWrap: 'wrap',
           justifyContent: 'center',
-          gap: 16,
+          columnGap: 14,
+          rowGap: 6,
           paddingVertical: 8,
           paddingHorizontal: 16,
         },
@@ -858,6 +950,45 @@ export default function CalendarScreen({ navigation, route }: Props) {
         );
       }
 
+      if (item.type === 'googleCal') {
+        const e = item.data;
+        const start = new Date(e.startTime);
+        const hh = String(start.getHours()).padStart(2, '0');
+        const mm = String(start.getMinutes()).padStart(2, '0');
+        const timeLabel = e.isAllDay ? 'All Day' : formatTime(`${hh}:${mm}`, timeFormat);
+        return (
+          <View
+            style={[
+              styles.card,
+              {
+                borderColor: DOT_GOOGLE_CAL,
+                borderLeftColor: DOT_GOOGLE_CAL,
+                backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : DOT_GOOGLE_CAL + '15',
+              },
+            ]}
+            accessibilityRole="text"
+            accessibilityLabel={`Google Calendar event: ${e.summary}, ${timeLabel}${e.location ? `, ${e.location}` : ''}`}
+          >
+            <Image source={APP_ICONS.calendar} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle} numberOfLines={1}>{e.summary}</Text>
+              <Text style={styles.cardSub} numberOfLines={1}>
+                {timeLabel}
+                {e.location ? ` \u00B7 ${e.location}` : ''}
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.cardLabel,
+                { backgroundColor: DOT_GOOGLE_CAL + '20', color: DOT_GOOGLE_CAL },
+              ]}
+            >
+              Google
+            </Text>
+          </View>
+        );
+      }
+
       if (item.type === 'voiceMemo') {
         const memo = item.data;
         const dur = `${Math.floor(memo.duration / 60)}:${String(Math.floor(memo.duration % 60)).padStart(2, '0')}`;
@@ -990,8 +1121,14 @@ export default function CalendarScreen({ navigation, route }: Props) {
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: DOT_VOICE }]} />
-            <Text style={styles.legendText}>Voice Memos</Text>
+            <Text style={styles.legendText}>Voice</Text>
           </View>
+          {isSignedIn && (
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: DOT_GOOGLE_CAL }]} />
+              <Text style={styles.legendText}>Google</Text>
+            </View>
+          )}
         </View>
         {/* Quick-create buttons (day only, today or future) */}
         {viewMode === 'day' && selectedDate >= today && (
@@ -1057,7 +1194,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         {/* Filter capsules (week & month only) */}
         {viewMode !== 'day' && (
           <View style={styles.filterRow}>
-            {FILTER_TYPES.map((f) => (
+            {(isSignedIn ? FILTER_TYPES : FILTER_TYPES.filter((f) => f !== 'google')).map((f) => (
               <TouchableOpacity
                 key={f}
                 onPress={() => {
@@ -1098,6 +1235,8 @@ export default function CalendarScreen({ navigation, route }: Props) {
       selectedDate,
       today,
       navigation,
+      isSignedIn,
+      DOT_GOOGLE_CAL,
     ],
   );
 

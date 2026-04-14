@@ -7,13 +7,18 @@ import {
   type FirebaseAuthTypes,
 } from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { createOrUpdateUserProfile } from './firestore';
 
 const WEB_CLIENT_ID = '190522733985-r50fan5ba955qv2ab1n0oqrgv7kak7ba.apps.googleusercontent.com';
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
 
 let configured = false;
 function ensureConfigured(): void {
   if (configured) return;
-  GoogleSignin.configure({ webClientId: WEB_CLIENT_ID });
+  GoogleSignin.configure({
+    webClientId: WEB_CLIENT_ID,
+    scopes: [CALENDAR_SCOPE],
+  });
   configured = true;
 }
 
@@ -31,7 +36,11 @@ export async function signInWithGoogle(): Promise<FirebaseAuthTypes.UserCredenti
     throw new Error('Google Sign-In did not return an idToken — check webClientId configuration');
   }
   const credential = GoogleAuthProvider.credential(idToken);
-  return signInWithCredential(getAuth(), credential);
+  const userCredential = await signInWithCredential(getAuth(), credential);
+  createOrUpdateUserProfile(userCredential.user).catch((err) => {
+    console.warn('Failed to update user profile:', err);
+  });
+  return userCredential;
 }
 
 export async function signOutGoogle(): Promise<void> {
@@ -56,4 +65,24 @@ export function onAuthStateChanged(
   callback: (user: FirebaseAuthTypes.User | null) => void,
 ): () => void {
   return rnfbOnAuthStateChanged(getAuth(), callback);
+}
+
+export async function getAccessToken(): Promise<string | null> {
+  try {
+    ensureConfigured();
+    const tokens = await GoogleSignin.getTokens();
+    return tokens.accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function requestCalendarScope(): Promise<boolean> {
+  try {
+    ensureConfigured();
+    await GoogleSignin.addScopes({ scopes: [CALENDAR_SCOPE] });
+    return true;
+  } catch {
+    return false;
+  }
 }

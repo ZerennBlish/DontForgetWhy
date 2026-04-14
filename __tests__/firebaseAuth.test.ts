@@ -29,6 +29,14 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   },
 }));
 
+jest.mock('../src/services/firestore', () => ({
+  __esModule: true,
+  createOrUpdateUserProfile: jest.fn(() => Promise.resolve()),
+}));
+
+import { createOrUpdateUserProfile } from '../src/services/firestore';
+const createOrUpdateUserProfileMock = createOrUpdateUserProfile as jest.Mock;
+
 import * as rnfbAuth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import {
@@ -94,6 +102,8 @@ beforeEach(() => {
   gsiMock.signIn.mockReset().mockResolvedValue(successfulSignInResponse);
   gsiMock.signOut.mockReset().mockResolvedValue(null);
   gsiMock.hasPlayServices.mockReset().mockResolvedValue(true);
+
+  createOrUpdateUserProfileMock.mockReset().mockResolvedValue(undefined);
 });
 
 describe('getCurrentUser', () => {
@@ -124,6 +134,21 @@ describe('signInWithGoogle', () => {
       code: 'SIGN_IN_CANCELLED',
     });
     expect(authMock.signInWithCredential).not.toHaveBeenCalled();
+  });
+
+  it('fires createOrUpdateUserProfile after successful sign-in', async () => {
+    await signInWithGoogle();
+    expect(createOrUpdateUserProfileMock).toHaveBeenCalledTimes(1);
+    expect(createOrUpdateUserProfileMock).toHaveBeenCalledWith(sampleUser);
+  });
+
+  it('still resolves sign-in even if profile write rejects', async () => {
+    createOrUpdateUserProfileMock.mockRejectedValueOnce(new Error('firestore down'));
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(signInWithGoogle()).resolves.toBeDefined();
+    await new Promise((r) => setImmediate(r));
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   it('throws when idToken is missing from the response', async () => {

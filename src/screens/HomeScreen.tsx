@@ -35,6 +35,8 @@ import { shouldAutoBackup, autoExportBackup } from '../services/backupRestore';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import APP_ICONS from '../data/appIconAssets';
+import { fetchCalendarEvents, getEventsForDate, type GoogleCalendarEvent } from '../services/googleCalendar';
+import { getCurrentUser } from '../services/firebaseAuth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -51,13 +53,17 @@ const EMPTY_TODAY_LINES = [
 ];
 
 interface TodayEvent {
-  type: 'alarm' | 'reminder';
+  type: 'alarm' | 'reminder' | 'googleCal';
   title: string;
   time: string;
-  data: Alarm | Reminder;
+  data: Alarm | Reminder | GoogleCalendarEvent;
 }
 
-function getTodayEvents(alarms: Alarm[], reminders: Reminder[]): TodayEvent[] {
+function getTodayEvents(
+  alarms: Alarm[],
+  reminders: Reminder[],
+  googleEvents: GoogleCalendarEvent[],
+): TodayEvent[] {
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const weekday = WEEKDAY_MAP[now.getDay()];
@@ -116,6 +122,21 @@ function getTodayEvents(alarms: Alarm[], reminders: Reminder[]): TodayEvent[] {
     }
   }
 
+  const todayGoogle = getEventsForDate(todayStr, googleEvents);
+  for (const event of todayGoogle) {
+    let time = '00:00';
+    if (!event.isAllDay) {
+      const d = new Date(event.startTime);
+      time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    events.push({
+      type: 'googleCal',
+      title: event.summary,
+      time,
+      data: event,
+    });
+  }
+
   events.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
   return events;
 }
@@ -167,6 +188,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([]);
   const [noteCount, setNoteCount] = useState(0);
   const [voiceMemoCount, setVoiceMemoCount] = useState(0);
   const [runningTimerCount, setRunningTimerCount] = useState(0);
@@ -238,9 +260,17 @@ export default function HomeScreen({ navigation }: Props) {
           if (cancelled) return;
           const activeRems = rems.filter((r) => !r.deletedAt);
           setReminders(activeRems);
-          setTodayEvents(getTodayEvents(active, activeRems));
         });
       });
+      if (getCurrentUser()) {
+        const nowD = new Date();
+        const todayStr = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}-${String(nowD.getDate()).padStart(2, '0')}`;
+        fetchCalendarEvents(todayStr, todayStr).then((events) => {
+          if (!cancelled) setGoogleEvents(events);
+        });
+      } else {
+        setGoogleEvents([]);
+      }
       getNotes().then((loaded) => { if (!cancelled) setNoteCount(loaded.length); });
       getVoiceMemos().then((loaded) => { if (!cancelled) setVoiceMemoCount(loaded.filter((m) => !m.deletedAt).length); });
       loadActiveTimers().then((loaded) => {
@@ -259,6 +289,10 @@ export default function HomeScreen({ navigation }: Props) {
       return () => { cancelled = true; };
     }, []),
   );
+
+  useEffect(() => {
+    setTodayEvents(getTodayEvents(alarms, reminders, googleEvents));
+  }, [alarms, reminders, googleEvents]);
 
   useEffect(() => {
     (async () => {
@@ -316,6 +350,7 @@ export default function HomeScreen({ navigation }: Props) {
   }, [navigation]);
 
   const handleEventPress = useCallback((event: TodayEvent) => {
+    if (event.type === 'googleCal') return;
     hapticLight();
     if (event.type === 'alarm') {
       navigation.navigate('CreateAlarm', { alarm: event.data as Alarm });
@@ -631,28 +666,40 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.emptyToday}>{emptyLine}</Text>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
-              {todayEvents.map((event, i) => (
-                <TouchableOpacity
-                  key={`${event.type}-${i}`}
-                  onPress={() => handleEventPress(event)}
-                  activeOpacity={0.7}
-                  style={styles.eventRow}
-                  accessibilityLabel={`${event.title}, ${event.type === 'alarm' ? 'Alarm' : 'Reminder'}${event.time ? `, ${formatTime(event.time, timeFormat)}` : ''}`}
-                  accessibilityRole="button"
-                >
-                  <View
-                    style={[
-                      styles.eventDot,
-                      { backgroundColor: event.type === 'alarm' ? colors.sectionAlarm : colors.sectionReminder },
-                    ]}
-                  />
-                  <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
-                  <Text style={styles.eventSub}>
-                    {event.type === 'alarm' ? 'Alarm' : 'Reminder'}
-                    {event.time ? ` \u00B7 ${formatTime(event.time, timeFormat)}` : ''}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {todayEvents.map((event, i) => {
+                const isAllDayGoogle =
+                  event.type === 'googleCal' && (event.data as GoogleCalendarEvent).isAllDay;
+                const dotColor =
+                  event.type === 'alarm'
+                    ? colors.sectionAlarm
+                    : event.type === 'reminder'
+                    ? colors.sectionReminder
+                    : colors.sectionCalendar;
+                const typeLabel =
+                  event.type === 'alarm' ? 'Alarm' : event.type === 'reminder' ? 'Reminder' : 'Google';
+                const timeSuffix = isAllDayGoogle
+                  ? ' \u00B7 All Day'
+                  : event.time
+                  ? ` \u00B7 ${formatTime(event.time, timeFormat)}`
+                  : '';
+                return (
+                  <TouchableOpacity
+                    key={`${event.type}-${i}`}
+                    onPress={() => handleEventPress(event)}
+                    activeOpacity={event.type === 'googleCal' ? 1 : 0.7}
+                    style={styles.eventRow}
+                    accessibilityLabel={`${event.title}, ${typeLabel}${timeSuffix}`}
+                    accessibilityRole="button"
+                  >
+                    <View style={[styles.eventDot, { backgroundColor: dotColor }]} />
+                    <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
+                    <Text style={styles.eventSub}>
+                      {typeLabel}
+                      {timeSuffix}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           )}
         </View>
