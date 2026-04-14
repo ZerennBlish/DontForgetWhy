@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 28 (April 13, 2026)
+### Source of Truth · Updated: Session 29 (April 14, 2026)
 
 ---
 
@@ -7,15 +7,27 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.20.0 (versionCode 37) on `dev`, ready for production build |
+| **Current Version** | v1.21.0 (versionCode 39) on `dev` |
 | **Branch** | `dev` |
-| **Production Status** | v1.19.0 (versionCode 36) on Play Store. Session 28 work on `dev` ready to ship. |
-| **Current Focus** | Session 28: 8 targeted fixes, tutorial overlay system (7 screens, 15 voice clips, Settings reset), audit fixes, TalkBack structural fix. |
+| **Production Status** | **v1.21.0 (versionCode 39) live on Play Store.** Internal testing AAB of the same build also uploaded — used to unlock in-app-product creation for the `dfw_pro_unlock` SKU. |
+| **Current Focus** | Session 29: Timer preset WebP icons (21 presets), Opening.mp3 on HomeScreen, 4 audit fixes, **P5.5 Premium Foundation complete** (expo-iap + proStatus + useEntitlement + ProGate shipped dormant). |
 | **Blocked By** | Nothing |
-| **Next Action** | Production build, upload, ship. |
+| **Next Action** | Pick next session — Firebase activation (P8 prep), P5 Calendar Sync, P7 Pro Tier UI, multiplayer chess, or cloud Stockfish. |
 | **EAS Credits** | ~30 available (reset April 12) |
 | **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
 | **ElevenLabs** | Subscription active — 83 clips shipped (68 original + 15 tutorial) |
+
+---
+
+## NEXT SESSION CANDIDATES
+
+Picking the next body of work. Each candidate is scoped big enough for a full session but loose enough to reshape on the way in.
+
+- **Firebase backend setup (P8 prep)** — Activate the $300 Firebase credit, stand up Auth (Google Sign-In, optional — app works 100% offline without it) + Firestore. Lays groundwork for online riddles, global leaderboards, multiplayer chess, cloud Stockfish. Activation starts a 90-day consumption clock, so only pull the trigger when the first online feature is ready to ship within that window.
+- **Google Calendar Sync (P5)** — Re-open the deferred phase. Requires Firebase Auth + Google OAuth via `expo-auth-session`. Pull Google Calendar events into Today section + CalendarScreen dot indicators. Sign-in is voluntary and local-feeling — the "no accounts" brand evolves to "optional sign-in unlocks optional connected features" (see Decisions doc).
+- **P7 Pro Tier + Billing UI** — The actual paywall. All P5.5 plumbing is in production dormant. P7 is pure UI work: design locked-state visuals for Chess/Checkers/Sudoku/voice memos/photo backgrounds/note images/drawing/backup, place `ProGate` wrappers around the 8-10 gated surfaces, build the paywall modal, wire `useEntitlement().purchase` and `.restore` to buttons, ship.
+- **Multiplayer chess** — Firestore-backed async + realtime multiplayer. Pro-gated (P7 must ship first). Depends on Firebase.
+- **Cloud Stockfish** — Firebase Cloud Function hosting Stockfish for 2000+ ELO play. Pro-tier alternative to the local engine. Free tier keeps the offline engine. Depends on Firebase.
 
 ---
 
@@ -34,9 +46,9 @@
 | 4 | The Vault (Backup & Restore) | ✅ Done | Dev + Prod |
 | 4.5 | Stability Sprint | ✅ Done | Prod only |
 | 5 | Google Calendar Sync | ⏭️ Deferred | Dev + Prod |
-| 5.5 | Premium Foundation | ⬜ Waiting | Prod only |
+| 5.5 | Premium Foundation | ✅ Done | Dev + Prod |
 | 6 | Chess + Checkers + Blunder Roast | ✅ Done | Prod only |
-| 6.5 | Voice Content Expansion | ⬜ Waiting | Prod only |
+| 6.5 | Voice Content Expansion | 🟡 Partial | Prod only |
 | 7 | Pro Tier + Billing | ⬜ Waiting | Multiple |
 | 8 | Firebase Online + Social | ⬜ Waiting | Prod |
 
@@ -54,6 +66,7 @@
 - **Session 14 · Onboarding** — Shipped v1.10.1. Full rewrite with sarcastic copy, View-based icons, mic/camera permission slides, theme cycling preview, watermark, skip warnings, dynamic final slide.
 - **P4 · The Vault** — Shipped v1.11.0. Export/Import Memories (.dfw backup), auto-export via SAF to Google Drive/external folders, transactional restore with rollback, manifest-first architecture, strict validation, notification rescheduling, Jest tests.
 - **P4.5 · Stability Sprint** — Shipped v1.12.0. NotepadScreen + AlarmListScreen decomposed into thin shells + hooks + card components, full accessibility pass, PNG→WebP compression (31.8 MB → 1.5 MB), FlatList OOM prevention, Jest resurrection (162 tests), clean package audit.
+- **P5.5 · Premium Foundation** — Shipped v1.21.0 (Session 29). `expo-iap@^4.0.2` (Play Billing 8.x), Google Play product `dfw_pro_unlock` ($1.99, one-time, non-consumable) active, license testers configured. `proStatus.ts` (sync kv entitlement cache with safeParse + type guard), `useEntitlement.ts` (wraps useIAP with real restore flow + 60s timeout + cancel handling + unmount cleanup), `ProGate.tsx` (pass-through until P7). 18-test `proStatus.test.ts` suite. Ships dormant — plumbing in production before any user can be charged.
 - **P6 · Chess + Checkers + Blunder Roast** — Shipped v1.13.0 (chess) + v1.14.0 (checkers + scoring overhaul). Chess: chess.js, iterative-deepening minimax, opening book, TT, killer moves, null-move pruning, tapered eval, 5 difficulties, blunder roasts. Checkers: pure JS engine, American rules, 5 difficulties, forced capture, promotion-stops-chain. Scoring: max 140 (7 games × 20), rank thresholds scaled, chess/checkers stat sections in Memory Score.
 - **Session 19 · Visual Art Overhaul** — Memory Match → Memory Guy Match (22 custom cards + card back + felt bg). 10 trivia category icons + library bg. 9 rank tier images with new titles. GamesScreen + score screen emoji → custom art.
 - **Session 20 · Silver Metallic Icon Set + Guess Why Art** — 25+ silver/chrome utility icons replacing View-based CSS geometry. Two-tier visual language (silver core, anthropomorphic games). Screen header icons on 7 core screens. Sound mode icons. ShareNoteModal icons. FAB plus buttons. Guess Why art. Checker pieces (4 WebP). Icons.tsx pruned. Jest webp moduleNameMapper.
@@ -143,28 +156,34 @@
 
 ---
 
-## PHASE 5.5 — PREMIUM FOUNDATION
+## PHASE 5.5 — PREMIUM FOUNDATION ✅ COMPLETE
 
-**Version Target:** v1.15.0
+**Shipped in:** v1.21.0 (versionCode 39) — foundation dormant (no user-facing billing UI until P7).
 **Branch:** `dev`
-**New deps:** `expo-iap`
-**Build cost:** 1 dev build + 1 production build
+**New deps:** `expo-iap@^4.0.2`
+**Build cost:** 1 production build + 1 internal testing AAB (same binary; internal track upload was the prerequisite Google requires before in-app products can be created).
 
 ### Tasks
 
-- [ ] **5.5.1 Entitlement storage** — `proStatus.ts` service: checks Pro entitlement, caches in `kv_store` (tier, purchaseDate, productId). Single source of truth for "is this user Pro?"
-- [ ] **5.5.2 Install expo-iap** — Expo Module for Google Play Billing. `npx expo install expo-iap`. Native dep = requires dev build. Create in-app product in Play Console (one-time, $1.99, dormant — not surfaced to users yet).
-- [ ] **5.5.3 ProGate component** — wrapper that checks `proStatus`. Currently always unlocked (no paywall until P7). Apply gates to: Chess, Checkers, Sudoku, voice memos, photo backgrounds, note images, drawing, backup/restore, full voice pack.
-- [ ] **5.5.4 useEntitlement() hook** — React hook exposing Pro status to screens. Drives ProGate and future Pro UI.
-- [ ] **5.5.5 Backup entitlement flag** — export/import entitlement state with .dfw backup so Pro status survives restore.
-- [ ] **5.5.6 License testing setup** — configure Google Play license testers for test purchases without real charges.
-- [ ] **5.5.7 Jest tests** — proStatus service, entitlement logic, ProGate behavior (locked/unlocked).
-- [x] **5.5.8 Emoji picker overhaul** ✅ Shipped early in Session 16. 11 categories, 105 labeled emojis. EmojiPickerModal: horizontal capsule category tabs + 5-column labeled grid.
+- [x] **5.5.1 Entitlement storage** ✅ Session 29. `src/services/proStatus.ts` — synchronous service reading/writing `kv_store['pro_status']`. Exports `isProUser()`, `getProDetails()`, `setProStatus(details)`, `clearProStatus()`. Uses `safeParse` + `isValidProDetails` type guard so malformed/partial JSON can't fake entitlement. `ProDetails` shape: `{ purchased, productId, purchaseDate, purchaseToken? }`.
+- [x] **5.5.2 Install expo-iap** ✅ Session 29. `expo-iap@^4.0.2` — Expo module for Google Play Billing 8.x. Native dep = requires dev build. Added to `app.json` plugins array. Google Play in-app product **`dfw_pro_unlock`** created: **$1.99, one-time (non-consumable), active.** License testing configured via Google Play Console license testers for purchase-without-charge validation. Internal testing track AAB upload (vCode 39) was a prerequisite to unlock product creation in the Play Console.
+- [x] **5.5.3 ProGate component** ✅ Session 29. `src/components/ProGate.tsx` — pass-through wrapper accepting `{ feature: string, children: ReactNode }`. Renders children unconditionally. **Screen wrapping deferred to P7** — see Decisions doc for rationale (no value placing transparent wrappers across 8-10 files when the locked-state UI lives in P7).
+- [x] **5.5.4 useEntitlement() hook** ✅ Session 29. `src/hooks/useEntitlement.ts` — wraps expo-iap's `useIAP`. Exposes `{ isPro, loading, error, productPrice, purchase, restore }`. Handles: local-cache init via `isProUser()`, product fetch via `fetchProducts` with `.catch()`, price extraction via `product.displayPrice`, purchase flow via `requestPurchase` with 60s timeout fallback, real restore flow via `restorePurchases` + `availablePurchases` scan with automatic `finishTransaction` acknowledgement (critical — unacknowledged Android purchases auto-refund after 3 days), AppState-less cleanup via `useRef` timeout cleared in unmount effect, user-cancel detection via both `ErrorCode.UserCancelled` (async path) and the legacy `E_USER_CANCELLED` + `message.includes('cancel')` fallback (sync path).
+- [x] **5.5.5 Backup entitlement flag** ✅ Session 29 (covered for free). The .dfw backup archives the entire `kv_store` table via the existing `dfw.db` SQLite snapshot path in `backupRestore.ts`. `pro_status` is a standard kv key, so it survives backup/restore round-trips without any backup-side code changes. No manifest field addition needed.
+- [x] **5.5.6 License testing setup** ✅ Session 29. Google Play Console license testers configured under the Bald Guy & Company Games account. Test purchases bypass real charges, allow full purchase + restore + refund cycles against the production `dfw_pro_unlock` SKU.
+- [x] **5.5.7 Jest tests** ✅ Session 29. `__tests__/proStatus.test.ts` — 18 tests covering `isProUser` / `getProDetails` / `setProStatus` / `clearProStatus` + a full shape-validation describe block (empty object, partial object, wrong-type fields, JSON `null`, JSON string, JSON number coercion). Same `Map`-backed kv mock pattern as `settings.test.ts`. Full suite 14 suites / 338 tests passing.
+- [x] **5.5.8 Emoji picker overhaul** ✅ Shipped early in Session 16. 11 categories, 105 labeled emojis.
 
 ### Audit Gate
-- [ ] Full dual audit before production build
-- [ ] `npx tsc --noEmit` — 0 errors
-- [ ] Increment version + versionCode
+- [x] Secondary (Claude) audit on all four P5.5 files — 1 P1 (non-functional restore) + 3 P2 (unhandled fetchProducts rejection, stuck loading timeout, unvalidated `as ProDetails` cast) + 6 P3 (import path, safeParse usage, product lookup field, test coverage, STORAGE_KEY duplication, unused prop). All findings fixed.
+- [x] `npx tsc --noEmit` — 0 errors
+- [x] `npx jest` — 14 suites, 338 tests passing
+- [x] Version bump v1.20.0 → v1.21.0, versionCode 37 → 39 (38 was the first Session 29 build before the Premium Foundation work landed)
+
+### P5.5 Design Notes
+- **Dormant by design.** Every P5.5 artifact ships but is inert until P7. `isProUser()` is never read by any screen. `useEntitlement()` is never mounted. `ProGate` renders children unconditionally. Purpose is to have the billing plumbing settled and in production before any user can be charged — so P7 is UI work, not plumbing + UI work under time pressure.
+- **Non-consumable.** `isConsumable: false` in `finishTransaction()` — a lifetime unlock should never be consumed. Acknowledgement still required within 3 days or Google auto-refunds; `useEntitlement` handles this in both the new-purchase path (onPurchaseSuccess → finishTransaction) and the restore path (availablePurchases effect → finishTransaction with swallow-on-error catch).
+- **Single SKU.** `'dfw_pro_unlock'` is the only product — one toggle between Free and Pro. No tiers, no subscriptions, no upgrade paths to reason about.
 
 ---
 
@@ -342,16 +361,17 @@
 
 ---
 
-## PHASE 6.5 — VOICE CONTENT EXPANSION
+## PHASE 6.5 — VOICE CONTENT EXPANSION 🟡 PARTIAL
 
-**Version Target:** v1.15.0
+**Status:** Opening.mp3 shipped in Session 29 (wired to HomeScreen first-mount with `kvGet` flag gate). Remaining clips deferred to post-Pro-tier — voice content is a premium surface and ships after the paywall is live.
+
 **Build cost:** 1 production build (--clear flag for new audio assets)
 
 ### Tasks
 
-- [ ] **6.5.1 Onboarding voice intro** — Alarm Guy clip on first launch
-- [ ] **6.5.2 Voice memos attachable to alarms** — hear your own voice when alarm fires
-- [ ] **6.5.3 More in-app roast moments** — navigation, idle, trivia/riddle
+- [x] **6.5.1 Opening.mp3 intro** — Alarm Guy clip plays once on first HomeScreen mount after onboarding, kv flag gate. Session 29.
+- [ ] **6.5.2 Voice memos attachable to alarms** — hear your own voice when alarm fires — **deferred to post-P7**
+- [ ] **6.5.3 More in-app roast moments** — navigation, idle, trivia/riddle — **deferred to post-P7**
 - [ ] **6.5.4 Female voice character design pass** — concept only, not shipping yet
 
 ---
@@ -481,8 +501,14 @@
 - Don't ship dead features
 - Build with `--clear` when new assets added
 - Always include Jest tests for new services/features
-- Four backups: desktop + laptop + GitHub + USB
+- Backups: desktop (primary) + GitHub + USB. Laptop no longer used for coding (WSL freezes) — kept as passive git backup and voice/image workstation only.
 - Never put repos in OneDrive
+
+### Git Rules
+
+- `main` is a milestone checkpoint. Merge `dev` → `main` when a body of work is complete and stable, not every build.
+- Tag releases on `dev` (version bumps + versionCode bumps live on `dev`).
+- All day-to-day work happens on `dev`.
 
 ---
 
@@ -530,4 +556,5 @@
 | Apr 10 | Session 24 full codebase audit sweep. 8-category dual audit (Codex + Gemini). Dead code removed (alarmSounds.ts + 26 icon exports + orphan styles across 13 files + dead exports across 27 files). Theme tokens added (success + overlaySecondary). Accessibility pass across critical screens/cards/modals/forms/games. FlatList perf configs. Data safety: safeParse + asyncMutex utilities wired across 13 storage files, restore mutex, never-throw autoBackup. Navigation beforeRemove guards with savedRef bypass. Type safety in migrations/forms/hooks. `audioCompat.ts` type-compat layer scaffolded (not yet imported). `GameNavButtons.tsx` + 8 game icons + 5 new trivia/sudoku sounds + lock/checkmark chrome icons on disk but wiring was reverted after laptop issues (stranded files: broken icon refs in GameNavButtons). Visual fixes: FAB chrome circle on 4 list screens, silver notepad fallback on NoteCard/DeletedNoteCard. No version bump — audit sits on dev unshipped. |
 | Apr 12 | Session 27 NoteEditorModal redesign + note titles. NoteEditorModal rewritten: useNoteEditor hook extraction (all state + logic), 5 sub-components (NoteEditorTopBar, NoteEditorToolbar, NoteColorPicker, NoteImageStrip), bottom toolbar (Camera, Gallery, Draw, Colors, Attached), dropdown menu eliminated. Voice recording removed from notes (legacy playback kept via MemoCard). Text limits removed (notes unlimited, voice memo notes unlimited, titles stay 100). Note title feature: new `title` column on notes table, Note type updated, wired through useNoteEditor + useNotepad + NoteEditorModal save flow, title UI in editor. Attachments panel: images behind paperclip button in edit mode, inline in view mode. Scrollable image strip (horizontal ScrollView). Icon size consistency pass across 10+ files (save=24, edit=24, trash=20, toolbar circles ~56, icons ~28, HomeButton=24, BackButton=22). New asset: paperclip.webp. Dual audit (Codex + Gemini) — 6 findings fixed. Visual polish: image positioning, centering, title layout. |
 | Apr 11 | Session 26 voice memo clips + photos + icon overhaul. Memos are now containers holding multiple audio clips (`voice_clips` table, `VoiceClip` type, `voiceClipStorage` service, automatic legacy migration). Clip playback modes (Stop/Play All/Repeat). Voice memo photos via camera (record screen) + gallery (detail screen), 5-photo cap, ImageLightbox view, new `voice-memo-images/` folder + `images TEXT` column on voice_memos. Recording flow rewrite: VoiceRecordScreen creates memo + first clip directly, eliminates `tempUri` handoff path entirely, atomic save with rollback on clip failure. Icon overhaul: floppy-disk (save) + pencil (edit) icons, replaced text Edit/Save buttons with circle icon buttons across VoiceMemoDetail/NoteEditorModal/CreateAlarm/CreateReminder, timer modal redesigned (3 circle action buttons: red cancel / accent save-only / success start with new `handleModalSaveOnly`), sound/bell + emoji circles got tappable treatment, reminder/timer/alarm icon-picker fallbacks show silver `+`, calendar inline icons restructured into proper flex rows. Dual audit (Codex + Gemini) — 8 findings fixed (HIGH: focus reload missed memo, non-atomic save, stale capturedPhotos closure; MEDIUM: 5-photo cap, backup meta count, migration inserter; LOW: a11y label, Array.isArray). Re-audit clean. 315 tests passing, tsc clean. Ready for device testing then ship. |
+| Apr 14 | Session 29: **Timer preset WebP icons + Opening.mp3 + P5.5 Premium Foundation shipped.** Timer presets: 21 built-in presets now render custom WebP art via new `timerPresetAssets.ts` registry (user-created timers still use emoji). 2 new presets added: Crying (2700s / 45min) and Revenge (14400s / 4hr). Opening.mp3 wired to HomeScreen: plays once on first mount after onboarding, gated behind a `kvGet`/`kvSet` flag so it never replays (duplicate playback from OnboardingScreen removed during wiring). 4 audit fixes: AppState background listener (pause audio when app backgrounds), dead code removal, double-lookup collapse on TimerScreen preset rendering, a11y pass on new icons. **P5.5 Premium Foundation COMPLETE** — `expo-iap@^4.0.2` installed (Play Billing 8.x, Expo-native, TypeScript-first); Google Play in-app product `dfw_pro_unlock` created ($1.99, one-time, non-consumable, active); license testers configured; `src/services/proStatus.ts` (sync kv-backed entitlement cache with safeParse + `isValidProDetails` type guard); `src/hooks/useEntitlement.ts` (wraps `useIAP`, real restore flow, 60s purchase timeout, cancel handling, unmount cleanup); `src/components/ProGate.tsx` (pass-through until P7); `__tests__/proStatus.test.ts` (18 tests, full shape validation). Foundation ships dormant — no billing UI until P7. Secondary (Claude) audit on P5.5 found 1 P1 (non-functional restore) + 3 P2 + 6 P3, all fixed. Backup entitlement covered for free (pro_status is a standard kv key, already part of dfw.db backup archive). Internal testing AAB uploaded alongside production AAB (vCode 39) — internal track upload was the prerequisite Google requires before in-app products can be created in Play Console. **v1.21.0 (versionCode 39), live on Play Store.** |
 | Apr 13 | Session 28: 8 targeted fixes + tutorial overlay system with voice clips. Fixes: useFocusEffect preserves title/note on re-focus, back button peels attachments panel before save dialog, share clip picker uses scrollable modal (Alert.alert 3-button Android limit), VoiceRecordScreen back confirms photo discard, toolbar/panel uses theme colors not hardcoded rgba, attachments panel dismisses on text focus with empty-photo guard, backup validates voiceMemoImages field with backward compat for old manifests, audioCompat.ts PlayerWithEvents adopted across 4 files replacing `as any` casts. Tutorial system: per-screen first-visit tip carousel with sarcastic DFW voice copy, useTutorial hook (kvGet/kvSet dismissal, lazy initializer for flash-free mount), TutorialOverlay component (section-colored card, dot indicators, backdrop dismiss, sibling structure for TalkBack), tutorialTips.ts data for 7 screens (alarmList 3, reminders 2, notepad 3, voiceMemoList 3, calendar 1, timers 2, games 1), **15 ElevenLabs voice clips in assets/voice/tutorial/ with expo-audio MEDIA stream playback** (Asset.fromModule + downloadAsync, PlayerWithEvents, cancelled-flag race protection, AppState background pause), tutorialClips.ts registry, Settings Tutorial Guide reset row, Jest data validation tests. Wired to AlarmListScreen, ReminderScreen, NotepadScreen, VoiceMemoListScreen, CalendarScreen, TimerScreen, GamesScreen. Triple audit (Codex + Claude + Gemini) — 9 initial findings fixed + 3 voice clip audit findings fixed: backup backward compat for old .dfw files, VoiceRecordScreen photo-only discard guard, share picker theme-aware backdrop, badge/border theme compliance, 2 tip copy corrections (reminders 6hr→midnight, calendar missing voice memos), tutorial flash eliminated via lazy useState, no-op TouchableOpacity a11y fix, TalkBack structural fix (backdrop/card siblings not parent/child), stopClip on tip advance (no audio trail), playerRef before play (no leak window), AppState background pause. **v1.20.0 (versionCode 37).** |

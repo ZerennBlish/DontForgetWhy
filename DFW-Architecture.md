@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 28 (April 13, 2026)
+**Last updated:** Session 29 (April 14, 2026)
 
 ---
 
@@ -415,6 +415,39 @@ Male, early 30s, American accent. Tired, sarcastic, self-aware app personality. 
 | `src/screens/GamesScreen.tsx` | MODIFIED | Tutorial overlay wired (`useTutorial('games')`, `colors.sectionGames`) |
 | `src/screens/SettingsScreen.tsx` | MODIFIED | New "Tutorial Guide" card row in General section above Send Feedback. `onPress={handleResetTutorials}`, subtitle "Show feature tips again", chevron-right indicator |
 | `src/hooks/useSettings.ts` | MODIFIED | Added `handleResetTutorials` — calls `resetAllTutorials()` from `useTutorial.ts`, toasts "Tutorials reset — visit any screen to see tips again", fires `hapticLight()`. Returned from `UseSettingsResult` for SettingsScreen |
+
+### New/Modified Files in Session 29
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/data/timerPresetAssets.ts` | NEW | Timer preset WebP registry — `Record<string, number>` mapping preset id → `require('../../assets/timer-presets/{preset}.webp')` module ID. 21 entries, one per built-in preset. TimerScreen resolves preset rendering to `<Image>` via this registry; user-created timers fall through to the emoji path. |
+| `assets/timer-presets/` | NEW | 20 WebP art files shared across the 21 built-in timer presets (one preset falls through to the shared/emoji path — registry is sparse by design). Includes the 2 new Session 29 presets (`crying.webp` @ 2700s, `revenge.webp` @ 14400s). Style matches the two-tier chrome/character system: weathered character-driven art sits in the timer grid. |
+| `src/data/timerPresets.ts` | MODIFIED | Added Crying (2700s / 45min) and Revenge (14400s / 4hr) preset entries. List now 21 items. |
+| `src/screens/HomeScreen.tsx` | MODIFIED | Opening.mp3 wired: on first mount, reads `kvGet('openingClipPlayed')`; if missing, plays `assets/voice/Opening.mp3` via `expo-audio` MEDIA stream (same `Asset.fromModule + downloadAsync` + `PlayerWithEvents` pattern as tutorial clips), then calls `kvSet('openingClipPlayed', '1')`. `AppState.addEventListener('change', ...)` pauses on background. `cancelled`-flag race protection on the async IIFE. Duplicate Opening playback from `OnboardingScreen.tsx` removed as part of the wiring — the home-screen first-mount is now the single source of truth. |
+| `src/screens/OnboardingScreen.tsx` | MODIFIED | Duplicate Opening.mp3 playback removed (moved to HomeScreen, gated on first mount). |
+| `assets/voice/Opening.mp3` | NEW | ElevenLabs v3 MP3, same male early-30s Alarm Guy character as existing fire/snooze/timer/tutorial clips. First-launch greeting, plays once. Brings total bundled voice clips to 84 (68 original + 15 tutorial + 1 opening). |
+| `src/screens/TimerScreen.tsx` | MODIFIED | Preset cell rendering branches on `timerPresetAssets[preset.id]` — renders `<Image>` when the asset exists, otherwise falls through to the emoji fallback for user-created timers. |
+| `src/services/proStatus.ts` | NEW | Synchronous Pro entitlement cache backed by `kv_store['pro_status']`. Exports `isProUser()`, `getProDetails()`, `setProStatus(details)`, `clearProStatus()`. Uses `safeParse` + `isValidProDetails` type guard so malformed / partial / wrong-shape JSON can never fake entitlement. `ProDetails` shape: `{ purchased: boolean, productId: string, purchaseDate: string, purchaseToken?: string }`. No async/await — kvGet/kvSet/kvRemove are already synchronous. |
+| `src/hooks/useEntitlement.ts` | NEW | React hook wrapping expo-iap's `useIAP`. Exposes `{ isPro, loading, error, productPrice, purchase, restore }`. Local cache init via `isProUser()` (works offline). `fetchProducts` with `.catch()` for network flakes. Price via `products.find(p => p.id === PRODUCT_ID).displayPrice`. Real restore via `restorePurchases` + `availablePurchases` scan + `finishTransaction` acknowledge (critical — unacknowledged Android purchases auto-refund after 3 days). 60s `setTimeout` fallback for stuck `loading`, cleared in both callbacks and in an unmount effect. User-cancel handled via `ErrorCode.UserCancelled` (async error path) + legacy `E_USER_CANCELLED` + `message.includes('cancel')` (sync catch path). `PRODUCT_ID = 'dfw_pro_unlock'`. |
+| `src/components/ProGate.tsx` | NEW | `{ feature: string, children: ReactNode }` pass-through wrapper. Renders `<>{children}</>` unconditionally. Screen wrapping deferred to P7 — see DFW-Decisions.md. |
+| `__tests__/proStatus.test.ts` | NEW | 18 Jest tests covering `isProUser` / `getProDetails` / `setProStatus` / `clearProStatus` + `shape validation` block (empty object, partial object, wrong-type fields, JSON `null`, JSON string, wrong-type composites). Same `Map`-backed kv mock pattern as `settings.test.ts`. |
+| `app.json` | MODIFIED | Added `expo-iap` to the `expo.plugins` array. Bumped `expo.version` `1.20.0 → 1.21.0` and `expo.android.versionCode` `37 → 38 → 39` (38 was the first Session 29 build before the P5.5 work landed; 39 is the one that shipped to both production and internal testing tracks). |
+| `package.json` | MODIFIED | Added `"expo-iap": "^4.0.2"` to dependencies. |
+
+### Session 29 Native Dependencies
+
+- **`expo-iap@^4.0.2`** — Expo-native Google Play Billing 8.x wrapper. Native module, **requires a dev/production build** (cannot run in Expo Go or a dev client without the module). Registered in `app.json` `expo.plugins`. First Session 29 dev build bumps vCode from 37 → 38 → 39 to reflect the native-surface change.
+- TypeScript-first, re-exports `ErrorCode` enum (kebab-case values like `'user-cancelled'`, NOT the legacy `'E_USER_CANCELLED'`) via `export * from './types'`.
+- `useIAP` hook provides: `connected`, `products`, `availablePurchases`, `fetchProducts`, `requestPurchase`, `finishTransaction`, `restorePurchases`, + `onPurchaseSuccess` / `onPurchaseError` callbacks. All callbacks captured via an `optionsRef` pattern inside the library so the latest callback fires on every event (no stale closure concerns).
+- `Product.displayPrice` is the cross-platform standardized formatted price string (e.g. `"$1.99"`). `Product.price` is `number | null` and should not be rendered directly.
+- `Product.id` (not `productId`) is the SKU field; `Purchase.productId` is the SKU field on the purchase side — the asymmetry is worth knowing when writing `.find()` lookups.
+
+### Session 29 Audit Fixes
+
+- **AppState background listener** — HomeScreen opening-clip effect and other one-shot audio playback now subscribe to `AppState.addEventListener('change', ...)` and call `stopClip()` on any non-`'active'` state. Prevents a backgrounded app from continuing to pipe audio into the system sink.
+- **Dead code removal** — unused imports/locals cleaned up in the Session 29 touched files (HomeScreen, TimerScreen, timerPresets).
+- **Double-lookup collapse** — TimerScreen preset rendering used to resolve the asset twice per cell (once for existence check, once for the `<Image source>`). Collapsed to a single `const asset = timerPresetAssets[id]` destructure + conditional render.
+- **Accessibility pass** — new preset Image elements carry `accessibilityLabel` (preset name) and `accessibilityRole="image"`. User-created emoji path untouched.
 
 ### Two-Tier Icon System (established Session 20, expanded Session 24)
 

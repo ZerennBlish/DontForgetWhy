@@ -20,7 +20,7 @@
         "backgroundColor": "#121220"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 38,
+      "versionCode": 39,
       "package": "com.zerennblish.DontForgetWhy",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
@@ -88,7 +88,8 @@
       "expo-audio",
       "expo-sharing",
       "expo-sqlite",
-      "expo-document-picker"
+      "expo-document-picker",
+      "expo-iap"
     ],
     "extra": {
       "eas": {
