@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 28 (April 13, 2026)
+**Last updated:** Session 31 (April 15, 2026)
 
 ---
 
@@ -474,3 +474,93 @@ type PlayerWithEvents = AudioPlayer & {
 - Patches expo-audio 55.x type drift. `AudioPlayer extends SharedObject<AudioEvents>`, but the re-export chain prevents TypeScript from inheriting `addListener` and `release` onto `AudioPlayer`. Runtime methods still work — only the type is broken
 - Call sites cast `createAudioPlayer(...) as PlayerWithEvents` and prefer `player.remove()` (declared directly on `AudioPlayer`) over `player.release()`
 - **Adopted in Session 28** — `gameSounds.ts`, `soundFeedback.ts`, and `VoiceMemoListScreen.tsx` now import `PlayerWithEvents` and cast at the createAudioPlayer call sites. All `as any` casts on `addListener`/`release` eliminated, all `.release()` swapped to `.remove()`. `npx tsc --noEmit` clean across the three files
+
+---
+
+## 12. Pro Tier (Sessions 29 + 31)
+
+### `ProDetails` interface
+
+```typescript
+// src/services/proStatus.ts
+export interface ProDetails {
+  purchased: boolean;
+  productId: string;       // 'dfw_pro_unlock' for purchases, 'founding_user' for migrated existing users
+  purchaseDate: string;    // ISO timestamp
+  purchaseToken?: string;  // Google Play purchase token, present on real purchases (absent for founding grants)
+}
+```
+
+- Stored as JSON under `kv_store['pro_status']`
+- Read via `getProDetails()` / `isProUser()` (both apply `safeParse` + `isValidProDetails` type guard so malformed JSON cannot fake entitlement)
+- Written via `setProStatus(details)` from the entitlement hook on purchase success and from `runFoundingMigration()` on first-launch migration
+- Cleared via `clearProStatus()` (used in tests; not currently called from UI code)
+
+### `EntitlementState` interface
+
+```typescript
+// src/hooks/useEntitlement.ts
+export interface EntitlementState {
+  isPro: boolean;
+  loading: boolean;
+  error: string | null;
+  productPrice: string | null;   // 'product.displayPrice' from useIAP, e.g. '$1.99'
+  purchase: () => Promise<void>;
+  restore: () => Promise<void>;
+}
+```
+
+- `useEntitlement()` is the single owner of the IAP hook surface for any screen that needs entitlement state. **Each screen calls it at most once** — ProGate accepts these values via props rather than calling the hook itself, so opening the modal from a screen that already owns an instance never doubles up
+- Initial `isPro` value seeded from `isProUser()` so offline / Play-Store-unavailable cases still reflect the local cache
+- `purchase` / `restore` both go through `useIAP`'s `requestPurchase` / `restorePurchases`. `onPurchaseSuccess` callback handles `finishTransaction({ isConsumable: false })` + `setProStatus({...})` + `setIsPro(true)`. `availablePurchases` effect handles the restore-side acknowledgment so reinstalled users get re-flipped to Pro the moment Play returns the existing purchase
+
+### `TrialGame` type and trial storage keys
+
+```typescript
+// src/services/gameTrialStorage.ts
+export type TrialGame = 'chess' | 'checkers' | 'trivia' | 'sudoku' | 'memoryMatch';
+export const TRIAL_LIMIT = 3;
+```
+
+- Kv key pattern: `game_trial_{game}` — five keys total, one per gated game. Value is a stringified non-negative integer (the count of plays so far). Missing key = 0
+- `canPlayGame(game)` — `true` if `isProUser()` OR the count is `< TRIAL_LIMIT`
+- `incrementTrial(game)` — bumps the counter and returns the new value. Caller is responsible for gating on `!isPro` to avoid wasted writes for Pro users
+- `getTrialRemaining(game)` — `Infinity` for Pro users, `max(0, TRIAL_LIMIT - count)` otherwise. Used to render the badge on the Games screen
+- `resetTrials()` — wipes all five keys. Currently only used in tests; could become a debug action in a future session
+
+### `FoundingDetails` interface
+
+```typescript
+// src/services/foundingStatus.ts
+export interface FoundingDetails {
+  isFoundingUser: boolean;  // always true when present
+  grantedAt: string;        // ISO timestamp from when the migration ran
+}
+```
+
+- Stored as JSON under `kv_store['founding_status']`
+- Read via `isFoundingUser()` / `getFoundingDetails()` with `safeParse` + `isValidFoundingDetails` type guard
+- Written by `runFoundingMigration()` on first launch for any user with `kvGet('onboardingComplete') === 'true'` — strict equality, corrupted truthy values rejected
+- Migration is idempotent via `kv_store['founding_check_done'] = 'true'` flag, set after the first run completes
+- Independent of `pro_status` — an already-Pro user still gets the founding badge written; a non-Pro existing user gets BOTH a `pro_status` entry (with `productId: 'founding_user'`) and a `founding_status` entry
+
+### Pro-related kv_store keys
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `pro_status` | string (JSON) | Serialized `ProDetails`. Presence + `purchased: true` is the canonical "is this user Pro?" signal |
+| `founding_status` | string (JSON) | Serialized `FoundingDetails`. Independent of pro_status — used to render the Founding User card in Settings |
+| `founding_check_done` | string | `'true'` once `runFoundingMigration()` has executed. Idempotency flag |
+| `game_trial_chess` | string | Stringified integer trial count for Chess |
+| `game_trial_checkers` | string | Stringified integer trial count for Checkers |
+| `game_trial_trivia` | string | Stringified integer trial count for Trivia |
+| `game_trial_sudoku` | string | Stringified integer trial count for Sudoku |
+| `game_trial_memoryMatch` | string | Stringified integer trial count for Memory Match |
+
+### Calendar sync kv_store keys (Session 31)
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `gcal_dfw_calendar_id` | string | Google Calendar id of the dedicated "Don't Forget Why" calendar created (or reused) on first sync. Cleared on sign-out via direct `kvRemove` call in `firebaseAuth.signOutGoogle` |
+| `gcal_sync_enabled` | string | `'true'` / `'false'`. User-facing toggle in Settings. Cleared on sign-out |
+| `gcal_sync_map` | string (JSON) | `Record<string, string>` mapping DFW item id (alarm or reminder id) → Google Calendar event id. Used by `syncToGoogleCalendar` to PUT existing events instead of POSTing duplicates on re-sync. **Intentionally preserved on sign-out** so re-signing the same Google account doesn't recreate every event. Mutations only on successful POST/PUT/DELETE — failed deletes preserve the mapping for idempotent retry |

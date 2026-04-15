@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 30 (April 14, 2026)
+### Source of Truth · Updated: Session 31 (April 15, 2026)
 
 ---
 
@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.21.0 (versionCode 39) on `dev` — no bump this session, Session 30 code not yet shipped to Play Store |
+| **Current Version** | v1.23.0 (versionCode 41) on `dev` — Session 31 P7 Pro tier work prepared for next ship |
 | **Branch** | `dev` |
-| **Production Status** | **v1.21.0 (versionCode 39) live on Play Store.** Session 30 Firebase/Google Calendar work sits unshipped on `dev` until the next version bump. |
-| **Current Focus** | Session 30: Firebase Auth (Google Sign-In), Firestore service layer, Google Calendar sync (P5), SettingsScreen Google Account card, SettingsScreen redesign (6 grouped sections + theme picker modal), triple audit + fixes (2 P1 + 6 P2 all cleared). |
+| **Production Status** | **v1.22.0 (versionCode 40) live on Play Store** (Session 30 Firebase/Calendar foundation + Settings redesign). Session 31 Pro tier (game trials, ProGate paywall, theme gating, founding migration, Google Calendar write-back) sits on `dev` as v1.23.0 / vCode 41 awaiting ship. |
+| **Current Focus** | Session 31: P7 Pro tier — game trial storage (3 free rounds per game), ProGate paywall modal (props-based, no internal hook), GamesScreen + theme gating, founding user migration for existing installs, Google Calendar write-back (Pro-gated manual sync). Triple audit (Codex + Claude + Gemini): 3 P1 + 13 P2 found, all fixed. |
 | **Blocked By** | Nothing |
-| **Next Action** | Settings screen redesign, then P7 Pro Tier + Billing UI, multiplayer chess, cloud Stockfish. |
+| **Next Action** | Ship v1.23.0 to Play Store, then P7.4 Android compliance (edge-to-edge, orientation), P7.5 reminder fire → Guess Why, Master tier for chess/checkers, multiplayer chess. |
 | **EAS Credits** | ~28 available (2 dev builds attempted this session — 1 failed, 1 succeeded; reset April 12 already rolled) |
 | **Firebase Credits** | **$300 activated — 90-day clock started April 14, expires July 14, 2026.** Firestore rules published (`users/{uid}` locked to `request.auth.uid == uid`). Google Calendar API enabled in Google Cloud Console. |
 | **ElevenLabs** | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
@@ -44,12 +44,12 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 | — | Session 14 Onboarding Overhaul | ✅ Done | Prod only |
 | 4 | The Vault (Backup & Restore) | ✅ Done | Dev + Prod |
 | 4.5 | Stability Sprint | ✅ Done | Prod only |
-| 5 | Google Calendar Sync | ✅ Done | Dev (unshipped) |
+| 5 | Google Calendar Sync (read) | ✅ Done | Dev + Prod |
 | 5.5 | Premium Foundation | ✅ Done | Dev + Prod |
 | 6 | Chess + Checkers + Blunder Roast | ✅ Done | Prod only |
 | 6.5 | Voice Content Expansion | 🟡 Partial | Prod only |
-| 7 | Pro Tier + Billing | ⬜ Waiting | Multiple |
-| 8 | Firebase Online + Social | ✅ Foundation Done | Dev (unshipped) |
+| 7 | Pro Tier + Billing | 🟡 Core Done | Dev (v1.23.0 awaiting ship) |
+| 8 | Firebase Online + Social | ✅ Foundation Done | Dev + Prod |
 
 > **Note:** P8 was pulled forward and its Auth + Firestore foundation landed in Session 30 alongside P5, because P5 required Firebase Auth to sign the user in for Google Calendar access. P8's remaining work (online riddles, global leaderboards, multiplayer chess, cloud Stockfish) is still waiting, but the plumbing is live.
 
@@ -407,19 +407,38 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 
 ---
 
-## PHASE 7 — PRO TIER + BILLING
+## PHASE 7 — PRO TIER + BILLING 🟡 CORE DONE (Session 31)
 
-**Version Target:** v2.0.0
+**Shipped in:** v1.23.0 (versionCode 41) — awaiting Play Store ship.
+**Branch:** `dev`
+**New deps:** None (all P5.5 plumbing reused)
+**Build cost:** 0 dev builds (pure JS work on top of existing native surface)
 
-### Tasks
+### Completed
 
-- [ ] **7.1 Pro tier** — ~$1.99 one-time, expose billing UI from P5.5
-- [ ] **7.2 Pro gates (enforce)** — voice, photos, drawing, backup, calendar, chess, checkers, online content
-- [ ] **7.3 Founding user display** — named badge in Settings
-- [ ] **7.4 Android compliance** — edge-to-edge (15), orientation (16)
+- [x] **7.1 Billing UI** — `ProGate.tsx` rewritten as a presentational paywall modal accepting entitlement values via props (no internal `useEntitlement()`). Each parent screen owns one hook instance and passes `{ isPro, loading, error, productPrice, onPurchase, onRestore }` down. SettingsScreen "DFW Pro" card with three render variants (founding user / Pro / free). Inline purchase + restore on the free-card; auto-close + win sound on purchase success when launched from a game.
+- [x] **7.2 Pro gates** — Game trials at the GamesScreen level (`canPlayGame` check before navigation). Theme gating in the SettingsScreen theme picker (`PRO_THEMES = {vivid, sunset, ruby}` → tap shows lock icon and opens ProGate). Calendar sync gating in `syncToGoogleCalendar` (throws "Pro required" if non-Pro reaches the service layer).
+- [x] **7.3 Founding user display** — `runFoundingMigration()` in `src/services/foundingStatus.ts` runs on first launch. Existing users (detected via `kvGet('onboardingComplete') === 'true'`) get auto-granted Pro with `productId: 'founding_user'` AND a `founding_status` kv entry. Settings shows a dedicated "Founding User" card with the founding badge for these users. Idempotent — `founding_check_done` flag prevents re-runs.
+- [x] **7.6 Game trial system** — `gameTrialStorage.ts` — 3 free rounds per game across Chess, Checkers, Trivia, Sudoku, Memory Match. Counter incremented on game launch (only for non-Pro users), trial-remaining badge rendered on each game card. Pro users see a "PRO" badge instead. Once trials are used up, tapping the game opens the ProGate paywall modal.
+- [x] **Google Calendar write-back (P5 extension)** — `calendarSync.ts` — Pro-gated manual sync that creates a dedicated "Don't Forget Why" calendar in the user's Google account, pushes active alarms + reminders as events with a stable `gcal_sync_map` (item id → event id) preventing duplicates on re-sync. Recurring alarms use `RRULE:FREQ=WEEKLY;BYDAY=...` with a stable DTSTART derived from `alarm.createdAt`. 401 → token refresh, 403 → re-request `calendar` write scope. Delete failures preserve the mapping so retries are idempotent. Sync map intentionally preserved on sign-out so re-signing the same account doesn't dupe events.
+
+### Remaining (Deferred)
+
+- [ ] **7.4 Android compliance** — edge-to-edge (Android 15), orientation (Android 16)
 - [ ] **7.5 Reminder fire → Guess Why** — reminders through AlarmFireScreen
-- [ ] **7.6 Master difficulty tier (chess)** — Pro-gated. ~15-20s think time, min-depth 8-10. Strongest local engine level.
-- [ ] **7.7 Master difficulty tier (checkers)** — Pro-gated. ~10-15s think time, min-depth 10-12. Strongest local engine level.
+- [ ] **7.6.1 Master difficulty (chess)** — Pro-gated. ~15-20s think time, min-depth 8-10
+- [ ] **7.7 Master difficulty (checkers)** — Pro-gated. ~10-15s think time, min-depth 10-12
+
+### Audit Gate
+
+- [x] Triple audit (Codex + Claude + Gemini) on Session 31 scope — **3 P1 + 13 P2** found, all fixed
+  - **P1 — Double `useEntitlement()` on SettingsScreen** (Codex). ProGate originally owned its own `useEntitlement()` hook AND was rendered unconditionally inside SettingsScreen which already owned one — two IAP hook instances meant `finishTransaction()` would fire twice on purchase success. Fixed by (a) conditionally mounting ProGate (`{proGateVisible && <ProGate.../>}`) on both SettingsScreen and GamesScreen and (b) refactoring ProGate to accept entitlement values as props instead of calling `useEntitlement()` internally. Each screen now owns exactly one hook instance.
+  - **P1 — `deleteEvent()` ignored HTTP failures** (Codex). The original `deleteEvent` awaited `authedFetch` but never inspected the response, then `syncItem` removed the mapping unconditionally — a 500 response would drop the mapping and the next sync would create a duplicate event. Fixed: `deleteEvent` throws on non-2xx/non-404 (404 = already gone, still success); `syncItem` only deletes the map entry on success and counts an error otherwise so retries stay idempotent.
+  - **P1 — Founding badge skipped for already-Pro users** (Claude). Original migration short-circuited with `if (isProUser()) return` before writing `founding_status`, so any user who somehow already had Pro never got the founding badge. Fixed: removed the early return, restructured to always write the founding badge for any onboarded user; `setProStatus` is still gated on `!isProUser()` to avoid double-grant. Added strict `kvGet(ONBOARDING_KEY) === 'true'` check (a corrupted value like `'false'` or `'yes'` no longer grants Pro).
+  - **P2 (13 total)** — context-aware ProGate headers (game vs generic), outer `TouchableWithoutFeedback` accessibility removed, `gameWin` sound gated on `game` prop, `incrementTrial` gated on `!isPro`, restore loading + result feedback on the Settings restore row, `purchaseError` rendered in the Support section (visible to Pro and founding users), `calSyncEnabled` refreshed on auth state change, `setTimeout` cleanup with `useRef` in `useSettings`, 403 handling in `authedFetch`, stable DTSTART for recurring alarms, circular dep `firebaseAuth ↔ calendarSync` broken (firebaseAuth now uses direct `kvRemove` for sync state cleanup, sync map preserved), `runFoundingMigration` in its own try/catch in `App.tsx` (success and recovery paths), strict ONBOARDING_KEY equality. All fixed.
+- [x] `npx tsc --noEmit` — 0 errors
+- [x] `npx jest` — 20 suites, 435 tests passing (adds `gameTrialStorage`, `foundingStatus`, `calendarSync` test suites)
+- [x] Version bump v1.22.0 → v1.23.0, versionCode 40 → 41
 
 ---
 
@@ -479,30 +498,33 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 ### Free Tier — Polished, Fully Functional Core
 - All alarms, reminders, timers, notepad
 - In-app calendar (day/week/month views)
-- All 6 themes (Dark, Light, High Contrast, Vivid, Sunset, Ruby)
+- 3 free themes (Dark, Light, High Contrast)
 - Home screen + 4 widgets
 - All personality content (text quotes, roasts, snooze messages, placeholders)
 - Sound picker + custom alarm sounds
 - Privacy mode, Silence All mode
-- Guess Why (built into alarm dismissal)
-- Memory Score tracking
-- Daily Riddle (daily engagement hook — free forever)
-- Trivia (limited offline question pool)
-- Memory Match (with custom card art)
-- Starter voice roast pack (limited lines)
-
-### Pro Tier — $1.99 One-Time Unlock
-- Chess + Checkers (all difficulties including Master tier)
-- Sudoku
-- Trivia unlimited question pool + online questions (P8)
+- Guess Why (built into alarm dismissal) — **free forever**
+- Memory Score tracking + Trophies — **free forever**
+- Daily Riddle — **free forever** (daily engagement hook)
+- 3 free rounds per game for Chess, Checkers, Trivia, Sudoku, Memory Match (then ProGate)
 - Voice memos
-- Full voice roast pack + female voice character (P6.5+)
 - Custom photo backgrounds + note images
 - Drawing canvas
 - Backup & Restore (.dfw export/import + auto-export)
-- Cloud Stockfish AI for chess (P8)
+- Google Calendar **read** sync (in-app Calendar shows your Google events)
+- Starter voice roast pack (limited lines)
+
+### Pro Tier — $1.99 One-Time Unlock
+- Unlimited rounds for Chess, Checkers, Trivia, Sudoku, Memory Match (Master tier deferred)
+- Premium themes: **Vivid, Sunset, Ruby**
+- **Google Calendar write-back** — push your DFW alarms + reminders to a dedicated "Don't Forget Why" calendar in your Google account
 - Multiplayer chess (P8)
+- Cloud Stockfish AI for chess (P8)
 - Online riddles + leaderboards (P8)
+- Full voice roast pack + female voice character (P6.5+)
+
+### Founding User
+- Existing users (anyone who completed onboarding before v1.23.0) — **auto-granted Pro forever** with a "Founding User" badge in Settings. Migration runs once on first launch after upgrade and is idempotent.
 
 ---
 
@@ -587,6 +609,7 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 | Apr 10 | Session 24 full codebase audit sweep. 8-category dual audit (Codex + Gemini). Dead code removed (alarmSounds.ts + 26 icon exports + orphan styles across 13 files + dead exports across 27 files). Theme tokens added (success + overlaySecondary). Accessibility pass across critical screens/cards/modals/forms/games. FlatList perf configs. Data safety: safeParse + asyncMutex utilities wired across 13 storage files, restore mutex, never-throw autoBackup. Navigation beforeRemove guards with savedRef bypass. Type safety in migrations/forms/hooks. `audioCompat.ts` type-compat layer scaffolded (not yet imported). `GameNavButtons.tsx` + 8 game icons + 5 new trivia/sudoku sounds + lock/checkmark chrome icons on disk but wiring was reverted after laptop issues (stranded files: broken icon refs in GameNavButtons). Visual fixes: FAB chrome circle on 4 list screens, silver notepad fallback on NoteCard/DeletedNoteCard. No version bump — audit sits on dev unshipped. |
 | Apr 12 | Session 27 NoteEditorModal redesign + note titles. NoteEditorModal rewritten: useNoteEditor hook extraction (all state + logic), 5 sub-components (NoteEditorTopBar, NoteEditorToolbar, NoteColorPicker, NoteImageStrip), bottom toolbar (Camera, Gallery, Draw, Colors, Attached), dropdown menu eliminated. Voice recording removed from notes (legacy playback kept via MemoCard). Text limits removed (notes unlimited, voice memo notes unlimited, titles stay 100). Note title feature: new `title` column on notes table, Note type updated, wired through useNoteEditor + useNotepad + NoteEditorModal save flow, title UI in editor. Attachments panel: images behind paperclip button in edit mode, inline in view mode. Scrollable image strip (horizontal ScrollView). Icon size consistency pass across 10+ files (save=24, edit=24, trash=20, toolbar circles ~56, icons ~28, HomeButton=24, BackButton=22). New asset: paperclip.webp. Dual audit (Codex + Gemini) — 6 findings fixed. Visual polish: image positioning, centering, title layout. |
 | Apr 11 | Session 26 voice memo clips + photos + icon overhaul. Memos are now containers holding multiple audio clips (`voice_clips` table, `VoiceClip` type, `voiceClipStorage` service, automatic legacy migration). Clip playback modes (Stop/Play All/Repeat). Voice memo photos via camera (record screen) + gallery (detail screen), 5-photo cap, ImageLightbox view, new `voice-memo-images/` folder + `images TEXT` column on voice_memos. Recording flow rewrite: VoiceRecordScreen creates memo + first clip directly, eliminates `tempUri` handoff path entirely, atomic save with rollback on clip failure. Icon overhaul: floppy-disk (save) + pencil (edit) icons, replaced text Edit/Save buttons with circle icon buttons across VoiceMemoDetail/NoteEditorModal/CreateAlarm/CreateReminder, timer modal redesigned (3 circle action buttons: red cancel / accent save-only / success start with new `handleModalSaveOnly`), sound/bell + emoji circles got tappable treatment, reminder/timer/alarm icon-picker fallbacks show silver `+`, calendar inline icons restructured into proper flex rows. Dual audit (Codex + Gemini) — 8 findings fixed (HIGH: focus reload missed memo, non-atomic save, stale capturedPhotos closure; MEDIUM: 5-photo cap, backup meta count, migration inserter; LOW: a11y label, Array.isArray). Re-audit clean. 315 tests passing, tsc clean. Ready for device testing then ship. |
+| Apr 15 | Session 31: **P7 Pro Tier core shipped + Google Calendar write-back.** Game trial system: `gameTrialStorage.ts` (`canPlayGame`, `incrementTrial`, `getTrialRemaining`, `TRIAL_LIMIT = 3`) gates Chess/Checkers/Trivia/Sudoku/Memory Match at the GamesScreen level — 3 free rounds per game for non-Pro users, then ProGate paywall, "PRO" badge for Pro users. `incrementTrial` only fires for non-Pro (Pro doesn't accumulate meaningless kv writes). ProGate paywall modal: rewritten as a presentational component accepting entitlement values via props (`isPro`, `loading`, `error`, `productPrice`, `onPurchase`, `onRestore`) — zero internal `useEntitlement()` instances, parent screens own exactly one each. Conditional mount on both SettingsScreen and GamesScreen. Context-aware headers (3 game-flavored vs 3 generic, randomized via lazy `useState` initializer), accent color follows context (`sectionGames` for game flow, `accent` for theme/calendar flow). Win sound + auto-close on purchase success only when launched from a game. Theme gating: `PRO_THEMES = {vivid, sunset, ruby}`, `LockIcon` rendered on locked theme circles in the SettingsScreen theme picker, tap opens ProGate. `LockIcon` added to `Icons.tsx`. Founding user migration: `foundingStatus.ts` runs `runFoundingMigration()` on first launch — existing users (detected via strict `kvGet('onboardingComplete') === 'true'` check, 'false' / 'yes' don't qualify) get auto-granted Pro with `productId: 'founding_user'` AND a `founding_status` kv entry, badge always written even for already-Pro users. Idempotent via `founding_check_done` flag. Wrapped in its own try/catch in `App.tsx` on both success + recovery paths so a founding migration throw can never trigger the DB-failed error screen. Settings DFW Pro section: founding badge card / Pro card / free-user purchase card with inline `Unlock Pro — $1.99` + Restore Purchases. Restore row in Support section now has `ActivityIndicator` + result feedback ("Purchase restored!" / "No purchases found", auto-clears after 3s, disabled while loading). `purchaseError` rendered in the Support section so it's visible to Pro and founding users (not just the free card). **Google Calendar write-back (`calendarSync.ts`)**: Pro-gated manual sync. Creates a dedicated "Don't Forget Why" calendar in the user's Google account if one doesn't already exist (or reuses an existing one by summary match), pushes active alarms + reminders as events, persists a `gcal_sync_map` (item id → event id) so re-syncs PUT existing events instead of duplicating. Recurring alarms use `RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR` style rules with a stable DTSTART derived from `alarm.createdAt` (deterministic for the alarm's lifetime — re-syncs don't drift the recurrence forward). `authedFetch` handles 401 (token refresh) AND 403 (re-request `calendar` write scope). Write scope `https://www.googleapis.com/auth/calendar` requested only when sync is enabled (principle of least privilege). `deleteEvent` checks status and throws on non-2xx/non-404; `syncItem` only removes the mapping on delete success and counts an error otherwise so retries stay idempotent. Sync map intentionally preserved on sign-out (`firebaseAuth.signOutGoogle` only clears `gcal_dfw_calendar_id` + `gcal_sync_enabled` via direct `kvRemove`, NOT `gcal_sync_map`) so re-signing the same Google account doesn't dupe events. SettingsScreen Google Calendar Sync card (visible only when signed in AND Pro): toggle + Sync Now button + last-sync result text. `useSettings` adds `calSyncEnabled` / `isSyncing` / `syncResult` / `syncError` state with `setTimeout` cleanup via `useRef` and refresh on auth state change. Circular dependency `firebaseAuth ↔ calendarSync` broken: `firebaseAuth` no longer imports `clearSyncData` from `calendarSync`; uses direct `kvRemove` calls instead. **Triple audit (Codex + Claude + Gemini): 3 P1 + 13 P2 found, all fixed.** P1.1 — double `useEntitlement()` on SettingsScreen would have fired `finishTransaction()` twice on purchase success (fixed via conditional mount + ProGate props refactor). P1.2 — `deleteEvent` ignored HTTP failures and dropped the sync mapping anyway, creating duplicates on next sync (fixed via status check + throw on non-2xx/non-404). P1.3 — `runFoundingMigration` short-circuited for already-Pro users so the founding badge was never written (fixed by removing the early return + restructuring; also adds strict `=== 'true'` check on onboarding key). P2 sweep: context-aware ProGate headers, outer accessibility cleanup, `gameWin` sound gated on `game` prop, trial increment skipped for Pro, restore row loading + result feedback, `purchaseError` visible to all user states, `calSyncEnabled` refreshed on auth change, `setTimeout` cleanup with `useRef`, 403 handling in `authedFetch`, stable recurring DTSTART, sync map preserved on sign-out, `runFoundingMigration` in own try/catch on success + recovery paths, strict ONBOARDING_KEY equality. **20 test suites / 435 tests passing**, `npx tsc --noEmit` clean. New tests: `gameTrialStorage.test.ts`, `foundingStatus.test.ts`, `calendarSync.test.ts` (DELETE 500 preserves mapping, DELETE 404 removes mapping, 403 retry, recurring DTSTART stability, scope-denied path). **v1.22.0 (versionCode 40) merged to `main` and tagged.** v1.23.0 (versionCode 41) prepared on `dev` for next ship. |
 | Apr 14 | Session 30: **Firebase backend (P8 foundation) + Google Calendar sync (P5) shipped.** Firebase project `dont-forget-why` on Blaze plan ($300 credit, 90-day clock started April 14, expires July 14, 2026). Firebase Auth with Google Sign-In — connect/disconnect in SettingsScreen Google Account card, Firestore user profile on sign-in (fire-and-forget with shape validation). Firestore service layer (`firestore.ts`) with typed CRUD, `isUserProfile` type guard, `set()` with `{ merge: true }`, first-write-only `createdAt` guard. Google Calendar sync via REST API (no SDK, no extra native dep) — fetches events with Bearer token, 5-minute in-memory cache keyed by uid + date range, events render as `sectionCalendar` dots on CalendarScreen + items in HomeScreen Today section, new `google` filter type added on CalendarScreen, event cards ship with "G" badge + "All Day" label handling. CalendarScreen legend wrapped to fit 5 dot types. Google Calendar API enabled in Google Cloud Console. Triple audit (Codex + Claude + Gemini): 2 P1 (cache leak on sign-out, Firestore test-mode rules) + 6 P2 (UTC timezone query window, 401 token refresh vs 403 scope request, duplicate fetch regression on month navigation, auth hydration race on cold start, duplicate React keys for multi-day Google events, dead `calendarColor` field). All P1 + P2 fixed — cache cleared on sign-in/out, Firestore rules published locking `users/{uid}` to `request.auth.uid`, local-TZ-aware query window via `toISOString`, 401 → `clearCachedAccessToken` + refresh + retry, 403 → `addScopes` + retry, Google fetch moved to dedicated `useEffect([currentMonth, authUser])` so month nav doesn't reload local data, screens now subscribe to `onAuthStateChanged` so cold-start auth hydration refreshes Google events, row keys now include `dateStr` prefix for `googleCal` events. Project Instructions updated with Claude Code Prompt Standards (verification loops, @ references, think levels, prompt structure templates). `npx tsc --noEmit` clean, 379 tests across 17 suites passing. **No version bump this session — Session 30 code sits on `dev` until the Settings redesign session lands and a single bump ships both.** SettingsScreen redesigned: 6 grouped sections (General, Appearance, Sound & Haptics, Google Account, Data, Support) with uppercase accent-colored section headers. Theme picker moved from inline 6-circle grid to compact card + bottom-sheet modal (auto-closes on selection). All functionality unchanged. Codex audit clean (1 P2 a11y + 2 P3, all fixed). |
 | Apr 14 | Session 29: **Timer preset WebP icons + Opening.mp3 + P5.5 Premium Foundation shipped.** Timer presets: 21 built-in presets now render custom WebP art via new `timerPresetAssets.ts` registry (user-created timers still use emoji). 2 new presets added: Crying (2700s / 45min) and Revenge (14400s / 4hr). Opening.mp3 wired to HomeScreen: plays once on first mount after onboarding, gated behind a `kvGet`/`kvSet` flag so it never replays (duplicate playback from OnboardingScreen removed during wiring). 4 audit fixes: AppState background listener (pause audio when app backgrounds), dead code removal, double-lookup collapse on TimerScreen preset rendering, a11y pass on new icons. **P5.5 Premium Foundation COMPLETE** — `expo-iap@^4.0.2` installed (Play Billing 8.x, Expo-native, TypeScript-first); Google Play in-app product `dfw_pro_unlock` created ($1.99, one-time, non-consumable, active); license testers configured; `src/services/proStatus.ts` (sync kv-backed entitlement cache with safeParse + `isValidProDetails` type guard); `src/hooks/useEntitlement.ts` (wraps `useIAP`, real restore flow, 60s purchase timeout, cancel handling, unmount cleanup); `src/components/ProGate.tsx` (pass-through until P7); `__tests__/proStatus.test.ts` (18 tests, full shape validation). Foundation ships dormant — no billing UI until P7. Secondary (Claude) audit on P5.5 found 1 P1 (non-functional restore) + 3 P2 + 6 P3, all fixed. Backup entitlement covered for free (pro_status is a standard kv key, already part of dfw.db backup archive). Internal testing AAB uploaded alongside production AAB (vCode 39) — internal track upload was the prerequisite Google requires before in-app products can be created in Play Console. **v1.21.0 (versionCode 39), live on Play Store.** |
 | Apr 13 | Session 28: 8 targeted fixes + tutorial overlay system with voice clips. Fixes: useFocusEffect preserves title/note on re-focus, back button peels attachments panel before save dialog, share clip picker uses scrollable modal (Alert.alert 3-button Android limit), VoiceRecordScreen back confirms photo discard, toolbar/panel uses theme colors not hardcoded rgba, attachments panel dismisses on text focus with empty-photo guard, backup validates voiceMemoImages field with backward compat for old manifests, audioCompat.ts PlayerWithEvents adopted across 4 files replacing `as any` casts. Tutorial system: per-screen first-visit tip carousel with sarcastic DFW voice copy, useTutorial hook (kvGet/kvSet dismissal, lazy initializer for flash-free mount), TutorialOverlay component (section-colored card, dot indicators, backdrop dismiss, sibling structure for TalkBack), tutorialTips.ts data for 7 screens (alarmList 3, reminders 2, notepad 3, voiceMemoList 3, calendar 1, timers 2, games 1), **15 ElevenLabs voice clips in assets/voice/tutorial/ with expo-audio MEDIA stream playback** (Asset.fromModule + downloadAsync, PlayerWithEvents, cancelled-flag race protection, AppState background pause), tutorialClips.ts registry, Settings Tutorial Guide reset row, Jest data validation tests. Wired to AlarmListScreen, ReminderScreen, NotepadScreen, VoiceMemoListScreen, CalendarScreen, TimerScreen, GamesScreen. Triple audit (Codex + Claude + Gemini) — 9 initial findings fixed + 3 voice clip audit findings fixed: backup backward compat for old .dfw files, VoiceRecordScreen photo-only discard guard, share picker theme-aware backdrop, badge/border theme compliance, 2 tip copy corrections (reminders 6hr→midnight, calendar missing voice memos), tutorial flash eliminated via lazy useState, no-op TouchableOpacity a11y fix, TalkBack structural fix (backdrop/card siblings not parent/child), stopClip on tip advance (no audio trail), playerRef before play (no leak window), AppState background pause. **v1.20.0 (versionCode 37).** |

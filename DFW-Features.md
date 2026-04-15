@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 30 (April 14, 2026)
+**Last updated:** Session 31 (April 15, 2026)
 
 ---
 
@@ -188,6 +188,85 @@ borderColor:    colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 
 - **Backup coverage (free)** — `pro_status` is a standard `kv_store` row, which is already archived as part of the `dfw.db` snapshot in `backupRestore.ts`. Pro status survives .dfw export/import round-trips without any backup-side code changes. No manifest field addition needed.
 - **Tests** — `__tests__/proStatus.test.ts`, 18 cases: core CRUD + malformed-JSON parse errors + a `shape validation` block covering empty objects, partial objects, wrong-type fields, JSON `null`, JSON strings, and wrong-type composites. Full suite: **14 suites / 338 tests passing**, `tsc --noEmit` clean.
 - **Audit (Claude secondary)** — 1 P1 (`restore()` was a placeholder that never called `restorePurchases`, would fail the real reinstall flow), 3 P2 (unhandled `fetchProducts` rejection, stuck-loading with no purchase timeout, unvalidated `as ProDetails` cast in `getProDetails`), 6 P3 (import path inconsistency, `safeParse` not used, `products[0]` vs `find`, missing shape-validation test cases, `STORAGE_KEY` constant duplication in tests, unused `feature` prop on ProGate). All fixed before ship.
+
+### Pro Tier (P7 — Session 31)
+
+**Status: core shipped on `dev` as v1.23.0 / vCode 41, awaiting Play Store.** All P5.5 plumbing is now wired to actual gates and a real paywall.
+
+#### Game Trial System
+- **3 free rounds per game** for Chess, Checkers, Trivia, Sudoku, and Memory Match — five `GATED_GAMES` tracked via `src/services/gameTrialStorage.ts`. Daily Riddle, Guess Why, and Trophies stay **free forever** (the daily-engagement hook + the universally-free game + the score tracker).
+- **Counter scope:** per-game, persisted in `kv_store['game_trial_{game}']` as a stringified integer. `incrementTrial` only fires for non-Pro users — Pro users don't accumulate meaningless kv writes.
+- **GamesScreen badge UI:** `renderTrialIndicator(game)` renders one of three states per gated card:
+  - **Pro user** → "PRO" badge in `colors.accent`
+  - **Trials remaining** → "{n} free rounds left" in `colors.textTertiary`
+  - **Trials exhausted** → "Pro required" in `colors.red`
+- **Gate location:** `GamesScreen.handleGamePress` checks `canPlayGame(game)` before navigation. If false, sets `gateGame` and opens `ProGate` with `game={gateGame}` so the paywall picks the game-flavored header copy. Otherwise calls `incrementTrial(game)` (non-Pro only) and navigates to the game screen. **Single check point**, not per-game-screen — simpler and impossible to forget on a new game.
+- **Reset on Pro:** `getTrialRemaining` returns `Infinity` for Pro users so the badge UI flips to "PRO" the moment entitlement updates. Counters aren't reset on disk — they just stop mattering.
+
+#### Theme Gating
+- **Premium themes:** Vivid (cyberpunk green), Sunset (warm orange), Ruby (rose) are now Pro-only. Dark, Light (Ocean), and High Contrast remain free. `PRO_THEMES = new Set(['vivid', 'sunset', 'ruby'])` in `SettingsScreen.tsx`.
+- **Visual:** the SettingsScreen theme picker modal renders `<LockIcon>` (new in `src/components/Icons.tsx`) inside the inner circle of locked themes for non-Pro users, with the outer ring at `opacity: 0.5` and a small "PRO" caption below the theme name.
+- **Tap behavior:** tapping a locked theme closes the picker and opens `ProGate` (no `game` prop, so the generic header pool fires). On purchase success, the theme picker re-opens via the user's next visit — they don't auto-apply Vivid/Sunset/Ruby behind the scenes.
+- **Pro/founding users** see all six themes ungated, no lock icons, no PRO captions.
+
+#### ProGate Paywall Modal
+- **Presentational component**, accepts entitlement values via props rather than calling `useEntitlement()` itself. New props: `{ visible, onClose, game?, isPro, loading, error, productPrice, onPurchase, onRestore }`. Each parent screen calls the hook exactly once and passes the values down — guarantees a single IAP hook instance per screen even when ProGate mounts and unmounts.
+- **Conditional mount** in both SettingsScreen and GamesScreen (`{proGateVisible && <ProGate.../>}`) so a hidden modal doesn't keep a stale entitlement subscription alive.
+- **Context-aware headers:** two pools (`GAME_HEADERS` for the game flow, `GENERIC_HEADERS` for theme/calendar/settings flow) selected once on mount via `useState(() => ...)`. Game headers reference free rounds being up; generic headers reference Pro membership in general — keeps copy from saying "your free rounds are up" on a theme-picker open.
+  - Game pool: "Your free rounds are up. Impressed? We thought so." / "3 rounds wasn't enough, huh? We're flattered." / "Look who wants more. Can't say we blame you."
+  - Generic pool: "You've got taste. This one's for Pro members." / "Upgrade your experience. You know you want to." / "The good stuff is right behind this button."
+- **Accent color follows context:** `colors.sectionGames` when `game` is set, `colors.accent` otherwise. Purchase button + restore link + loading spinner all theme to the chosen accent.
+- **Benefits list:** 4 lines — "Unlimited Brain Games", "Premium Themes (Vivid, Sunset, Ruby)", "Google Calendar Sync", "Multiplayer Chess (coming soon)".
+- **Purchase button:** `Unlock Pro — {productPrice ?? '$1.99'}` in the accent color, disabled while loading, calls `onPurchase()`. Restore link below: "Already purchased? Restore", calls `onRestore()`.
+- **Auto-close on purchase success:** `wasProRef` effect detects the `isPro` flip from false to true. If `game` was set, plays `gameWin` SFX; either way calls `onClose()`. The theme/calendar flow doesn't fire a game-win SFX on a successful theme unlock.
+- **Auto-clear errors after 3 seconds** via `errorTimerRef`. Inline `accessibilityLiveRegion="polite"` so TalkBack reads errors when they appear.
+- **Accessibility cleanup:** outer `TouchableWithoutFeedback` no longer carries `accessibilityRole="button"` + `accessibilityLabel="Close paywall"` (was incorrectly making TalkBack announce the entire modal as one button). Only the inner close-X carries the button role.
+- **Loading overlay** covers the card while a purchase is in flight (`pointerEvents: 'auto'`), prevents tap-through to the disabled button.
+
+#### Founding User System
+- **Existing users get Pro forever.** Anyone who completed onboarding before v1.23.0 is detected via a strict `kvGet('onboardingComplete') === 'true'` check on first launch. `runFoundingMigration()` in `src/services/foundingStatus.ts` auto-grants Pro with `productId: 'founding_user'` AND writes a `founding_status` JSON entry `{ isFoundingUser: true, grantedAt: ISO }`.
+- **Idempotent.** A `founding_check_done` kv flag is set after the migration completes. Subsequent runs short-circuit immediately. The migration is also written so that an already-Pro founding user (e.g., one who purchased before the migration ran) still gets the founding badge recorded — `setProStatus` is gated on `!isProUser()` to avoid double-grant, but the `founding_status` write is unconditional within the onboarded branch.
+- **Strict equality.** Only the literal string `'true'` qualifies. Corrupted or unexpected truthy values (`'false'`, `'yes'`, etc.) are explicitly rejected — a stray onboarding kv write can't accidentally grant Pro to a fresh install.
+- **Settings badge.** SettingsScreen renders a dedicated "Founding User" card at the top of the DFW Pro section: "You were here before Pro existed. Everything is unlocked for you — forever. Thank you for believing in this app early." + a "PRO" badge.
+- **Failure isolation.** `runFoundingMigration()` lives in its own try/catch in `App.tsx`, called on **both** the success path (after `migrateFromAsyncStorage` resolves and `setDbReady(true)`) AND the kv `_migrated` recovery path. A throw is logged as a warning and never trips the "Something went wrong" error screen.
+
+#### Settings DFW Pro Section
+New section header at the top of SettingsScreen with three render variants:
+- **Founding User card** (highest priority) — gold-tinted "Founding User" header, body copy thanking the user for being early, "PRO" badge.
+- **Pro card** — "Pro Unlocked" header, body shows formatted purchase date if available, "PRO" badge.
+- **Free user card** — "Upgrade to Pro" header + benefits blurb + `Unlock Pro — {productPrice}` accent button + "Restore Purchase" secondary link + inline `purchaseError` if something failed during inline purchase.
+
+The free-user card uses the same single `entitlement = useEntitlement()` instance that's passed to ProGate, so a purchase from the inline button or from a paywall modal both go through one IAP surface.
+
+#### Restore Purchases Row (Support section)
+Separate from the inline DFW Pro card, the Support section now has a dedicated "Restore Purchases" row visible to **all** user states (free, Pro, founding) so a user with an existing purchase can recover entitlement from any state.
+- `restoreLoading` + `restoreResult` state on SettingsScreen
+- `ActivityIndicator` rendered inline while loading; row disabled to prevent tap-spam
+- Result text below the row: "Purchase restored!" in `colors.success` if `isProUser()` is true after the restore call, "No purchases found" in `colors.textTertiary` otherwise
+- Auto-clears after 3 seconds via `restoreResultTimerRef` (cleared on unmount)
+- `purchaseError` also rendered in this section so Pro and founding users see purchase errors that bubble up from the entitlement hook (was previously only visible inside the free-user card)
+
+#### Purchase Flow
+- **$1.99 USD, one-time, non-consumable.** Single SKU `dfw_pro_unlock` — same product created in Session 29.
+- **Buy from anywhere:** the inline "Unlock Pro" button on the Settings DFW Pro card, the ProGate modal launched from a game trial exhaustion, or the ProGate launched from a locked theme tap. All paths flow through the same `entitlement.purchase()` → `useIAP.requestPurchase` → `onPurchaseSuccess` → `finishTransaction({ isConsumable: false })` → `setProStatus` → entitlement state flip.
+- **Restore from anywhere:** the inline restore link on the free DFW Pro card, the "Already purchased? Restore" link inside ProGate, or the dedicated Restore Purchases row in the Support section. All paths flow through `entitlement.restore()` → `useIAP.restorePurchases` → `availablePurchases` scan → `finishTransaction` → `setProStatus`.
+- **Local cache survives reinstalls via .dfw backup.** `pro_status` is a standard kv key, archived as part of the dfw.db snapshot in `backupRestore.ts`. A user who exports a backup, reinstalls, and imports the backup gets Pro back without needing a Play restore (same as Session 29).
+
+### Google Calendar Write-Back (P5 extension — Session 31)
+
+Pro-gated. Free tier still gets the read sync (in-app Calendar shows your Google events) from Session 30; Pro tier adds the write side that pushes your DFW alarms and reminders to a dedicated calendar in your Google account.
+
+- **Manual "Sync Now"** — no auto-sync, no background scheduling. The user taps a Sync Now button in Settings, the sync runs, success/error renders inline. Auto-sync (push on alarm save, push on schedule changes) is deferred to a future session — v1 validates the data shape and the dupe-prevention machinery before committing to background work.
+- **Dedicated calendar.** The first sync creates a new calendar named **"Don't Forget Why"** in the user's Google account (or reuses an existing one if a calendar with the same summary already exists, found via `users/me/calendarList?minAccessRole=owner`). Calendar id is persisted in `kv_store['gcal_dfw_calendar_id']` for fast verification on subsequent syncs. If the stored id 404s, the service falls through to list-and-create.
+- **Sync map prevents duplicates.** Every synced item id is mapped to its Google event id in `kv_store['gcal_sync_map']` (JSON object). Re-syncs PUT existing events instead of POSTing new ones. A new sync of a 50-alarm collection makes 50 GET-or-PUT calls, not 50 POSTs.
+- **Recurring alarms** emit `RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR`-style rules. DTSTART is derived from `alarm.createdAt` via `stableFirstDate(days, createdAt)` — the first matching weekday on or after the alarm's creation date — so DTSTART stays **stable for the alarm's lifetime** and re-syncs don't drift the recurrence forward (the original implementation used `nextOccurrenceDate` which advances daily and made Google Calendar drop past occurrences).
+- **One-time alarms + reminders** sync as standard `dateTime`/`date` events with the user's local timezone. Reminders without a `dueTime` sync as all-day events; reminders with a time sync as 30-minute timed events.
+- **Soft-deleted / disabled / completed items** trigger a DELETE call against the mapped Google event. The mapping is only removed on success — `deleteEvent` checks the response status and treats 2xx + 404 as success (404 = already gone server-side), throwing on anything else. `syncItem` catches the throw, counts an error, and **preserves the mapping** so the next sync retries idempotently.
+- **Auth recovery:** `authedFetch` handles 401 (token refresh via `clearCachedAccessToken` + `getAccessToken` + retry) AND 403 (re-request `https://www.googleapis.com/auth/calendar` write scope via `requestCalendarWriteScope` + retry). Routine hourly token expiry handled silently; revoked write scope mid-session prompts a single consent sheet then retries.
+- **Write scope requested on enable.** `https://www.googleapis.com/auth/calendar` is **not** requested up front in `GoogleSignin.configure()` — it's requested only when the user enables sync (or implicitly via the 403 branch above). Principle of least privilege: read scope (`calendar.readonly`) is granted at sign-in, write scope is granted at enable. A user who never enables write sync is never asked for write access.
+- **Sync map preserved on sign-out.** `firebaseAuth.signOutGoogle` clears `gcal_dfw_calendar_id` + `gcal_sync_enabled` via direct `kvRemove` calls but **intentionally** does not touch `gcal_sync_map`. A user who signs out and signs back into the **same** Google account picks up the existing mapping and PUTs the same event ids on the next sync — no duplicates.
+- **Settings UI:** A "Google Calendar Sync" card under the Google Account section, visible only when signed in AND Pro. Toggle + Sync Now button + last-sync result text ("Synced N items" in success green, "(M failed)" appended in red if errors > 0) + persistent error text for permission-denied / network failures (auto-clears after 4s).
+- **Free / non-signed-in users** see no sync card at all. A short italic helper line "Calendar sync available with Pro" shows when signed in but non-Pro.
 
 ### HomeScreen Opening Clip (Session 29)
 - **Opening.mp3** plays once on the first HomeScreen mount after onboarding — the Alarm Guy greets the user the first time they land on Home. Same MEDIA-stream `expo-audio` pattern as the tutorial clips (Asset.fromModule + downloadAsync, `PlayerWithEvents` cast, cancelled-flag race protection).
