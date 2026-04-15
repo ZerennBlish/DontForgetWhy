@@ -232,6 +232,18 @@ borderColor:    colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 
   - Retry-after-retry failures → silent empty array.
 - **Silent when absent** — If the user isn't signed in, Google Calendar features are invisible: no legend entry, no filter capsule, no dots, no Today rows, no prompts. The feature opts itself out completely until the user voluntarily connects an account.
 
+### SettingsScreen Redesign (Session 30)
+- **6 grouped sections** with small uppercase accent-colored headers (letterSpacing 1.5) replacing the previous flat list of 13+ cards in ad-hoc order. Section order top-to-bottom: **General** → **Appearance** → **Sound & Haptics** → **Google Account** → **Data** → **Support**.
+- **Section contents:**
+  - **General** — 24-Hour Time toggle, Time Input Style (Scroll/Type segmented control), Silence All Alarms toggle with duration picker.
+  - **Appearance** — Theme picker card, Screen Background photo picker + overlay darkness slider.
+  - **Sound & Haptics** — Voice Roasts, Haptic Feedback, Game Sounds toggles.
+  - **Google Account** — Connect/Disconnect card (details in Firebase Auth section above).
+  - **Data** — Privacy blurb + Your Memories card (Export/Import/Auto-Export, folder selection, frequency).
+  - **Support** — Tutorial Guide reset row, Send Feedback, About, Permissions / Setup Guide.
+- **Theme picker modal** — The inline 6-circle theme grid was replaced with a compact card showing an accent-colored dot + current theme name + chevron. Tapping opens a bottom-sheet modal (same pattern as the silence-duration picker) containing the full 3×2 theme grid. Selecting a theme applies it, fires a light haptic, and auto-closes the modal. Hardware back dismissal also fires a haptic.
+- **Render-only rewrite** — `useSettings` hook untouched, every existing feature remains wired identically (same handlers, same state, same accessibility attributes on all TouchableOpacity instances). Codex audit clean (1 P2 a11y + 2 P3 all fixed: compact theme card `accessibilityLabel` interpolates current theme; redundant inline "Google Account" label removed; theme modal `onRequestClose` fires haptic).
+
 ### Play Store Listing (Session 22)
 - 8 screenshots: Home, Alarms/Reminders/Calendar, Chess/Checkers/Memory, Notes, Timers, Settings, Widgets, Alarm Fire
 - Description updated with Chess, backup section, corrected theme count to 6

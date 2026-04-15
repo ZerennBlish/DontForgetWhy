@@ -34,6 +34,11 @@ jest.mock('../src/services/firestore', () => ({
   createOrUpdateUserProfile: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('../src/services/calendarSync', () => ({
+  __esModule: true,
+  clearSyncData: jest.fn(),
+}));
+
 import { createOrUpdateUserProfile } from '../src/services/firestore';
 const createOrUpdateUserProfileMock = createOrUpdateUserProfile as jest.Mock;
 

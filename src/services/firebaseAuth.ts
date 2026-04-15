@@ -9,9 +9,11 @@ import {
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { createOrUpdateUserProfile } from './firestore';
 import { clearCalendarCache } from './googleCalendar';
+import { clearSyncData } from './calendarSync';
 
 const WEB_CLIENT_ID = '190522733985-r50fan5ba955qv2ab1n0oqrgv7kak7ba.apps.googleusercontent.com';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+const CALENDAR_WRITE_SCOPE = 'https://www.googleapis.com/auth/calendar';
 
 let configured = false;
 function ensureConfigured(): void {
@@ -48,6 +50,7 @@ export async function signInWithGoogle(): Promise<FirebaseAuthTypes.UserCredenti
 export async function signOutGoogle(): Promise<void> {
   ensureConfigured();
   clearCalendarCache();
+  clearSyncData();
   try {
     await signOut(getAuth());
   } catch {
@@ -84,6 +87,16 @@ export async function requestCalendarScope(): Promise<boolean> {
   try {
     ensureConfigured();
     await GoogleSignin.addScopes({ scopes: [CALENDAR_SCOPE] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function requestCalendarWriteScope(): Promise<boolean> {
+  try {
+    ensureConfigured();
+    await GoogleSignin.addScopes({ scopes: [CALENDAR_WRITE_SCOPE] });
     return true;
   } catch {
     return false;

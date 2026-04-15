@@ -8,19 +8,39 @@ import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GameNavButtons } from '../components/GameNavButtons';
 import TutorialOverlay from '../components/TutorialOverlay';
+import ProGate from '../components/ProGate';
 import { useTutorial } from '../hooks/useTutorial';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import { ChevronRightIcon } from '../components/Icons';
+import {
+  canPlayGame,
+  incrementTrial,
+  getTrialRemaining,
+  TRIAL_LIMIT,
+  type TrialGame,
+} from '../services/gameTrialStorage';
+import { isProUser } from '../services/proStatus';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Games'>;
+
+const GATED_GAMES: TrialGame[] = ['chess', 'checkers', 'trivia', 'sudoku', 'memoryMatch'];
 
 export default function GamesScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [riddleStreak, setRiddleStreak] = useState(0);
   const tutorial = useTutorial('games');
+
+  const [proGateVisible, setProGateVisible] = useState(false);
+  const [gateGame, setGateGame] = useState<TrialGame | undefined>(undefined);
+  const [isPro, setIsPro] = useState(() => isProUser());
+  const [trialCounts, setTrialCounts] = useState<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    GATED_GAMES.forEach((g) => { counts[g] = getTrialRemaining(g); });
+    return counts;
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -35,8 +55,38 @@ export default function GamesScreen({ navigation }: Props) {
       } catch {
         setRiddleStreak(0);
       }
+      setIsPro(isProUser());
+      const counts: Record<string, number> = {};
+      GATED_GAMES.forEach((g) => { counts[g] = getTrialRemaining(g); });
+      setTrialCounts(counts);
     }, []),
   );
+
+  const handleGamePress = useCallback(
+    (screen: keyof RootStackParamList, game?: TrialGame) => {
+      hapticLight();
+      playGameSound('tap');
+      if (game && !canPlayGame(game)) {
+        setGateGame(game);
+        setProGateVisible(true);
+        return;
+      }
+      if (game) {
+        incrementTrial(game);
+        setTrialCounts((prev) => ({ ...prev, [game]: getTrialRemaining(game) }));
+      }
+      navigation.navigate(screen as any);
+    },
+    [navigation],
+  );
+
+  const handleGateClose = useCallback(() => {
+    setProGateVisible(false);
+    setIsPro(isProUser());
+    const counts: Record<string, number> = {};
+    GATED_GAMES.forEach((g) => { counts[g] = getTrialRemaining(g); });
+    setTrialCounts(counts);
+  }, []);
 
   const styles = useMemo(
     () =>
@@ -108,9 +158,53 @@ export default function GamesScreen({ navigation }: Props) {
           color: colors.orange,
           fontFamily: FONTS.bold,
         },
+        trialBadge: {
+          marginTop: 4,
+          alignItems: 'center',
+        },
+        trialTextPro: {
+          fontSize: 11,
+          fontFamily: FONTS.bold,
+          color: colors.accent,
+        },
+        trialTextRemaining: {
+          fontSize: 11,
+          fontFamily: FONTS.regular,
+          color: colors.textTertiary,
+        },
+        trialTextLocked: {
+          fontSize: 11,
+          fontFamily: FONTS.bold,
+          color: colors.red,
+        },
       }),
     [colors, insets.bottom],
   );
+
+  const renderTrialIndicator = (game: TrialGame) => {
+    if (isPro) {
+      return (
+        <View style={styles.trialBadge}>
+          <Text style={styles.trialTextPro}>PRO</Text>
+        </View>
+      );
+    }
+    const remaining = trialCounts[game] ?? TRIAL_LIMIT;
+    if (remaining === 0) {
+      return (
+        <View style={styles.trialBadge}>
+          <Text style={styles.trialTextLocked}>Pro required</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.trialBadge}>
+        <Text style={styles.trialTextRemaining}>
+          {remaining} free round{remaining === 1 ? '' : 's'} left
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <ImageBackground source={require('../../assets/brain.webp')} style={{ flex: 1 }} resizeMode="cover">
@@ -126,7 +220,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Daily Riddle */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('DailyRiddle'); }}
+        onPress={() => handleGamePress('DailyRiddle')}
         activeOpacity={0.7}
         accessibilityLabel="Daily Riddle"
         accessibilityRole="button"
@@ -154,7 +248,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Chess */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Chess'); }}
+        onPress={() => handleGamePress('Chess', 'chess')}
         activeOpacity={0.7}
         accessibilityLabel="Play Chess"
         accessibilityRole="button"
@@ -165,6 +259,7 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Chess</Text>
           <Text style={styles.gameDesc}>vs CPU • 5 difficulties</Text>
+          {renderTrialIndicator('chess')}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
@@ -174,7 +269,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Checkers */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Checkers'); }}
+        onPress={() => handleGamePress('Checkers', 'checkers')}
         activeOpacity={0.7}
         accessibilityLabel="Play Checkers"
         accessibilityRole="button"
@@ -185,6 +280,7 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Checkers</Text>
           <Text style={styles.gameDesc}>vs CPU • 5 difficulties</Text>
+          {renderTrialIndicator('checkers')}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
@@ -194,7 +290,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Trivia */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Trivia'); }}
+        onPress={() => handleGamePress('Trivia', 'trivia')}
         activeOpacity={0.7}
         accessibilityLabel="Play Trivia"
         accessibilityRole="button"
@@ -207,6 +303,7 @@ export default function GamesScreen({ navigation }: Props) {
           <Text style={styles.gameDesc}>
             10 categories. 370+ questions offline.
           </Text>
+          {renderTrialIndicator('trivia')}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
@@ -216,7 +313,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Sudoku */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('Sudoku'); }}
+        onPress={() => handleGamePress('Sudoku', 'sudoku')}
         activeOpacity={0.7}
         accessibilityLabel="Play Sudoku"
         accessibilityRole="button"
@@ -227,6 +324,7 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Sudoku</Text>
           <Text style={styles.gameDesc}>Classic number puzzle. No forgetting allowed.</Text>
+          {renderTrialIndicator('sudoku')}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
@@ -236,7 +334,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Memory Guy Match */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('MemoryMatch'); }}
+        onPress={() => handleGamePress('MemoryMatch', 'memoryMatch')}
         activeOpacity={0.7}
         accessibilityLabel="Play Memory Match"
         accessibilityRole="button"
@@ -247,6 +345,7 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Memory Guy Match</Text>
           <Text style={styles.gameDesc}>Flip cards and find matching pairs</Text>
+          {renderTrialIndicator('memoryMatch')}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
@@ -256,7 +355,7 @@ export default function GamesScreen({ navigation }: Props) {
       {/* Trophies */}
       <TouchableOpacity
         style={styles.gameCard}
-        onPress={() => { hapticLight(); playGameSound('tap'); navigation.navigate('MemoryScore'); }}
+        onPress={() => handleGamePress('MemoryScore')}
         activeOpacity={0.7}
         accessibilityLabel="Memory Score"
         accessibilityRole="button"
@@ -284,6 +383,7 @@ export default function GamesScreen({ navigation }: Props) {
         sectionColor={colors.sectionGames}
       />
     )}
+    <ProGate visible={proGateVisible} onClose={handleGateClose} game={gateGame} />
     </View>
     </ImageBackground>
   );

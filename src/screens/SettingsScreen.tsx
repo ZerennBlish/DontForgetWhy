@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themes, type ThemeName } from '../theme/colors';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
-import { ChevronRightIcon } from '../components/Icons';
+import { ChevronRightIcon, LockIcon } from '../components/Icons';
+import ProGate from '../components/ProGate';
+import useEntitlement from '../hooks/useEntitlement';
+import { getProDetails, type ProDetails } from '../services/proStatus';
 import APP_ICONS from '../data/appIconAssets';
 import TimePicker from '../components/TimePicker';
 import { getButtonStyles } from '../theme/buttonStyles';
@@ -38,13 +41,29 @@ function themeDisplayName(name: ThemeName): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+function formatPurchaseDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return 'recently';
+  }
+}
+
+const PRO_THEMES: Set<ThemeName> = new Set(['vivid', 'sunset', 'ruby']);
+
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, themeName, setTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [proGateVisible, setProGateVisible] = useState(false);
 
   const {
     timeFormat, timeInputMode, hapticsEnabled, voiceRoasts,
+    isPro: initialIsPro, isFounder, proDetails: initialProDetails,
     hasPermissionIssues,
     silenceAll, silenceRemaining,
     silencePickerVisible,
@@ -64,7 +83,30 @@ export default function SettingsScreen({ navigation }: Props) {
     handleSendFeedback,
     handleResetTutorials,
     handleGoogleSignIn, handleGoogleSignOut,
+    calSyncEnabled, isSyncing, syncResult, syncError,
+    handleCalSyncToggle, handleSyncNow,
   } = useSettings(navigation);
+
+  const entitlement = useEntitlement();
+  const [isPro, setIsPro] = useState<boolean>(initialIsPro);
+  const [proDetails, setProDetails] = useState<ProDetails | null>(initialProDetails);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (entitlement.isPro && !isPro) {
+      setIsPro(true);
+      setProDetails(getProDetails());
+    }
+  }, [entitlement.isPro, isPro]);
+
+  useEffect(() => {
+    if (entitlement.error) {
+      setPurchaseError(entitlement.error);
+      const t = setTimeout(() => setPurchaseError(null), 3000);
+      return () => clearTimeout(t);
+    }
+    setPurchaseError(null);
+  }, [entitlement.error]);
 
   const btn = getButtonStyles(colors);
   const styles = useMemo(() => StyleSheet.create({
@@ -220,6 +262,84 @@ export default function SettingsScreen({ navigation }: Props) {
       justifyContent: 'space-between',
       alignItems: 'center',
     },
+    proCard: {
+      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card + 'F0',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.accent + '30',
+      borderLeftWidth: 3,
+      borderLeftColor: colors.accent,
+      padding: 16,
+      marginHorizontal: 16,
+      marginTop: 8,
+      elevation: 2,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+    },
+    proHeaderText: {
+      fontSize: 16,
+      fontFamily: FONTS.bold,
+      color: colors.accent,
+    },
+    proBodyText: {
+      fontSize: 13,
+      fontFamily: FONTS.regular,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      marginTop: 6,
+    },
+    proBadge: {
+      backgroundColor: colors.accent + '20',
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 10,
+      alignSelf: 'flex-start',
+      marginTop: 8,
+    },
+    proBadgeText: {
+      fontSize: 11,
+      fontFamily: FONTS.bold,
+      color: colors.accent,
+    },
+    proUnlockBtn: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 12,
+    },
+    proUnlockBtnText: {
+      fontSize: 15,
+      fontFamily: FONTS.bold,
+      color: '#FFFFFF',
+    },
+    proRestoreBtn: {
+      paddingVertical: 10,
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    proRestoreText: {
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
+      color: colors.accent,
+    },
+    proErrorText: {
+      fontSize: 13,
+      fontFamily: FONTS.regular,
+      color: colors.red,
+      textAlign: 'center',
+      marginTop: 10,
+    },
+    proLoadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.modalOverlay,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
   }), [colors, insets.bottom]);
 
   const currentThemeDisplayName = themeDisplayName(themeName);
@@ -253,6 +373,72 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={styles.permissionBannerText}>Some permissions need attention</Text>
           <ChevronRightIcon color={colors.textTertiary} size={16} />
         </TouchableOpacity>
+      )}
+
+      {/* ===== DFW PRO ===== */}
+      <Text style={styles.sectionHeader}>DFW Pro</Text>
+
+      {isFounder ? (
+        <View style={styles.proCard}>
+          <Text style={styles.proHeaderText}>Founding User</Text>
+          <Text style={styles.proBodyText}>
+            You were here before Pro existed. Everything is unlocked for you — forever. Thank you for believing in this app early.
+          </Text>
+          <View style={styles.proBadge}>
+            <Text style={styles.proBadgeText}>PRO</Text>
+          </View>
+        </View>
+      ) : isPro ? (
+        <View style={styles.proCard}>
+          <Text style={styles.proHeaderText}>Pro Unlocked</Text>
+          <Text style={styles.proBodyText}>
+            {proDetails?.purchaseDate
+              ? `Purchased ${formatPurchaseDate(proDetails.purchaseDate)}`
+              : 'Thanks for going Pro.'}
+          </Text>
+          <View style={styles.proBadge}>
+            <Text style={styles.proBadgeText}>PRO</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.proCard}>
+          <Text style={styles.proHeaderText}>Upgrade to Pro</Text>
+          <Text style={styles.proBodyText}>
+            Unlimited games, premium themes, calendar sync, and more.
+          </Text>
+          <TouchableOpacity
+            style={[styles.proUnlockBtn, entitlement.loading && { opacity: 0.6 }]}
+            onPress={() => { hapticLight(); entitlement.purchase(); }}
+            disabled={entitlement.loading}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Unlock Pro for ${entitlement.productPrice ?? '$1.99'}`}
+          >
+            <Text style={styles.proUnlockBtnText}>
+              {`Unlock Pro — ${entitlement.productPrice ?? '$1.99'}`}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.proRestoreBtn}
+            onPress={() => { hapticLight(); entitlement.restore(); }}
+            disabled={entitlement.loading}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Restore previous purchase"
+          >
+            <Text style={styles.proRestoreText}>Restore Purchase</Text>
+          </TouchableOpacity>
+          {purchaseError ? (
+            <Text style={styles.proErrorText} accessibilityLiveRegion="polite">
+              {purchaseError}
+            </Text>
+          ) : null}
+          {entitlement.loading ? (
+            <View style={styles.proLoadingOverlay} pointerEvents="auto">
+              <ActivityIndicator size="large" color={colors.accent} />
+            </View>
+          ) : null}
+        </View>
       )}
 
       {/* ===== GENERAL ===== */}
@@ -524,6 +710,72 @@ export default function SettingsScreen({ navigation }: Props) {
         </Text>
       </View>
 
+      {googleUser && isPro && (
+        <View style={[styles.card, { marginTop: 16 }]}>
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={styles.label}>Google Calendar Sync</Text>
+              <Text style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.textSecondary, marginTop: 2 }}>
+                Push alarms & reminders to Google Calendar
+              </Text>
+            </View>
+            <Switch
+              value={calSyncEnabled}
+              onValueChange={handleCalSyncToggle}
+              trackColor={{ false: colors.border, true: colors.accent }}
+              thumbColor={calSyncEnabled ? colors.textPrimary : colors.textTertiary}
+              accessibilityLabel="Toggle Google Calendar sync"
+              disabled={isSyncing}
+            />
+          </View>
+
+          {calSyncEnabled && (
+            <TouchableOpacity
+              style={{ marginTop: 12, paddingVertical: 10, alignItems: 'center' }}
+              onPress={handleSyncNow}
+              disabled={isSyncing}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Sync alarms and reminders to Google Calendar"
+            >
+              {isSyncing ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Text style={{ fontSize: 14, fontFamily: FONTS.semiBold, color: colors.accent }}>
+                  Sync Now
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {syncResult && (
+            <Text
+              style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.success, textAlign: 'center', marginTop: 8 }}
+              accessibilityLiveRegion="polite"
+            >
+              {`Synced ${syncResult.synced} item${syncResult.synced === 1 ? '' : 's'}`}
+              {syncResult.errors > 0 ? (
+                <Text style={{ color: colors.red }}>{` (${syncResult.errors} failed)`}</Text>
+              ) : null}
+            </Text>
+          )}
+          {syncError && (
+            <Text
+              style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.red, textAlign: 'center', marginTop: 8 }}
+              accessibilityLiveRegion="polite"
+            >
+              {syncError}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {googleUser && !isPro && (
+        <Text style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.textTertiary, fontStyle: 'italic', marginHorizontal: 20, marginTop: 8 }}>
+          Calendar sync available with Pro
+        </Text>
+      )}
+
       {/* ===== DATA ===== */}
       <Text style={styles.sectionHeader}>Data</Text>
 
@@ -686,6 +938,22 @@ export default function SettingsScreen({ navigation }: Props) {
         </Text>
       </View>
 
+      <TouchableOpacity
+        style={[styles.card, { marginTop: 16 }]}
+        onPress={() => { hapticLight(); entitlement.restore(); }}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Restore previous purchase"
+      >
+        <View style={styles.aboutRow}>
+          <Text style={styles.label}>Restore Purchases</Text>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
+        </View>
+        <Text style={styles.description}>
+          Restore a previous Pro purchase from Google Play.
+        </Text>
+      </TouchableOpacity>
+
       {/* Silence duration picker modal */}
       <Modal transparent visible={silencePickerVisible} animationType="slide" onRequestClose={handleSilencePickerCancel}>
         <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
@@ -806,18 +1074,24 @@ export default function SettingsScreen({ navigation }: Props) {
                 const t = themes[name];
                 const isActive = name === themeName;
                 const displayName = themeDisplayName(name);
+                const isLocked = !isPro && PRO_THEMES.has(name);
                 return (
                   <TouchableOpacity
                     key={name}
                     style={styles.themeItem}
                     onPress={() => {
                       hapticLight();
+                      if (isLocked) {
+                        setThemeModalVisible(false);
+                        setProGateVisible(true);
+                        return;
+                      }
                       setTheme(name);
                       setThemeModalVisible(false);
                     }}
                     activeOpacity={0.7}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select ${displayName} theme`}
+                    accessibilityLabel={`Select ${displayName} theme${isLocked ? ' (Pro)' : ''}`}
                     accessibilityState={{ selected: isActive }}
                   >
                     <View
@@ -826,16 +1100,26 @@ export default function SettingsScreen({ navigation }: Props) {
                         {
                           borderColor: isActive ? t.accent : t.border,
                           backgroundColor: t.background,
+                          opacity: isLocked ? 0.5 : 1,
                         },
                       ]}
                     >
                       <View style={[styles.themeCircleInner, { backgroundColor: t.accent }]}>
-                        {isActive && <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />}
+                        {isLocked ? (
+                          <LockIcon color={t.textPrimary} size={14} />
+                        ) : (
+                          isActive && <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                        )}
                       </View>
                     </View>
                     <Text style={[styles.themeName, isActive && styles.themeNameActive]}>
                       {displayName}
                     </Text>
+                    {isLocked && (
+                      <Text style={{ fontSize: 9, fontFamily: FONTS.bold, color: colors.accent, marginTop: 2 }}>
+                        PRO
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -844,6 +1128,12 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
       </Modal>
     </ScrollView>
+    <ProGate
+      visible={proGateVisible}
+      onClose={() => {
+        setProGateVisible(false);
+      }}
+    />
     {isImporting && (
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 999 }}>
         <ActivityIndicator size="large" color={colors.accent} />

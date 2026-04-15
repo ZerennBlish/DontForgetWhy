@@ -13,6 +13,14 @@ import { kvGet, kvSet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import notifee from '@notifee/react-native';
 import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
+import { isProUser, getProDetails, type ProDetails } from '../services/proStatus';
+import { isFoundingUser } from '../services/foundingStatus';
+import {
+  isSyncEnabled,
+  setSyncEnabled,
+  syncToGoogleCalendar,
+  type SyncResult,
+} from '../services/calendarSync';
 import { getVoiceEnabled, setVoiceEnabled } from '../services/voicePlayback';
 import {
   signInWithGoogle,
@@ -50,6 +58,17 @@ interface UseSettingsResult {
   hapticsEnabled: boolean;
   gameSoundsEnabled: boolean;
   voiceRoasts: boolean;
+
+  // Pro
+  isPro: boolean;
+  isFounder: boolean;
+  proDetails: ProDetails | null;
+
+  // Google Calendar sync
+  calSyncEnabled: boolean;
+  isSyncing: boolean;
+  syncResult: SyncResult | null;
+  syncError: string | null;
 
   // Google account
   googleUser: GoogleUserSummary | null;
@@ -102,6 +121,8 @@ interface UseSettingsResult {
   handleResetTutorials: () => void;
   handleGoogleSignIn: () => Promise<void>;
   handleGoogleSignOut: () => void;
+  handleCalSyncToggle: () => Promise<void>;
+  handleSyncNow: () => Promise<void>;
 }
 
 function toGoogleUserSummary(
@@ -139,6 +160,14 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
   const [googleUser, setGoogleUser] = useState<GoogleUserSummary | null>(() =>
     toGoogleUserSummary(getCurrentUser()),
   );
+  const [isPro] = useState<boolean>(() => isProUser());
+  const [isFounder] = useState<boolean>(() => isFoundingUser());
+  const [proDetails] = useState<ProDetails | null>(() => getProDetails());
+
+  const [calSyncEnabled, setCalSyncEnabledState] = useState<boolean>(() => isSyncEnabled());
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings().then((s) => {
@@ -534,6 +563,42 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     );
   };
 
+  const runSync = useCallback(async () => {
+    setIsSyncing(true);
+    setSyncError(null);
+    setSyncResult(null);
+    try {
+      const result = await syncToGoogleCalendar();
+      setSyncResult(result);
+      setTimeout(() => setSyncResult(null), 4000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Sync failed';
+      setSyncError(msg);
+      setTimeout(() => setSyncError(null), 4000);
+      if (msg.toLowerCase().includes('permission denied')) {
+        setCalSyncEnabledState(false);
+        setSyncEnabled(false);
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
+  const handleCalSyncToggle = useCallback(async () => {
+    hapticLight();
+    const next = !calSyncEnabled;
+    setCalSyncEnabledState(next);
+    setSyncEnabled(next);
+    if (next) {
+      await runSync();
+    }
+  }, [calSyncEnabled, runSync]);
+
+  const handleSyncNow = useCallback(async () => {
+    hapticLight();
+    await runSync();
+  }, [runSync]);
+
   const handleSendFeedback = () => {
     hapticLight();
     const version =
@@ -556,6 +621,17 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     hapticsEnabled,
     gameSoundsEnabled,
     voiceRoasts,
+
+    // Pro
+    isPro,
+    isFounder,
+    proDetails,
+
+    // Google Calendar sync
+    calSyncEnabled,
+    isSyncing,
+    syncResult,
+    syncError,
 
     // Google account
     googleUser,
@@ -608,5 +684,7 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     handleResetTutorials,
     handleGoogleSignIn,
     handleGoogleSignOut,
+    handleCalSyncToggle,
+    handleSyncNow,
   };
 }

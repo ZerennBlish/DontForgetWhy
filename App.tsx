@@ -42,6 +42,7 @@ import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { migrateFromAsyncStorage } from './src/services/database';
+import { runFoundingMigration } from './src/services/foundingStatus';
 import { useNotificationRouting } from './src/hooks/useNotificationRouting';
 import type { RootStackParamList } from './src/navigation/types';
 import { FONTS } from './src/theme/fonts';
@@ -297,6 +298,7 @@ export default function App() {
     try {
       await migrateFromAsyncStorage();
       setDbReady(true);
+      runFoundingMigration();
     } catch (e) {
       console.error('[App] DB migration failed:', e);
       try {
