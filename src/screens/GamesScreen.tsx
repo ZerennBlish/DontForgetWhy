@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GameNavButtons } from '../components/GameNavButtons';
 import TutorialOverlay from '../components/TutorialOverlay';
 import ProGate from '../components/ProGate';
+import useEntitlement from '../hooks/useEntitlement';
 import { useTutorial } from '../hooks/useTutorial';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
@@ -32,6 +33,7 @@ export default function GamesScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [riddleStreak, setRiddleStreak] = useState(0);
   const tutorial = useTutorial('games');
+  const entitlement = useEntitlement();
 
   const [proGateVisible, setProGateVisible] = useState(false);
   const [gateGame, setGateGame] = useState<TrialGame | undefined>(undefined);
@@ -383,7 +385,19 @@ export default function GamesScreen({ navigation }: Props) {
         sectionColor={colors.sectionGames}
       />
     )}
-    {proGateVisible && <ProGate visible={proGateVisible} onClose={handleGateClose} game={gateGame} />}
+    {proGateVisible && (
+      <ProGate
+        visible={proGateVisible}
+        onClose={handleGateClose}
+        game={gateGame}
+        isPro={entitlement.isPro}
+        loading={entitlement.loading}
+        error={entitlement.error}
+        productPrice={entitlement.productPrice}
+        onPurchase={entitlement.purchase}
+        onRestore={entitlement.restore}
+      />
+    )}
     </View>
     </ImageBackground>
   );

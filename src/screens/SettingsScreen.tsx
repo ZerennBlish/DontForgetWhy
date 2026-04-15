@@ -1192,6 +1192,12 @@ export default function SettingsScreen({ navigation }: Props) {
         onClose={() => {
           setProGateVisible(false);
         }}
+        isPro={entitlement.isPro}
+        loading={entitlement.loading}
+        error={entitlement.error}
+        productPrice={entitlement.productPrice}
+        onPurchase={entitlement.purchase}
+        onRestore={entitlement.restore}
       />
     )}
     {isImporting && (

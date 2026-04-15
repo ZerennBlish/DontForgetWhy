@@ -12,7 +12,6 @@ import {
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import APP_ICONS from '../data/appIconAssets';
-import useEntitlement from '../hooks/useEntitlement';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import type { TrialGame } from '../services/gameTrialStorage';
@@ -40,11 +39,26 @@ interface ProGateProps {
   visible: boolean;
   onClose: () => void;
   game?: TrialGame;
+  isPro: boolean;
+  loading: boolean;
+  error: string | null;
+  productPrice: string | null;
+  onPurchase: () => Promise<void>;
+  onRestore: () => Promise<void>;
 }
 
-export default function ProGate({ visible, onClose, game }: ProGateProps) {
+export default function ProGate({
+  visible,
+  onClose,
+  game,
+  isPro,
+  loading,
+  error,
+  productPrice,
+  onPurchase,
+  onRestore,
+}: ProGateProps) {
   const { colors } = useTheme();
-  const { isPro, loading, error, productPrice, purchase, restore } = useEntitlement();
 
   const [headerText] = useState(() => {
     const pool = game ? GAME_HEADERS : GENERIC_HEADERS;
@@ -87,13 +101,13 @@ export default function ProGate({ visible, onClose, game }: ProGateProps) {
 
   const handlePurchase = useCallback(() => {
     hapticLight();
-    purchase();
-  }, [purchase]);
+    onPurchase();
+  }, [onPurchase]);
 
   const handleRestore = useCallback(() => {
     hapticLight();
-    restore();
-  }, [restore]);
+    onRestore();
+  }, [onRestore]);
 
   const handleClose = useCallback(() => {
     hapticLight();
