@@ -332,7 +332,7 @@ export default function SettingsScreen({ navigation }: Props) {
         onPress={() => { hapticLight(); setThemeModalVisible(true); }}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel="Choose theme"
+        accessibilityLabel={`Theme: ${currentThemeDisplayName}. Tap to change.`}
       >
         <View style={styles.row}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -477,8 +477,6 @@ export default function SettingsScreen({ navigation }: Props) {
       <Text style={styles.sectionHeader}>Google Account</Text>
 
       <View style={styles.card}>
-        <Text style={styles.sectionLabel}>Google Account</Text>
-
         {googleUser ? (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -777,7 +775,7 @@ export default function SettingsScreen({ navigation }: Props) {
       </Modal>
 
       {/* Theme picker modal */}
-      <Modal transparent visible={themeModalVisible} animationType="slide" onRequestClose={() => setThemeModalVisible(false)}>
+      <Modal transparent visible={themeModalVisible} animationType="slide" onRequestClose={() => { hapticLight(); setThemeModalVisible(false); }}>
         <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
           <View style={{
             backgroundColor: colors.card,
