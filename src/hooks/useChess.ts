@@ -4,6 +4,7 @@ import { Chess } from 'chess.js';
 import type { Color, PieceSymbol, Square } from 'chess.js';
 import {
   getAIMove,
+  getBookMove,
   analyzeMove,
   DIFFICULTY_LEVELS,
   clearTranspositionTable,
@@ -273,30 +274,36 @@ export function useChess(): UseChessReturn {
           return;
         }
         const t2 = Date.now();
-        // Try Lichess cloud eval first (fast, strong, same for all users);
-        // fall back to the local minimax engine on any failure.
-        let aiSan: string | null = null;
-        try {
-          aiSan = await getCloudMove(c2.fen(), level.cloudPickRange);
-        } catch {
-          aiSan = null;
-        }
-        // Bail if session changed during the cloud request.
-        if (sessionIdRef.current !== currentSession) {
-          setIsAIThinking(false);
-          setAiTimeBudget(0);
-          setAiThinkStart(0);
-          return;
-        }
-        // Re-check game state — could have changed while awaiting.
-        if (!gameRef.current || gameRef.current !== c2 || c2.isGameOver()) {
-          setIsAIThinking(false);
-          setAiTimeBudget(0);
-          setAiThinkStart(0);
-          return;
-        }
+        // Priority: opening book → Lichess cloud eval → local minimax.
+        // Book is synchronous and curated for opening-phase variety (multiple
+        // equivalent mainline choices), so it wins over the cloud's single
+        // top pick in known positions. Cloud kicks in once we're out of book
+        // and covers the long tail with strong Stockfish moves. Local minimax
+        // is the offline fallback when the cloud request fails.
+        let aiSan: string | null = getBookMove(c2);
         if (!aiSan) {
-          aiSan = getAIMove(c2, level);
+          try {
+            aiSan = await getCloudMove(c2.fen(), level.cloudPickRange);
+          } catch {
+            aiSan = null;
+          }
+          // Bail if session changed during the cloud request.
+          if (sessionIdRef.current !== currentSession) {
+            setIsAIThinking(false);
+            setAiTimeBudget(0);
+            setAiThinkStart(0);
+            return;
+          }
+          // Re-check game state — could have changed while awaiting.
+          if (!gameRef.current || gameRef.current !== c2 || c2.isGameOver()) {
+            setIsAIThinking(false);
+            setAiTimeBudget(0);
+            setAiThinkStart(0);
+            return;
+          }
+          if (!aiSan) {
+            aiSan = getAIMove(c2, level);
+          }
         }
         if (__DEV__) console.log('AI move took:', Date.now() - t2, 'ms');
         if (aiSan) {
@@ -642,10 +649,14 @@ export function useChess(): UseChessReturn {
             fenHistoryRef.current = [saved.fen];
           }
           gameRef.current = restored;
+          // Defensive clamp — chessStorage.rowToGame already clamps on read,
+          // but a stale in-memory SavedChessGame from a future migration path
+          // shouldn't be able to index DIFFICULTY_LEVELS out of range.
+          const safeDifficulty = Math.min(Math.max(saved.difficulty, 0), 4);
           setPlayerColor(saved.playerColor);
-          setDifficulty(saved.difficulty);
+          setDifficulty(safeDifficulty);
           setTakeBackUsed(saved.takeBackUsed);
-          const teachingEligible = saved.difficulty <= 2;
+          const teachingEligible = safeDifficulty <= 2;
           setTeachingModeWrapped(teachingEligible);
           blunderCountRef.current = saved.blunderCount;
           startedAtRef.current = saved.startedAt;

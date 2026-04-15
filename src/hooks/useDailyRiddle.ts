@@ -6,9 +6,10 @@ import { hapticMedium } from '../utils/haptics';
 import { checkConnectivity } from '../utils/connectivity';
 import {
   RIDDLES,
-  getDailyRiddleIndex,
+  getDailyRiddleForDate,
   type RiddleCategory,
   type Riddle,
+  type DailyRiddleEntry,
 } from '../data/riddles';
 import {
   fetchMultipleOnlineRiddles,
@@ -109,7 +110,7 @@ interface UseDailyRiddleResult {
   setMode: React.Dispatch<React.SetStateAction<ScreenMode>>;
 
   // Daily riddle
-  dailyRiddle: Riddle;
+  dailyRiddle: DailyRiddleEntry;
   stats: DailyRiddleStats;
   revealed: boolean;
   answered: boolean;
@@ -165,13 +166,12 @@ export function useDailyRiddle(): UseDailyRiddleResult {
   // Reveal animation
   const revealAnim = useRef(new Animated.Value(0)).current;
 
-  // Today's riddle. Offline is the synchronous default so the UI never
-  // flashes empty; a successful online fetch swaps it in (once, cached for
-  // the day). Online-sourced riddles use fake ids ≥ 1,000,000 so we can
-  // tell them apart from offline ids (1..RIDDLES.length) later.
+  // Today's riddle — deterministic lookup from the fixed 366-day yearly
+  // bank. No network, no cache, no shuffle: every device anywhere in the
+  // world resolves the same local `dateStr` to the same entry.
   const todayStr = getTodayString();
-  const [dailyRiddle, setDailyRiddle] = useState<Riddle>(
-    () => RIDDLES[getDailyRiddleIndex(getTodayString())],
+  const [dailyRiddle, setDailyRiddle] = useState<DailyRiddleEntry>(
+    () => getDailyRiddleForDate(getTodayString()),
   );
 
   // Check internet connectivity on mount
@@ -179,11 +179,15 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     checkConnectivity().then(setIsOnlineAvailable);
   }, []);
 
-  // Load stats on focus, then try online riddle (day-scoped cache).
+  // Refresh stats + today's riddle on focus. The riddle itself is
+  // deterministic (pure function of dateStr → YEARLY_RIDDLES lookup), so
+  // calling setDailyRiddle here only matters if the local date rolled over
+  // while the screen was unmounted.
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      loadStats().then(async (s) => {
+      setDailyRiddle(getDailyRiddleForDate(todayStr));
+      loadStats().then((s) => {
         if (cancelled) return;
         setStats(s);
         const playedToday = s.lastPlayedDate === todayStr;
@@ -198,45 +202,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
           setAnswered(false);
           setResultMessage('');
           revealAnim.setValue(0);
-        }
-
-        // Day-scoped cache keeps the riddle stable across app opens.
-        const cacheKey = `daily_riddle_${todayStr}`;
-        const cachedRaw = kvGet(cacheKey);
-        if (cachedRaw) {
-          try {
-            const cached = JSON.parse(cachedRaw);
-            if (
-              !cancelled &&
-              cached &&
-              typeof cached.question === 'string' &&
-              typeof cached.answer === 'string'
-            ) {
-              setDailyRiddle(cached);
-            }
-            return;
-          } catch {
-            // corrupt cache — fall through and refetch
-          }
-        }
-        // Already answered today's offline riddle before the cache existed?
-        // Don't swap the riddle out from under them.
-        if (playedToday) return;
-        try {
-          const results = await fetchMultipleOnlineRiddles(1);
-          if (cancelled || results.length === 0) return;
-          const o = results[0];
-          const riddle: Riddle = {
-            id: 1_000_000 + (Date.now() % 1_000_000),
-            question: o.question,
-            answer: o.answer,
-            difficulty: 'medium',
-            category: 'classic',
-          };
-          kvSet(cacheKey, JSON.stringify(riddle));
-          setDailyRiddle(riddle);
-        } catch {
-          // Offline or API down — keep the offline default.
         }
       });
       return () => {
@@ -279,13 +244,9 @@ export function useDailyRiddle(): UseDailyRiddleResult {
         totalPlayed: current.totalPlayed + 1,
         totalCorrect: current.totalCorrect + (correct ? 1 : 0),
         lastPlayedCorrect: correct,
-        // Online-sourced riddles use fake ids ≥ 1,000,000; skip them so
-        // the "Seen: X/RIDDLES.length" counter stays accurate.
-        seenRiddleIds:
-          dailyRiddle.id >= 1_000_000 ||
-          current.seenRiddleIds.includes(dailyRiddle.id)
-            ? current.seenRiddleIds
-            : [...current.seenRiddleIds, dailyRiddle.id],
+        seenRiddleIds: current.seenRiddleIds.includes(dailyRiddle.id)
+          ? current.seenRiddleIds
+          : [...current.seenRiddleIds, dailyRiddle.id],
       };
       setStats(newStats);
       setAlreadyPlayedToday(true);

@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   ImageBackground,
   Image,
-  ImageSourcePropType,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
@@ -20,21 +19,13 @@ import { playGameSound } from '../utils/gameSounds';
 import { GameNavButtons } from '../components/GameNavButtons';
 import APP_ICONS from '../data/appIconAssets';
 import type { RootStackParamList } from '../navigation/types';
-import { RIDDLES, CATEGORY_LABELS } from '../data/riddles';
+import { YEARLY_RIDDLES } from '../data/riddles';
 import { useDailyRiddle, getFormattedDate, difficultyColor } from '../hooks/useDailyRiddle';
 import { isProUser } from '../services/proStatus';
 import ProGate from '../components/ProGate';
 import useEntitlement from '../hooks/useEntitlement';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DailyRiddle'>;
-
-const RIDDLE_CATEGORY_IMAGES: Record<string, ImageSourcePropType> = {
-  memory: require('../../assets/trivia/trivia-general.webp'),
-  classic: require('../../assets/trivia/trivia-history.webp'),
-  wordplay: require('../../assets/icons/icon-wordplay.webp'),
-  logic: require('../../assets/icons/icon-puzzle.webp'),
-  quick: require('../../assets/icons/icon-quick.webp'),
-};
 
 export default function DailyRiddleScreen({ navigation }: Props) {
   const { colors } = useTheme();
@@ -402,11 +393,8 @@ export default function DailyRiddleScreen({ navigation }: Props) {
               </Text>
             </View>
             <View style={[styles.categoryBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-              {RIDDLE_CATEGORY_IMAGES[dailyRiddle.category] && (
-                <Image source={RIDDLE_CATEGORY_IMAGES[dailyRiddle.category]} style={{ width: 14, height: 14 }} resizeMode="contain" />
-              )}
               <Text style={styles.categoryBadgeText}>
-                {CATEGORY_LABELS[dailyRiddle.category]}
+                {dailyRiddle.category}
               </Text>
             </View>
           </View>
@@ -625,7 +613,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             Correct: {stats.totalCorrect}
           </Text>
           <Text style={styles.statText}>
-            Seen: {stats.seenRiddleIds.length}/{RIDDLES.length}
+            Seen: {stats.seenRiddleIds.length}/{YEARLY_RIDDLES.length}
           </Text>
         </View>
       )}

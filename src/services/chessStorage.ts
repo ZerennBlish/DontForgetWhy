@@ -33,10 +33,15 @@ function rowToGame(row: ChessGameRow): SavedChessGame {
     const parsed = JSON.parse(row.moveHistory);
     if (Array.isArray(parsed)) moveHistory = parsed.filter((m) => typeof m === 'string');
   } catch {}
+  // Clamp to the 0–4 range that the current DIFFICULTY_LEVELS array supports.
+  // Protects against legacy saves from a build that shipped extra levels
+  // (e.g. the old Cloud difficulty at index 5); such games now resolve to
+  // Master instead of crashing or rendering a blank label.
+  const clampedDifficulty = Math.min(Math.max(row.difficulty ?? 1, 0), 4);
   return {
     fen: row.fen,
     playerColor: row.playerColor,
-    difficulty: row.difficulty,
+    difficulty: clampedDifficulty,
     moveHistory,
     takeBackUsed: !!row.takeBackUsed,
     blunderCount: row.blunderCount,
