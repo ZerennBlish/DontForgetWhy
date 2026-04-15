@@ -3,6 +3,12 @@ import { checkConnectivity } from '../utils/connectivity';
 
 const LICHESS_CLOUD_EVAL = 'https://lichess.org/api/cloud-eval';
 const CLOUD_TIMEOUT_MS = 5000;
+const MULTI_PV = 5;
+
+export interface PickRange {
+  minRank: number; // 0-indexed: 0 = best
+  maxRank: number; // inclusive
+}
 
 interface CloudEvalResponse {
   fen: string;
@@ -46,10 +52,16 @@ export function uciToSan(game: Chess, uci: string): string | null {
   }
 }
 
-/** Query the Lichess cloud eval API for a Stockfish-computed best move.
- * Returns a SAN string on success, or null for ANY failure (offline, 404,
- * timeout, malformed response, etc.) — callers should fall back locally. */
-export async function getCloudMove(fen: string): Promise<string | null> {
+/** Query the Lichess cloud eval API for a Stockfish-computed multi-PV move.
+ * `pickRange` selects a rank band within the top-5 results (0 = best,
+ * 4 = 5th best); if fewer PVs are returned, both bounds clamp to the
+ * last available index. A single rank is picked uniformly at random from
+ * the clamped range. Returns a SAN string on success, or null for ANY
+ * failure (offline, 404, timeout, malformed, illegal move). */
+export async function getCloudMove(
+  fen: string,
+  pickRange: PickRange,
+): Promise<string | null> {
   try {
     const online = await checkConnectivity();
     if (!online) return null;
@@ -60,7 +72,7 @@ export async function getCloudMove(fen: string): Promise<string | null> {
     let response: Response;
     try {
       response = await fetch(
-        `${LICHESS_CLOUD_EVAL}?fen=${encodeURIComponent(fen)}&multiPv=1`,
+        `${LICHESS_CLOUD_EVAL}?fen=${encodeURIComponent(fen)}&multiPv=${MULTI_PV}`,
         { signal: controller.signal },
       );
     } finally {
@@ -72,7 +84,24 @@ export async function getCloudMove(fen: string): Promise<string | null> {
     const data: unknown = await response.json();
     if (!isCloudEvalResponse(data)) return null;
 
-    const uciMove = data.pvs[0].moves.split(' ')[0];
+    const maxAvailable = data.pvs.length - 1;
+    const effectiveMin = Math.max(0, Math.min(pickRange.minRank, maxAvailable));
+    const effectiveMax = Math.max(
+      effectiveMin,
+      Math.min(pickRange.maxRank, maxAvailable),
+    );
+    const span = effectiveMax - effectiveMin + 1;
+    const rank = effectiveMin + Math.floor(Math.random() * span);
+
+    const picked = data.pvs[rank];
+    if (
+      !picked ||
+      typeof picked.moves !== 'string' ||
+      picked.moves.length < 4
+    ) {
+      return null;
+    }
+    const uciMove = picked.moves.split(' ')[0];
     if (!uciMove) return null;
 
     const tempGame = new Chess(fen);

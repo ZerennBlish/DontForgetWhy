@@ -136,7 +136,7 @@ export default function TriviaScreen({ navigation }: Props) {
 
   // Phase state
   const [phase, setPhase] = useState<Phase>('category');
-  const [onlineMode, setOnlineMode] = useState(false);
+  const [onlineMode, setOnlineMode] = useState(true);
   const [allSeenMessage, setAllSeenMessage] = useState<string | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('all');
   const [speedOption, setSpeedOption] = useState<SpeedOption>('normal');
@@ -160,9 +160,11 @@ export default function TriviaScreen({ navigation }: Props) {
   const answerLocked = useRef(false);
   const roundTimePerQuestion = useRef(SPEED_SECONDS.normal);
 
-  // Check online availability on mount (online mode is disabled for now)
+  // Online by default — auto-disable if the OpenTDB API is unreachable.
   useEffect(() => {
-    checkOnlineAvailable().then(() => {});
+    checkOnlineAvailable().then((available) => {
+      setOnlineMode(available);
+    });
   }, []);
 
   // Timer logic

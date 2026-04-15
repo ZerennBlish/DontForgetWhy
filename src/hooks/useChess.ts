@@ -9,7 +9,6 @@ import {
   clearTranspositionTable,
 } from '../services/chessAI';
 import { getCloudMove } from '../services/cloudStockfish';
-import { isProUser } from '../services/proStatus';
 import {
   saveChessGame,
   loadChessGame,
@@ -274,31 +273,29 @@ export function useChess(): UseChessReturn {
           return;
         }
         const t2 = Date.now();
+        // Try Lichess cloud eval first (fast, strong, same for all users);
+        // fall back to the local minimax engine on any failure.
         let aiSan: string | null = null;
-        if (level.cloud && isProUser()) {
-          try {
-            aiSan = await getCloudMove(c2.fen());
-          } catch {
-            aiSan = null;
-          }
-          // Bail if session changed during the cloud request.
-          if (sessionIdRef.current !== currentSession) {
-            setIsAIThinking(false);
-            setAiTimeBudget(0);
-            setAiThinkStart(0);
-            return;
-          }
-          // Also re-check game state — could have changed while awaiting.
-          if (!gameRef.current || gameRef.current !== c2 || c2.isGameOver()) {
-            setIsAIThinking(false);
-            setAiTimeBudget(0);
-            setAiThinkStart(0);
-            return;
-          }
-          if (!aiSan) {
-            aiSan = getAIMove(c2, level);
-          }
-        } else {
+        try {
+          aiSan = await getCloudMove(c2.fen(), level.cloudPickRange);
+        } catch {
+          aiSan = null;
+        }
+        // Bail if session changed during the cloud request.
+        if (sessionIdRef.current !== currentSession) {
+          setIsAIThinking(false);
+          setAiTimeBudget(0);
+          setAiThinkStart(0);
+          return;
+        }
+        // Re-check game state — could have changed while awaiting.
+        if (!gameRef.current || gameRef.current !== c2 || c2.isGameOver()) {
+          setIsAIThinking(false);
+          setAiTimeBudget(0);
+          setAiThinkStart(0);
+          return;
+        }
+        if (!aiSan) {
           aiSan = getAIMove(c2, level);
         }
         if (__DEV__) console.log('AI move took:', Date.now() - t2, 'ms');

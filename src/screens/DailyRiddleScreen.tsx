@@ -1,11 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   Animated,
   ActivityIndicator,
   ImageBackground,
@@ -22,7 +21,10 @@ import { GameNavButtons } from '../components/GameNavButtons';
 import APP_ICONS from '../data/appIconAssets';
 import type { RootStackParamList } from '../navigation/types';
 import { RIDDLES, CATEGORY_LABELS } from '../data/riddles';
-import { useDailyRiddle, ALL_CATEGORIES, getFormattedDate, difficultyColor } from '../hooks/useDailyRiddle';
+import { useDailyRiddle, getFormattedDate, difficultyColor } from '../hooks/useDailyRiddle';
+import { isProUser } from '../services/proStatus';
+import ProGate from '../components/ProGate';
+import useEntitlement from '../hooks/useEntitlement';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DailyRiddle'>;
 
@@ -41,16 +43,24 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   const {
     mode, setMode,
     dailyRiddle, stats, revealed, answered, resultMessage,
-    hintShown, alreadyPlayedToday, revealAnim,
-    selectedCategory, setSelectedCategory,
-    searchQuery, setSearchQuery,
-    expandedRiddleId, setExpandedRiddleId,
-    filteredRiddles,
-    browseSource,
+    alreadyPlayedToday, revealAnim,
     onlineRiddles, onlineLoading, onlineError,
     expandedOnlineId, setExpandedOnlineId,
-    handleReveal, handleAnswer, handleShowHint, handleFetchOnlineRiddles,
+    handleReveal, handleAnswer, handleFetchOnlineRiddles,
   } = useDailyRiddle();
+
+  const [proGateVisible, setProGateVisible] = useState(false);
+  const entitlement = useEntitlement();
+
+  const handleBonusTabPress = () => {
+    hapticLight();
+    playGameSound('tap');
+    if (isProUser()) {
+      setMode('browse');
+    } else {
+      setProGateVisible(true);
+    }
+  };
 
   const styles = useMemo(
     () =>
@@ -148,25 +158,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           textShadowOffset: { width: 0, height: 1 },
           textShadowRadius: 3,
         },
-        hintBtn: {
-          alignSelf: 'center',
-          marginTop: 12,
-          paddingVertical: 8,
-          paddingHorizontal: 16,
-        },
-        hintBtnText: {
-          fontSize: 13,
-          color: colors.overlaySecondary,
-          fontFamily: FONTS.semiBold,
-        },
-        hintText: {
-          fontSize: 13,
-          color: colors.accent,
-          fontFamily: FONTS.semiBold,
-          textAlign: 'center',
-          marginTop: 8,
-        },
-
         // Reveal section
         answerSection: {
           marginTop: 20,
@@ -246,22 +237,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           color: colors.overlayText,
         },
 
-        // Browse button
-        browseBtn: {
-          marginHorizontal: 16,
-          marginTop: 12,
-          backgroundColor: colors.card,
-          borderRadius: 16,
-          paddingVertical: 16,
-          alignItems: 'center',
-          borderWidth: 1,
-          borderColor: colors.border,
-        },
-        browseBtnText: {
-          fontSize: 15,
-          fontFamily: FONTS.semiBold,
-          color: colors.accent,
-        },
         // Browse mode
         modeToggle: {
           flexDirection: 'row',
@@ -289,84 +264,18 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         modeBtnTextActive: {
           color: colors.textPrimary,
         },
-        searchInput: {
-          marginHorizontal: 16,
-          marginTop: 12,
-          backgroundColor: colors.card,
-          borderRadius: 12,
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          fontSize: 15,
-          color: colors.textPrimary,
-          borderWidth: 1,
-          borderColor: colors.border,
-        },
-        filterRow: {
-          flexDirection: 'row',
-          marginHorizontal: 16,
-          marginTop: 12,
-          gap: 8,
-          flexWrap: 'wrap',
-        },
-        filterBtn: {
-          paddingHorizontal: 14,
-          paddingVertical: 8,
-          borderRadius: 20,
-          backgroundColor: colors.card,
-          borderWidth: 1,
-          borderColor: colors.border,
-        },
-        filterBtnActive: {
+        proBadge: {
           backgroundColor: colors.accent,
-          borderColor: colors.accent,
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          borderRadius: 4,
+          marginLeft: 4,
         },
-        filterBtnText: {
-          fontSize: 12,
-          fontFamily: FONTS.semiBold,
-          color: colors.textSecondary,
-        },
-        filterBtnTextActive: {
-          color: colors.textPrimary,
-        },
-        browseCard: {
-          marginHorizontal: 16,
-          marginTop: 10,
-          backgroundColor: colors.card,
-          borderRadius: 14,
-          padding: 16,
-          borderWidth: 1,
-          borderColor: colors.border,
-        },
-        browseCardRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 10,
-        },
-        browseSeenIcon: {
-          fontSize: 16,
-          color: colors.success,
-        },
-        browseQuestion: {
-          flex: 1,
-          fontSize: 14,
-          fontFamily: FONTS.regular,
-          color: colors.textPrimary,
-          lineHeight: 22,
-        },
-        browseChevron: {
-          fontSize: 16,
-          color: colors.textTertiary,
-        },
-        browseBadgeRow: {
-          flexDirection: 'row',
-          gap: 6,
-          marginTop: 8,
-        },
-        browseAnswer: {
-          fontSize: 14,
+        proBadgeText: {
+          fontSize: 9,
           fontFamily: FONTS.bold,
-          color: colors.accent,
-          marginTop: 12,
+          color: '#FFFFFF',
+          letterSpacing: 0.5,
         },
         browseCount: {
           fontSize: 13,
@@ -389,36 +298,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           fontStyle: 'italic',
         },
 
-        // Browse source toggle
-        sourceToggle: {
-          flexDirection: 'row',
-          marginHorizontal: 16,
-          marginTop: 12,
-          backgroundColor: colors.card,
-          borderRadius: 12,
-          borderWidth: 1,
-          borderColor: colors.border,
-          overflow: 'hidden',
-        },
-        sourceBtn: {
-          flex: 1,
-          paddingVertical: 10,
-          alignItems: 'center',
-          flexDirection: 'row',
-          justifyContent: 'center',
-          gap: 6,
-        },
-        sourceBtnActive: {
-          backgroundColor: colors.accent,
-        },
-        sourceBtnText: {
-          fontSize: 12,
-          fontFamily: FONTS.semiBold,
-          color: colors.textSecondary,
-        },
-        sourceBtnTextActive: {
-          color: colors.textPrimary,
-        },
         // Online riddle cards
         onlineCard: {
           marginHorizontal: 16,
@@ -507,8 +386,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   // ─── Render: Daily Mode ────────────────────────────────────────────────
 
   const renderDaily = () => {
-    const hintLetter = dailyRiddle.answer.charAt(0).toUpperCase();
-
     return (
       <>
         <View style={styles.riddleCard}>
@@ -537,27 +414,6 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           <Text style={styles.questionText}>
             {'\u201C'}{dailyRiddle.question}{'\u201D'}
           </Text>
-
-          {!revealed && !alreadyPlayedToday && (
-            <>
-              {!hintShown ? (
-                <TouchableOpacity
-                  style={[styles.hintBtn, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                  onPress={() => { hapticLight(); playGameSound('tap'); handleShowHint(); }}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel="Show hint"
-                >
-                  <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
-                  <Text style={styles.hintBtnText}>Need a hint?</Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={styles.hintText} accessibilityLiveRegion="polite">
-                  Starts with "{hintLetter}"
-                </Text>
-              )}
-            </>
-          )}
 
           {revealed && (
             <Animated.View
@@ -646,267 +502,95 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             </View>
           </TouchableOpacity>
         )}
-
-        <TouchableOpacity
-          style={styles.browseBtn}
-          onPress={() => { hapticLight(); playGameSound('tap'); setMode('browse'); }}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Browse riddles"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Image source={require('../../assets/icons/icon-books.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
-            <Text style={styles.browseBtnText}>Browse All Riddles</Text>
-          </View>
-        </TouchableOpacity>
-
       </>
     );
   };
 
   // ─── Render: Browse Mode ───────────────────────────────────────────────
 
-  const renderBrowse = () => {
-    const seenSet = new Set(stats.seenRiddleIds);
-    return (
-      <>
-        {/* Source toggle: Offline Bank / Fresh Riddles (online disabled — coming soon) */}
-        <View style={styles.sourceToggle}>
-          <TouchableOpacity
-            style={[styles.sourceBtn, styles.sourceBtnActive]}
-            activeOpacity={1}
-          >
-            <Image source={require('../../assets/icons/icon-phone.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
-            <Text style={[styles.sourceBtnText, styles.sourceBtnTextActive]}>
-              Offline Bank
-            </Text>
-          </TouchableOpacity>
-          <View
-            style={[styles.sourceBtn, { opacity: 0.4 }]}
-            pointerEvents="none"
-          >
-            <Image source={require('../../assets/icons/icon-globe.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
-            <Text style={[styles.sourceBtnText, { color: colors.textTertiary }]}>
-              Fresh Riddles
-            </Text>
-          </View>
+  const renderBrowse = () => (
+    <>
+      {onlineLoading && onlineRiddles.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={styles.loadingText}>Fetching fresh riddles...</Text>
         </View>
-        <Text style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.textTertiary, fontStyle: 'italic', marginHorizontal: 16, marginTop: 4 }}>
-          Online riddles coming soon
-        </Text>
+      ) : onlineError && onlineRiddles.length === 0 ? (
+        <>
+          <Text style={styles.errorText}>
+            Couldn't fetch new riddles. Check your connection and try again.
+          </Text>
+          <TouchableOpacity
+            style={styles.loadMoreBtn}
+            onPress={() => { hapticLight(); playGameSound('tap'); handleFetchOnlineRiddles(); }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Try again"
+          >
+            <Text style={styles.loadMoreText}>Try Again</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          <Text style={styles.browseCount}>
+            {onlineRiddles.length} fresh riddle{onlineRiddles.length !== 1 ? 's' : ''}
+          </Text>
 
-        {browseSource === 'offline' ? (
-          <>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search riddles..."
-              placeholderTextColor={colors.textTertiary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCorrect={false}
-            />
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.filterRow, { paddingHorizontal: 16 }]}
-            >
+          {onlineRiddles.map((riddle) => {
+            const isExpanded = expandedOnlineId === riddle.id;
+            return (
               <TouchableOpacity
-                style={[
-                  styles.filterBtn,
-                  selectedCategory === 'all' && styles.filterBtnActive,
-                ]}
-                onPress={() => { hapticLight(); playGameSound('tap'); setSelectedCategory('all'); }}
+                key={riddle.id}
+                style={styles.onlineCard}
+                onPress={() => {
+                  hapticLight();
+                  playGameSound('tap');
+                  setExpandedOnlineId(isExpanded ? null : riddle.id);
+                }}
                 activeOpacity={0.7}
                 accessibilityRole="button"
-                accessibilityLabel="All"
-                accessibilityState={{ selected: selectedCategory === 'all' }}
+                accessibilityLabel={`Online riddle: ${riddle.question}`}
               >
-                <Text
-                  style={[
-                    styles.filterBtnText,
-                    selectedCategory === 'all' && styles.filterBtnTextActive,
-                  ]}
-                >
-                  All
+                <View style={[styles.onlineBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+                  <Image source={require('../../assets/icons/icon-globe.webp')} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                  <Text style={styles.onlineBadgeText}>Online</Text>
+                </View>
+                <Text style={styles.onlineQuestion}>
+                  {'\u201C'}{riddle.question}{'\u201D'}
                 </Text>
-              </TouchableOpacity>
-              {ALL_CATEGORIES.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.filterBtn,
-                    selectedCategory === cat && styles.filterBtnActive,
-                  ]}
-                  onPress={() => { hapticLight(); playGameSound('tap'); setSelectedCategory(cat); }}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={CATEGORY_LABELS[cat]}
-                  accessibilityState={{ selected: selectedCategory === cat }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    {RIDDLE_CATEGORY_IMAGES[cat] && (
-                      <Image source={RIDDLE_CATEGORY_IMAGES[cat]} style={{ width: 24, height: 24 }} resizeMode="contain" />
-                    )}
-                    <Text
-                      style={[
-                        styles.filterBtnText,
-                        selectedCategory === cat && styles.filterBtnTextActive,
-                      ]}
-                    >
-                      {CATEGORY_LABELS[cat]}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.browseCount}>
-              {filteredRiddles.length} riddle{filteredRiddles.length !== 1 ? 's' : ''}
-            </Text>
-
-            {filteredRiddles.map((riddle) => {
-              const isExpanded = expandedRiddleId === riddle.id;
-              const isSeen = seenSet.has(riddle.id);
-              return (
-                <TouchableOpacity
-                  key={riddle.id}
-                  style={styles.browseCard}
-                  onPress={() => {
-                    hapticLight();
-                    playGameSound('tap');
-                    setExpandedRiddleId(isExpanded ? null : riddle.id);
-                  }}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Riddle: ${riddle.question}`}
-                >
-                  <View style={styles.browseCardRow}>
-                    {isSeen && (
-                      <Text style={styles.browseSeenIcon}>{'\u2705'}</Text>
-                    )}
-                    <Text
-                      style={styles.browseQuestion}
-                      numberOfLines={isExpanded ? undefined : 2}
-                    >
-                      {riddle.question}
-                    </Text>
-                    <Text style={styles.browseChevron}>
-                      {isExpanded ? '\u2304' : '\u203A'}
-                    </Text>
-                  </View>
-                  <View style={styles.browseBadgeRow}>
-                    <View
-                      style={[
-                        styles.difficultyBadge,
-                        { backgroundColor: difficultyColor(riddle.difficulty) },
-                      ]}
-                    >
-                      <Text style={styles.difficultyBadgeText}>
-                        {riddle.difficulty.charAt(0).toUpperCase() +
-                          riddle.difficulty.slice(1)}
-                      </Text>
-                    </View>
-                    <View style={styles.categoryBadge}>
-                      <Text style={styles.categoryBadgeText}>
-                        {CATEGORY_LABELS[riddle.category]}
-                      </Text>
-                    </View>
-                  </View>
-                  {isExpanded && (
-                    <Text style={styles.browseAnswer}>{riddle.answer}</Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </>
-        ) : (
-          <>
-            {/* Online riddles */}
-            {onlineLoading && onlineRiddles.length === 0 ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.accent} />
-                <Text style={styles.loadingText}>Fetching fresh riddles...</Text>
-              </View>
-            ) : onlineError && onlineRiddles.length === 0 ? (
-              <>
-                <Text style={styles.errorText}>
-                  Couldn't fetch new riddles. Check your connection or browse the offline bank.
-                </Text>
-                <TouchableOpacity
-                  style={styles.loadMoreBtn}
-                  onPress={() => { hapticLight(); playGameSound('tap'); handleFetchOnlineRiddles(); }}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel="Try again"
-                >
-                  <Text style={styles.loadMoreText}>Try Again</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={styles.browseCount}>
-                  {onlineRiddles.length} fresh riddle{onlineRiddles.length !== 1 ? 's' : ''}
-                </Text>
-
-                {onlineRiddles.map((riddle) => {
-                  const isExpanded = expandedOnlineId === riddle.id;
-                  return (
-                    <TouchableOpacity
-                      key={riddle.id}
-                      style={styles.onlineCard}
-                      onPress={() => {
-                        hapticLight();
-                        playGameSound('tap');
-                        setExpandedOnlineId(isExpanded ? null : riddle.id);
-                      }}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Online riddle: ${riddle.question}`}
-                    >
-                      <View style={[styles.onlineBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-                        <Image source={require('../../assets/icons/icon-globe.webp')} style={{ width: 14, height: 14 }} resizeMode="contain" />
-                        <Text style={styles.onlineBadgeText}>Online</Text>
-                      </View>
-                      <Text style={styles.onlineQuestion}>
-                        {'\u201C'}{riddle.question}{'\u201D'}
-                      </Text>
-                      {isExpanded ? (
-                        <Text style={styles.onlineAnswer}>{riddle.answer}</Text>
-                      ) : (
-                        <Text style={styles.onlineTapHint}>Tap to reveal answer</Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-
-                <TouchableOpacity
-                  style={styles.loadMoreBtn}
-                  onPress={() => { hapticLight(); playGameSound('tap'); handleFetchOnlineRiddles(); }}
-                  activeOpacity={0.7}
-                  disabled={onlineLoading}
-                  accessibilityRole="button"
-                  accessibilityLabel="Load more riddles"
-                >
-                  {onlineLoading ? (
-                    <ActivityIndicator size="small" color={colors.accent} />
-                  ) : (
-                    <Text style={styles.loadMoreText}>Load More</Text>
-                  )}
-                </TouchableOpacity>
-
-                {onlineError && onlineRiddles.length > 0 && (
-                  <Text style={styles.errorText}>
-                    Some riddles couldn't be loaded. Try again later.
-                  </Text>
+                {isExpanded ? (
+                  <Text style={styles.onlineAnswer}>{riddle.answer}</Text>
+                ) : (
+                  <Text style={styles.onlineTapHint}>Tap to reveal answer</Text>
                 )}
-              </>
+              </TouchableOpacity>
+            );
+          })}
+
+          <TouchableOpacity
+            style={styles.loadMoreBtn}
+            onPress={() => { hapticLight(); playGameSound('tap'); handleFetchOnlineRiddles(); }}
+            activeOpacity={0.7}
+            disabled={onlineLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Load more riddles"
+          >
+            {onlineLoading ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <Text style={styles.loadMoreText}>Load More</Text>
             )}
-          </>
-        )}
-      </>
-    );
-  };
+          </TouchableOpacity>
+
+          {onlineError && onlineRiddles.length > 0 && (
+            <Text style={styles.errorText}>
+              Some riddles couldn't be loaded. Try again later.
+            </Text>
+          )}
+        </>
+      )}
+    </>
+  );
 
   // ─── Main Render ───────────────────────────────────────────────────────
 
@@ -970,10 +654,10 @@ export default function DailyRiddleScreen({ navigation }: Props) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.modeBtn, mode === 'browse' && styles.modeBtnActive]}
-          onPress={() => { hapticLight(); playGameSound('tap'); setMode('browse'); }}
+          onPress={handleBonusTabPress}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="Browse riddles"
+          accessibilityLabel="Bonus riddles (Pro)"
           accessibilityState={{ selected: mode === 'browse' }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -984,14 +668,29 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                 mode === 'browse' && styles.modeBtnTextActive,
               ]}
             >
-              Browse All
+              Bonus Riddles
             </Text>
+            <View style={styles.proBadge}>
+              <Text style={styles.proBadgeText}>PRO</Text>
+            </View>
           </View>
         </TouchableOpacity>
       </View>
 
       {mode === 'daily' ? renderDaily() : renderBrowse()}
     </ScrollView>
+    {proGateVisible && (
+      <ProGate
+        visible={proGateVisible}
+        onClose={() => setProGateVisible(false)}
+        isPro={entitlement.isPro}
+        loading={entitlement.loading}
+        error={entitlement.error}
+        productPrice={entitlement.productPrice}
+        onPurchase={entitlement.purchase}
+        onRestore={entitlement.restore}
+      />
+    )}
     </View>
     </ImageBackground>
   );

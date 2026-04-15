@@ -16,7 +16,6 @@ import {
 } from '../services/riddleOnline';
 
 type ScreenMode = 'daily' | 'browse';
-type BrowseSource = 'offline' | 'online';
 
 interface DailyRiddleStats {
   lastPlayedDate: string;
@@ -116,7 +115,6 @@ interface UseDailyRiddleResult {
   answered: boolean;
   resultMessage: string;
   gotIt: boolean;
-  hintShown: boolean;
   alreadyPlayedToday: boolean;
   revealAnim: Animated.Value;
 
@@ -130,8 +128,6 @@ interface UseDailyRiddleResult {
   filteredRiddles: Riddle[];
 
   // Online browse
-  browseSource: BrowseSource;
-  setBrowseSource: React.Dispatch<React.SetStateAction<BrowseSource>>;
   onlineRiddles: OnlineRiddle[];
   onlineLoading: boolean;
   onlineError: boolean;
@@ -142,7 +138,6 @@ interface UseDailyRiddleResult {
   // Callbacks
   handleReveal: () => void;
   handleAnswer: (correct: boolean) => Promise<void>;
-  handleShowHint: () => void;
   handleFetchOnlineRiddles: () => Promise<void>;
 }
 
@@ -153,7 +148,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
   const [answered, setAnswered] = useState(false);
   const [resultMessage, setResultMessage] = useState('');
   const [gotIt, setGotIt] = useState(false);
-  const [hintShown, setHintShown] = useState(false);
   const [alreadyPlayedToday, setAlreadyPlayedToday] = useState(false);
 
   // Browse mode state
@@ -162,7 +156,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
   const [expandedRiddleId, setExpandedRiddleId] = useState<number | null>(null);
 
   // Online browse state
-  const [browseSource, setBrowseSource] = useState<BrowseSource>('offline');
   const [onlineRiddles, setOnlineRiddles] = useState<OnlineRiddle[]>([]);
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [onlineError, setOnlineError] = useState(false);
@@ -172,22 +165,29 @@ export function useDailyRiddle(): UseDailyRiddleResult {
   // Reveal animation
   const revealAnim = useRef(new Animated.Value(0)).current;
 
-  // Today's riddle
+  // Today's riddle. Offline is the synchronous default so the UI never
+  // flashes empty; a successful online fetch swaps it in (once, cached for
+  // the day). Online-sourced riddles use fake ids ≥ 1,000,000 so we can
+  // tell them apart from offline ids (1..RIDDLES.length) later.
   const todayStr = getTodayString();
-  const dailyIndex = getDailyRiddleIndex(todayStr);
-  const dailyRiddle = RIDDLES[dailyIndex];
+  const [dailyRiddle, setDailyRiddle] = useState<Riddle>(
+    () => RIDDLES[getDailyRiddleIndex(getTodayString())],
+  );
 
   // Check internet connectivity on mount
   useEffect(() => {
     checkConnectivity().then(setIsOnlineAvailable);
   }, []);
 
-  // Load stats on focus
+  // Load stats on focus, then try online riddle (day-scoped cache).
   useFocusEffect(
     useCallback(() => {
-      loadStats().then((s) => {
+      let cancelled = false;
+      loadStats().then(async (s) => {
+        if (cancelled) return;
         setStats(s);
-        if (s.lastPlayedDate === todayStr) {
+        const playedToday = s.lastPlayedDate === todayStr;
+        if (playedToday) {
           setAlreadyPlayedToday(true);
           setRevealed(true);
           setAnswered(true);
@@ -196,12 +196,54 @@ export function useDailyRiddle(): UseDailyRiddleResult {
           setAlreadyPlayedToday(false);
           setRevealed(false);
           setAnswered(false);
-          setHintShown(false);
           setResultMessage('');
           revealAnim.setValue(0);
         }
+
+        // Day-scoped cache keeps the riddle stable across app opens.
+        const cacheKey = `daily_riddle_${todayStr}`;
+        const cachedRaw = kvGet(cacheKey);
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            if (
+              !cancelled &&
+              cached &&
+              typeof cached.question === 'string' &&
+              typeof cached.answer === 'string'
+            ) {
+              setDailyRiddle(cached);
+            }
+            return;
+          } catch {
+            // corrupt cache — fall through and refetch
+          }
+        }
+        // Already answered today's offline riddle before the cache existed?
+        // Don't swap the riddle out from under them.
+        if (playedToday) return;
+        try {
+          const results = await fetchMultipleOnlineRiddles(1);
+          if (cancelled || results.length === 0) return;
+          const o = results[0];
+          const riddle: Riddle = {
+            id: 1_000_000 + (Date.now() % 1_000_000),
+            question: o.question,
+            answer: o.answer,
+            difficulty: 'medium',
+            category: 'classic',
+          };
+          kvSet(cacheKey, JSON.stringify(riddle));
+          setDailyRiddle(riddle);
+        } catch {
+          // Offline or API down — keep the offline default.
+        }
       });
-    }, [todayStr, dailyRiddle.id, revealAnim]),
+      return () => {
+        cancelled = true;
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [todayStr]),
   );
 
   const handleReveal = useCallback(() => {
@@ -237,9 +279,13 @@ export function useDailyRiddle(): UseDailyRiddleResult {
         totalPlayed: current.totalPlayed + 1,
         totalCorrect: current.totalCorrect + (correct ? 1 : 0),
         lastPlayedCorrect: correct,
-        seenRiddleIds: current.seenRiddleIds.includes(dailyRiddle.id)
-          ? current.seenRiddleIds
-          : [...current.seenRiddleIds, dailyRiddle.id],
+        // Online-sourced riddles use fake ids ≥ 1,000,000; skip them so
+        // the "Seen: X/RIDDLES.length" counter stays accurate.
+        seenRiddleIds:
+          dailyRiddle.id >= 1_000_000 ||
+          current.seenRiddleIds.includes(dailyRiddle.id)
+            ? current.seenRiddleIds
+            : [...current.seenRiddleIds, dailyRiddle.id],
       };
       setStats(newStats);
       setAlreadyPlayedToday(true);
@@ -247,10 +293,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     },
     [todayStr, dailyRiddle.id],
   );
-
-  const handleShowHint = useCallback(() => {
-    setHintShown(true);
-  }, []);
 
   const handleFetchOnlineRiddles = useCallback(async () => {
     setOnlineLoading(true);
@@ -263,6 +305,15 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     }
     setOnlineLoading(false);
   }, []);
+
+  // Auto-fetch fresh riddles the first time the user enters Browse mode
+  // (and whenever they re-enter after it was emptied).
+  useEffect(() => {
+    if (mode === 'browse' && onlineRiddles.length === 0 && !onlineLoading) {
+      void handleFetchOnlineRiddles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   const filteredRiddles = useMemo(() => {
     let list = RIDDLES;
@@ -292,7 +343,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     answered,
     resultMessage,
     gotIt,
-    hintShown,
     alreadyPlayedToday,
     revealAnim,
 
@@ -306,8 +356,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     filteredRiddles,
 
     // Online browse
-    browseSource,
-    setBrowseSource,
     onlineRiddles,
     onlineLoading,
     onlineError,
@@ -318,7 +366,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     // Callbacks
     handleReveal,
     handleAnswer,
-    handleShowHint,
     handleFetchOnlineRiddles,
   };
 }

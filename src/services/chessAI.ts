@@ -865,17 +865,18 @@ export interface DifficultyLevel {
   maxDepth: number;
   timeLimitMs: number;
   randomness: number; // 0 = always best move, higher = more random
-  cloud?: boolean; // Fetch best move from Lichess cloud eval (Stockfish)
+  // Which Stockfish multi-PV rank band to draw from when the cloud eval
+  // API has this position. 0 = best move, 4 = 5th best. A single rank
+  // is picked uniformly at random from [minRank, maxRank].
+  cloudPickRange: { minRank: number; maxRank: number };
 }
 
 export const DIFFICULTY_LEVELS: DifficultyLevel[] = [
-  { name: 'Beginner',     minDepth: 1, maxDepth: 2, timeLimitMs: 300,  randomness: 0.4 },
-  { name: 'Casual',       minDepth: 1, maxDepth: 3, timeLimitMs: 500,  randomness: 0.2 },
-  { name: 'Intermediate', minDepth: 2, maxDepth: 4, timeLimitMs: 1000, randomness: 0.05 },
-  { name: 'Advanced',     minDepth: 2, maxDepth: 5, timeLimitMs: 2000, randomness: 0 },
-  { name: 'Expert',       minDepth: 3, maxDepth: 6, timeLimitMs: 5000, randomness: 0 },
-  // Cloud: fallback depth/budget equals Expert when the API has no data.
-  { name: 'Cloud',        minDepth: 3, maxDepth: 6, timeLimitMs: 5000, randomness: 0, cloud: true },
+  { name: 'Easy',         minDepth: 1, maxDepth: 2, timeLimitMs: 300,  randomness: 0.4,  cloudPickRange: { minRank: 2, maxRank: 4 } },
+  { name: 'Intermediate', minDepth: 1, maxDepth: 3, timeLimitMs: 500,  randomness: 0.15, cloudPickRange: { minRank: 1, maxRank: 3 } },
+  { name: 'Hard',         minDepth: 2, maxDepth: 4, timeLimitMs: 1000, randomness: 0.05, cloudPickRange: { minRank: 0, maxRank: 2 } },
+  { name: 'Expert',       minDepth: 3, maxDepth: 5, timeLimitMs: 2000, randomness: 0,    cloudPickRange: { minRank: 0, maxRank: 1 } },
+  { name: 'Master',       minDepth: 3, maxDepth: 6, timeLimitMs: 3000, randomness: 0,    cloudPickRange: { minRank: 0, maxRank: 0 } },
 ];
 
 export function getAIMove(game: Chess, level: DifficultyLevel): string | null {
