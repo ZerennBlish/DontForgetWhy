@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 29 (April 14, 2026)
+### Source of Truth · Updated: Session 30 (April 14, 2026)
 
 ---
 
@@ -7,15 +7,15 @@
 
 | | |
 |---|---|
-| **Current Version** | v1.21.0 (versionCode 39) on `dev` |
+| **Current Version** | v1.21.0 (versionCode 39) on `dev` — no bump this session, Session 30 code not yet shipped to Play Store |
 | **Branch** | `dev` |
-| **Production Status** | **v1.21.0 (versionCode 39) live on Play Store.** Internal testing AAB of the same build also uploaded — used to unlock in-app-product creation for the `dfw_pro_unlock` SKU. |
-| **Current Focus** | Session 29: Timer preset WebP icons (21 presets), Opening.mp3 on HomeScreen, 4 audit fixes, **P5.5 Premium Foundation complete** (expo-iap + proStatus + useEntitlement + ProGate shipped dormant). |
+| **Production Status** | **v1.21.0 (versionCode 39) live on Play Store.** Session 30 Firebase/Google Calendar work sits unshipped on `dev` until the next version bump. |
+| **Current Focus** | Session 30: Firebase Auth (Google Sign-In), Firestore service layer, Google Calendar sync (P5), SettingsScreen Google Account card, triple audit + fixes (2 P1 + 6 P2 all cleared). |
 | **Blocked By** | Nothing |
-| **Next Action** | Pick next session — Firebase activation (P8 prep), P5 Calendar Sync, P7 Pro Tier UI, multiplayer chess, or cloud Stockfish. |
-| **EAS Credits** | ~30 available (reset April 12) |
-| **Firebase Credits** | $300 available — DO NOT activate yet (90-day clock starts on activation) |
-| **ElevenLabs** | Subscription active — 83 clips shipped (68 original + 15 tutorial) |
+| **Next Action** | Settings screen redesign, then P7 Pro Tier + Billing UI, multiplayer chess, cloud Stockfish. |
+| **EAS Credits** | ~28 available (2 dev builds attempted this session — 1 failed, 1 succeeded; reset April 12 already rolled) |
+| **Firebase Credits** | **$300 activated — 90-day clock started April 14, expires July 14, 2026.** Firestore rules published (`users/{uid}` locked to `request.auth.uid == uid`). Google Calendar API enabled in Google Cloud Console. |
+| **ElevenLabs** | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
 
 ---
 
@@ -23,11 +23,10 @@
 
 Picking the next body of work. Each candidate is scoped big enough for a full session but loose enough to reshape on the way in.
 
-- **Firebase backend setup (P8 prep)** — Activate the $300 Firebase credit, stand up Auth (Google Sign-In, optional — app works 100% offline without it) + Firestore. Lays groundwork for online riddles, global leaderboards, multiplayer chess, cloud Stockfish. Activation starts a 90-day consumption clock, so only pull the trigger when the first online feature is ready to ship within that window.
-- **Google Calendar Sync (P5)** — Re-open the deferred phase. Requires Firebase Auth + Google OAuth via `expo-auth-session`. Pull Google Calendar events into Today section + CalendarScreen dot indicators. Sign-in is voluntary and local-feeling — the "no accounts" brand evolves to "optional sign-in unlocks optional connected features" (see Decisions doc).
+- **Settings screen redesign** — Group settings into logical sections (Account, Appearance, Sound & Haptics, Data & Backup, About), compact theme picker, cleaner layout. The Google Account card landed mid-list in Session 30 and exposed how long and ungrouped the screen has become — worth a pass before P7 adds more surfaces to it.
 - **P7 Pro Tier + Billing UI** — The actual paywall. All P5.5 plumbing is in production dormant. P7 is pure UI work: design locked-state visuals for Chess/Checkers/Sudoku/voice memos/photo backgrounds/note images/drawing/backup, place `ProGate` wrappers around the 8-10 gated surfaces, build the paywall modal, wire `useEntitlement().purchase` and `.restore` to buttons, ship.
-- **Multiplayer chess** — Firestore-backed async + realtime multiplayer. Pro-gated (P7 must ship first). Depends on Firebase.
-- **Cloud Stockfish** — Firebase Cloud Function hosting Stockfish for 2000+ ELO play. Pro-tier alternative to the local engine. Free tier keeps the offline engine. Depends on Firebase.
+- **Multiplayer chess** — Firestore-backed async + realtime multiplayer. Pro-gated (P7 must ship first). Firebase foundation is now live — `firestore.ts` service layer + `firebaseAuth.ts` Google Sign-In exist, just need a `games` collection + presence/turn logic.
+- **Cloud Stockfish** — Firebase Cloud Function hosting Stockfish for 2000+ ELO play. Pro-tier alternative to the local engine. Free tier keeps the offline engine. Firebase Auth already wired, so Functions can trust `request.auth.uid` out of the box.
 
 ---
 
@@ -45,12 +44,14 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 | — | Session 14 Onboarding Overhaul | ✅ Done | Prod only |
 | 4 | The Vault (Backup & Restore) | ✅ Done | Dev + Prod |
 | 4.5 | Stability Sprint | ✅ Done | Prod only |
-| 5 | Google Calendar Sync | ⏭️ Deferred | Dev + Prod |
+| 5 | Google Calendar Sync | ✅ Done | Dev (unshipped) |
 | 5.5 | Premium Foundation | ✅ Done | Dev + Prod |
 | 6 | Chess + Checkers + Blunder Roast | ✅ Done | Prod only |
 | 6.5 | Voice Content Expansion | 🟡 Partial | Prod only |
 | 7 | Pro Tier + Billing | ⬜ Waiting | Multiple |
-| 8 | Firebase Online + Social | ⬜ Waiting | Prod |
+| 8 | Firebase Online + Social | ✅ Foundation Done | Dev (unshipped) |
+
+> **Note:** P8 was pulled forward and its Auth + Firestore foundation landed in Session 30 alongside P5, because P5 required Firebase Auth to sign the user in for Google Calendar access. P8's remaining work (online riddles, global leaderboards, multiplayer chess, cloud Stockfish) is still waiting, but the plumbing is live.
 
 ---
 
@@ -143,16 +144,46 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 
 ---
 
-## PHASE 5 — GOOGLE CALENDAR SYNC ⏭️ DEFERRED
+## PHASE 5 — GOOGLE CALENDAR SYNC ✅ COMPLETE
 
-**Deferred Session 16.** Requires Google sign-in (Firebase Auth + OAuth), which conflicts with the "no accounts, we don't want your data" brand promise. Revisit only when user base justifies the complexity AND a flow exists that keeps sign-in optional/local-feeling. Until then, users keep using the in-app calendar.
+**Shipped in:** Session 30 (April 14, 2026) — code on `dev`, not yet shipped to Play Store (pending version bump).
+**Branch:** `dev`
+**New deps:** `@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-firebase/firestore`, `@react-native-google-signin/google-signin`
+**Build cost:** 2 dev builds (1 failed, 1 succeeded)
 
-**Original scope (preserved):**
-- Firebase project setup (Auth only)
-- Google OAuth via expo-auth-session
-- Pull Google Calendar events into Today section + CalendarScreen dots
-- Sync settings UI in SettingsScreen
-- Optional: push DFW alarms/reminders to Google Calendar
+**Deferred in Session 16.** Original reason was brand conflict with "no accounts, we don't want your data." Session 30 unblocked it by reframing the brand: the app still works 100% offline always, sign-in is voluntary and local-feeling, connected features (calendar) are additive and never block the offline core.
+
+### Completed
+
+- [x] Firebase project `dont-forget-why` on Blaze plan ($300 credit, 90-day clock started April 14)
+- [x] Android app registered with production keystore SHA-1
+- [x] Google Auth provider enabled, Firestore created, rules published locking `users/{uid}` to `request.auth.uid`
+- [x] Google Calendar API enabled in Google Cloud Console
+- [x] `google-services.json` in project root, referenced via `android.googleServicesFile` in app.json for EAS prebuild
+- [x] `@react-native-firebase/auth` Google Sign-In (voluntary, initiated from SettingsScreen Google Account card)
+- [x] `firebaseAuth.ts` service — `signInWithGoogle`, `signOutGoogle`, `getCurrentUser`, `onAuthStateChanged`, `getAccessToken`, `requestCalendarScope`. Configured with `calendar.readonly` scope. Clears the calendar cache on sign-in + sign-out.
+- [x] `firestore.ts` service — typed CRUD for `users` collection, `UserProfile` type, `isUserProfile` shape validation, `set({ merge: true })` with first-write-only `createdAt` guard, `firestoreTimestamp()` helper
+- [x] User profile write on sign-in (fire-and-forget, never blocks the sign-in UX)
+- [x] `googleCalendar.ts` service — REST API client, 5-minute in-memory cache keyed by uid + date range, all-day + timed event parsing, local-TZ-aware query window, 401 → token refresh, 403 → scope request, silent empty-array fallback on any failure
+- [x] CalendarScreen integration — `sectionCalendar`-colored dots on month grid, new `google` filter capsule, event cards with "G" badge, auth-aware fetching via `onAuthStateChanged` subscription, separate `useEffect([currentMonth, authUser])` for fetch (local data loading kept on focus), legend wraps to two rows to fit 5 dot types, multi-day events deduplicated via `dateStr`-prefixed row keys
+- [x] HomeScreen integration — Google events in Today section with "G" badge + "All Day" label handling, auth-aware fetching via `onAuthStateChanged` subscription, dedicated `useEffect([authUser])` for fetch
+- [x] SettingsScreen Google Account card — connect button, connected state shows photo + name + email + disconnect button, no-data messaging
+- [x] Jest coverage — `firebaseAuth.test.ts` (mocks google-signin + firebase-auth + firestore), `firestore.test.ts` (shape validation + set/merge + createdAt first-write-only), `googleCalendar.test.ts` (URL/auth header, TZ-robust time window assertion, cached/TTL, 401-refresh-retry, 403-scope-retry, all-day + multi-day + timed parsing, clearCalendarCache, getEventsForDate)
+
+### Design Decisions
+- **Optional sign-in philosophy confirmed.** Brand evolves from "no accounts ever" to "your data stays yours, even when you sign in." See Decisions doc Session 30 block.
+- **Google Calendar via REST API, not SDK.** No extra native dependency; Bearer token from Google Sign-In is enough. Lighter, simpler, sufficient for read-only sync.
+- **In-memory cache only, no local persistence for calendar events.** Aligns with "your data stays yours" — Google Calendar data never touches SQLite.
+- **Cache keyed by uid + date range.** Prevents cross-account data leaks on shared devices. Cleared on sign-in AND sign-out (belt-and-suspenders).
+- **401 = token refresh, 403 = scope request.** Distinguishes expired tokens (silent refresh via `clearCachedAccessToken` + `getTokens`) from missing permissions (user-facing `addScopes` consent sheet). Prevents confusing consent popups on routine hourly token expiry.
+- **Firestore rules published on day one.** `users/{uid}` locked to `request.auth.uid == uid`. No test-mode window exposed to real users.
+- **Auth hydration via `onAuthStateChanged` in screens.** Screens depending on auth state subscribe to auth changes instead of reading the synchronous `getCurrentUser()` — which can return null briefly on cold start while Firebase hydrates from persistence.
+
+### Audit Gate
+- [x] Triple audit (Codex + Claude + Gemini) on Session 30 scope — 2 P1 (cache leak on sign-out, Firestore test-mode rules) + 6 P2 (UTC query window, 401 token refresh, duplicate fetch regression on CalendarScreen, auth hydration race, duplicate React keys for multi-day events, dead `calendarColor` field) + several P3. **All P1 + P2 fixed.** The P1 rules concern was fixed by publishing real rules before shipping; the P1 cache leak was fixed by wiring `clearCalendarCache()` into both `signInWithGoogle` and `signOutGoogle`.
+- [x] `npx tsc --noEmit` — 0 errors
+- [x] `npx jest` — 17 suites, 379 tests passing (adds `firebaseAuth`, `firestore`, `googleCalendar` to the suite)
+- [ ] Version bump — deferred until Settings redesign lands alongside this work
 
 ---
 
@@ -556,5 +587,6 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 | Apr 10 | Session 24 full codebase audit sweep. 8-category dual audit (Codex + Gemini). Dead code removed (alarmSounds.ts + 26 icon exports + orphan styles across 13 files + dead exports across 27 files). Theme tokens added (success + overlaySecondary). Accessibility pass across critical screens/cards/modals/forms/games. FlatList perf configs. Data safety: safeParse + asyncMutex utilities wired across 13 storage files, restore mutex, never-throw autoBackup. Navigation beforeRemove guards with savedRef bypass. Type safety in migrations/forms/hooks. `audioCompat.ts` type-compat layer scaffolded (not yet imported). `GameNavButtons.tsx` + 8 game icons + 5 new trivia/sudoku sounds + lock/checkmark chrome icons on disk but wiring was reverted after laptop issues (stranded files: broken icon refs in GameNavButtons). Visual fixes: FAB chrome circle on 4 list screens, silver notepad fallback on NoteCard/DeletedNoteCard. No version bump — audit sits on dev unshipped. |
 | Apr 12 | Session 27 NoteEditorModal redesign + note titles. NoteEditorModal rewritten: useNoteEditor hook extraction (all state + logic), 5 sub-components (NoteEditorTopBar, NoteEditorToolbar, NoteColorPicker, NoteImageStrip), bottom toolbar (Camera, Gallery, Draw, Colors, Attached), dropdown menu eliminated. Voice recording removed from notes (legacy playback kept via MemoCard). Text limits removed (notes unlimited, voice memo notes unlimited, titles stay 100). Note title feature: new `title` column on notes table, Note type updated, wired through useNoteEditor + useNotepad + NoteEditorModal save flow, title UI in editor. Attachments panel: images behind paperclip button in edit mode, inline in view mode. Scrollable image strip (horizontal ScrollView). Icon size consistency pass across 10+ files (save=24, edit=24, trash=20, toolbar circles ~56, icons ~28, HomeButton=24, BackButton=22). New asset: paperclip.webp. Dual audit (Codex + Gemini) — 6 findings fixed. Visual polish: image positioning, centering, title layout. |
 | Apr 11 | Session 26 voice memo clips + photos + icon overhaul. Memos are now containers holding multiple audio clips (`voice_clips` table, `VoiceClip` type, `voiceClipStorage` service, automatic legacy migration). Clip playback modes (Stop/Play All/Repeat). Voice memo photos via camera (record screen) + gallery (detail screen), 5-photo cap, ImageLightbox view, new `voice-memo-images/` folder + `images TEXT` column on voice_memos. Recording flow rewrite: VoiceRecordScreen creates memo + first clip directly, eliminates `tempUri` handoff path entirely, atomic save with rollback on clip failure. Icon overhaul: floppy-disk (save) + pencil (edit) icons, replaced text Edit/Save buttons with circle icon buttons across VoiceMemoDetail/NoteEditorModal/CreateAlarm/CreateReminder, timer modal redesigned (3 circle action buttons: red cancel / accent save-only / success start with new `handleModalSaveOnly`), sound/bell + emoji circles got tappable treatment, reminder/timer/alarm icon-picker fallbacks show silver `+`, calendar inline icons restructured into proper flex rows. Dual audit (Codex + Gemini) — 8 findings fixed (HIGH: focus reload missed memo, non-atomic save, stale capturedPhotos closure; MEDIUM: 5-photo cap, backup meta count, migration inserter; LOW: a11y label, Array.isArray). Re-audit clean. 315 tests passing, tsc clean. Ready for device testing then ship. |
+| Apr 14 | Session 30: **Firebase backend (P8 foundation) + Google Calendar sync (P5) shipped.** Firebase project `dont-forget-why` on Blaze plan ($300 credit, 90-day clock started April 14, expires July 14, 2026). Firebase Auth with Google Sign-In — connect/disconnect in SettingsScreen Google Account card, Firestore user profile on sign-in (fire-and-forget with shape validation). Firestore service layer (`firestore.ts`) with typed CRUD, `isUserProfile` type guard, `set()` with `{ merge: true }`, first-write-only `createdAt` guard. Google Calendar sync via REST API (no SDK, no extra native dep) — fetches events with Bearer token, 5-minute in-memory cache keyed by uid + date range, events render as `sectionCalendar` dots on CalendarScreen + items in HomeScreen Today section, new `google` filter type added on CalendarScreen, event cards ship with "G" badge + "All Day" label handling. CalendarScreen legend wrapped to fit 5 dot types. Google Calendar API enabled in Google Cloud Console. Triple audit (Codex + Claude + Gemini): 2 P1 (cache leak on sign-out, Firestore test-mode rules) + 6 P2 (UTC timezone query window, 401 token refresh vs 403 scope request, duplicate fetch regression on month navigation, auth hydration race on cold start, duplicate React keys for multi-day Google events, dead `calendarColor` field). All P1 + P2 fixed — cache cleared on sign-in/out, Firestore rules published locking `users/{uid}` to `request.auth.uid`, local-TZ-aware query window via `toISOString`, 401 → `clearCachedAccessToken` + refresh + retry, 403 → `addScopes` + retry, Google fetch moved to dedicated `useEffect([currentMonth, authUser])` so month nav doesn't reload local data, screens now subscribe to `onAuthStateChanged` so cold-start auth hydration refreshes Google events, row keys now include `dateStr` prefix for `googleCal` events. Project Instructions updated with Claude Code Prompt Standards (verification loops, @ references, think levels, prompt structure templates). `npx tsc --noEmit` clean, 379 tests across 17 suites passing. **No version bump this session — Session 30 code sits on `dev` until the Settings redesign session lands and a single bump ships both.** |
 | Apr 14 | Session 29: **Timer preset WebP icons + Opening.mp3 + P5.5 Premium Foundation shipped.** Timer presets: 21 built-in presets now render custom WebP art via new `timerPresetAssets.ts` registry (user-created timers still use emoji). 2 new presets added: Crying (2700s / 45min) and Revenge (14400s / 4hr). Opening.mp3 wired to HomeScreen: plays once on first mount after onboarding, gated behind a `kvGet`/`kvSet` flag so it never replays (duplicate playback from OnboardingScreen removed during wiring). 4 audit fixes: AppState background listener (pause audio when app backgrounds), dead code removal, double-lookup collapse on TimerScreen preset rendering, a11y pass on new icons. **P5.5 Premium Foundation COMPLETE** — `expo-iap@^4.0.2` installed (Play Billing 8.x, Expo-native, TypeScript-first); Google Play in-app product `dfw_pro_unlock` created ($1.99, one-time, non-consumable, active); license testers configured; `src/services/proStatus.ts` (sync kv-backed entitlement cache with safeParse + `isValidProDetails` type guard); `src/hooks/useEntitlement.ts` (wraps `useIAP`, real restore flow, 60s purchase timeout, cancel handling, unmount cleanup); `src/components/ProGate.tsx` (pass-through until P7); `__tests__/proStatus.test.ts` (18 tests, full shape validation). Foundation ships dormant — no billing UI until P7. Secondary (Claude) audit on P5.5 found 1 P1 (non-functional restore) + 3 P2 + 6 P3, all fixed. Backup entitlement covered for free (pro_status is a standard kv key, already part of dfw.db backup archive). Internal testing AAB uploaded alongside production AAB (vCode 39) — internal track upload was the prerequisite Google requires before in-app products can be created in Play Console. **v1.21.0 (versionCode 39), live on Play Store.** |
 | Apr 13 | Session 28: 8 targeted fixes + tutorial overlay system with voice clips. Fixes: useFocusEffect preserves title/note on re-focus, back button peels attachments panel before save dialog, share clip picker uses scrollable modal (Alert.alert 3-button Android limit), VoiceRecordScreen back confirms photo discard, toolbar/panel uses theme colors not hardcoded rgba, attachments panel dismisses on text focus with empty-photo guard, backup validates voiceMemoImages field with backward compat for old manifests, audioCompat.ts PlayerWithEvents adopted across 4 files replacing `as any` casts. Tutorial system: per-screen first-visit tip carousel with sarcastic DFW voice copy, useTutorial hook (kvGet/kvSet dismissal, lazy initializer for flash-free mount), TutorialOverlay component (section-colored card, dot indicators, backdrop dismiss, sibling structure for TalkBack), tutorialTips.ts data for 7 screens (alarmList 3, reminders 2, notepad 3, voiceMemoList 3, calendar 1, timers 2, games 1), **15 ElevenLabs voice clips in assets/voice/tutorial/ with expo-audio MEDIA stream playback** (Asset.fromModule + downloadAsync, PlayerWithEvents, cancelled-flag race protection, AppState background pause), tutorialClips.ts registry, Settings Tutorial Guide reset row, Jest data validation tests. Wired to AlarmListScreen, ReminderScreen, NotepadScreen, VoiceMemoListScreen, CalendarScreen, TimerScreen, GamesScreen. Triple audit (Codex + Claude + Gemini) — 9 initial findings fixed + 3 voice clip audit findings fixed: backup backward compat for old .dfw files, VoiceRecordScreen photo-only discard guard, share picker theme-aware backdrop, badge/border theme compliance, 2 tip copy corrections (reminders 6hr→midnight, calendar missing voice memos), tutorial flash eliminated via lazy useState, no-op TouchableOpacity a11y fix, TalkBack structural fix (backdrop/card siblings not parent/child), stopClip on tip advance (no audio trail), playerRef before play (no leak window), AppState background pause. **v1.20.0 (versionCode 37).** |

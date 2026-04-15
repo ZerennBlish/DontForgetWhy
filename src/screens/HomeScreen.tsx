@@ -36,7 +36,7 @@ import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
 import APP_ICONS from '../data/appIconAssets';
 import { fetchCalendarEvents, getEventsForDate, type GoogleCalendarEvent } from '../services/googleCalendar';
-import { getCurrentUser } from '../services/firebaseAuth';
+import { getCurrentUser, onAuthStateChanged } from '../services/firebaseAuth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -189,6 +189,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([]);
+  const [authUser, setAuthUser] = useState<ReturnType<typeof getCurrentUser>>(() => getCurrentUser());
   const [noteCount, setNoteCount] = useState(0);
   const [voiceMemoCount, setVoiceMemoCount] = useState(0);
   const [runningTimerCount, setRunningTimerCount] = useState(0);
@@ -262,15 +263,6 @@ export default function HomeScreen({ navigation }: Props) {
           setReminders(activeRems);
         });
       });
-      if (getCurrentUser()) {
-        const nowD = new Date();
-        const todayStr = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}-${String(nowD.getDate()).padStart(2, '0')}`;
-        fetchCalendarEvents(todayStr, todayStr).then((events) => {
-          if (!cancelled) setGoogleEvents(events);
-        });
-      } else {
-        setGoogleEvents([]);
-      }
       getNotes().then((loaded) => { if (!cancelled) setNoteCount(loaded.length); });
       getVoiceMemos().then((loaded) => { if (!cancelled) setVoiceMemoCount(loaded.filter((m) => !m.deletedAt).length); });
       loadActiveTimers().then((loaded) => {
@@ -293,6 +285,27 @@ export default function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     setTodayEvents(getTodayEvents(alarms, reminders, googleEvents));
   }, [alarms, reminders, googleEvents]);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged((user) => setAuthUser(user));
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    if (!authUser) {
+      setGoogleEvents([]);
+      return;
+    }
+    let cancelled = false;
+    const nowD = new Date();
+    const todayStr = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}-${String(nowD.getDate()).padStart(2, '0')}`;
+    fetchCalendarEvents(todayStr, todayStr).then((events) => {
+      if (!cancelled) setGoogleEvents(events);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser]);
 
   useEffect(() => {
     (async () => {

@@ -8,6 +8,7 @@ import {
 } from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { createOrUpdateUserProfile } from './firestore';
+import { clearCalendarCache } from './googleCalendar';
 
 const WEB_CLIENT_ID = '190522733985-r50fan5ba955qv2ab1n0oqrgv7kak7ba.apps.googleusercontent.com';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
@@ -24,6 +25,7 @@ function ensureConfigured(): void {
 
 export async function signInWithGoogle(): Promise<FirebaseAuthTypes.UserCredential> {
   ensureConfigured();
+  clearCalendarCache();
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
   const result = await GoogleSignin.signIn();
   if (result.type !== 'success') {
@@ -45,6 +47,7 @@ export async function signInWithGoogle(): Promise<FirebaseAuthTypes.UserCredenti
 
 export async function signOutGoogle(): Promise<void> {
   ensureConfigured();
+  clearCalendarCache();
   try {
     await signOut(getAuth());
   } catch {

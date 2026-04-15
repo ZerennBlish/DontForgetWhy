@@ -1,6 +1,6 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 29 (April 14, 2026)
+**Last updated:** Session 30 (April 14, 2026)
 
 ---
 
@@ -194,6 +194,43 @@ borderColor:    colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 
 - **One-time gate** — HomeScreen checks `kvGet('openingClipPlayed')` on mount. If the flag is missing, it plays the clip and calls `kvSet('openingClipPlayed', '1')` so the next mount (and every future mount) skips playback. Gate lives in `kv_store`, survives app restarts, and is included in the .dfw backup like every other kv key.
 - **AppState background pause** — the same `AppState.addEventListener('change', ...)` pattern as Tutorial Overlay: if the user backgrounds the app mid-Opening, the clip stops cleanly instead of continuing into the system audio sink.
 - Asset lives at `assets/voice/Opening.mp3`, registered alongside the other 83 ElevenLabs clips.
+
+### Firebase Auth (Session 30)
+- **Optional Google Sign-In** from the Settings screen. Uses `@react-native-google-signin/google-signin` + `@react-native-firebase/auth`. Entirely voluntary — the app works 100% offline and never requires an account. Sign-in exists only to unlock connected features (Google Calendar sync today; multiplayer chess, cloud Stockfish, online riddles, and global leaderboards later).
+- **Settings Google Account card** (between About and Permissions). Two visual states:
+  - **Connected** — 36×36 circle profile photo + display name + email + "Disconnect" secondary button (two-step `Alert.alert` confirmation before the actual sign-out).
+  - **Disconnected** — "Connect Google Account" primary button.
+  - Explanation text: "Optional. Enables calendar sync and future connected features. Your local data stays on your phone either way."
+- **Sign-in flow** — `signInWithGoogle()` runs `hasPlayServices` → `GoogleSignin.signIn` → `GoogleAuthProvider.credential(idToken)` → `signInWithCredential`. On success, fires a background `createOrUpdateUserProfile(user)` write to Firestore `users/{uid}` (never blocks the sign-in UX; failures are logged via `console.warn`). Shows a toast "Connected as {email}" + medium haptic.
+- **Sign-out flow** — Clears the calendar cache, signs out of both Firebase Auth and Google Sign-In, swallows errors on both paths (Firebase complains if no user is signed in; Google complains if not currently signed in via Google). Shows a toast "Disconnected" + light haptic.
+- **Cancel detection** — Native `signIn()` returns `{ type: 'cancelled' }` when the user backs out of the consent sheet. `signInWithGoogle` re-throws this as a synthetic `Error` with `code: 'SIGN_IN_CANCELLED'`, and `handleGoogleSignIn` silently returns on that code (no toast, no haptic). Also tolerates the legacy iOS cancel code `'-5'`.
+- **User profile in Firestore** — `users/{uid}` documents carry `{ uid, email, displayName, photoURL, createdAt: Timestamp, lastSignIn: Timestamp }`. `createdAt` is only written on the first sign-in (read-then-write guarded by `snap.exists()`); every subsequent sign-in updates `lastSignIn` + mutable profile fields via `set(payload, { merge: true })`. Shape validated on read via `isUserProfile` type guard so malformed server data can't break the app.
+- **Firestore security rules** — `match /users/{uid} { allow read, write: if request.auth != null && request.auth.uid == uid; }`. Published day one, no test-mode window exposed to real users.
+- **Scopes requested up front** — `calendar.readonly` is included in `GoogleSignin.configure()` so new sign-ins grant calendar access in the same consent sheet. Legacy sign-ins without the scope are upgraded lazily via `requestCalendarScope()` when a Google Calendar fetch hits 403.
+- **Auth state subscription** — Settings, Home, and Calendar screens subscribe to `onAuthStateChanged` so the UI reflects sign-in / sign-out events live (and handles the Firebase cold-start hydration race where `getCurrentUser()` briefly returns null before persistence has loaded).
+
+### Google Calendar Sync (P5, Session 30)
+- **Reads the user's primary Google Calendar** via the REST API (`https://www.googleapis.com/calendar/v3/calendars/primary/events`). No Google Calendar SDK — just `fetch` + a Bearer access token from Google Sign-In. Read-only (`calendar.readonly` scope); the app never writes to your calendar.
+- **Where events show up:**
+  - **HomeScreen Today section** — today's events appear alongside alarms and reminders. Dot color `sectionCalendar` (orange by default). Type label "Google". Time formatted per settings (12h/24h). All-day events show "All Day" instead of a time. Tapping a Google event is a no-op (they're external — can't edit them here). A "G" visual cue in the row distinguishes them from DFW items.
+  - **CalendarScreen month grid** — Google events render as `sectionCalendar`-colored dots on each day they occupy. Multi-day all-day events expand across every overlapping date in the visible month via `getEventDateStrings(event, year, month)`. Dedicated legend entry "Google" shows only when signed in.
+  - **CalendarScreen day/week/month item list** — events render as cards matching the other item types (alarm/reminder/note/voiceMemo) but with a "Google" badge and calendar icon. All-day events show "All Day" + optional location; timed events show formatted time + optional location. Not tappable.
+  - **CalendarScreen filter capsules** — new "Google" filter (week and month views only) lets users isolate Google Calendar events. Shown only when signed in.
+- **Fetching**
+  - HomeScreen fetches a single-day window (today only) in a dedicated `useEffect([authUser])`.
+  - CalendarScreen fetches the visible month's full range in a dedicated `useEffect([currentMonth, authUser])`. Month navigation triggers a fresh fetch without reloading local data.
+  - Query window built with local-timezone `toISOString` conversion — `2026-04-01T00:00:00` local → correct UTC instant. Non-UTC users in PST/IST/etc. get events that actually match their local day boundaries.
+- **Caching**
+  - 5-minute in-memory cache (module-level `Map`). Keyed by `${startDate}_${endDate}`. Cleared on every sign-in and sign-out (belt-and-suspenders — prevents cross-user cache bleed on shared devices).
+  - No local persistence. Google Calendar data never touches SQLite. This aligns with the "your data stays yours, even when you sign in" evolution of the brand promise.
+- **Error recovery**
+  - No token (not signed in) → silent empty array. No errors, no prompts, no empty states mentioning Google.
+  - Network error → silent empty array.
+  - Non-OK response (500, etc.) → silent empty array.
+  - **401 Unauthorized** → call `GoogleSignin.clearCachedAccessToken(token)`, refresh via `getAccessToken()`, retry once. Routine hourly token expiry handled silently with no user-facing consent prompt.
+  - **403 Forbidden** → call `requestCalendarScope()` (`GoogleSignin.addScopes`), retry once. Only path that can pop a consent sheet, and only when the scope is actually missing (e.g., a legacy sign-in from before the scope was in `configure()`).
+  - Retry-after-retry failures → silent empty array.
+- **Silent when absent** — If the user isn't signed in, Google Calendar features are invisible: no legend entry, no filter capsule, no dots, no Today rows, no prompts. The feature opts itself out completely until the user voluntarily connects an account.
 
 ### Play Store Listing (Session 22)
 - 8 screenshots: Home, Alarms/Reminders/Calendar, Chess/Checkers/Memory, Notes, Timers, Settings, Widgets, Alarm Fire

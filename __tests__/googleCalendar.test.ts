@@ -4,6 +4,12 @@ jest.mock('../src/services/firebaseAuth', () => ({
   requestCalendarScope: jest.fn(),
 }));
 
+jest.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: {
+    clearCachedAccessToken: jest.fn(),
+  },
+}));
+
 import {
   fetchCalendarEvents,
   getEventsForDate,
@@ -11,9 +17,11 @@ import {
   type GoogleCalendarEvent,
 } from '../src/services/googleCalendar';
 import { getAccessToken, requestCalendarScope } from '../src/services/firebaseAuth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const getAccessTokenMock = getAccessToken as jest.Mock;
 const requestCalendarScopeMock = requestCalendarScope as jest.Mock;
+const gsiMock = GoogleSignin as unknown as { clearCachedAccessToken: jest.Mock };
 
 const originalFetch = global.fetch;
 let fetchMock: jest.Mock;
@@ -52,6 +60,7 @@ beforeEach(() => {
   clearCalendarCache();
   getAccessTokenMock.mockReset();
   requestCalendarScopeMock.mockReset();
+  gsiMock.clearCachedAccessToken.mockReset().mockResolvedValue(null);
   fetchMock = jest.fn();
   global.fetch = fetchMock as unknown as typeof fetch;
   nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
@@ -82,8 +91,10 @@ describe('fetchCalendarEvents', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain('calendars/primary/events');
-    expect(url).toContain(encodeURIComponent('2026-04-01T00:00:00Z'));
-    expect(url).toContain(encodeURIComponent('2026-04-30T23:59:59Z'));
+    const expectedMin = encodeURIComponent(new Date('2026-04-01T00:00:00').toISOString());
+    const expectedMax = encodeURIComponent(new Date('2026-04-30T23:59:59').toISOString());
+    expect(url).toContain(`timeMin=${expectedMin}`);
+    expect(url).toContain(`timeMax=${expectedMax}`);
     expect(url).toContain('singleEvents=true');
     expect(url).toContain('orderBy=startTime');
     expect(url).toContain('maxResults=250');
@@ -183,32 +194,65 @@ describe('fetchCalendarEvents', () => {
     expect(events).toEqual([]);
   });
 
-  it('retries once on 401 after requesting calendar scope', async () => {
-    getAccessTokenMock.mockResolvedValue('t');
-    requestCalendarScopeMock.mockResolvedValue(true);
+  it('on 401, clears cached token, refreshes, and retries once', async () => {
+    getAccessTokenMock
+      .mockResolvedValueOnce('stale-token')
+      .mockResolvedValueOnce('fresh-token');
     fetchMock
       .mockResolvedValueOnce(mockResponse(null, { status: 401, ok: false }))
       .mockResolvedValueOnce(mockResponse({ items: [apiItemTimed] }));
 
     const events = await fetchCalendarEvents('2026-04-01', '2026-04-30');
-    expect(requestCalendarScopeMock).toHaveBeenCalledTimes(1);
+
+    expect(gsiMock.clearCachedAccessToken).toHaveBeenCalledWith('stale-token');
+    expect(requestCalendarScopeMock).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [, init2] = fetchMock.mock.calls[1];
+    expect(init2.headers.Authorization).toBe('Bearer fresh-token');
     expect(events).toHaveLength(1);
   });
 
-  it('gives up when 401 persists after scope grant', async () => {
-    getAccessTokenMock.mockResolvedValue('t');
-    requestCalendarScopeMock.mockResolvedValue(true);
+  it('on 401, gives up when refresh retry is also not ok', async () => {
+    getAccessTokenMock
+      .mockResolvedValueOnce('t1')
+      .mockResolvedValueOnce('t2');
     fetchMock.mockResolvedValue(mockResponse(null, { status: 401, ok: false }));
 
     const events = await fetchCalendarEvents('2026-04-01', '2026-04-30');
     expect(events).toEqual([]);
+    expect(requestCalendarScopeMock).not.toHaveBeenCalled();
   });
 
-  it('gives up when scope grant is denied on 401', async () => {
+  it('on 401, gives up when refreshed token is null', async () => {
+    getAccessTokenMock
+      .mockResolvedValueOnce('stale')
+      .mockResolvedValueOnce(null);
+    fetchMock.mockResolvedValueOnce(mockResponse(null, { status: 401, ok: false }));
+
+    const events = await fetchCalendarEvents('2026-04-01', '2026-04-30');
+    expect(events).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('on 403, requests calendar scope and retries once', async () => {
+    getAccessTokenMock.mockResolvedValue('t');
+    requestCalendarScopeMock.mockResolvedValue(true);
+    fetchMock
+      .mockResolvedValueOnce(mockResponse(null, { status: 403, ok: false }))
+      .mockResolvedValueOnce(mockResponse({ items: [apiItemTimed] }));
+
+    const events = await fetchCalendarEvents('2026-04-01', '2026-04-30');
+
+    expect(requestCalendarScopeMock).toHaveBeenCalledTimes(1);
+    expect(gsiMock.clearCachedAccessToken).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(events).toHaveLength(1);
+  });
+
+  it('on 403, gives up when scope grant is denied', async () => {
     getAccessTokenMock.mockResolvedValue('t');
     requestCalendarScopeMock.mockResolvedValue(false);
-    fetchMock.mockResolvedValue(mockResponse(null, { status: 401, ok: false }));
+    fetchMock.mockResolvedValue(mockResponse(null, { status: 403, ok: false }));
 
     const events = await fetchCalendarEvents('2026-04-01', '2026-04-30');
     expect(events).toEqual([]);
@@ -237,7 +281,6 @@ describe('getEventsForDate', () => {
     endTime: '2026-04-14T16:00:00-00:00',
     isAllDay: false,
     location: null,
-    calendarColor: '#000',
   };
 
   const oneDayAllDay: GoogleCalendarEvent = {
@@ -248,7 +291,6 @@ describe('getEventsForDate', () => {
     endTime: '2026-04-15',
     isAllDay: true,
     location: null,
-    calendarColor: '#000',
   };
 
   const multiDayAllDay: GoogleCalendarEvent = {
@@ -259,7 +301,6 @@ describe('getEventsForDate', () => {
     endTime: '2026-04-23',
     isAllDay: true,
     location: null,
-    calendarColor: '#000',
   };
 
   it('includes a timed event on its own date', () => {

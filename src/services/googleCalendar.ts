@@ -1,4 +1,5 @@
 import { getAccessToken, requestCalendarScope } from './firebaseAuth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export interface GoogleCalendarEvent {
   id: string;
@@ -8,7 +9,6 @@ export interface GoogleCalendarEvent {
   endTime: string;
   isAllDay: boolean;
   location: string | null;
-  calendarColor: string;
 }
 
 interface CacheEntry {
@@ -27,12 +27,21 @@ interface GoogleCalendarApiItem {
 
 const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const DEFAULT_CALENDAR_COLOR = '#E17055';
 const CALENDAR_API_BASE =
   'https://www.googleapis.com/calendar/v3/calendars/primary/events';
 
 function buildCacheKey(start: string, end: string): string {
   return `${start}_${end}`;
+}
+
+function toLocalISOStart(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toISOString();
+}
+
+function toLocalISOEnd(dateStr: string): string {
+  const d = new Date(dateStr + 'T23:59:59');
+  return d.toISOString();
 }
 
 function parseItems(items: GoogleCalendarApiItem[]): GoogleCalendarEvent[] {
@@ -51,7 +60,6 @@ function parseItems(items: GoogleCalendarApiItem[]): GoogleCalendarEvent[] {
       endTime,
       isAllDay,
       location: item.location || null,
-      calendarColor: DEFAULT_CALENDAR_COLOR,
     });
   }
   return out;
@@ -62,8 +70,8 @@ async function callCalendarApi(
   endDate: string,
   accessToken: string,
 ): Promise<Response> {
-  const timeMin = encodeURIComponent(`${startDate}T00:00:00Z`);
-  const timeMax = encodeURIComponent(`${endDate}T23:59:59Z`);
+  const timeMin = encodeURIComponent(toLocalISOStart(startDate));
+  const timeMax = encodeURIComponent(toLocalISOEnd(endDate));
   const url = `${CALENDAR_API_BASE}?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=250`;
   return fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -91,6 +99,19 @@ export async function fetchCalendarEvents(
   }
 
   if (response.status === 401) {
+    try {
+      await GoogleSignin.clearCachedAccessToken(accessToken);
+    } catch {
+      // Ignore — proceed to refresh attempt regardless.
+    }
+    const freshToken = await getAccessToken();
+    if (!freshToken) return [];
+    try {
+      response = await callCalendarApi(startDate, endDate, freshToken);
+    } catch {
+      return [];
+    }
+  } else if (response.status === 403) {
     const granted = await requestCalendarScope();
     if (!granted) return [];
     const retryToken = await getAccessToken();

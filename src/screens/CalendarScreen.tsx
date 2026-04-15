@@ -32,7 +32,7 @@ import { hapticLight } from '../utils/haptics';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import APP_ICONS from '../data/appIconAssets';
 import { fetchCalendarEvents, getEventsForDate, type GoogleCalendarEvent } from '../services/googleCalendar';
-import { getCurrentUser } from '../services/firebaseAuth';
+import { getCurrentUser, onAuthStateChanged } from '../services/firebaseAuth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>;
 
@@ -48,7 +48,7 @@ type DayItem =
 
 type ListRow =
   | { rowType: 'dateHeader'; dateStr: string; label: string }
-  | { rowType: 'event'; item: DayItem };
+  | { rowType: 'event'; item: DayItem; dateStr: string };
 
 interface DayDate {
   dateString: string;
@@ -322,7 +322,8 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
   const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([]);
-  const [isSignedIn, setIsSignedIn] = useState<boolean>(() => !!getCurrentUser());
+  const [authUser, setAuthUser] = useState<ReturnType<typeof getCurrentUser>>(() => getCurrentUser());
+  const isSignedIn = !!authUser;
   const today = toDateString(new Date());
   const initialDate = route.params?.initialDate || today;
   const [selectedDate, setSelectedDate] = useState(initialDate);
@@ -365,28 +366,22 @@ export default function CalendarScreen({ navigation, route }: Props) {
       })();
       loadBackground().then(setBgUri);
       getOverlayOpacity().then(setBgOpacity);
-      const signedIn = !!getCurrentUser();
-      setIsSignedIn(signedIn);
-      if (signedIn) {
-        const year = parseInt(currentMonth.slice(0, 4), 10);
-        const month = parseInt(currentMonth.slice(5, 7), 10);
-        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-        const lastDay = new Date(year, month, 0).getDate();
-        const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-        fetchCalendarEvents(startDate, endDate).then((events) => {
-          if (!cancelled) setGoogleEvents(events);
-        });
-      } else {
-        setGoogleEvents([]);
-      }
       return () => {
         cancelled = true;
       };
-    }, [currentMonth]),
+    }, []),
   );
 
   useEffect(() => {
-    if (!isSignedIn) return;
+    const unsub = onAuthStateChanged((user) => setAuthUser(user));
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    if (!authUser) {
+      setGoogleEvents([]);
+      return;
+    }
     let cancelled = false;
     const year = parseInt(currentMonth.slice(0, 4), 10);
     const month = parseInt(currentMonth.slice(5, 7), 10);
@@ -399,7 +394,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [currentMonth, isSignedIn]);
+  }, [currentMonth, authUser]);
 
   // ── Marked dates for calendar dots (unchanged logic) ──
   const markedDates = useMemo(() => {
@@ -549,7 +544,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
   // ── Day view items ──
   const dayRows = useMemo<ListRow[]>(() => {
     const items = sortItems(getItemsForDate(selectedDate, alarms, reminders, notes, voiceMemos, googleEvents));
-    return items.map((item) => ({ rowType: 'event' as const, item }));
+    return items.map((item) => ({ rowType: 'event' as const, item, dateStr: selectedDate }));
   }, [alarms, reminders, notes, voiceMemos, googleEvents, selectedDate]);
 
   // ── Week view items (always current week — the week containing today) ──
@@ -564,7 +559,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       if (items.length > 0) {
         rows.push({ rowType: 'dateHeader', dateStr: ds, label: formatGroupDate(ds) });
         for (const item of items) {
-          rows.push({ rowType: 'event', item });
+          rows.push({ rowType: 'event', item, dateStr: ds });
         }
       }
     }
@@ -584,7 +579,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
       if (items.length > 0) {
         rows.push({ rowType: 'dateHeader', dateStr: ds, label: formatGroupDate(ds) });
         for (const item of items) {
-          rows.push({ rowType: 'event', item });
+          rows.push({ rowType: 'event', item, dateStr: ds });
         }
       }
     }
@@ -1058,6 +1053,9 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const rowKeyExtractor = useCallback(
     (item: ListRow) => {
       if (item.rowType === 'dateHeader') return `header-${item.dateStr}`;
+      if (item.item.type === 'googleCal') {
+        return `${item.dateStr}-googleCal-${item.item.data.id}`;
+      }
       return `${item.item.type}-${item.item.data.id}`;
     },
     [],

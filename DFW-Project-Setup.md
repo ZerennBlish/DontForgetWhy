@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 28 (April 13, 2026) — v1.20.0 (versionCode 37) on `dev`, ready for production build. v1.19.0 (versionCode 36) still live on Play Store.
+**Last updated:** Session 30 (April 14, 2026) — v1.21.0 (versionCode 39) live on Play Store. Session 30 Firebase Auth + Firestore + Google Calendar sync work sits unshipped on `dev` until the next version bump (Settings redesign session).
 
 ---
 
@@ -320,8 +320,8 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.20.0 (versionCode 37) on `dev`, ready for production build |
-| Production status | v1.19.0 live on Google Play; v1.20.0 ready to upload |
+| Current version | v1.21.0 (versionCode 39) live on Play Store; Session 30 code on `dev` unshipped |
+| Production status | v1.21.0 live on Google Play (Session 29 build); Session 30 Firebase Auth + Google Calendar sync work waits on `dev` for the next version bump |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
@@ -329,12 +329,16 @@ DontForgetWhy/
 | Phase 3.5 (Voice Memos) | COMPLETE |
 | Phase 4 (The Vault) | COMPLETE |
 | Phase 4.5 (Stability Sprint) | COMPLETE |
+| Phase 5 (Google Calendar Sync) | COMPLETE (unshipped — Session 30) |
+| Phase 5.5 (Premium Foundation) | COMPLETE |
 | Phase 6 (Chess + Checkers) | COMPLETE |
-| Audit status | Session 28 triple audit (Codex + Claude + Gemini) complete — Round 1: 9 findings fixed + TalkBack structural fix; Round 2 (voice clip wiring): 3 findings fixed |
-| Jest tests | 13 suites / 320 tests passing: time, timeUtils, noteColors, soundModeUtils, safeParse, asyncMutex, backupRestore, widgetPins, settings, voiceClipStorage, chessAI (69), checkersAI (52), tutorialTips (Session 28, 5 tests) — ts-jest, node env |
-| Voice clips | 83 total (68 original fire/snooze/timer/guess/dismiss/intro + 15 tutorial). ElevenLabs v3, same voice character throughout. `assets/voice/*.mp3` + `assets/voice/tutorial/*.mp3` |
-| EAS build credits | ~30 available (reset April 12) |
-| ElevenLabs | Subscription active — 83 clips shipped (68 original + 15 tutorial) |
+| Phase 8 (Firebase Auth + Firestore foundation) | COMPLETE (unshipped — Session 30) |
+| Audit status | Session 30 triple audit (Codex + Claude + Gemini) complete — 2 P1 (Firestore test-mode rules, calendar cache leak on sign-out) + 6 P2 (UTC timezone, 401 vs 403 recovery, duplicate fetch regression, auth hydration race, duplicate React keys, dead `calendarColor` field) all fixed. Rules published before ship. |
+| Jest tests | 17 suites / 379 tests passing: time, timeUtils, noteColors, soundModeUtils, safeParse, asyncMutex, backupRestore, widgetPins, settings, voiceClipStorage, proStatus, chessAI (69), checkersAI (52), tutorialTips, **firebaseAuth (Session 30), firestore (Session 30), googleCalendar (Session 30, 21 tests)** — ts-jest, node env |
+| Voice clips | 84 total (68 original fire/snooze/timer/guess/dismiss/intro + 15 tutorial + Opening.mp3). ElevenLabs v3, same voice character throughout. `assets/voice/*.mp3` + `assets/voice/tutorial/*.mp3` |
+| EAS build credits | ~28 available (2 dev builds attempted Session 30 — 1 failed, 1 succeeded) |
+| ElevenLabs | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
+| Firebase | Project `dont-forget-why` on Blaze plan. **$300 credit activated April 14, 2026 — expires July 14, 2026.** Firestore rules published (`users/{uid}` self-only). Google Calendar API enabled in Google Cloud Console. `google-services.json` at project root, referenced via `android.googleServicesFile` in `app.json` for EAS prebuild. |
 
 ### Packages Added (Session 12)
 - `expo-sqlite` — synchronous SQLite database (replaced AsyncStorage for all persistent storage)
@@ -346,6 +350,63 @@ DontForgetWhy/
 
 ### Packages Added (Session 16)
 - `chess.js` — JS-only chess library (move generation, FEN, game state). No native modules, no build required.
+
+### Packages Added (Session 29)
+- `expo-iap` — Expo-native Google Play Billing 8.x wrapper for the $1.99 `dfw_pro_unlock` IAP (P5.5 Premium Foundation). Native, requires a dev/production build. Registered in `app.json` `expo.plugins`.
+
+### Packages Added (Session 30)
+- `@react-native-firebase/app` — Firebase core module. Required by every other `@react-native-firebase/*` package. Native, requires a dev/production build. Registered in `app.json` `expo.plugins`.
+- `@react-native-firebase/auth` — Firebase Authentication. Uses the modular API (`getAuth`, `signInWithCredential`, `signOut`, `onAuthStateChanged`, `GoogleAuthProvider.credential`). Native. Registered in `app.json` `expo.plugins`.
+- `@react-native-firebase/firestore` — Firestore client. Uses the namespaced default export (`import firestore from '@react-native-firebase/firestore'`) so `firestore.Timestamp.now()` is available statically. Native (same dev-build requirement as the rest of the Firebase suite).
+- `@react-native-google-signin/google-signin` — Native Google Sign-In sheet + `getTokens` / `addScopes` / `clearCachedAccessToken` helpers. The native dep that owns the consent UI; hands an `idToken` to `@react-native-firebase/auth` via `GoogleAuthProvider.credential(idToken)`. Registered in `app.json` `expo.plugins` with `iosUrlScheme: "com.googleusercontent.apps.PLACEHOLDER"` (iOS is secondary/future — the placeholder needs replacing with the reversed iOS OAuth client ID before any iOS build).
+
+### Firebase Setup (Session 30)
+
+**Project:** `dont-forget-why` on Blaze plan (required for Cloud Functions — even though P8 Cloud Stockfish hasn't shipped yet, Blaze was activated to start the $300 credit clock).
+
+**Credit:** $300 activated April 14, 2026 — **expires July 14, 2026** (90-day consumption window). Sessions that consume Firebase resources (multiplayer chess, cloud Stockfish, online riddles, global leaderboards) need to land inside that window to benefit.
+
+**Registered app:** Android `com.zerennblish.DontForgetWhy` with SHA-1 fingerprint from the production keystore. `google-services.json` downloaded from the Firebase Console and committed at the project root. Referenced via `android.googleServicesFile: "./google-services.json"` in `app.json` — required for EAS prebuild, which runs on the build server and can't auto-detect the file the way a local build can.
+
+**Auth providers:** Google Sign-In enabled via the Firebase Console. Web client ID (`client_type: 3`) from `google-services.json` is hardcoded as `WEB_CLIENT_ID` in `src/services/firebaseAuth.ts` and passed to `GoogleSignin.configure()` along with the `calendar.readonly` scope.
+
+**Firestore:** Database created, rules published on day one (no test-mode window exposed to real users):
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+A future session should commit these rules to a `firestore.rules` file at the repo root and wire a deploy script so they live alongside the client code, not only in the Firebase Console.
+
+**Google Calendar API:** Enabled in Google Cloud Console (separate from the Firebase Console) so the Bearer token from `GoogleSignin.getTokens()` can hit `https://www.googleapis.com/calendar/v3/calendars/primary/events`. Required once per project; no per-user consent beyond the `calendar.readonly` scope in the Google Sign-In sheet.
+
+### Config Plugins Added to `app.json` (Session 30)
+
+```json
+"plugins": [
+  ...
+  "@react-native-firebase/app",
+  "@react-native-firebase/auth",
+  ["@react-native-google-signin/google-signin", {
+    "iosUrlScheme": "com.googleusercontent.apps.PLACEHOLDER"
+  }]
+]
+```
+
+Plus the Android-specific `googleServicesFile` setting:
+
+```json
+"android": {
+  ...
+  "googleServicesFile": "./google-services.json",
+  ...
+}
+```
 
 ### Package Audit (Session 15)
 - Ran `depcheck` — no abandoned packages. Flagged as "unused" but actually required implicitly: `expo-dev-client`, `expo-notifications`, `react-native-screens`, `react-native-worklets`.

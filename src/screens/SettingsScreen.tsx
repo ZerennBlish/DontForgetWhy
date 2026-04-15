@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -30,9 +30,18 @@ import { useSettings } from '../hooks/useSettings';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
+function themeDisplayName(name: ThemeName): string {
+  if (name === 'highContrast') return 'High Contrast';
+  if (name === 'sunset') return 'Sunset';
+  if (name === 'ruby') return 'Ruby';
+  if (name === 'vivid') return 'Vivid';
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, themeName, setTheme } = useTheme();
   const insets = useSafeAreaInsets();
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
 
   const {
     timeFormat, timeInputMode, hapticsEnabled, voiceRoasts,
@@ -106,6 +115,16 @@ export default function SettingsScreen({ navigation }: Props) {
       fontFamily: FONTS.semiBold,
       color: colors.red,
       flex: 1,
+    },
+    sectionHeader: {
+      fontSize: 11,
+      fontFamily: FONTS.bold,
+      color: colors.accent,
+      letterSpacing: 1.5,
+      textTransform: 'uppercase',
+      marginHorizontal: 20,
+      marginTop: 24,
+      marginBottom: 8,
     },
     card: {
       marginHorizontal: 16,
@@ -203,6 +222,8 @@ export default function SettingsScreen({ navigation }: Props) {
     },
   }), [colors, insets.bottom]);
 
+  const currentThemeDisplayName = themeDisplayName(themeName);
+
   return (
     <ImageBackground source={require('../../assets/gear.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
@@ -234,6 +255,9 @@ export default function SettingsScreen({ navigation }: Props) {
         </TouchableOpacity>
       )}
 
+      {/* ===== GENERAL ===== */}
+      <Text style={styles.sectionHeader}>General</Text>
+
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.label}>24-Hour Time</Text>
@@ -247,27 +271,6 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
         <Text style={styles.description}>
           Show times as 14:30 instead of 2:30 PM.
-        </Text>
-      </View>
-
-      <View style={[styles.card, { marginTop: 16 }]}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Silence All Alarms</Text>
-          <Switch
-            value={silenceAll}
-            onValueChange={handleSilenceToggle}
-            trackColor={{ false: colors.border, true: colors.orange }}
-            thumbColor={silenceAll ? '#FFFFFF' : colors.textTertiary}
-            accessibilityLabel="Toggle silence all alarms"
-          />
-        </View>
-        {silenceAll && (
-          <Text style={{ fontSize: 13, color: colors.orange, fontFamily: FONTS.semiBold, marginTop: 10 }}>
-            {silenceRemaining || 'Silenced until you turn it off'}
-          </Text>
-        )}
-        <Text style={styles.description}>
-          Mute all alarm sounds and vibrations. Alarms still fire and show notifications.
         </Text>
       </View>
 
@@ -301,43 +304,52 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
 
       <View style={[styles.card, { marginTop: 16 }]}>
-        <Text style={styles.sectionLabel}>Theme</Text>
-        <View style={styles.themeGrid}>
-          {(Object.keys(themes) as ThemeName[]).map((name) => {
-            const t = themes[name];
-            const isActive = name === themeName;
-            const displayName = name === 'highContrast' ? 'High Contrast' : name === 'sunset' ? 'Sunset' : name === 'ruby' ? 'Ruby' : name === 'vivid' ? 'Vivid' : name.charAt(0).toUpperCase() + name.slice(1);
-            return (
-              <TouchableOpacity
-                key={name}
-                style={styles.themeItem}
-                onPress={() => { hapticLight(); setTheme(name); }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={`Select ${displayName} theme`}
-                accessibilityState={{ selected: isActive }}
-              >
-                <View
-                  style={[
-                    styles.themeCircleOuter,
-                    {
-                      borderColor: isActive ? t.accent : t.border,
-                      backgroundColor: t.background,
-                    },
-                  ]}
-                >
-                  <View style={[styles.themeCircleInner, { backgroundColor: t.accent }]}>
-                    {isActive && <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />}
-                  </View>
-                </View>
-                <Text style={[styles.themeName, isActive && styles.themeNameActive]}>
-                  {displayName}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+        <View style={styles.row}>
+          <Text style={styles.label}>Silence All Alarms</Text>
+          <Switch
+            value={silenceAll}
+            onValueChange={handleSilenceToggle}
+            trackColor={{ false: colors.border, true: colors.orange }}
+            thumbColor={silenceAll ? '#FFFFFF' : colors.textTertiary}
+            accessibilityLabel="Toggle silence all alarms"
+          />
         </View>
+        {silenceAll && (
+          <Text style={{ fontSize: 13, color: colors.orange, fontFamily: FONTS.semiBold, marginTop: 10 }}>
+            {silenceRemaining || 'Silenced until you turn it off'}
+          </Text>
+        )}
+        <Text style={styles.description}>
+          Mute all alarm sounds and vibrations. Alarms still fire and show notifications.
+        </Text>
       </View>
+
+      {/* ===== APPEARANCE ===== */}
+      <Text style={styles.sectionHeader}>Appearance</Text>
+
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => { hapticLight(); setThemeModalVisible(true); }}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Choose theme"
+      >
+        <View style={styles.row}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <View style={{
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: colors.accent,
+              marginRight: 12,
+            }} />
+            <Text style={styles.label}>
+              {currentThemeDisplayName}
+            </Text>
+          </View>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
+        </View>
+      </TouchableOpacity>
 
       <View style={[styles.card, { marginTop: 16 }]}>
         <Text style={styles.sectionLabel}>Screen Background</Text>
@@ -410,7 +422,10 @@ export default function SettingsScreen({ navigation }: Props) {
         )}
       </View>
 
-      <View style={[styles.card, { marginTop: 16 }]}>
+      {/* ===== SOUND & HAPTICS ===== */}
+      <Text style={styles.sectionHeader}>Sound & Haptics</Text>
+
+      <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.label}>Voice Roasts</Text>
           <Switch
@@ -458,55 +473,10 @@ export default function SettingsScreen({ navigation }: Props) {
         </Text>
       </View>
 
-      <TouchableOpacity
-        style={[styles.card, { marginTop: 16 }]}
-        onPress={handleResetTutorials}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="Reset tutorial guide"
-      >
-        <View style={styles.aboutRow}>
-          <Text style={styles.label}>Tutorial Guide</Text>
-          <ChevronRightIcon color={colors.textTertiary} size={16} />
-        </View>
-        <Text style={styles.description}>
-          Show feature tips again
-        </Text>
-      </TouchableOpacity>
+      {/* ===== GOOGLE ACCOUNT ===== */}
+      <Text style={styles.sectionHeader}>Google Account</Text>
 
-      <TouchableOpacity
-        style={[styles.card, { marginTop: 16 }]}
-        onPress={handleSendFeedback}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="Send feedback"
-      >
-        <View style={styles.aboutRow}>
-          <Text style={styles.label}>Send Feedback</Text>
-          <ChevronRightIcon color={colors.textTertiary} size={16} />
-        </View>
-        <Text style={styles.description}>
-          Bug reports, suggestions, or let us know how we're doing
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.card, { marginTop: 16 }]}
-        onPress={() => { hapticLight(); navigation.navigate('About'); }}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="About Don't Forget Why"
-      >
-        <View style={styles.aboutRow}>
-          <Text style={styles.label}>About</Text>
-          <ChevronRightIcon color={colors.textTertiary} size={16} />
-        </View>
-        <Text style={styles.description}>
-          Version info and credits.
-        </Text>
-      </TouchableOpacity>
-
-      <View style={[styles.card, { marginTop: 16 }]}>
+      <View style={styles.card}>
         <Text style={styles.sectionLabel}>Google Account</Text>
 
         {googleUser ? (
@@ -556,28 +526,14 @@ export default function SettingsScreen({ navigation }: Props) {
         </Text>
       </View>
 
-      <View style={[styles.card, { marginTop: 16 }]}>
-        <Text style={styles.sectionLabel}>Permissions</Text>
-        <TouchableOpacity
-          style={btn.primary}
-          onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Run setup wizard"
-        >
-          <Text style={btn.primaryText}>Setup Guide</Text>
-        </TouchableOpacity>
-        <Text style={styles.setupGuideDesc}>
-          Re-run setup. In case you forgot to do something...
-        </Text>
-      </View>
+      {/* ===== DATA ===== */}
+      <Text style={styles.sectionHeader}>Data</Text>
 
-      {/* Your Memories — Backup & Restore */}
-      <Text style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.textTertiary, fontStyle: 'italic', lineHeight: 18, marginHorizontal: 20, marginTop: 24, marginBottom: 16 }}>
+      <Text style={{ fontSize: 12, fontFamily: FONTS.regular, color: colors.textTertiary, fontStyle: 'italic', lineHeight: 18, marginHorizontal: 20, marginBottom: 12 }}>
         Everything stays on your phone. Exports go wherever you send them {'\u2014'} not to us. We don't have servers. We don't want your data.
       </Text>
 
-      <View style={[styles.card, { marginTop: 0 }]}>
+      <View style={styles.card}>
         <Text style={styles.sectionLabel}>Your Memories</Text>
 
         <Text style={{ fontSize: 13, fontFamily: FONTS.regular, color: lastBackup ? colors.textSecondary : colors.textTertiary, marginBottom: showNudge ? 4 : 16 }}>
@@ -665,6 +621,73 @@ export default function SettingsScreen({ navigation }: Props) {
         )}
       </View>
 
+      {/* ===== SUPPORT ===== */}
+      <Text style={styles.sectionHeader}>Support</Text>
+
+      <TouchableOpacity
+        style={styles.card}
+        onPress={handleResetTutorials}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Reset tutorial guide"
+      >
+        <View style={styles.aboutRow}>
+          <Text style={styles.label}>Tutorial Guide</Text>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
+        </View>
+        <Text style={styles.description}>
+          Show feature tips again
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.card, { marginTop: 16 }]}
+        onPress={handleSendFeedback}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Send feedback"
+      >
+        <View style={styles.aboutRow}>
+          <Text style={styles.label}>Send Feedback</Text>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
+        </View>
+        <Text style={styles.description}>
+          Bug reports, suggestions, or let us know how we're doing
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.card, { marginTop: 16 }]}
+        onPress={() => { hapticLight(); navigation.navigate('About'); }}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="About Don't Forget Why"
+      >
+        <View style={styles.aboutRow}>
+          <Text style={styles.label}>About</Text>
+          <ChevronRightIcon color={colors.textTertiary} size={16} />
+        </View>
+        <Text style={styles.description}>
+          Version info and credits.
+        </Text>
+      </TouchableOpacity>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <Text style={styles.sectionLabel}>Permissions</Text>
+        <TouchableOpacity
+          style={btn.primary}
+          onPress={() => { hapticLight(); navigation.navigate('Onboarding', { startSlide: 2 }); }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Run setup wizard"
+        >
+          <Text style={btn.primaryText}>Setup Guide</Text>
+        </TouchableOpacity>
+        <Text style={styles.setupGuideDesc}>
+          Re-run setup. In case you forgot to do something...
+        </Text>
+      </View>
+
       {/* Silence duration picker modal */}
       <Modal transparent visible={silencePickerVisible} animationType="slide" onRequestClose={handleSilencePickerCancel}>
         <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
@@ -748,6 +771,76 @@ export default function SettingsScreen({ navigation }: Props) {
               >
                 <Text style={btn.secondaryText}>Until I Turn It Off</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Theme picker modal */}
+      <Modal transparent visible={themeModalVisible} animationType="slide" onRequestClose={() => setThemeModalVisible(false)}>
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-end', padding: 0 }]}>
+          <View style={{
+            backgroundColor: colors.card,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            padding: 20,
+            paddingBottom: 20 + insets.bottom,
+            borderWidth: 1,
+            borderBottomWidth: 0,
+            borderColor: colors.border,
+          }} accessibilityViewIsModal={true}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 18, fontFamily: FONTS.bold, color: colors.textPrimary }}>Choose Theme</Text>
+              <TouchableOpacity
+                onPress={() => { hapticLight(); setThemeModalVisible(false); }}
+                style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Close theme picker"
+              >
+                <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.themeGrid}>
+              {(Object.keys(themes) as ThemeName[]).map((name) => {
+                const t = themes[name];
+                const isActive = name === themeName;
+                const displayName = themeDisplayName(name);
+                return (
+                  <TouchableOpacity
+                    key={name}
+                    style={styles.themeItem}
+                    onPress={() => {
+                      hapticLight();
+                      setTheme(name);
+                      setThemeModalVisible(false);
+                    }}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${displayName} theme`}
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <View
+                      style={[
+                        styles.themeCircleOuter,
+                        {
+                          borderColor: isActive ? t.accent : t.border,
+                          backgroundColor: t.background,
+                        },
+                      ]}
+                    >
+                      <View style={[styles.themeCircleInner, { backgroundColor: t.accent }]}>
+                        {isActive && <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />}
+                      </View>
+                    </View>
+                    <Text style={[styles.themeName, isActive && styles.themeNameActive]}>
+                      {displayName}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         </View>
