@@ -305,21 +305,37 @@ interface BlunderResult {
 
 Severity bucketing: `good` <50cp, `inaccuracy` <150cp, `mistake` <300cp, `blunder` <600cp, `catastrophe` ≥600cp.
 
-### DifficultyLevel (Session 17 shape)
+### DifficultyLevel (Session 17 shape, Session 31 cloud redesign)
 
 ```typescript
+interface PickRange {
+  minRank: number; // 0-indexed: 0 = Stockfish's top PV
+  maxRank: number; // inclusive upper bound
+}
+
 interface DifficultyLevel {
-  name: string;        // 'Beginner' | 'Casual' | 'Intermediate' | 'Advanced' | 'Expert'
-  minDepth: number;    // depths 1..minDepth complete unconditionally (competence floor)
-  maxDepth: number;    // hard cap on iterative deepening
-  timeLimitMs: number; // normal time budget; a 3× safety deadline caps mandatory depths
-  randomness: number;  // 0 = always best; higher = static-eval noise threshold (cp/100)
+  name: string;        // 'Easy' | 'Intermediate' | 'Hard' | 'Expert' | 'Master' (renamed S31)
+  minDepth: number;    // depths 1..minDepth complete unconditionally (competence floor, local engine)
+  maxDepth: number;    // hard cap on iterative deepening (local engine)
+  timeLimitMs: number; // normal time budget (local engine); a 3× safety deadline caps mandatory depths
+  randomness: number;  // 0 = always best (local engine); higher = static-eval noise threshold (cp/100)
+  cloudPickRange: PickRange; // Session 31 — band into Lichess cloud eval's top-5 PVs
 }
 ```
 
-Current values: Beginner (1/2/300ms/0.4), Casual (1/3/500ms/0.2), Intermediate (2/4/1000ms/0.05), Advanced (2/5/2000ms/0), Expert (3/6/5000ms/0).
+**Session 31 current values** (all five levels cloud-first, difficulty = move quality, not search depth):
 
-Replaces the Session 16 `{ name, depth, randomness }` shape plus the separate `TIME_LIMITS_MS` array — the time budget now lives on each level, so `useChess` reads `level.timeLimitMs` directly for the thinking-indicator budget and `getAIMove` hands all three numbers to `findBestMove(game, level.maxDepth, level.timeLimitMs, level.minDepth)`. The `TIME_LIMITS_MS` export has been removed.
+| Level | minDepth | maxDepth | timeLimitMs | randomness | cloudPickRange |
+|-------|---------:|---------:|------------:|-----------:|:---------------|
+| Easy | 1 | 2 | 300 | 0.4 | `{ 2, 4 }` (3rd-5th best) |
+| Intermediate | 1 | 3 | 500 | 0.15 | `{ 1, 3 }` (2nd-4th best) |
+| Hard | 2 | 4 | 1000 | 0.05 | `{ 0, 2 }` (best-3rd best) |
+| Expert | 3 | 5 | 2000 | 0 | `{ 0, 1 }` (best-2nd best) |
+| Master | 3 | 6 | 3000 | 0 | `{ 0, 0 }` (always best) |
+
+**Priority order** (per move): opening book → Lichess cloud eval (picks from the level's `cloudPickRange` band) → local minimax. The `minDepth` / `maxDepth` / `timeLimitMs` / `randomness` fields govern **only the local engine fallback path**; the cloud path ignores them entirely and uses `cloudPickRange` instead. Levels were renamed from the Session 16 labels (Beginner/Casual/Intermediate/Advanced/Expert) to the Session 31 labels (Easy/Intermediate/Hard/Expert/Master) to match the new semantic — every level produces Stockfish-strength play from a rank band, not graduated search depth.
+
+Replaces the Session 16 `{ name, depth, randomness }` shape plus the separate `TIME_LIMITS_MS` array. The Session 17 shape (without `cloudPickRange`) lives on in the local-engine code path; Session 31 adds the new field as a pure extension — all existing local-engine logic still reads the same fields it always did.
 
 ### chessStats (kv_store)
 
@@ -564,3 +580,72 @@ export interface FoundingDetails {
 | `gcal_dfw_calendar_id` | string | Google Calendar id of the dedicated "Don't Forget Why" calendar created (or reused) on first sync. Cleared on sign-out via direct `kvRemove` call in `firebaseAuth.signOutGoogle` |
 | `gcal_sync_enabled` | string | `'true'` / `'false'`. User-facing toggle in Settings. Cleared on sign-out |
 | `gcal_sync_map` | string (JSON) | `Record<string, string>` mapping DFW item id (alarm or reminder id) → Google Calendar event id. Used by `syncToGoogleCalendar` to PUT existing events instead of POSTing duplicates on re-sync. **Intentionally preserved on sign-out** so re-signing the same Google account doesn't recreate every event. Mutations only on successful POST/PUT/DELETE — failed deletes preserve the mapping for idempotent retry |
+
+---
+
+## 13. Daily Riddle (Session 31 rewrite)
+
+### `DailyRiddleEntry` interface
+
+```typescript
+// src/data/dfw_yearly_riddles.ts
+export type RiddleDifficulty = 'easy' | 'medium' | 'hard';
+
+export interface DailyRiddleEntry {
+  id: number;                    // 1..366, matches dayOfYear for the canonical bank
+  dayOfYear: number;             // 1..366, primary lookup key
+  category: string;              // one of RIDDLE_CATEGORIES (12 display strings)
+  difficulty: RiddleDifficulty;
+  question: string;
+  answer: string;
+}
+
+export const RIDDLE_CATEGORIES = [
+  "Home & Objects",
+  "Nature & Weather",
+  "Food & Kitchen",
+  "Animals",
+  "Body & Health",
+  "School & Work",
+  "Travel & Places",
+  "Technology",
+  "Science & Space",
+  "Time & Calendar",
+  "Fantasy & Fun",
+  "Logic & Wordplay",
+] as const;
+
+export const YEARLY_RIDDLES: DailyRiddleEntry[] = [ /* 366 entries */ ];
+```
+
+- **366 entries, one per `dayOfYear`.** Manually curated, not generated, not shuffled. Every entry is pre-assigned to a specific day of the year (1 = January 1, 366 = December 31 in a leap year).
+- **Category is a display string, not a type-level enum.** The Session 22 shape used a `RiddleCategory` union (`'memory' | 'classic' | 'wordplay' | 'logic' | 'quick'`) which meant the screen had to map keys to labels via `CATEGORY_LABELS`. Session 31's `category: string` is already a display-ready label — the screen renders `dailyRiddle.category` directly. Extra type safety is traded for a simpler render path and zero bookkeeping when adding new categories.
+- **Difficulty and id are still typed.** `RiddleDifficulty` remains a union so the difficulty badge color mapping stays exhaustive; `id` is `number` so dedup works against `seenRiddleIds: number[]` without coercion.
+
+### Lookup function
+
+```typescript
+// src/data/riddles.ts
+export function getDailyRiddleForDate(dateStr: string): DailyRiddleEntry {
+  const date = new Date(dateStr + 'T12:00:00Z');
+  const startOfYear = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const dayOfYear = Math.floor(
+    (date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24),
+  ) + 1;
+  const match = YEARLY_RIDDLES.find((r) => r.dayOfYear === dayOfYear);
+  return match ?? YEARLY_RIDDLES[(dayOfYear - 1) % YEARLY_RIDDLES.length];
+}
+```
+
+- **Noon UTC anchor.** `new Date(dateStr + 'T12:00:00Z')` parses the `YYYY-MM-DD` date at exactly 12:00 UTC, 12 hours away from any timezone's midnight. Eliminates DST fencepost edge cases that plagued the Session 22 seeded-shuffle implementation (where `new Date(dateStr + 'T00:00:00')` was interpreted in local time and produced different `dayOfYear` values across DST-observing devices).
+- **UTC arithmetic.** `Date.UTC(year, 0, 1)` builds the January-1-midnight-UTC timestamp without any local-time offset. Subtracting in UTC guarantees every device computes the same delta.
+- **`+ 1` to match 1-indexed `dayOfYear`.** January 1 → delta 0 days → `dayOfYear = 1`. December 31 in a leap year → delta 365 days → `dayOfYear = 366`. Matches the `YEARLY_RIDDLES` primary key.
+- **Defensive fallback.** `(dayOfYear - 1) % YEARLY_RIDDLES.length` wraps if the bank ever ships fewer than 366 entries or if the date math produces an out-of-range `dayOfYear` for any reason. Should never fire in practice — the fallback is a belt-and-suspenders safety net against a future refactor that leaves the bank partially populated.
+
+### Legacy `getDailyRiddleIndex` (deprecated)
+
+The Session 22 `getDailyRiddleIndex(dateStr): number` function (year-seeded Fisher-Yates shuffle returning an index into the old 355-entry `RIDDLES` array) is **kept with `@deprecated`** rather than deleted. Any stale import that wasn't caught by the grep will still compile. The body is unchanged from Session 22 — it still runs the LCG PRNG + shuffle — but nothing in the app calls it anymore. Safe to remove in a future session once a full import scan confirms zero callers.
+
+### Old `RIDDLES` array (kept for backward compat)
+
+The Session 22 `RIDDLES: Riddle[]` export (355 riddles with the old `RiddleCategory` union shape) is **kept** because users' existing `dailyRiddleStats.seenRiddleIds` may contain ids from the old id space. Removing the array would orphan those entries. The array is no longer read by any daily-riddle code path — `useDailyRiddle` reads exclusively from `YEARLY_RIDDLES` via `getDailyRiddleForDate`. The old `Riddle` type and `RiddleCategory` union are also kept for the same reason.
