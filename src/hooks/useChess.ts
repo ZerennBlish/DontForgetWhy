@@ -8,6 +8,8 @@ import {
   DIFFICULTY_LEVELS,
   clearTranspositionTable,
 } from '../services/chessAI';
+import { getCloudMove } from '../services/cloudStockfish';
+import { isProUser } from '../services/proStatus';
 import {
   saveChessGame,
   loadChessGame,
@@ -255,7 +257,7 @@ export function useChess(): UseChessReturn {
       // registers before the search begins.
       setAiThinkStart(Date.now());
       setAiTimeBudget(budget);
-      setTimeout(() => {
+      setTimeout(async () => {
         // Bail if the user resigned / started a new game / unmounted
         // while we were yielding to React.
         if (sessionIdRef.current !== currentSession) {
@@ -272,7 +274,33 @@ export function useChess(): UseChessReturn {
           return;
         }
         const t2 = Date.now();
-        const aiSan = getAIMove(c2, level);
+        let aiSan: string | null = null;
+        if (level.cloud && isProUser()) {
+          try {
+            aiSan = await getCloudMove(c2.fen());
+          } catch {
+            aiSan = null;
+          }
+          // Bail if session changed during the cloud request.
+          if (sessionIdRef.current !== currentSession) {
+            setIsAIThinking(false);
+            setAiTimeBudget(0);
+            setAiThinkStart(0);
+            return;
+          }
+          // Also re-check game state — could have changed while awaiting.
+          if (!gameRef.current || gameRef.current !== c2 || c2.isGameOver()) {
+            setIsAIThinking(false);
+            setAiTimeBudget(0);
+            setAiThinkStart(0);
+            return;
+          }
+          if (!aiSan) {
+            aiSan = getAIMove(c2, level);
+          }
+        } else {
+          aiSan = getAIMove(c2, level);
+        }
         if (__DEV__) console.log('AI move took:', Date.now() - t2, 'ms');
         if (aiSan) {
           try {

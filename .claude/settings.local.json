@@ -86,7 +86,8 @@
       "Bash(cmd.exe /c \"where py\")",
       "Bash(py -c \"from PIL import Image; print\\('ok'\\)\")",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(echo \"TSC=$?\")"
+      "Bash(echo \"TSC=$?\")",
+      "Bash(echo \"---EXIT:$?---\")"
     ]
   }
 }

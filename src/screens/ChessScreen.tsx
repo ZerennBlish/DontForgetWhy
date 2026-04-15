@@ -22,11 +22,12 @@ import { useChess } from '../hooks/useChess';
 import { getPieceImage } from '../data/chessAssets';
 import APP_ICONS from '../data/appIconAssets';
 import { DIFFICULTY_LEVELS } from '../services/chessAI';
+import { isProUser } from '../services/proStatus';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chess'>;
 
-const DIFFICULTY_LABELS = ['Beginner', 'Casual', 'Mid', 'Advanced', 'Expert'];
+const DIFFICULTY_LABELS = ['Beginner', 'Casual', 'Mid', 'Advanced', 'Expert', 'Cloud'];
 const PIECE_NAMES: Record<string, string> = {
   p: 'pawn',
   n: 'knight',
@@ -181,6 +182,14 @@ export default function ChessScreen({ navigation }: Props) {
   const [selectedColor, setSelectedColor] = useState<'w' | 'b'>('w');
   const [selectedDifficulty, setSelectedDifficulty] = useState(2);
   const [teachingEnabled, setTeachingEnabled] = useState(true);
+
+  // Cloud difficulty is Pro-only — non-Pro users see the original 5 levels.
+  const visibleDifficulties = useMemo(() => {
+    const isPro = isProUser();
+    return DIFFICULTY_LABELS.map((label, index) => ({ label, index })).filter(
+      ({ label }) => label !== 'Cloud' || isPro,
+    );
+  }, []);
 
   const roastFade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -567,22 +576,23 @@ export default function ChessScreen({ navigation }: Props) {
 
         <Text style={styles.sectionLabel}>Difficulty</Text>
         <View style={styles.pillsRow}>
-          {DIFFICULTY_LEVELS.map((_, idx) => {
-            const active = selectedDifficulty === idx;
+          {visibleDifficulties.map(({ label, index }) => {
+            const active = selectedDifficulty === index;
+            const isCloud = label === 'Cloud';
             return (
               <TouchableOpacity
-                key={idx}
+                key={index}
                 style={[styles.pill, active && styles.pillActive]}
-                onPress={() => { hapticLight(); playGameSound('tap'); setSelectedDifficulty(idx); }}
+                onPress={() => { hapticLight(); playGameSound('tap'); setSelectedDifficulty(index); }}
                 activeOpacity={0.7}
                 accessibilityRole="tab"
-                accessibilityLabel={DIFFICULTY_LABELS[idx]}
+                accessibilityLabel={label}
                 accessibilityState={{ selected: active }}
               >
                 <Text
                   style={[styles.pillText, active && styles.pillTextActive]}
                 >
-                  {DIFFICULTY_LABELS[idx]}
+                  {isCloud ? `\u2601 ${label}` : label}
                 </Text>
               </TouchableOpacity>
             );
@@ -809,7 +819,9 @@ export default function ChessScreen({ navigation }: Props) {
   const renderActiveGame = () => {
     const opponentColor: 'w' | 'b' = chess.playerColor === 'w' ? 'b' : 'w';
     const moveNum = Math.max(1, Math.ceil(chess.moveHistory.length / 2));
-    const diffName = DIFFICULTY_LABELS[chess.difficulty] ?? '';
+    const rawDiffName = DIFFICULTY_LABELS[chess.difficulty] ?? '';
+    const diffName =
+      rawDiffName === 'Cloud' ? `\u2601 ${rawDiffName}` : rawDiffName;
 
     return (
       <View style={styles.body}>

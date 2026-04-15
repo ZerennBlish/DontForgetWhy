@@ -865,6 +865,7 @@ export interface DifficultyLevel {
   maxDepth: number;
   timeLimitMs: number;
   randomness: number; // 0 = always best move, higher = more random
+  cloud?: boolean; // Fetch best move from Lichess cloud eval (Stockfish)
 }
 
 export const DIFFICULTY_LEVELS: DifficultyLevel[] = [
@@ -873,6 +874,8 @@ export const DIFFICULTY_LEVELS: DifficultyLevel[] = [
   { name: 'Intermediate', minDepth: 2, maxDepth: 4, timeLimitMs: 1000, randomness: 0.05 },
   { name: 'Advanced',     minDepth: 2, maxDepth: 5, timeLimitMs: 2000, randomness: 0 },
   { name: 'Expert',       minDepth: 3, maxDepth: 6, timeLimitMs: 5000, randomness: 0 },
+  // Cloud: fallback depth/budget equals Expert when the API has no data.
+  { name: 'Cloud',        minDepth: 3, maxDepth: 6, timeLimitMs: 5000, randomness: 0, cloud: true },
 ];
 
 export function getAIMove(game: Chess, level: DifficultyLevel): string | null {
