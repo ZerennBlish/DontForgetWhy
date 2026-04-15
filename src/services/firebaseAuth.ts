@@ -9,7 +9,7 @@ import {
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { createOrUpdateUserProfile } from './firestore';
 import { clearCalendarCache } from './googleCalendar';
-import { clearSyncData } from './calendarSync';
+import { kvRemove } from './database';
 
 const WEB_CLIENT_ID = '190522733985-r50fan5ba955qv2ab1n0oqrgv7kak7ba.apps.googleusercontent.com';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
@@ -50,7 +50,10 @@ export async function signInWithGoogle(): Promise<FirebaseAuthTypes.UserCredenti
 export async function signOutGoogle(): Promise<void> {
   ensureConfigured();
   clearCalendarCache();
-  clearSyncData();
+  kvRemove('gcal_dfw_calendar_id');
+  kvRemove('gcal_sync_enabled');
+  // Intentionally NOT clearing gcal_sync_map — preserves event mapping
+  // so re-signing the same account doesn't create duplicates.
   try {
     await signOut(getAuth());
   } catch {

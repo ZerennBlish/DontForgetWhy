@@ -23,18 +23,15 @@ function isValidFoundingDetails(v: unknown): v is FoundingDetails {
 export function runFoundingMigration(): void {
   if (kvGet(FOUNDING_CHECK_KEY)) return;
 
-  if (isProUser()) {
-    kvSet(FOUNDING_CHECK_KEY, 'true');
-    return;
-  }
-
-  if (kvGet(ONBOARDING_KEY)) {
+  if (kvGet(ONBOARDING_KEY) === 'true') {
     const now = new Date().toISOString();
-    setProStatus({
-      purchased: true,
-      productId: 'founding_user',
-      purchaseDate: now,
-    });
+    if (!isProUser()) {
+      setProStatus({
+        purchased: true,
+        productId: 'founding_user',
+        purchaseDate: now,
+      });
+    }
     kvSet(
       FOUNDING_STATUS_KEY,
       JSON.stringify({ isFoundingUser: true, grantedAt: now }),

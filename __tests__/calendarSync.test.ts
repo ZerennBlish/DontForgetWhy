@@ -140,7 +140,7 @@ describe('isSyncEnabled / setSyncEnabled', () => {
 // ── clearSyncData ──────────────────────────────────────────────
 
 describe('clearSyncData', () => {
-  it('removes the calendar id, sync map, and sync enabled keys', () => {
+  it('removes the calendar id and sync enabled keys but preserves the sync map', () => {
     kvStore.set('gcal_dfw_calendar_id', 'cal-xyz');
     kvStore.set('gcal_sync_map', '{"a":"e"}');
     kvStore.set('gcal_sync_enabled', 'true');
@@ -149,8 +149,10 @@ describe('clearSyncData', () => {
     clearSyncData();
 
     expect(kvStore.get('gcal_dfw_calendar_id')).toBeUndefined();
-    expect(kvStore.get('gcal_sync_map')).toBeUndefined();
     expect(kvStore.get('gcal_sync_enabled')).toBeUndefined();
+    // Sync map intentionally preserved so re-sign-in to the same account
+    // doesn't create duplicate events.
+    expect(kvStore.get('gcal_sync_map')).toBe('{"a":"e"}');
     expect(kvStore.get('unrelated')).toBe('keep');
   });
 });
@@ -342,5 +344,118 @@ describe('syncToGoogleCalendar — 401 retry', () => {
     const secondAuth = fetchMock.mock.calls[1][1].headers.Authorization;
     expect(firstAuth).toBe('Bearer tok-stale');
     expect(secondAuth).toBe('Bearer tok-fresh');
+  });
+});
+
+describe('syncToGoogleCalendar — 403 scope retry', () => {
+  it('re-requests the calendar write scope and retries after a 403 response', async () => {
+    kvStore.set('gcal_dfw_calendar_id', 'cal-id');
+    mockedGetAccessToken
+      .mockResolvedValueOnce('tok-old')
+      .mockResolvedValueOnce('tok-rescoped');
+
+    fetchMock
+      .mockResolvedValueOnce(mockRes({}, { status: 403 })) // verify GET → 403
+      .mockResolvedValueOnce(mockRes({ id: 'cal-id' })); // retry → 200
+
+    const result = await syncToGoogleCalendar();
+
+    expect(result).toEqual({ synced: 0, errors: 0 });
+    // requestCalendarWriteScope is called once at the top of syncToGoogleCalendar
+    // and once more inside authedFetch when the 403 fires.
+    expect(mockedRequestCalendarWriteScope).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const firstAuth = fetchMock.mock.calls[0][1].headers.Authorization;
+    const secondAuth = fetchMock.mock.calls[1][1].headers.Authorization;
+    expect(firstAuth).toBe('Bearer tok-old');
+    expect(secondAuth).toBe('Bearer tok-rescoped');
+  });
+
+  it('throws when the 403 retry path can no longer obtain the write scope', async () => {
+    kvStore.set('gcal_dfw_calendar_id', 'cal-id');
+    mockedRequestCalendarWriteScope
+      .mockResolvedValueOnce(true) // initial syncToGoogleCalendar() check
+      .mockResolvedValueOnce(false); // re-request from authedFetch
+
+    fetchMock.mockResolvedValueOnce(mockRes({}, { status: 403 }));
+
+    await expect(syncToGoogleCalendar()).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe('syncToGoogleCalendar — delete error handling', () => {
+  it('preserves the sync-map entry and counts an error when DELETE returns 500', async () => {
+    kvStore.set('gcal_dfw_calendar_id', 'cal-id');
+    kvStore.set('gcal_sync_map', JSON.stringify({ 'alarm-disabled': 'evt-existing' }));
+    mockedLoadAlarms.mockResolvedValue([
+      makeAlarm({ id: 'alarm-disabled', enabled: false }),
+    ]);
+
+    fetchMock
+      .mockResolvedValueOnce(mockRes({ id: 'cal-id' })) // verify GET
+      .mockResolvedValueOnce(mockRes({}, { status: 500 })); // DELETE → 500
+
+    const result = await syncToGoogleCalendar();
+
+    expect(result).toEqual({ synced: 0, errors: 1 });
+    const updatedMap = JSON.parse(kvStore.get('gcal_sync_map')!);
+    expect(updatedMap['alarm-disabled']).toBe('evt-existing');
+  });
+
+  it('treats a 404 DELETE as success — removes the sync-map entry without counting an error', async () => {
+    kvStore.set('gcal_dfw_calendar_id', 'cal-id');
+    kvStore.set('gcal_sync_map', JSON.stringify({ 'alarm-disabled': 'evt-gone' }));
+    mockedLoadAlarms.mockResolvedValue([
+      makeAlarm({ id: 'alarm-disabled', enabled: false }),
+    ]);
+
+    fetchMock
+      .mockResolvedValueOnce(mockRes({ id: 'cal-id' })) // verify GET
+      .mockResolvedValueOnce(mockRes({}, { status: 404 })); // DELETE → 404
+
+    const result = await syncToGoogleCalendar();
+
+    expect(result).toEqual({ synced: 0, errors: 0 });
+    const updatedMap = JSON.parse(kvStore.get('gcal_sync_map')!);
+    expect(updatedMap['alarm-disabled']).toBeUndefined();
+  });
+});
+
+describe('syncToGoogleCalendar — recurring DTSTART stability', () => {
+  it('produces the same DTSTART across re-syncs for the same recurring alarm', async () => {
+    kvStore.set('gcal_dfw_calendar_id', 'cal-id');
+    const recurringAlarm = makeAlarm({
+      id: 'rec-alarm',
+      mode: 'recurring',
+      days: ['Mon', 'Wed', 'Fri'],
+      date: null,
+      time: '07:00',
+      createdAt: '2026-01-10T12:00:00Z',
+    });
+    mockedLoadAlarms.mockResolvedValue([recurringAlarm]);
+
+    // First sync: verify GET + POST.
+    fetchMock
+      .mockResolvedValueOnce(mockRes({ id: 'cal-id' }))
+      .mockResolvedValueOnce(mockRes({ id: 'evt-rec' }));
+
+    await syncToGoogleCalendar();
+    const firstPostBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    const firstStart = firstPostBody.start.dateTime;
+
+    // Second sync: verify GET + PUT (item already mapped).
+    fetchMock.mockReset();
+    fetchMock
+      .mockResolvedValueOnce(mockRes({ id: 'cal-id' }))
+      .mockResolvedValueOnce(mockRes({ id: 'evt-rec' }));
+
+    await syncToGoogleCalendar();
+    const secondPutBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    const secondStart = secondPutBody.start.dateTime;
+
+    expect(firstStart).toBe(secondStart);
+    // Sanity: the recurrence rule uses the alarm's days.
+    expect(firstPostBody.recurrence).toEqual(['RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR']);
   });
 });

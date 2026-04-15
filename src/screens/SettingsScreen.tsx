@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ import HomeButton from '../components/HomeButton';
 import { ChevronRightIcon, LockIcon } from '../components/Icons';
 import ProGate from '../components/ProGate';
 import useEntitlement from '../hooks/useEntitlement';
-import { getProDetails, type ProDetails } from '../services/proStatus';
+import { getProDetails, isProUser, type ProDetails } from '../services/proStatus';
 import APP_ICONS from '../data/appIconAssets';
 import TimePicker from '../components/TimePicker';
 import { getButtonStyles } from '../theme/buttonStyles';
@@ -91,6 +91,31 @@ export default function SettingsScreen({ navigation }: Props) {
   const [isPro, setIsPro] = useState<boolean>(initialIsPro);
   const [proDetails, setProDetails] = useState<ProDetails | null>(initialProDetails);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreResult, setRestoreResult] = useState<string | null>(null);
+  const restoreResultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (restoreResultTimerRef.current) clearTimeout(restoreResultTimerRef.current);
+    };
+  }, []);
+
+  const handleRestorePurchases = useCallback(async () => {
+    if (restoreLoading) return;
+    hapticLight();
+    setRestoreLoading(true);
+    setRestoreResult(null);
+    try {
+      await entitlement.restore();
+    } finally {
+      const restored = isProUser();
+      setRestoreResult(restored ? 'Purchase restored!' : 'No purchases found');
+      setRestoreLoading(false);
+      if (restoreResultTimerRef.current) clearTimeout(restoreResultTimerRef.current);
+      restoreResultTimerRef.current = setTimeout(() => setRestoreResult(null), 3000);
+    }
+  }, [entitlement, restoreLoading]);
 
   useEffect(() => {
     if (entitlement.isPro && !isPro) {
@@ -939,20 +964,53 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
 
       <TouchableOpacity
-        style={[styles.card, { marginTop: 16 }]}
-        onPress={() => { hapticLight(); entitlement.restore(); }}
+        style={[styles.card, { marginTop: 16, opacity: restoreLoading ? 0.6 : 1 }]}
+        onPress={handleRestorePurchases}
+        disabled={restoreLoading}
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel="Restore previous purchase"
       >
         <View style={styles.aboutRow}>
           <Text style={styles.label}>Restore Purchases</Text>
-          <ChevronRightIcon color={colors.textTertiary} size={16} />
+          {restoreLoading ? (
+            <ActivityIndicator size="small" color={colors.accent} />
+          ) : (
+            <ChevronRightIcon color={colors.textTertiary} size={16} />
+          )}
         </View>
         <Text style={styles.description}>
           Restore a previous Pro purchase from Google Play.
         </Text>
       </TouchableOpacity>
+      {restoreResult ? (
+        <Text
+          style={{
+            fontSize: 12,
+            fontFamily: FONTS.regular,
+            color: restoreResult === 'Purchase restored!' ? colors.success : colors.textTertiary,
+            marginHorizontal: 16,
+            marginTop: 4,
+          }}
+          accessibilityLiveRegion="polite"
+        >
+          {restoreResult}
+        </Text>
+      ) : null}
+      {purchaseError ? (
+        <Text
+          style={{
+            fontSize: 12,
+            fontFamily: FONTS.regular,
+            color: colors.red,
+            marginHorizontal: 16,
+            marginTop: 4,
+          }}
+          accessibilityLiveRegion="polite"
+        >
+          {purchaseError}
+        </Text>
+      ) : null}
 
       {/* Silence duration picker modal */}
       <Modal transparent visible={silencePickerVisible} animationType="slide" onRequestClose={handleSilencePickerCancel}>
@@ -1128,12 +1186,14 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
       </Modal>
     </ScrollView>
-    <ProGate
-      visible={proGateVisible}
-      onClose={() => {
-        setProGateVisible(false);
-      }}
-    />
+    {proGateVisible && (
+      <ProGate
+        visible={proGateVisible}
+        onClose={() => {
+          setProGateVisible(false);
+        }}
+      />
+    )}
     {isImporting && (
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 999 }}>
         <ActivityIndicator size="large" color={colors.accent} />

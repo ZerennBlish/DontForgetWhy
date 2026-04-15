@@ -71,13 +71,13 @@ export default function GamesScreen({ navigation }: Props) {
         setProGateVisible(true);
         return;
       }
-      if (game) {
+      if (game && !isPro) {
         incrementTrial(game);
         setTrialCounts((prev) => ({ ...prev, [game]: getTrialRemaining(game) }));
       }
       navigation.navigate(screen as any);
     },
-    [navigation],
+    [navigation, isPro],
   );
 
   const handleGateClose = useCallback(() => {
@@ -383,7 +383,7 @@ export default function GamesScreen({ navigation }: Props) {
         sectionColor={colors.sectionGames}
       />
     )}
-    <ProGate visible={proGateVisible} onClose={handleGateClose} game={gateGame} />
+    {proGateVisible && <ProGate visible={proGateVisible} onClose={handleGateClose} game={gateGame} />}
     </View>
     </ImageBackground>
   );

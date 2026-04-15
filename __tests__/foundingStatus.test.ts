@@ -57,9 +57,32 @@ describe('runFoundingMigration', () => {
     expect(typeof parsed.grantedAt).toBe('string');
   });
 
-  it('does not re-grant when the user is already Pro, but still marks the check done', () => {
+  it('does not re-grant Pro when the user is already Pro, but still records the founding badge', () => {
     mockedIsProUser.mockReturnValue(true);
     kvStore.set('onboardingComplete', 'true');
+    runFoundingMigration();
+
+    expect(mockedSetProStatus).not.toHaveBeenCalled();
+    expect(kvStore.get('founding_check_done')).toBe('true');
+
+    const rawStatus = kvStore.get('founding_status');
+    expect(rawStatus).toBeDefined();
+    const parsed = JSON.parse(rawStatus!) as FoundingDetails;
+    expect(parsed.isFoundingUser).toBe(true);
+    expect(typeof parsed.grantedAt).toBe('string');
+  });
+
+  it("does not grant founding when onboardingComplete is the string 'false'", () => {
+    kvStore.set('onboardingComplete', 'false');
+    runFoundingMigration();
+
+    expect(mockedSetProStatus).not.toHaveBeenCalled();
+    expect(kvStore.get('founding_check_done')).toBe('true');
+    expect(kvStore.get('founding_status')).toBeUndefined();
+  });
+
+  it("does not grant founding when onboardingComplete is a corrupted truthy value like 'yes'", () => {
+    kvStore.set('onboardingComplete', 'yes');
     runFoundingMigration();
 
     expect(mockedSetProStatus).not.toHaveBeenCalled();

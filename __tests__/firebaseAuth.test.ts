@@ -34,9 +34,19 @@ jest.mock('../src/services/firestore', () => ({
   createOrUpdateUserProfile: jest.fn(() => Promise.resolve()),
 }));
 
-jest.mock('../src/services/calendarSync', () => ({
+const databaseRemoves: string[] = [];
+jest.mock('../src/services/database', () => ({
   __esModule: true,
-  clearSyncData: jest.fn(),
+  kvGet: jest.fn(),
+  kvSet: jest.fn(),
+  kvRemove: jest.fn((key: string) => {
+    databaseRemoves.push(key);
+  }),
+}));
+
+jest.mock('../src/services/googleCalendar', () => ({
+  __esModule: true,
+  clearCalendarCache: jest.fn(),
 }));
 
 import { createOrUpdateUserProfile } from '../src/services/firestore';
@@ -92,6 +102,7 @@ const successfulSignInResponse = {
 };
 
 beforeEach(() => {
+  databaseRemoves.length = 0;
   authMock.__setCurrentUser(null);
   authMock.signInWithCredential.mockReset().mockResolvedValue({
     user: sampleUser,
@@ -171,6 +182,13 @@ describe('signOutGoogle', () => {
     await signOutGoogle();
     expect(authMock.signOut).toHaveBeenCalled();
     expect(gsiMock.signOut).toHaveBeenCalled();
+  });
+
+  it('removes the calendar id and sync enabled keys but preserves the sync map', async () => {
+    await signOutGoogle();
+    expect(databaseRemoves).toContain('gcal_dfw_calendar_id');
+    expect(databaseRemoves).toContain('gcal_sync_enabled');
+    expect(databaseRemoves).not.toContain('gcal_sync_map');
   });
 
   it('resolves even if Firebase signOut throws', async () => {

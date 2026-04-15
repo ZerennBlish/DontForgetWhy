@@ -168,6 +168,13 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     loadSettings().then((s) => {
@@ -522,6 +529,7 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged((user) => {
       setGoogleUser(toGoogleUserSummary(user));
+      setCalSyncEnabledState(isSyncEnabled());
     });
     return unsubscribe;
   }, []);
@@ -564,17 +572,21 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
   };
 
   const runSync = useCallback(async () => {
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
     setIsSyncing(true);
     setSyncError(null);
     setSyncResult(null);
     try {
       const result = await syncToGoogleCalendar();
       setSyncResult(result);
-      setTimeout(() => setSyncResult(null), 4000);
+      syncTimeoutRef.current = setTimeout(() => setSyncResult(null), 4000);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Sync failed';
       setSyncError(msg);
-      setTimeout(() => setSyncError(null), 4000);
+      syncTimeoutRef.current = setTimeout(() => setSyncError(null), 4000);
       if (msg.toLowerCase().includes('permission denied')) {
         setCalSyncEnabledState(false);
         setSyncEnabled(false);

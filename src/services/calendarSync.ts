@@ -69,15 +69,17 @@ function saveSyncMap(map: Record<string, string>): void {
   kvSet(SYNC_MAP_KEY, JSON.stringify(map));
 }
 
-// ── clear sync data (called on sign-out) ───────────────────────
+// ── clear sync data ────────────────────────────────────────────
+// Intentionally preserves the sync map so re-signing the same Google
+// account doesn't create duplicate events for items that were already
+// synced previously.
 
 export function clearSyncData(): void {
   kvRemove(DFW_CALENDAR_KEY);
-  kvRemove(SYNC_MAP_KEY);
   kvRemove(SYNC_ENABLED_KEY);
 }
 
-// ── authed fetch with 401 retry ────────────────────────────────
+// ── authed fetch with 401/403 retry ────────────────────────────
 
 async function authedFetch(url: string, options: RequestInit): Promise<Response> {
   let token = await getAccessToken();
@@ -102,6 +104,14 @@ async function authedFetch(url: string, options: RequestInit): Promise<Response>
     }
     token = await getAccessToken();
     if (!token) throw new Error('Token refresh failed');
+    res = await fetch(url, withAuth(token));
+  }
+
+  if (res.status === 403) {
+    const granted = await requestCalendarWriteScope();
+    if (!granted) throw new Error('Calendar write permission denied');
+    token = await getAccessToken();
+    if (!token) throw new Error('Token refresh failed after scope grant');
     res = await fetch(url, withAuth(token));
   }
 
@@ -168,6 +178,30 @@ function nextOccurrenceDate(days: AlarmDay[], time: string): string | null {
   return null;
 }
 
+// Stable DTSTART for a recurring alarm: first matching weekday on or
+// after the alarm's creation date. Deterministic for the alarm's lifetime
+// so re-syncs don't move the recurrence forward.
+function stableFirstDate(days: AlarmDay[], createdAt: string): string | null {
+  if (!days.length) return null;
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return null;
+  const targetDays = days
+    .map((d) => DAY_TO_INDEX[d])
+    .filter((n) => Number.isFinite(n))
+    .sort((a, b) => a - b);
+  if (targetDays.length === 0) return null;
+  const createdDay = created.getDay();
+  const onOrAfter = targetDays.find((d) => d >= createdDay);
+  const daysToAdd =
+    onOrAfter !== undefined ? onOrAfter - createdDay : 7 - createdDay + targetDays[0];
+  const result = new Date(
+    created.getFullYear(),
+    created.getMonth(),
+    created.getDate() + daysToAdd,
+  );
+  return `${result.getFullYear()}-${pad(result.getMonth() + 1)}-${pad(result.getDate())}`;
+}
+
 function buildRRule(days: AlarmDay[]): string {
   const byday = days.map((d) => DAY_TO_RRULE[d]).join(',');
   return `RRULE:FREQ=WEEKLY;BYDAY=${byday}`;
@@ -205,7 +239,8 @@ function alarmToEvent(alarm: Alarm): EventBody | null {
 
   // recurring
   if (!alarm.days || alarm.days.length === 0) return null;
-  const firstDate = nextOccurrenceDate(alarm.days, alarm.time);
+  const firstDate =
+    stableFirstDate(alarm.days, alarm.createdAt) ?? nextOccurrenceDate(alarm.days, alarm.time);
   if (!firstDate) return null;
   const start = toLocalDateTime(firstDate, alarm.time, 0);
   const end = toLocalDateTime(firstDate, alarm.time, EVENT_DURATION_MIN);
@@ -307,10 +342,14 @@ async function findOrCreateDfwCalendar(): Promise<string> {
 // ── per-item sync helpers ──────────────────────────────────────
 
 async function deleteEvent(calId: string, eventId: string): Promise<void> {
-  await authedFetch(
+  const res = await authedFetch(
     `${CALENDAR_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(eventId)}`,
     { method: 'DELETE' },
   );
+  // 2xx → deleted, 404 → already gone (still success). Anything else fails.
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Delete failed (${res.status})`);
+  }
 }
 
 async function putEvent(calId: string, eventId: string, body: EventBody): Promise<Response> {
@@ -343,10 +382,12 @@ async function syncItem(
     if (existingEventId) {
       try {
         await deleteEvent(calId, existingEventId);
-      } catch {
-        // ignore
+        delete syncMap[itemId];
+      } catch (e) {
+        // Keep the mapping so the next sync retries idempotently.
+        console.warn(`[calendarSync] delete failed for ${itemId} (${existingEventId}):`, e);
+        return 'error';
       }
-      delete syncMap[itemId];
     }
     return 'skipped';
   }

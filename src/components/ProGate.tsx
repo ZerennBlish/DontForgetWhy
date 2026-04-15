@@ -17,10 +17,16 @@ import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import type { TrialGame } from '../services/gameTrialStorage';
 
-const HEADERS: readonly string[] = [
+const GAME_HEADERS: readonly string[] = [
   'Your free rounds are up. Impressed? We thought so.',
   "3 rounds wasn't enough, huh? We're flattered.",
   "Look who wants more. Can't say we blame you.",
+];
+
+const GENERIC_HEADERS: readonly string[] = [
+  "You've got taste. This one's for Pro members.",
+  'Upgrade your experience. You know you want to.',
+  'The good stuff is right behind this button.',
 ];
 
 const BENEFITS: readonly string[] = [
@@ -40,12 +46,10 @@ export default function ProGate({ visible, onClose, game }: ProGateProps) {
   const { colors } = useTheme();
   const { isPro, loading, error, productPrice, purchase, restore } = useEntitlement();
 
-  const headerText = useMemo(
-    () => HEADERS[Math.floor(Math.random() * HEADERS.length)],
-    // Re-roll the header each time the modal opens.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [visible],
-  );
+  const [headerText] = useState(() => {
+    const pool = game ? GAME_HEADERS : GENERIC_HEADERS;
+    return pool[Math.floor(Math.random() * pool.length)];
+  });
 
   const accentColor = game ? colors.sectionGames : colors.accent;
 
@@ -75,11 +79,11 @@ export default function ProGate({ visible, onClose, game }: ProGateProps) {
   const wasProRef = useRef(isPro);
   useEffect(() => {
     if (!wasProRef.current && isPro) {
-      playGameSound('gameWin');
+      if (game) playGameSound('gameWin');
       onClose();
     }
     wasProRef.current = isPro;
-  }, [isPro, onClose]);
+  }, [isPro, onClose, game]);
 
   const handlePurchase = useCallback(() => {
     hapticLight();
@@ -196,11 +200,7 @@ export default function ProGate({ visible, onClose, game }: ProGateProps) {
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={handleClose}>
-      <TouchableWithoutFeedback
-        onPress={handleClose}
-        accessibilityRole="button"
-        accessibilityLabel="Close paywall"
-      >
+      <TouchableWithoutFeedback onPress={handleClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.card} accessibilityViewIsModal={true}>
