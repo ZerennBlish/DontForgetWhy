@@ -355,7 +355,7 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trivia</Text>
           <Text style={styles.gameDesc}>
-            10 categories. 370+ questions offline.
+            8 categories. 1,600+ questions offline.
           </Text>
           {renderTrialIndicator('trivia')}
         </View>
