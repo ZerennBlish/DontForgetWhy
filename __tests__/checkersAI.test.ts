@@ -7,11 +7,14 @@ import {
   getGameStatus,
   findBestMove,
   getAIMove,
+  getTopMoves,
   clearTranspositionTable,
   DIFFICULTY_LEVELS,
   Board,
   Piece,
   CheckersMove,
+  RankedMove,
+  PickRange,
 } from '../src/services/checkersAI';
 import { getCheckerImage } from '../src/data/checkersAssets';
 
@@ -503,5 +506,148 @@ describe('AI null return triggers game over', () => {
     board[5][2] = { color: 'b', king: false };
     const move = getAIMove(board, 'r', DIFFICULTY_LEVELS[0]);
     expect(move).toBeNull();
+  });
+});
+
+// ── Improved evaluation heuristics ──────────────────────────────────────────
+describe('evaluateBoard — improved heuristics', () => {
+  it('values a supported piece higher than an isolated piece', () => {
+    const supported: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    supported[5][2] = { color: 'r', king: false };
+    supported[6][3] = { color: 'r', king: false }; // supporter behind-right
+    supported[0][1] = { color: 'b', king: false };
+
+    const isolated: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    isolated[5][2] = { color: 'r', king: false };
+    isolated[6][5] = { color: 'r', king: false }; // same advancement, not adjacent
+    isolated[0][1] = { color: 'b', king: false };
+
+    expect(evaluateBoard(supported)).toBeGreaterThan(evaluateBoard(isolated));
+  });
+
+  it('penalizes kings on the edge vs center', () => {
+    const edgeKing: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    edgeKing[0][1] = { color: 'r', king: true };
+    edgeKing[7][6] = { color: 'b', king: false };
+
+    const centerKing: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    centerKing[3][4] = { color: 'r', king: true };
+    centerKing[7][6] = { color: 'b', king: false };
+
+    expect(evaluateBoard(centerKing)).toBeGreaterThan(evaluateBoard(edgeKing));
+  });
+
+  it('blocked piece scores lower due to mobility penalty', () => {
+    const blocked: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    blocked[5][2] = { color: 'r', king: false };
+    blocked[4][1] = { color: 'b', king: false }; // blocks forward-left
+    blocked[4][3] = { color: 'b', king: false }; // blocks forward-right
+
+    const open: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    open[5][2] = { color: 'r', king: false };
+    open[0][1] = { color: 'b', king: false };
+    open[0][3] = { color: 'b', king: false };
+
+    expect(evaluateBoard(open)).toBeGreaterThan(evaluateBoard(blocked));
+  });
+
+  it('endgame scaling produces a finite evaluation', () => {
+    const endgame: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    endgame[3][4] = { color: 'r', king: true };
+    endgame[4][3] = { color: 'r', king: false };
+    endgame[5][2] = { color: 'b', king: false };
+    endgame[6][1] = { color: 'b', king: false };
+
+    const score = evaluateBoard(endgame);
+    expect(typeof score).toBe('number');
+    expect(Math.abs(score)).toBeLessThan(100000);
+  });
+
+  it('still returns ±100000 for no-piece positions', () => {
+    const noRed: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    noRed[3][4] = { color: 'b', king: false };
+    expect(evaluateBoard(noRed)).toBe(-100000);
+
+    const noBlack: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    noBlack[3][4] = { color: 'r', king: false };
+    expect(evaluateBoard(noBlack)).toBe(100000);
+  });
+});
+
+// ── getTopMoves (cloud interface) ───────────────────────────────────────────
+describe('getTopMoves', () => {
+  it('returns up to 5 ranked moves for the initial board', () => {
+    const board = createInitialBoard();
+    const ranked: RankedMove[] = getTopMoves(board, 'r', 4, 1000, 5);
+    expect(ranked.length).toBeGreaterThan(0);
+    expect(ranked.length).toBeLessThanOrEqual(5);
+  });
+
+  it('moves are sorted best-first for red (descending score)', () => {
+    const board = createInitialBoard();
+    const ranked = getTopMoves(board, 'r', 4, 1000, 5);
+    for (let i = 1; i < ranked.length; i++) {
+      expect(ranked[i - 1].score).toBeGreaterThanOrEqual(ranked[i].score);
+    }
+  });
+
+  it('moves are sorted best-first for black (ascending score)', () => {
+    const board = createInitialBoard();
+    const ranked = getTopMoves(board, 'b', 4, 1000, 5);
+    for (let i = 1; i < ranked.length; i++) {
+      expect(ranked[i - 1].score).toBeLessThanOrEqual(ranked[i].score);
+    }
+  });
+
+  it('returns only 1 move when only 1 is legal', () => {
+    const board: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    board[5][0] = { color: 'r', king: false };
+    const ranked = getTopMoves(board, 'r', 4, 1000, 5);
+    expect(ranked.length).toBe(1);
+  });
+
+  it('returns empty array when no moves exist', () => {
+    const board: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    board[7][0] = { color: 'r', king: false };
+    board[6][1] = { color: 'b', king: false };
+    board[5][2] = { color: 'b', king: false };
+    const ranked = getTopMoves(board, 'r', 4, 1000, 5);
+    expect(ranked.length).toBe(0);
+  });
+
+  it('all returned moves are legal', () => {
+    const board = createInitialBoard();
+    const ranked = getTopMoves(board, 'r', 4, 1000, 5);
+    const legal = generateMoves(board, 'r');
+    for (const { move } of ranked) {
+      const isLegal = legal.some(
+        (m) =>
+          m.from[0] === move.from[0] &&
+          m.from[1] === move.from[1] &&
+          m.to[0] === move.to[0] &&
+          m.to[1] === move.to[1],
+      );
+      expect(isLegal).toBe(true);
+    }
+  });
+});
+
+// ── Difficulty cloudPickRange ───────────────────────────────────────────────
+describe('difficulty model — cloudPickRange', () => {
+  it('every level has a cloudPickRange with valid bounds', () => {
+    for (const level of DIFFICULTY_LEVELS) {
+      const range: PickRange = level.cloudPickRange;
+      expect(range.minRank).toBeGreaterThanOrEqual(0);
+      expect(range.maxRank).toBeGreaterThanOrEqual(range.minRank);
+      expect(range.maxRank).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it('higher difficulty = lower (better) pick range', () => {
+    for (let i = 1; i < DIFFICULTY_LEVELS.length; i++) {
+      const prev = DIFFICULTY_LEVELS[i - 1];
+      const curr = DIFFICULTY_LEVELS[i];
+      expect(curr.cloudPickRange.minRank).toBeLessThanOrEqual(prev.cloudPickRange.minRank);
+    }
   });
 });

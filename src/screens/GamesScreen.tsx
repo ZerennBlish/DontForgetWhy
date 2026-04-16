@@ -13,6 +13,7 @@ import useEntitlement from '../hooks/useEntitlement';
 import { useTutorial } from '../hooks/useTutorial';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
+import { checkConnectivity } from '../utils/connectivity';
 import { ChevronRightIcon } from '../components/Icons';
 import {
   canPlayGame,
@@ -43,6 +44,7 @@ export default function GamesScreen({ navigation }: Props) {
     GATED_GAMES.forEach((g) => { counts[g] = getTrialRemaining(g); });
     return counts;
   });
+  const [isOnline, setIsOnline] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,6 +63,20 @@ export default function GamesScreen({ navigation }: Props) {
       const counts: Record<string, number> = {};
       GATED_GAMES.forEach((g) => { counts[g] = getTrialRemaining(g); });
       setTrialCounts(counts);
+
+      let mounted = true;
+      checkConnectivity().then((online) => {
+        if (mounted) setIsOnline(online);
+      });
+      const interval = setInterval(() => {
+        checkConnectivity().then((online) => {
+          if (mounted) setIsOnline(online);
+        });
+      }, 30000);
+      return () => {
+        mounted = false;
+        clearInterval(interval);
+      };
     }, []),
   );
 
@@ -179,6 +195,17 @@ export default function GamesScreen({ navigation }: Props) {
           fontFamily: FONTS.bold,
           color: colors.red,
         },
+        globeBadge: {
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          width: 24,
+          height: 24,
+        },
+        globeImage: {
+          width: 24,
+          height: 24,
+        },
       }),
     [colors, insets.bottom],
   );
@@ -245,6 +272,16 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
         </View>
+        <View
+          style={styles.globeBadge}
+          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
+        >
+          <Image
+            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            style={styles.globeImage}
+            resizeMode="contain"
+          />
+        </View>
       </TouchableOpacity>
 
       {/* Chess */}
@@ -266,6 +303,16 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
         </View>
+        <View
+          style={styles.globeBadge}
+          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
+        >
+          <Image
+            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            style={styles.globeImage}
+            resizeMode="contain"
+          />
+        </View>
       </TouchableOpacity>
 
       {/* Checkers */}
@@ -286,6 +333,16 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
+        </View>
+        <View
+          style={styles.globeBadge}
+          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
+        >
+          <Image
+            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            style={styles.globeImage}
+            resizeMode="contain"
+          />
         </View>
       </TouchableOpacity>
 
@@ -310,6 +367,16 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
         </View>
+        <View
+          style={styles.globeBadge}
+          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
+        >
+          <Image
+            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            style={styles.globeImage}
+            resizeMode="contain"
+          />
+        </View>
       </TouchableOpacity>
 
       {/* Sudoku */}
@@ -331,6 +398,16 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
         </View>
+        <View
+          style={styles.globeBadge}
+          accessibilityLabel="Offline game"
+        >
+          <Image
+            source={require('../../assets/icons/offline_globe.webp')}
+            style={styles.globeImage}
+            resizeMode="contain"
+          />
+        </View>
       </TouchableOpacity>
 
       {/* Memory Guy Match */}
@@ -351,6 +428,16 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
           <ChevronRightIcon color={colors.sectionGames} size={16} />
+        </View>
+        <View
+          style={styles.globeBadge}
+          accessibilityLabel="Offline game"
+        >
+          <Image
+            source={require('../../assets/icons/offline_globe.webp')}
+            style={styles.globeImage}
+            resizeMode="contain"
+          />
         </View>
       </TouchableOpacity>
 

@@ -18,6 +18,7 @@ import {
   clearCheckersGame,
 } from '../services/checkersStorage';
 import { recordCheckersResult } from '../services/memoryScore';
+import { getCloudCheckersMove } from '../services/cloudCheckers';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 
@@ -167,8 +168,8 @@ export function useCheckers(): UseCheckersReturn {
       }
       const level = DIFFICULTY_LEVELS[difficultyRef.current] ?? DIFFICULTY_LEVELS[1];
 
-      // Yield to React before blocking with search
-      setTimeout(() => {
+      // Yield to React, then cloud-first → local fallback
+      setTimeout(async () => {
         if (sessionIdRef.current !== currentSession) {
           setIsAIThinking(false);
           return;
@@ -180,8 +181,28 @@ export function useCheckers(): UseCheckersReturn {
         }
         const aiTurn = turnRef.current;
         const t0 = Date.now();
-        const aiMove = getAIMove(b2, aiTurn, level);
-        console.log('Checkers AI move took:', Date.now() - t0, 'ms');
+
+        let aiMove: CheckersMove | null = null;
+        try {
+          aiMove = await getCloudCheckersMove(b2, aiTurn, level.cloudPickRange);
+        } catch {
+          aiMove = null;
+        }
+
+        if (sessionIdRef.current !== currentSession) {
+          setIsAIThinking(false);
+          return;
+        }
+        if (!boardRef.current || boardRef.current !== b2) {
+          setIsAIThinking(false);
+          return;
+        }
+
+        if (!aiMove) {
+          aiMove = getAIMove(b2, aiTurn, level);
+        }
+
+        if (__DEV__) console.log('Checkers AI move took:', Date.now() - t0, 'ms');
         if (aiMove) {
           boardRef.current = applyMove(b2, aiMove);
           if (aiMove.captured.length > 0) playGameSound('capture');
@@ -194,7 +215,6 @@ export function useCheckers(): UseCheckersReturn {
         setIsAIThinking(false);
         bump();
         saveCurrentGame();
-        // Check game over regardless of whether AI found a move
         checkGameOver(boardRef.current!, turnRef.current);
       }, 0);
     }, AI_DELAY_MS);

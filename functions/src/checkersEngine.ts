@@ -1,6 +1,9 @@
+// Checkers engine for Firebase Cloud Function.
+// Adapted from src/services/checkersAI.ts — pure TypeScript, zero dependencies.
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type PieceColor = 'r' | 'b'; // red or black
+export type PieceColor = 'r' | 'b';
 
 export interface Piece {
   color: PieceColor;
@@ -10,29 +13,15 @@ export interface Piece {
 export type Board = (Piece | null)[][];
 
 export interface CheckersMove {
-  from: [number, number];           // [row, col]
-  to: [number, number];             // final destination [row, col]
-  captured: [number, number][];     // positions of captured pieces (in order)
-  crowned: boolean;                 // whether the piece becomes a king this move
+  from: [number, number];
+  to: [number, number];
+  captured: [number, number][];
+  crowned: boolean;
 }
 
-// ── Initial board ────────────────────────────────────────────────────────────
-// Red starts on rows 5-7 (bottom), black on rows 0-2 (top).
-// Only dark squares ((row + col) % 2 === 1) hold pieces.
-
-export function createInitialBoard(): Board {
-  const board: Board = Array.from({ length: 8 }, () => Array(8).fill(null));
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 8; col++) {
-      if ((row + col) % 2 === 1) board[row][col] = { color: 'b', king: false };
-    }
-  }
-  for (let row = 5; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      if ((row + col) % 2 === 1) board[row][col] = { color: 'r', king: false };
-    }
-  }
-  return board;
+export interface RankedMove {
+  move: CheckersMove;
+  score: number;
 }
 
 // ── Board helpers ────────────────────────────────────────────────────────────
@@ -41,17 +30,15 @@ function cloneBoard(board: Board): Board {
   return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
 }
 
-export function applyMove(board: Board, move: CheckersMove): Board {
+function applyMove(board: Board, move: CheckersMove): Board {
   const b = cloneBoard(board);
   const piece = b[move.from[0]][move.from[1]];
   if (!piece) return b;
 
-  // Remove captured pieces
   for (const [cr, cc] of move.captured) {
     b[cr][cc] = null;
   }
 
-  // Move piece
   b[move.from[0]][move.from[1]] = null;
   const movedPiece = { ...piece };
   if (move.crowned) movedPiece.king = true;
@@ -60,7 +47,7 @@ export function applyMove(board: Board, move: CheckersMove): Board {
   return b;
 }
 
-export function serializeBoard(board: Board, turn: PieceColor): string {
+function serializeBoard(board: Board, turn: PieceColor): string {
   let s = '';
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
@@ -82,7 +69,6 @@ export function serializeBoard(board: Board, turn: PieceColor): string {
 // ── Move generation ──────────────────────────────────────────────────────────
 
 function getForwardDirs(color: PieceColor): [number, number][] {
-  // Red moves toward row 0 (up), black toward row 7 (down)
   return color === 'r' ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
 }
 
@@ -100,9 +86,6 @@ function inBounds(r: number, c: number): boolean {
   return r >= 0 && r <= 7 && c >= 0 && c <= 7;
 }
 
-// Recursive DFS for multi-jump chains.
-// When a non-king piece lands on its promotion rank, the chain STOPS — the
-// piece is crowned but does NOT continue jumping as a king on that turn.
 function findJumpChains(
   tempBoard: Board,
   row: number,
@@ -125,15 +108,12 @@ function findJumpChains(
     const midPiece = tempBoard[midR][midC];
     if (!midPiece || midPiece.color === piece.color) continue;
 
-    // Can't jump a piece already captured in this chain
     if (captured.some(([cr, cc]) => cr === midR && cc === midC)) continue;
 
-    // Landing square must be empty
     if (tempBoard[landR][landC] !== null) continue;
 
     const newCaptured: [number, number][] = [...captured, [midR, midC]];
 
-    // Promotion stops the jump chain
     if (!piece.king && isPromotionRow(piece.color, landR)) {
       results.push({
         from: origin,
@@ -144,7 +124,6 @@ function findJumpChains(
       continue;
     }
 
-    // Execute the jump on a temp board and recurse
     const nextBoard = cloneBoard(tempBoard);
     nextBoard[row][col] = null;
     nextBoard[midR][midC] = null;
@@ -157,7 +136,6 @@ function findJumpChains(
     if (continuations.length > 0) {
       results.push(...continuations);
     } else {
-      // Terminal jump (no further jumps available)
       results.push({
         from: origin,
         to: [landR, landC],
@@ -170,7 +148,7 @@ function findJumpChains(
   return results;
 }
 
-export function generateMoves(board: Board, color: PieceColor): CheckersMove[] {
+function generateMoves(board: Board, color: PieceColor): CheckersMove[] {
   const jumps: CheckersMove[] = [];
   const simpleMoves: CheckersMove[] = [];
 
@@ -179,13 +157,11 @@ export function generateMoves(board: Board, color: PieceColor): CheckersMove[] {
       const piece = board[row][col];
       if (!piece || piece.color !== color) continue;
 
-      // Try jumps
       const pieceJumps = findJumpChains(
         board, row, col, piece, [], [row, col],
       );
       jumps.push(...pieceJumps);
 
-      // Try simple moves (only used if no jumps exist)
       const dirs = getDirs(piece);
       for (const [dr, dc] of dirs) {
         const nr = row + dr;
@@ -203,14 +179,10 @@ export function generateMoves(board: Board, color: PieceColor): CheckersMove[] {
     }
   }
 
-  // Forced capture: if any jumps exist, only jumps are legal
   return jumps.length > 0 ? jumps : simpleMoves;
 }
 
 // ── Evaluation ───────────────────────────────────────────────────────────────
-// Score from Red's perspective (positive = good for red).
-// Material + positional + support + mobility approximation. Does NOT call
-// generateMoves — that's expensive and belongs in the search layer.
 
 // prettier-ignore
 const RED_ADVANCE_BONUS   = [0, 40, 28, 18, 10, 5, 2, 0];
@@ -221,8 +193,6 @@ function isKingCenterSquare(row: number, col: number): boolean {
   return row >= 3 && row <= 4 && col >= 2 && col <= 5;
 }
 
-// Kings count supporters in all 4 diagonals; regular pieces only "behind"
-// (away from their advance direction).
 function isSupported(
   board: Board,
   row: number,
@@ -278,14 +248,11 @@ function mobilityScore(
   return open * 4;
 }
 
-export function evaluateBoard(board: Board): number {
+function evaluateBoard(board: Board): number {
   let redPieces = 0;
   let blackPieces = 0;
   let score = 0;
 
-  // Endgame: ≤8 total pieces triggers scaled king value, scaled center
-  // bonus, and scaled non-king advancement. Promotion and central king
-  // control dominate endgame play.
   let totalPieces = 0;
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
@@ -306,18 +273,15 @@ export function evaluateBoard(board: Board): number {
       if (piece.color === 'r') redPieces++;
       else blackPieces++;
 
-      // Material
       score += (piece.king ? kingValue : 100) * sign;
 
       if (!piece.king) {
-        // Advancement
         const bonus =
           piece.color === 'r'
             ? RED_ADVANCE_BONUS[row]
             : BLACK_ADVANCE_BONUS[row];
         score += Math.round(bonus * advanceScale) * sign;
 
-        // Back rank defense
         if (
           (piece.color === 'r' && row === 7) ||
           (piece.color === 'b' && row === 0)
@@ -325,20 +289,16 @@ export function evaluateBoard(board: Board): number {
           score += 15 * sign;
         }
 
-        // Connected formation (non-kings)
         if (hasConnectedFriend(board, row, col, piece.color)) {
           score += 3 * sign;
         }
       } else {
-        // King center control
         if (isKingCenterSquare(row, col)) {
           score += kingCenterBonus * sign;
         }
-        // Edge penalty
         if (row === 0 || row === 7 || col === 0 || col === 7) {
           score -= 5 * sign;
         }
-        // Double corner penalty — the 4 playable corner squares
         if (
           (row === 0 && (col === 1 || col === 7)) ||
           (row === 7 && (col === 0 || col === 6))
@@ -347,33 +307,18 @@ export function evaluateBoard(board: Board): number {
         }
       }
 
-      // Support
       if (isSupported(board, row, col, piece)) {
         score += 6 * sign;
       }
 
-      // Mobility approximation
       score += mobilityScore(board, row, col, piece) * sign;
     }
   }
 
-  // Terminal — no pieces left for one side
   if (redPieces === 0) return -100000;
   if (blackPieces === 0) return 100000;
 
   return score;
-}
-
-// ── Game status ──────────────────────────────────────────────────────────────
-
-export function getGameStatus(
-  board: Board,
-  turn: PieceColor,
-): 'playing' | 'red_wins' | 'black_wins' {
-  const moves = generateMoves(board, turn);
-  if (moves.length > 0) return 'playing';
-  // No legal moves — the side to move loses
-  return turn === 'r' ? 'black_wins' : 'red_wins';
 }
 
 // ── Search time budget ───────────────────────────────────────────────────────
@@ -389,7 +334,7 @@ function isTimeUp(): boolean {
 
 // ── Transposition table ──────────────────────────────────────────────────────
 
-const enum TTFlag {
+enum TTFlag {
   EXACT = 0,
   LOWERBOUND = 1,
   UPPERBOUND = 2,
@@ -399,7 +344,7 @@ interface TTEntry {
   depth: number;
   score: number;
   flag: TTFlag;
-  bestMoveIdx: number; // index into the move list (or -1)
+  bestMoveIdx: number;
 }
 
 const TT_MAX_SIZE = 100_000;
@@ -425,7 +370,7 @@ function ttStore(
   transpositionTable.set(key, { depth, score, flag, bestMoveIdx });
 }
 
-export function clearTranspositionTable(): void {
+function clearTranspositionTable(): void {
   transpositionTable.clear();
 }
 
@@ -470,7 +415,6 @@ function clearKillers(): void {
 }
 
 // ── Move ordering ────────────────────────────────────────────────────────────
-// Captures first (sorted by number of pieces captured desc), then killers, then rest.
 
 function scoreMoveForOrdering(
   move: CheckersMove,
@@ -478,7 +422,6 @@ function scoreMoveForOrdering(
   moveIdx: number,
   ply: number,
 ): number {
-  // TT best move always searched first
   if (ttMoveIdx >= 0 && moveIdx === ttMoveIdx) return 100_000;
 
   let score = 0;
@@ -486,7 +429,6 @@ function scoreMoveForOrdering(
     score += 1000 + move.captured.length * 100;
   }
 
-  // Killer moves
   if (move.captured.length === 0 && ply >= 0 && ply < MAX_PLY) {
     const key = moveKey(move);
     const slot = killerMoves[ply];
@@ -526,8 +468,6 @@ function minimax(
   const turn: PieceColor = maximizingRed ? 'r' : 'b';
   const moves = generateMoves(board, turn);
 
-  // Game over: no legal moves means the current side loses.
-  // Include ply penalty so the AI prefers faster mates.
   if (moves.length === 0) {
     return maximizingRed ? -100000 + ply : 100000 - ply;
   }
@@ -539,7 +479,6 @@ function minimax(
   const origAlpha = alpha;
   const origBeta = beta;
 
-  // TT lookup
   const key = serializeBoard(board, turn);
   const ttEntry = ttLookup(key);
   let ttMoveIdx = -1;
@@ -547,7 +486,8 @@ function minimax(
     const ttScore = adjustMateScoreFromTT(ttEntry.score, ply);
     if (ttEntry.flag === TTFlag.EXACT) return ttScore;
     if (ttEntry.flag === TTFlag.LOWERBOUND && ttScore > alpha) alpha = ttScore;
-    else if (ttEntry.flag === TTFlag.UPPERBOUND && ttScore < beta) beta = ttScore;
+    else if (ttEntry.flag === TTFlag.UPPERBOUND && ttScore < beta)
+      beta = ttScore;
     if (alpha >= beta) return ttScore;
   }
   if (ttEntry) ttMoveIdx = ttEntry.bestMoveIdx;
@@ -588,7 +528,6 @@ function minimax(
     }
   }
 
-  // Store in TT (skip if time expired — partial results unreliable)
   if (!isTimeUp()) {
     let flag: TTFlag;
     if (best <= origAlpha) flag = TTFlag.UPPERBOUND;
@@ -600,170 +539,13 @@ function minimax(
   return best;
 }
 
-// ── Iterative-deepening search ───────────────────────────────────────────────
-
-export function findBestMove(
-  board: Board,
-  turn: PieceColor,
-  maxDepth: number,
-  timeLimitMs: number = 1500,
-  minDepth: number = 1,
-): CheckersMove | null {
-  const moves = generateMoves(board, turn);
-  if (moves.length === 0) return null;
-  if (moves.length === 1) return moves[0];
-
-  clearTranspositionTable();
-  clearKillers();
-
-  const maximizing = turn === 'r';
-  let bestMove: CheckersMove = moves[0];
-  const now = Date.now();
-  searchDeadline = now + timeLimitMs;
-  searchSafetyDeadline = now + timeLimitMs * 3;
-
-  // Track move ordering across IDS iterations
-  let orderedMoves = orderMoves(moves);
-
-  for (let depth = 1; depth <= maxDepth; depth++) {
-    searchMinDepthActive = depth <= minDepth;
-    if (!searchMinDepthActive && isTimeUp()) break;
-
-    let bestScore = maximizing ? -Infinity : Infinity;
-    let depthBest: CheckersMove | null = null;
-    let depthBestOrderIdx = -1;
-    let completed = true;
-    let alpha = -Infinity;
-    let beta = Infinity;
-
-    for (let i = 0; i < orderedMoves.length; i++) {
-      const { move } = orderedMoves[i];
-      if (isTimeUp()) {
-        completed = false;
-        break;
-      }
-
-      const newBoard = applyMove(board, move);
-      const score = minimax(newBoard, depth - 1, alpha, beta, !maximizing, 1);
-
-      if (isTimeUp()) {
-        completed = false;
-        break;
-      }
-
-      if (maximizing) {
-        if (score > bestScore) {
-          bestScore = score;
-          depthBest = move;
-          depthBestOrderIdx = i;
-        }
-        if (score > alpha) alpha = score;
-      } else {
-        if (score < bestScore) {
-          bestScore = score;
-          depthBest = move;
-          depthBestOrderIdx = i;
-        }
-        if (score < beta) beta = score;
-      }
-    }
-
-    if (completed && depthBest) {
-      bestMove = depthBest;
-      // Move PV to front for next iteration
-      if (depthBestOrderIdx > 0) {
-        const [pvEntry] = orderedMoves.splice(depthBestOrderIdx, 1);
-        orderedMoves.unshift(pvEntry);
-      }
-    }
-  }
-
-  searchMinDepthActive = false;
-  return bestMove;
-}
-
-// ── Difficulty levels ────────────────────────────────────────────────────────
-
-export interface PickRange {
-  minRank: number; // 0-indexed: 0 = best move
-  maxRank: number; // inclusive upper bound
-}
-
-export interface DifficultyLevel {
-  name: string;
-  minDepth: number;
-  maxDepth: number;
-  timeLimitMs: number;
-  randomness: number;
-  // Which rank band to draw from when cloud multi-PV results are available.
-  // 0 = best move, 4 = 5th best. Lower range = stronger play.
-  cloudPickRange: PickRange;
-}
-
-export const DIFFICULTY_LEVELS: DifficultyLevel[] = [
-  { name: 'Beginner',     minDepth: 2,  maxDepth: 4,  timeLimitMs: 500,  randomness: 0.4,  cloudPickRange: { minRank: 2, maxRank: 4 } },
-  { name: 'Casual',       minDepth: 3,  maxDepth: 6,  timeLimitMs: 800,  randomness: 0.2,  cloudPickRange: { minRank: 1, maxRank: 3 } },
-  { name: 'Intermediate', minDepth: 4,  maxDepth: 8,  timeLimitMs: 1500, randomness: 0.05, cloudPickRange: { minRank: 0, maxRank: 2 } },
-  { name: 'Advanced',     minDepth: 5,  maxDepth: 10, timeLimitMs: 3000, randomness: 0,    cloudPickRange: { minRank: 0, maxRank: 1 } },
-  { name: 'Expert',       minDepth: 6,  maxDepth: 14, timeLimitMs: 5000, randomness: 0,    cloudPickRange: { minRank: 0, maxRank: 0 } },
-];
-
-// ── AI move selection ────────────────────────────────────────────────────────
-
-export function getAIMove(
-  board: Board,
-  turn: PieceColor,
-  level: DifficultyLevel,
-): CheckersMove | null {
-  const moves = generateMoves(board, turn);
-  if (moves.length === 0) return null;
-
-  if (level.randomness <= 0) {
-    return findBestMove(board, turn, level.maxDepth, level.timeLimitMs, level.minDepth);
-  }
-
-  // Find best move as anchor
-  const best = findBestMove(board, turn, level.maxDepth, level.timeLimitMs, level.minDepth);
-  if (!best) return moves[0];
-
-  const maximizing = turn === 'r';
-  const threshold = level.randomness * 100;
-
-  // Evaluate all moves with static eval for candidate filtering
-  const scored: Array<{ move: CheckersMove; score: number }> = [];
-  for (const move of moves) {
-    const newBoard = applyMove(board, move);
-    const score = evaluateBoard(newBoard);
-    scored.push({ move, score });
-  }
-
-  scored.sort((a, b) => (maximizing ? b.score - a.score : a.score - b.score));
-  const topScore = scored[0].score;
-  const candidates = scored.filter((m) => {
-    const diff = maximizing ? topScore - m.score : m.score - topScore;
-    return diff <= threshold;
-  });
-
-  return candidates[Math.floor(Math.random() * candidates.length)].move;
-}
-
-// ── Top-N move ranking (cloud interface) ────────────────────────────────────
-// Iterative deepening: every root move is scored at each depth, and the
-// final ranking uses the deepest fully-completed iteration. If the search
-// aborts mid-depth, that depth's partial scores are discarded so every
-// entry in the returned list comes from the same depth. The Cloud Function
-// calls this to return ranked results to the client.
-
-export interface RankedMove {
-  move: CheckersMove;
-  score: number;
-}
+// ── Top-N move ranking ───────────────────────────────────────────────────────
 
 export function getTopMoves(
   board: Board,
   turn: PieceColor,
-  maxDepth: number = 14,
-  timeLimitMs: number = 5000,
+  maxDepth: number = 20,
+  timeLimitMs: number = 6000,
   count: number = 5,
 ): RankedMove[] {
   const moves = generateMoves(board, turn);
