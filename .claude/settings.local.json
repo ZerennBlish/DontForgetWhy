@@ -88,7 +88,8 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(echo \"TSC=$?\")",
       "Bash(echo \"---EXIT:$?---\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git -C /mnt/c/DontForgetWhy show HEAD:DFW-Features.md)"
     ]
   }
 }

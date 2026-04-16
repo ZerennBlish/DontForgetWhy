@@ -297,24 +297,24 @@ export default function App() {
     setMigrationFailed(false);
     try {
       await migrateFromAsyncStorage();
-      setDbReady(true);
       try {
         runFoundingMigration();
       } catch (e) {
         console.warn('[App] founding migration failed:', e);
       }
+      setDbReady(true);
     } catch (e) {
       console.error('[App] DB migration failed:', e);
       try {
         const { kvGet } = require('./src/services/database');
         const migrated = kvGet('_migrated');
         if (migrated) {
-          setDbReady(true);
           try {
             runFoundingMigration();
           } catch (err) {
             console.warn('[App] founding migration failed:', err);
           }
+          setDbReady(true);
           return;
         }
       } catch { /* can't even read kv_store */ }

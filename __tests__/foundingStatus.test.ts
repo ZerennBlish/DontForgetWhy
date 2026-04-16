@@ -17,6 +17,8 @@ import {
 } from '../src/services/foundingStatus';
 import { isProUser, setProStatus } from '../src/services/proStatus';
 import type { FoundingDetails } from '../src/services/foundingStatus';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const mockedIsProUser = isProUser as jest.MockedFunction<typeof isProUser>;
 const mockedSetProStatus = setProStatus as jest.MockedFunction<typeof setProStatus>;
@@ -30,15 +32,26 @@ beforeEach(() => {
 // ── runFoundingMigration ────────────────────────────────────────
 
 describe('runFoundingMigration', () => {
-  it('on fresh install (no onboardingComplete), does not grant founding but marks check done', () => {
+  it('on fresh install, grants founding and marks check done', () => {
     runFoundingMigration();
-    expect(mockedSetProStatus).not.toHaveBeenCalled();
+
+    expect(mockedSetProStatus).toHaveBeenCalledTimes(1);
+    const arg = mockedSetProStatus.mock.calls[0][0];
+    expect(arg.purchased).toBe(true);
+    expect(arg.productId).toBe('founding_user');
+    expect(typeof arg.purchaseDate).toBe('string');
+    expect(() => new Date(arg.purchaseDate).toISOString()).not.toThrow();
+
     expect(kvStore.get('founding_check_done')).toBe('true');
-    expect(kvStore.get('founding_status')).toBeUndefined();
-    expect(isFoundingUser()).toBe(false);
+    const rawStatus = kvStore.get('founding_status');
+    expect(rawStatus).toBeDefined();
+    const parsed = JSON.parse(rawStatus!) as FoundingDetails;
+    expect(parsed.isFoundingUser).toBe(true);
+    expect(typeof parsed.grantedAt).toBe('string');
+    expect(isFoundingUser()).toBe(true);
   });
 
-  it('on existing user (onboardingComplete present), grants Pro with founding_user productId and stores founding status', () => {
+  it('grants founding on first run when onboardingComplete is already set (upgrade path)', () => {
     kvStore.set('onboardingComplete', 'true');
     runFoundingMigration();
 
@@ -72,22 +85,16 @@ describe('runFoundingMigration', () => {
     expect(typeof parsed.grantedAt).toBe('string');
   });
 
-  it("does not grant founding when onboardingComplete is the string 'false'", () => {
+  it('grants founding regardless of onboardingComplete value (corrupted values no longer gate the grant)', () => {
     kvStore.set('onboardingComplete', 'false');
     runFoundingMigration();
 
-    expect(mockedSetProStatus).not.toHaveBeenCalled();
+    expect(mockedSetProStatus).toHaveBeenCalledTimes(1);
     expect(kvStore.get('founding_check_done')).toBe('true');
-    expect(kvStore.get('founding_status')).toBeUndefined();
-  });
-
-  it("does not grant founding when onboardingComplete is a corrupted truthy value like 'yes'", () => {
-    kvStore.set('onboardingComplete', 'yes');
-    runFoundingMigration();
-
-    expect(mockedSetProStatus).not.toHaveBeenCalled();
-    expect(kvStore.get('founding_check_done')).toBe('true');
-    expect(kvStore.get('founding_status')).toBeUndefined();
+    const rawStatus = kvStore.get('founding_status');
+    expect(rawStatus).toBeDefined();
+    const parsed = JSON.parse(rawStatus!) as FoundingDetails;
+    expect(parsed.isFoundingUser).toBe(true);
   });
 
   it('is idempotent: a second run does not re-grant or re-write anything', () => {
@@ -112,6 +119,28 @@ describe('runFoundingMigration', () => {
     expect(mockedIsProUser).not.toHaveBeenCalled();
     expect(mockedSetProStatus).not.toHaveBeenCalled();
     expect(kvStore.get('founding_status')).toBeUndefined();
+  });
+
+  it('on completely fresh install (empty kv store), grants founding and Pro', () => {
+    expect(kvStore.size).toBe(0);
+    runFoundingMigration();
+
+    expect(mockedSetProStatus).toHaveBeenCalledTimes(1);
+    const arg = mockedSetProStatus.mock.calls[0][0];
+    expect(arg.purchased).toBe(true);
+    expect(arg.productId).toBe('founding_user');
+
+    const rawStatus = kvStore.get('founding_status');
+    expect(rawStatus).toBeDefined();
+    const parsed = JSON.parse(rawStatus!) as FoundingDetails;
+    expect(parsed.isFoundingUser).toBe(true);
+  });
+
+  it('is idempotent on repeat invocations', () => {
+    runFoundingMigration();
+    runFoundingMigration();
+
+    expect(mockedSetProStatus).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -165,5 +194,32 @@ describe('getFoundingDetails', () => {
   it('returns null on missing grantedAt field', () => {
     kvStore.set('founding_status', JSON.stringify({ isFoundingUser: true }));
     expect(getFoundingDetails()).toBeNull();
+  });
+});
+
+// ── v2.0.0 revert guard ─────────────────────────────────────────
+
+describe('v2.0.0 revert guard', () => {
+  it('ONBOARDING_KEY declaration and TODO(v2.0.0) marker must both persist until revert', () => {
+    const source = fs.readFileSync(
+      path.join(__dirname, '..', 'src', 'services', 'foundingStatus.ts'),
+      'utf-8',
+    );
+
+    // Pin the actual constant declaration, not just the token. A prior
+    // version of this test matched `/ONBOARDING_KEY/`, which passed as
+    // long as the string appeared anywhere — including in the TODO
+    // comment itself. Deleting the `const ONBOARDING_KEY = ...` line
+    // would have slipped through. This regex forces the declaration
+    // to survive.
+    expect(source).toMatch(
+      /const\s+ONBOARDING_KEY\s*=\s*['"]onboardingComplete['"]/,
+    );
+
+    // Pin the TODO marker verbatim. When v2.0.0 lands, the engineer
+    // doing the revert must see this marker and restore the
+    // `onboardingComplete === 'true'` gate. Losing the marker means
+    // losing the forcing function.
+    expect(source).toContain('TODO(v2.0.0)');
   });
 });

@@ -14,6 +14,7 @@ import { withLock } from '../utils/asyncMutex';
 import { loadAlarms, updateSingleAlarm } from './storage';
 import { getReminders, updateReminder } from './reminderStorage';
 import { scheduleAlarm, scheduleReminderNotification, cancelAllAlarms } from './notifications';
+import { runFoundingMigration } from './foundingStatus';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -295,6 +296,17 @@ export async function importBackup(fileUri: string): Promise<void> {
       // so any failure during reschedule still lands in catch/finally.
       setRestoreInProgress(false);
       reopenDb();
+
+      // Re-run the founding migration so v1.23.0 users restoring a
+      // pre-v1.23.0 backup don't get kicked back to non-Pro. The call is
+      // idempotent — if the restored kv already has founding_check_done,
+      // it early-returns.
+      try {
+        runFoundingMigration();
+      } catch (err) {
+        console.warn('[restore] founding migration failed:', err);
+      }
+
       await cancelAllAlarms();
       await rescheduleAllNotifications();
 

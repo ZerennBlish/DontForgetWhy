@@ -12,6 +12,11 @@ jest.mock('../src/services/database', () => ({
   getDb: jest.fn(),
   closeDb: jest.fn(),
   reopenDb: jest.fn(),
+  setRestoreInProgress: jest.fn(),
+}));
+
+jest.mock('../src/services/foundingStatus', () => ({
+  runFoundingMigration: jest.fn(),
 }));
 
 jest.mock('expo-file-system', () => ({
@@ -90,7 +95,12 @@ import {
   getBackupFolderName,
   clearAutoBackupSettings,
   validateBackup,
+  importBackup,
 } from '../src/services/backupRestore';
+import { runFoundingMigration } from '../src/services/foundingStatus';
+
+const mockedRunFoundingMigration =
+  runFoundingMigration as jest.MockedFunction<typeof runFoundingMigration>;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -371,5 +381,29 @@ describe('validateBackup', () => {
     expect(meta.contents.alarmPhotos).toBe(1);
     expect(meta.contents.backgrounds).toBe(2);
     expect(meta.contents.voiceMemoImages).toBe(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// importBackup — post-restore founding migration
+// ---------------------------------------------------------------------------
+
+describe('importBackup post-restore founding migration', () => {
+  beforeEach(() => {
+    mockedRunFoundingMigration.mockReset();
+  });
+
+  it('calls runFoundingMigration after a successful restore', async () => {
+    setupValidBackup();
+    await importBackup('file:///mock/test.dfw');
+    expect(mockedRunFoundingMigration).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not throw if runFoundingMigration throws', async () => {
+    setupValidBackup();
+    mockedRunFoundingMigration.mockImplementationOnce(() => {
+      throw new Error('boom');
+    });
+    await expect(importBackup('file:///mock/test.dfw')).resolves.toBeUndefined();
   });
 });
