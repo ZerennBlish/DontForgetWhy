@@ -1,0 +1,787 @@
+# DFW Bug History Archive — Sessions 1-28
+**Part of the DFW Technical Reference** — historical bug findings and fixes.
+**For current state, see DFW-Bug-History.md.**
+
+---
+
+## Bug Categories (Grouped)
+
+**Notification/Alarm Lifecycle (~20 bugs):** notificationId not stored, cancel uses wrong ID, one-time alarm ghost after dismiss, yearly reminders don't reschedule, weekly early completion duplicates, snooze doesn't bypass lock screen, snooze leaks alarm.note, snooze double-tap, snooze ID pruning removes recurring triggers, dismiss cancels ALL notifications, no sound when screen on, swipe doesn't stop sound, foreground DELIVERED blocks yearly reschedule, double-play race, invalid custom URI silent failure, AlarmFireScreen appears twice, fire screen re-trigger on reopen
+
+**Widget (~8 bugs):** transparent render, Linking.openURL syntax, deep link fails headless, no notification after widget timer start, presets don't refresh, countdown notification wrong channel, stale preset pins, ghost user timer pin
+
+**Theme/Display (~10 bugs):** widget theme uses nonexistent names, updateWidget missing theme prop, ThemeContext no widget refresh, widget refresh before AsyncStorage write, legacy custom theme string crash, widget theme loader missing migration, custom theme unreadable with extreme colors, hardcoded colors surviving refactor, NotepadWidget header not centered
+
+**Input/Validation (~10 bugs):** time input allows 88:77, minute accepts invalid first digits, AM/PM untappable in typing mode, AM/PM auto-flip misses fast scroll, TimePicker stale state on reopen, time defaults to static value, smart date shows "Today" for past times, one-time day chip doesn't schedule
+
+**Privacy (~5 bugs):** private alarm content leaks in Deleted view, private icons leak to widgets, snooze privacy leak (alarm.private not checked), Guess Why note not revealed after game, private alarm regression after GW fix
+
+**Emoji (~4 bugs):** empty string renders blank icons, ZWJ truncation via chars[0], grapheme segmentation broken (spread operator), setSelectedIcon null vs string
+
+**Data/Storage (~8 bugs):** loose AsyncStorage validation (progressively tightened across 3 audits), welcome note race condition, custom color key rename without migration, edit race condition (save before load), settings validation missing, timer drift in background
+
+**Game (~6 bugs):** Guess Why icon substring matching (fixed 3 times), short notes unwinnable, memory rank float gaps, Sudoku shows wrong answers in red, trivia crash (Kids+Hard=0 questions), Sudoku stats display wrong
+
+---
+
+## Individual Bug Reports
+
+### TimePicker columns clip on narrow screens (S25 FE)
+- Found: Mar 21 by Zerenn's son on Samsung Galaxy S25 FE (1080x2340, 19.5:9)
+- Cause: Hardcoded colWidth (80/90px) and itemHeight (56px) didn't scale for lower pixel density screens
+- Fix: Full TimePicker.tsx rewrite — responsive colWidth from useWindowDimensions, font scaling via fontScale = colWidth/90, itemHeight increased to 96px for all devices
+- Version: v1.3.7
+
+### Day chip doesn't clear calendar date in one-time mode
+- Found: Mar 21 by Zerenn during testing
+- Cause: useDaySelection.ts handleToggleDay only called clearDate in recurring mode, not one-time mode
+- Fix: Added clearDate?.() call in one-time branch of handleToggleDay
+- Version: v1.3.7
+
+### Reminder one-time day chip silently misschedules
+- Found: Mar 21 by Audit 30 (Codex)
+- Cause: CreateReminderScreen save logic only read selectedDate, ignored selectedDays. When clearDate fired from day chip tap, selectedDate became null and reminder fell back to today/tomorrow instead of the selected day
+- Fix: Added same three-tier scheduling logic from CreateAlarmScreen to CreateReminderScreen: (1) selectedDate, (2) selectedDays one-day-of-week calculation, (3) today/tomorrow fallback
+- Version: v1.3.7
+
+### v1.3.8 Bug Fixes (found via emulator testing matrix)
+
+**Bug: NotepadScreen emoji crash (CRITICAL)**
+- Found: Mar 22 via emulator testing
+- Cause: `Intl.Segmenter` does not exist in Hermes. The emoji icon picker's `onChangeText` handler crashed with "Cannot read property 'prototype' of undefined" on every phone when selecting an emoji.
+- Fix: Replaced `Intl.Segmenter` with spread syntax `[...t]`
+- Known limitation: compound ZWJ emoji (flags, families) may save only the last code point — accepted as edge case for note icon picker
+- Version: v1.3.8
+
+**Bug: TriviaScreen category grid off-center (all devices)**
+- Found: Mar 22 via emulator testing
+- Cause: `categoryGrid` style had no `justifyContent`, defaulting to flex-start
+- Fix: Added `justifyContent: 'center'`
+- Version: v1.3.8
+
+**Bug: TimerScreen intermittent preset layout**
+- Found: Mar 22 via emulator testing
+- Cause: `SCREEN_WIDTH` and `PRESET_CARD_WIDTH` calculated at module load time via static `Dimensions.get('window').width`. Same class of bug as the v1.3.7 TimePicker fix.
+- Fix: Replaced with `useWindowDimensions()` hook inside the component
+- Version: v1.3.8
+
+**Bug: CreateReminderScreen dead sound picker removed**
+- Found: Mar 22 during audit/testing
+- Cause: Sound mode picker (silent/vibrate/sound) did nothing — reminders always use default notification sound
+- Fix: Removed `soundMode` state, UI, styles, and unused imports. Save logic changed to `soundId: undefined` for new reminders, preserved existing `soundId` on edit (audit fix — prevents overwriting legacy silent/vibrate reminders)
+- Version: v1.3.8
+
+**Bug: Note card full background color**
+- Found: Mar 22 via emulator testing
+- Cause: Cards used theme card color with 4px stripe — didn't match NotepadWidget behavior (which already used note color as card background)
+- Fix: Cards now use the note's chosen color as full background. Removed `cardStripe`. Auto-picks white or dark font via `getTextColor()` when user hasn't set a font color. Timestamp color adjusts for readability.
+- Version: v1.3.8
+
+**Bug: Capsule buttons (all screens)**
+- Found: Mar 22 via emulator testing
+- Cause: Delete and Pin buttons disappeared on colored backgrounds or matching themes
+- Fix: All Delete and Pin buttons wrapped in dark gray capsule (`rgba(30,30,40,0.7)`) with subtle white border. Applied uniformly to NotepadScreen, AlarmCard, and ReminderScreen. Restore and Forever buttons on deleted notes also updated.
+- Version: v1.3.8
+
+**Bug: Reminder Done UX cleanup**
+- Found: Mar 22 via emulator testing
+- Cause: Redundant `renderDoneButton` and "Done" text button alongside circle checkbox
+- Fix: Removed redundant done button. Circle checkbox on left is now the only done toggle. Checkbox turns green (#22C55E) when completed. White checkmark on green. Completed one-time reminders stay visible but faded (opacity 0.45) on active list until 12am the next day. Recurring reminders show green checkbox when completed today.
+- Version: v1.3.8
+
+### v1.3.9 Bug Fixes (found via emulator testing and P2 polish)
+
+**Bug: AlarmFireScreen dismiss flash**
+- Found: Mar 22 (deferred), fixed Mar 24
+- Cause: `exitToLockScreen()` did `navigation.reset({ index: 0, routes: [{ name: 'AlarmList' }] })` then `setTimeout(() => BackHandler.exitApp(), 100)` — AlarmList rendered and flashed on screen for ~100ms before exit. Disrupted users in other apps (e.g., disconnected from online games).
+- Fix: `exitToLockScreen()` now calls `BackHandler.exitApp()` immediately with no navigation reset and no setTimeout. Safety net in App.tsx handles stale fire screen on next app open.
+- Version: v1.3.9
+
+**Bug: Note card borders invisible on dark themes**
+- Found: Mar 24 during store screenshot creation
+- Cause: Note cards used `borderColor: item.color + '80'` (semi-transparent version of note's own color). Black/dark notes on dark themes had invisible borders, cards blended into background.
+- Fix: Contrast-based border using `getTextColor()` — dark notes get light border (`rgba(255, 255, 255, 0.25)`), light notes get dark border (`rgba(0, 0, 0, 0.2)`). Applied to both active and deleted card renders.
+- Version: v1.3.9
+
+**Bug: Reminder cards don't show nickname**
+- Found: Mar 24 during store screenshot creation
+- Cause: Reminder cards only showed `${item.icon} ${item.text}` on one line. Nickname field was ignored in card display.
+- Fix: Two-line layout — if nickname exists, shows `icon nickname` as primary line and `text` as secondary line underneath (13px, textTertiary color). Falls back to single line when no nickname. Applied to both active and deleted renders. New style: `reminderSecondaryText`.
+- Version: v1.3.9
+
+**Bug: Safety net kills live alarm screens (Audit 32 finding)**
+- Found: Mar 24 by Codex Audit 32
+- Cause: Initial safety net only checked `getPendingAlarm()` which is a transient buffer consumed after first navigation. Any AppState 'active' trigger (notification shade, app switch) during a live alarm would see no pending data and reset to AlarmList, killing the alarm.
+- Fix: Now also checks `notifee.getDisplayedNotifications()` for active alarm/timer notifications before resetting. Only resets if BOTH no pending data AND no displayed notifications.
+- Version: v1.3.9
+
+**Bug: Timer notification action dismiss doesn't cancel countdown (Audit 32 finding)**
+- Found: Mar 24 by Codex Audit 32
+- Cause: ACTION_PRESS dismiss handler only cancelled the timer-done notification, leaving the countdown chronometer notification in the shade.
+- Fix: Added `cancelTimerCountdownNotification(timerId)` call in both background and foreground ACTION_PRESS handlers.
+- Version: v1.3.9
+
+**Bug: Notification snooze doesn't enforce flag write (Audit 32 finding)**
+- Found: Mar 24 by Codex Audit 32
+- Cause: Snooze action handlers used `.catch(() => {})` for the snoozing flag AsyncStorage write and continued regardless. If write failed, DISMISSED handler would soft-delete one-time alarms during snooze.
+- Fix: Changed to try/catch with early return on failure, matching AlarmFireScreen pattern.
+- Version: v1.3.9
+
+**Bug: Notification snooze doesn't persist snooze notification ID (Audit 32 finding)**
+- Found: Mar 24 by Codex Audit 32
+- Cause: ACTION_PRESS snooze handlers didn't save the returned snooze notification ID back to alarm.notificationIds. Later delete/disable flows wouldn't cancel the snoozed notification.
+- Fix: Added `updateSingleAlarm()` call to persist snooze notification ID, matching AlarmFireScreen pattern.
+- Version: v1.3.9
+
+### v1.5.0 Bug Fixes (found via Audits 34-35)
+
+**Bug: Note sort uses UTC time instead of local**
+- Found: Mar 25 by Codex Audit 34
+- Cause: getItemSortTime in CalendarScreen used `createdAt.slice(11, 16)` which extracts UTC time. Alarms/reminders use local time strings, causing notes to sort out of order in non-UTC timezones.
+- Fix: Parse Date object, extract local hours/minutes via getHours()/getMinutes().
+
+**Bug: Widget alarm loader bypasses canonical migration**
+- Found: Mar 25 by Gemini Audit 34
+- Cause: loadWidgetAlarms() in widgetTaskHandler did raw JSON parse without normalizing missing mode, missing days array, or legacy numeric weekday values. Could crash or show wrong dots.
+- Fix: Added inline normalization matching loadAlarms() logic — defaults mode to 'recurring', days to [], maps numeric weekday arrays to string format.
+
+**Bug: CalendarWidget minHeight too small for 6-row months**
+- Found: Mar 25 by Gemini Audit 34
+- Cause: 220dp minimum left ~25dp per row after chrome. Day cells need ~30dp+ for number + dot row.
+- Fix: Bumped to 280dp in app.json.
+
+**Bug: Widget deep-links don't update already-mounted CalendarScreen**
+- Found: Mar 25 by Gemini Audit 34
+- Cause: useState initializers only run on first mount. If CalendarScreen was already in the nav stack, route.params.initialDate changes were ignored.
+- Fix: Added useEffect watching route.params?.initialDate to update selectedDate and currentMonth on re-navigation.
+
+**Bug: Floating BackButton overlaps scrolling content on CalendarScreen**
+- Found: Mar 25 by Codex Audit 34
+- Cause: Floating back button container had no background, scrolling content showed through.
+- Fix: Added semi-transparent dark background pill (rgba(18, 18, 32, 0.85), borderRadius 20).
+
+**Bug: Sudoku paused/won screens not width-capped on tablet**
+- Found: Mar 25 by Codex Audit 35
+- Cause: centeredContent and winContent styles had no maxWidth. Action buttons stretched full tablet width.
+- Fix: Added maxWidth: 500, alignSelf: 'center', width: '100%' to both.
+
+---
+
+## Bug Fixes (P2 Session)
+
+**Timer/alarm dismiss clearing pending data:**
+- `clearPendingAlarm()` added to ACTION_PRESS dismiss and snooze handlers in both `index.ts` and `useNotificationRouting.ts`
+- DISMISSED handler now cleans up timers (previously only alarms)
+- `consumePendingAlarm` checks `wasNotifHandled` before navigating
+
+**One-time alarm toggle with past date:**
+- `toggleAlarm` in storage.ts auto-updates date to today/tomorrow when re-enabling a one-time alarm whose date has passed
+- Uses constructor-based date parsing (`new Date(y, mo - 1, d, h, m, 0, 0)`) to avoid engine-dependent string parsing
+- Handles: restored-from-trash alarms, old alarms toggled back on, any lapsed one-time alarm
+
+**Day picker mutual exclusivity:**
+- Switching from recurring to one-time clears selected days
+- Selecting a day updates the date field to next occurrence via `getNearestDayDate`
+
+---
+
+## Complete Audit History
+
+| # | Date | Scope | Key Findings |
+|---|------|-------|-------------|
+| — | Feb 9 | First ever | notificationId not stored (C), UUID crash (C), JSON.parse unguarded (M) |
+| — | Feb 9-10 | Post-13-features | Icon-only unwinnable (I), type mode false positive (I), notification note leak (I) |
+| 1 | Feb 10 | Pre-theming | updateAlarm when disabled (C), wrong cancel ID (I), timer mount-only (I), GuessWhy substring (I) |
+| 2 | Feb 11 | Post-theming | rank float gaps (I), custom theme extremes (I), edit permission block (I), hardcoded colors (m) |
+| 3 | Feb 12 | Post-Notifee | dismiss cancels ALL (I), settings validation (m), timer creation unhandled (I) |
+| 4 | Pre-Feb 12 | Post-widgets | Channel race, paused timer leak, countdown orphans, legacy icons |
+| 5 | Feb 14 | Day/date + widgets | Stuck notifications (C), ghost alarms (C), date off-by-one (I), past timestamps (I) |
+| 7 | Feb 15 | Full repo | Samsung DND (I), trivia seen scope (I), reminder sort (I), widget label (I), Sudoku hint (I) |
+| 8 | Feb 15 | Full repo | Battery API (I), swipe bypass (I), undo timer (I), General Knowledge reset (I) |
+| 14 | Feb 16 | Full codebase | Trivia crash (C), snooze privacy leak (C), trash inaccessible (I), AlarmFire double-fire (I) |
+| 15 | Feb 17 | Post-fix | Guess Why note reveal (I), empty state (m), Sudoku contrast (m) |
+| 16 | Feb 17 | expo-av removal | Clean. Dead function + async race found and fixed. |
+| 17 | Feb 18-19 | Time input, recurring reminders | Yearly dueDate null (C), yearly no reschedule (C), timeFormat race (m). **Gemini violated READ-ONLY.** |
+| 18 | Feb 19 | Full codebase | Yearly reschedule failure (C), weekly skip logic (C), checkbox bypass (I) |
+| 19 | Feb 20 | Verification of 18 | Weekly duplicate trigger — Audit 18 fix was wrong (C), incomplete alarm ghost (I) |
+| 20 | Feb 26 | Alarm sound system | Snooze race/flag mechanism (H), trim crash (H), double-play (M), URI fallback (M) |
+| — | Feb 26 | Channel investigation | Both auditors contributed to MediaPlayer decision |
+| 23 | Mar 10 | TypeScript check | 1 error: null not assignable to string |
+| 24 | Mar 11 | Full dual (Update 2) | Legacy theme crash (C), widget refresh race (H), ghost pin (H), stale soundId (H) |
+| 25 | Mar 11 | UI polish | Private leak in deleted view (H), private icon leak to widgets (M), stale pins (H) |
+| 26 | Mar 12 | Pre-build (Update 3) | Grapheme segmentation, dead compact widget code, orphaned noteIcons.ts |
+| 27 | Mar 12 | Final pre-production | Global guessWhyEnabled rendering (C), eligibility mismatch (W), reminder dead code (W) |
+| 28 | Mar 19 | Phase 1 housekeeping | **0 findings.** All clean. |
+| 29 | Mar 19 | Bug fixes v1.3.5 | Duplicate notification IDs in dedupe (valid warning, fixed) |
+| 30 | Mar 21 | TimePicker rewrite + useDaySelection fix | Codex: 1 HIGH (reminder day chip regression — CreateReminderScreen save logic ignores selectedDays), 1 MEDIUM (fontScale not in render deps — portrait-locked so safe), 2 LOW (stale props on remount, label missing textAlignVertical). Gemini: PASS. |
+| 30b | Mar 21 | CreateReminderScreen three-tier fix | Codex: MEDIUM (Save Anyway still allows past dates — pre-existing, not regression). Gemini: PASS. |
+| 31 | Mar 22 | v1.3.8 full (emulator testing fixes) | Codex: soundId regression on edit (fixed), midnight stale state (accepted — reload on focus), emoji ZWJ limitation (accepted), dead code getAvailableAtTime/getAvailableAtDate (removed). Gemini: deleted note text unreadable (fixed), Clear button dark-on-dark (fixed), checkmark color (fixed), Restore/Forever buttons missing capsules (fixed), emoji ZWJ (accepted). |
+| 32 | Mar 24 | P2 polish (3 fixes) | Codex: 2 HIGH (safety net too aggressive — kills live alarms, early return blocks displayed-notification fallback), 1 LOW (completed reminders hide secondary text — design choice). Gemini: All PASS. |
+| 32b | Mar 24 | Notification actions + safety net fix | Codex: 3 HIGH (timer countdown not cancelled on dismiss, snooze flag not enforced, snooze notif ID not persisted), 1 MEDIUM (safety net async race — accepted), 2 LOW (redundant cleanup, unused imports). Gemini: All PASS with 1 LOW redundant stopAlarmSound. All HIGH findings fixed. |
+| 34 | Mar 25 | CalendarWidget + calendar fixes | Codex: 1 HIGH (note sort UTC slice), 1 MEDIUM (floating back button overlap), 1 LOW (root widget missing clickAction). Gemini: 2 HIGH (widget deep-link doesn't drive month — useState stale, widget alarm loader no normalization), 1 MEDIUM (widget minHeight too small for 6-row months). All fixed. Re-audit: Codex all PASS. Gemini: 4 PASS, 1 partial (widget alarm normalization functionally equivalent but not identical to loadAlarms — accepted, daily behavior same). |
+| 35 | Mar 25 | Tablet responsive (Onboarding + Sudoku) | Codex: 1 MEDIUM (Sudoku paused/won not width-capped). Fixed. Gemini: All PASS. |
+| 36 | Mar 26 | Note image attachments (P2 2.1) | Self-audit during implementation. 1 HIGH (transaction order), 2 MEDIUM (duplicate keys, image-only notes blocked), 2 MEDIUM (print broken images), 1 LOW (thumbnail memory). All resolved. Emoji picker removed. |
+| 37 | Mar 26 | Drawing canvas (P2 2.2) | 3 HIGH (drawing persistence — saveNoteImage .png extension + companion .json copy, performance — memoize parsedStrokes, loadDrawingData reads JPGs as text), 2 MEDIUM (image cache after edit — new filename cache bust, print/share MIME detection), 2 LOW (empty canvas save block, cancel confirmation). All resolved. |
+| 44 | Mar 30 | Voice memo feature (full) | Codex: 3 HIGH (VoiceRecordScreen rapid-tap race, recorder.stop not awaited, NotepadScreen listener leak), 2 MEDIUM (audio listener stale ref, AsyncStorage race). Gemini: 3 HIGH (rapid-tap race + save exit paths active during save + voiceMemoStorage swallows errors), 3 MEDIUM (detail screen no focus cleanup, seek validation, widget sort order). 8 findings fixed. voiceMemoFileStorage.ts false positive from Codex (File.copy is sync in new expo-file-system API). |
+| 45 | Mar 30 | Voice memo UI polish + integration | Codex: 4 HIGH (hardware back bypasses cleanup on both screens, non-transactional save, widget pin order destroyed), 3 MEDIUM (Save & Exit pops on failure, pause/resume race, undo doesn't restore pin). Gemini: 3 HIGH (same pin ordering, pause race, pin sort in All view), 2 MEDIUM (VoiceMemoCell hardcoded colors, stale playback progress). 10 findings fixed. |
+| 47 | Apr 1 | v1.9.0 Home screen (full) | Codex: 0 P0, 2 P1 (pre-existing timer/note behaviors), 3 P2. Gemini: 0 P0, 2 P1 (widget warm-start nav, notification routing missing Home base), 3 P2 (dead appQuote code, quote count, duplicate reminder reads). Both Gemini P1s fixed before build. |
+
+### Audit 33 — March 25, 2026 (Codex + Gemini)
+**Scope:** Foreground notification refactor, calendar feature, AlarmsTab extraction, NoteEditorModal extraction, UI polish (dark capsules, floating headers, BackButton)
+
+**Findings:**
+- HIGH: Daily recurring alarms/reminders (empty days array) missing from Calendar — recurring items with no days = daily, needed mapping to every day of month. Fixed.
+- HIGH: Calendar create buttons navigated with initialDate but CreateAlarmScreen/CreateReminderScreen never consumed it. Fixed — CreateAlarm reads initialDate, sets one-time mode + date; CreateReminder reads initialDate, sets dueDate.
+- HIGH: Floating header overlap on Settings (vertically stacked header exceeded 58px padding) and DailyRiddle (multi-line header with stats). Fixed — Settings made single-row, DailyRiddle stats moved into scrollable content.
+- MEDIUM: Notes timezone bucketing used UTC slice (createdAt.slice(0,10)) instead of local date. Fixed — parses Date object, extracts local YYYY-MM-DD.
+- LOW: New note unsaved changes detection only checked text, missed icon/color/font-only edits. Fixed — checks all fields against defaults.
+
+**Passed:** Foreground notification refactor (both auditors), consumePendingAlarm cleanup, timer dismissal state management, refactor integrity (AlarmsTab + NoteEditorModal), calendar date mapping (after fix).
+
+**Bug: Silent/true-silent alarm and timer channels use LOW importance — fullScreenAction never fires**
+- Found: Mar 29 by Zerenn during testing
+- Cause: alarms_silent_v4, alarms_true_silent_v1, and timer_silent_v1 channels created with AndroidImportance.LOW. Android requires HIGH importance for fullScreenAction to trigger screen wake and fire screen display. Also affected "Silence All" toggle which routes to true_silent channels.
+- Fix: Version-bumped all three channels (alarms_silent_v5, alarms_true_silent_v2, timer_silent_v2) with AndroidImportance.HIGH. Old channels deleted on startup.
+- Version: v1.7.0
+
+**Bug: Snooze shame overlay not tappable — can't skip voice clip**
+- Found: Mar 29 by Zerenn during testing
+- Cause: Shame overlay renders as a separate return path that replaces the snooze button. User has no way to tap to skip the voice clip while the overlay is showing.
+- Fix: Wrapped shame overlay in TouchableOpacity with stopVoice + exitToLockScreen. Added "Tap anywhere to skip" hint text.
+- Version: v1.7.0
+
+### Bug: Calendar annual/date-specific recurring reminders show on every day
+- **Found:** Mar 30, 2026 by Zerenn
+- **Cause:** `getItemsForDate` and `markedDates` in CalendarScreen treated `recurring: true` + empty `days` array as "daily recurring" without checking `dueDate`. Annual reminders saved with `recurring: true, days: [], dueDate: set` — calendar showed them on every day
+- **Fix:** When recurring + empty days + dueDate exists, match only month/day of dueDate (annual pattern). Only fall through to "every day" push when no dueDate. Fixed in both `getItemsForDate` and `markedDates` useMemo
+- **Version:** pre-v1.8.0 (dev)
+
+### Bug: Calendar event cards not tappable
+- **Found:** Mar 30, 2026 by Zerenn
+- **Cause:** All three card types in `renderEventCard` used plain `<View>` wrappers with no `onPress` handler
+- **Fix:** Wrapped each card type in `<TouchableOpacity>` with `activeOpacity={0.7}` and `hapticLight()`. Alarm → `CreateAlarm`, Reminder → `CreateReminder`, Note → `Notepad`. Added `navigation` to `renderEventCard` dependency array
+- **Version:** pre-v1.8.0 (dev)
+
+### Bug: AlarmFireScreen merge conflict markers committed to repo
+- **Found:** Mar 30, 2026 by Zerenn
+- **Cause:** Merge conflict markers (`<<<<<<< / ======= / >>>>>>>`) accidentally committed during laptop-to-desktop sync. `git status` showed clean because markers were part of the committed content
+- **Fix:** Resolved conflict blocks manually, keeping correct code
+- **Version:** pre-v1.8.0 (dev)
+
+### Build 46 (v1.8.1) — SDK 55 Upgrade Build Failures
+- **Build 1 failure:** `react-native-notification-sounds` used `jcenter()` repository, removed in Gradle 9.0 (SDK 55). Patched with patch-package (replaced `jcenter()` with `mavenCentral()`).
+- **Build 2 failure:** Same library used deprecated `destinationDir` property in its build.gradle (removed in Gradle 9.0). patch-package could not fix this — property used deep in Android build pipeline.
+- **Decision:** Remove `react-native-notification-sounds` entirely. Added native `getSystemAlarmSounds` method to existing `AlarmChannelModule` using `RingtoneManager.TYPE_ALARM`. Same response format (`{title, url, soundID}`), so `SoundPickerModal.tsx` needed only a call site change.
+- **Build 3:** Succeeded.
+
+### Pre-existing bugs found during v1.8.1 testing
+- **Guess Why shows answer immediately:** Game screen shows the answer without presenting a guess screen first. Pre-existing, needs investigation.
+- **Yearly recurring reminder reschedules without firing:** Reminder reschedules for next year without the current-year notification firing first. Pre-existing, needs investigation.
+
+### Bug: Widget warm-start navigation not consumed on app resume (Audit 47)
+- **Found:** April 1, 2026 by Gemini Audit 47
+- **Cause:** `pendingTabAction` written to AsyncStorage by widget click actions but not consumed on app resume (warm start). Only consumed on cold start.
+- **Fix:** Added consumption in `useNotificationRouting` for warm-start path.
+- **Version:** v1.9.0
+
+### Bug: Notification routing rebuilds stack without Home base route (Audit 47)
+- **Found:** April 1, 2026 by Gemini Audit 47
+- **Cause:** Two notification routing paths rebuilt the navigation stack without including Home as the base route (initial route changed from AlarmList to Home in v1.9.0).
+- **Fix:** Updated both paths to include Home as base route in rebuilt stack.
+- **Version:** v1.9.0
+
+### Session 9 Bug Fixes (April 1, 2026)
+
+**Bug: Guess Why shows answer immediately for nickname-only alarms**
+- Found: Session 9 investigation of pre-existing bug
+- Cause: `canPlayGuessWhy` included `hasNickname` as eligible — but nickname is always visible on the card, so showing it as a "guess" reveals the answer immediately
+- Fix: Removed `hasNickname` from `canPlayGuessWhy`. Now requires icon OR note ≥ 3 chars (hidden clues only)
+
+**Bug: Yearly recurring reminder rescheduled same date on early completion**
+- Found: Session 9 investigation of pre-existing bug
+- Cause: Reschedule logic used current date + 1 year when completed before due date. If completed early (e.g., day before), next occurrence would be the same date
+- Fix: Always advance from stored dueDate year + 1, not current date
+
+**Bug: Calendar widget showed reminder dots on every day for yearly reminders**
+- Found: Session 9 (pre-existing)
+- Cause: Widget calendar data treated `recurring: true` + empty `days` without checking `dueDate` — yearly reminders appeared on every day
+- Fix: Added dueDate vs daily distinction in widget calendar dot logic
+
+**Bug: No-date recurring reminders treated as daily instead of yearly**
+- Found: Session 9
+- Cause: Recurring reminders with no days + no dueDate were treated as "every day". Should be yearly from createdAt (creation anniversary pattern)
+- Fix: Updated scheduling, calendar dots, Today section, widget, and completion logic to use createdAt month/day match
+
+**Bug: ExpoKeepAwake promise rejection (SDK 55)**
+- Found: Session 9 (pre-existing dev-mode warning)
+- Cause: `useKeepAwake()` hook throws unhandled promise rejection during activity transitions in SDK 55's stricter error handling
+- Fix: Replaced with imperative `activateKeepAwakeAsync()` wrapped in try-catch inside useEffect
+
+**Bug: Light mode — dark overlays on personal photos**
+- Found: Session 9 light mode testing
+- Cause: Background photo overlay used `rgba(0,0,0,opacity)` regardless of theme mode — dark overlay on light mode made photos look muddy
+- Fix: Mode-aware overlay — `rgba(255,255,255,opacity)` in light mode, `rgba(0,0,0,opacity)` in dark mode
+
+**Bug: Light mode — dark capsule buttons on white cards**
+- Found: Session 9 light mode testing
+- Cause: Capsule buttons used `rgba(30,30,40,0.7)` background and `rgba(255,255,255,0.15)` border — invisible/ugly on light backgrounds
+- Fix: Mode-aware rgba values — light mode uses `rgba(0,0,0,0.06)` background and `rgba(0,0,0,0.12)` border
+
+### Session 10 Bug Fixes (April 2, 2026)
+
+**Bug: Yearly label on no-date recurring reminders**
+- Found: Session 10 P2 audit
+- Cause: Recurring reminders with no days + no dueDate displayed "Daily" label instead of "Yearly"
+- Fix: Label now correctly shows "Yearly" for creation-anniversary pattern reminders
+
+**Bug: CreateReminderScreen back navigation goes to AlarmList**
+- Found: Session 10 P2 audit
+- Cause: Back navigation fell back to AlarmList instead of the Reminders screen
+- Fix: Back stack now correctly returns to Reminders
+
+**Bug: Emoji TextInput hack fragility**
+- Found: Session 10 (broke 3 times during attempted filter implementation)
+- Cause: TextInput-based emoji picker was a fragile hack — broke on every attempt to add filtering or improve UX
+- Fix: Rebuilt as EmojiPickerModal — controlled modal surface with flat grid of ~128 curated emoji
+
+**Bug: VoiceMemoListScreen SyntaxError after button style removal**
+- Found: Session 10
+- Cause: StyleSheet had broken references after button style properties were removed during hierarchy refactor
+- Fix: Cleaned up StyleSheet to match new button hierarchy pattern
+
+**Bug: AlarmListScreen deleted card buttons stacked vertically**
+- Found: Session 10
+- Cause: Restore and Forever Delete buttons rendered in column layout instead of side-by-side
+- Fix: Changed to row layout with proper spacing
+
+### Session 12 Bug Fixes (April 2, 2026) — SQLite Migration
+
+**Bug: `execSync` multi-statement DDL only executes first statement**
+- Found: Session 12 during migration testing
+- Cause: `db.execSync()` with a single string containing multiple `CREATE TABLE` statements only executed the first one. All subsequent tables were never created.
+- Fix: Split into individual `db.execSync()` calls per table, each wrapped in try/catch with error logging.
+
+**Bug: `soundId` / `soundID` SQLite case-insensitive column collision**
+- Found: Session 12 by Codex audit
+- Cause: Alarm type has `soundId: string` (TEXT) and `soundID: number` (INTEGER). SQLite treats column names as case-insensitive, so both mapped to the same column.
+- Fix: Renamed INTEGER column to `nativeSoundId` in schema, migration, and all row converters. TypeScript type kept as `soundID` for backward compatibility; `rowToAlarm` maps `nativeSoundId → soundID`.
+
+**Bug: Migration failure renders empty app**
+- Found: Session 12 during testing
+- Cause: If `migrateFromAsyncStorage()` failed, `dbReady` was set to true anyway, rendering the app with empty SQLite tables and no data.
+- Fix: App.tsx checks `_migrated` flag. Migration retry on failure (flag not set = retries next launch).
+
+**Bug: `voiceMemos` column missing from notes schema**
+- Found: Session 12 by Codex audit
+- Cause: Original schema prompt omitted `voiceMemos TEXT` column from the `notes` table. Note type has `voiceMemos?: string[]` field. Without the column, note-attached voice memos were silently lost on migration.
+- Fix: Added `voiceMemos TEXT` column to notes table schema. Updated `_insertNotes`, `NoteRow`, `rowToNote`, `addNote`, `updateNote` to include the column.
+
+**Bug: Voice roast migration key mismatch**
+- Found: Session 12 by Codex audit
+- Cause: Migration KV keys list had `voiceEnabled` and `introPlayed` but actual AsyncStorage keys used by `voicePlayback.ts` were `voiceRoastsEnabled` and `voiceIntroPlayed`.
+- Fix: Updated KV_KEYS in database.ts to use correct key names.
+
+**Bug: Custom note color migration key mismatch**
+- Found: Session 12 by Codex audit
+- Cause: Migration KV keys had `notepad_customBgColor` / `notepad_customFontColor` but actual keys used in NotepadScreen were `note_custom_bg_color` / `note_custom_font_color` (from `CUSTOM_BG_COLOR_KEY` / `CUSTOM_FONT_COLOR_KEY` constants). Also needed legacy keys `noteCustomBgColor` / `noteCustomFontColor` for the old→new migration path.
+- Fix: Updated KV_KEYS to include all 4 key variants (current + legacy).
+
+**Bug: `private` is a SQLite reserved word**
+- Found: Session 12 during testing
+- Cause: `private` column in alarms and reminders tables failed DDL when unquoted. SQLite treats `private` as a reserved keyword.
+- Fix: Quoted as `"private"` in all DDL and DML statements.
+
+### Session 13 Bug Fixes (April 3, 2026) — v1.10.1
+
+**Bug: Alarm delete/restore UI — deleted alarms disappear from trash**
+- Found: Session 13
+- Cause: `handleDelete`, `handleUndoDelete`, `handleRestore`, `handlePermanentDelete` in AlarmListScreen used return values from CRUD functions (`deleteAlarm`, `restoreAlarm`, `permanentlyDeleteAlarm`) which called `loadAlarms()` without `includeDeleted`. Soft-deleted alarms vanished from UI state after any operation.
+- Fix: All 4 handlers now call `setAlarms(await loadAlarms(true))` to reload the full list including soft-deleted alarms.
+
+**Bug: Light mode visibility across 15+ screens**
+- Found: Session 13 visual audit
+- Cause: GamesScreen, SettingsScreen, 5 game sub-screens, 8 photo screens all had hardcoded dark-only colors (`#FFFFFF`, `rgba(255,255,255,...)`) or missing `bgUri` overrides. In light mode, text was invisible on light backgrounds or on dark photo overlays.
+- Fix: Systematic overhaul — mode-aware card backgrounds (`colors.card + 'E6'/'F0'`), overlay-safe text (`colors.overlayText`, light rgba), conditional `forceDark` on buttons, `bgUri &&` JSX overrides on photo screens.
+
+**Bug: VoiceRecordScreen title invisible in light mode without photo**
+- Found: Session 13
+- Cause: Title style hardcoded `color: '#FFFFFF'` — white on light background = invisible.
+- Fix: Changed base to `colors.textPrimary` with `bgUri && { color: colors.overlayText }` JSX override.
+
+**Bug: VoiceMemoDetailScreen Save/Home overlap**
+- Found: Session 13
+- Cause: Both `headerHome` and old `headerSave` positioned at `left: 64`. Save pill covered HomeButton when unsaved changes existed.
+- Fix: Full header redesign to headerLeft/headerCenter/headerRight flex layout with centered Edit/Save accent pills. Old absolute-positioned headerSave removed.
+
+### Session 14 — Backup & Restore Audit Findings
+**Audit round 1 (Codex + Gemini):**
+- P0: Non-transactional restore — live DB deleted before backup verified. Fixed with rollback pattern.
+- P1: SAF auto-export not implemented — Claude Code fell back to internal storage. Reimplemented with SAF.
+- P1: Weak manifest validation — accepted backupVersion 0, no content counts. Strict validation added.
+- P2: 30-day nudge on first launch — showed "It's been a while" when never exported. Fixed condition.
+- P2: Missing Jest tests — test file not created. Written and passing.
+
+**Audit round 2 (Codex + Gemini):**
+- P1: Manifest contents fields not fully validated. Added type checks for all 5 fields.
+- P2: validateBackup tests missing from test suite. Added.
+
+### Session 14 — Onboarding Audit Findings
+- P1: skippedPermissions append-only, not deduplicated. Fixed with dedup + auto-cleanup useEffect.
+- P2: No icon on final "done" slide. Added HomeIcon.
+
+### Session 15 — P4.5 Stability Sprint Audit Findings
+**Decomposition + accessibility audit (Codex + Gemini):**
+- P1: `onError={() => setBgUri(null)}` fallback dropped during NotepadScreen + AlarmListScreen decomposition. A corrupted/deleted user background photo never self-recovered. Fixed by exposing `setBgUri` from `useNotepad` and `useAlarmList` hooks and re-adding `onError` on the background `<Image>` in both screens.
+- P1: NoteCard center touchable missing `accessibilityRole` and `accessibilityLabel`. TalkBack had no meaningful name for the main note tap target. Fixed by adding `accessibilityRole="button"` and `accessibilityLabel={truncated}` (the same first-line text used visually).
+- P1: ReminderScreen had incomplete accessibility — 6 interactive elements (checkbox, edit target, pin button, clear history, restore, forever delete) had no labels. Fixed with dynamic labels (e.g., "Mark incomplete" / "Mark complete" depending on state).
+- P1: OnboardingScreen theme cycling broken — `previewTheme` state updated but visible FlatList slides didn't re-render because `extraData` was missing. Fixed by adding `extraData={previewTheme}` to the FlatList.
+- P2: AlarmListScreen still imports `isAlarmPinned` directly from widgetPins instead of going through the hook. Accepted — not worth the churn, matches how NotepadScreen imports `isNotePinned`.
+- P2: Timer preset pin (`togglePinPreset`, `getPinnedPresets`, `unpinPreset`) tests not added in widgetPins.test.ts. Deferred — timer preset pins less critical than the 4 covered categories.
+
+**46 audits total.** Every ship preceded by at least one audit. v1.3.3 shipped without audit due to urgency (recurring alarm critical fix) — acknowledged as exception.
+
+### Session 16 — P6 Chess Audit Findings
+
+**Round 1 (Codex + Gemini) — Chess AI and persistence:**
+
+- **P0: Root alpha-beta not carried across siblings** (chessAI.ts findBestMove). Every root move was searched with fresh `-Infinity, Infinity` bounds, so pruning info from one move never helped prune the next. Biggest single perf issue. Fixed by tightening alpha (max) / beta (min) as the loop finds better moves, and passing the updated bounds to subsequent `minimax()` calls. Also added PV reordering — after each completed depth, moves the best move to the front of `ordered` for the next iteration. Roughly 2-3× speedup at all depths, same move quality. Tests confirmed same mates/captures found.
+- **P0: Move counter shows "Move 0" on resume, take-back silently broken.** Saved chess games restored via `new Chess(saved.fen)` only — a FEN encodes the current position but no history. chess.js's internal `_history` array was empty after restore, so `game.history()` returned `[]` (move count=0) AND `game.undo()` became a no-op (take-back silently did nothing). Fixed by replaying every SAN move from `saved.moveHistory` onto a fresh `new Chess()` on load. Fallback to FEN-only if replay throws (degraded state, still playable).
+- **P0: Captured pieces wrong on pawn promotion** (ChessScreen.tsx). The `getCaptured` helper derived captures by comparing current board piece counts to starting counts. When a pawn promoted to a queen, the pawn count dropped → UI showed the pawn as "captured" even though it wasn't. Fixed by rewriting as `getCapturedPieces(game, color)` that iterates `game.history({ verbose: true })` and collects moves where `captured` is set and the moving color matches the opponent. History-based derivation is correct under promotion.
+- **P1: Randomness path compared deep-search scores to static-eval scores** (chessAI.ts getAIMove). Used `findBestMove` to get the anchor, scored it with static eval, then scored candidates with static eval — but the anchor was chosen by deep search, so the comparison was apples-to-oranges. A tactically-best move that looked mediocre statically could get "ties" that were actually hanging pieces. Fixed by evaluating ALL moves with static eval (including the anchor), sorting, then filtering within threshold. Randomness selection is now purely among statically-similar moves.
+- **P1: Inner setTimeout(0) in triggerAIMove was untracked.** The yielding `setTimeout(0)` that gives React time to commit state + start native animations before `getAIMove` blocks was not tracked by `clearTimers`. If the user resigned/started a new game/unmounted after the outer timer fired but before the inner callback ran, stale AI computation could fire on an unmounted component. Fixed by adding `sessionIdRef` (incremented on startGame/newGame/resign/unmount) and checking it inside the inner callback. Same guard added to the blunder-analysis setTimeout in makePlayerMove.
+- **P1: Blunder analysis ran at depth 1, too shallow.** Depth 1 only sees one ply of lookahead — misses obvious 2-ply tactical blunders. Bumped `ANALYSIS_DEPTH` to 2. Adds ~50-200ms per analysis but runs async on `setTimeout(0)` so it never blocks the AI move.
+- **P2: Progress bar freeze during AI think.** Initial animated progress bar used `useNativeDriver: false` with width interpolation, which runs on the JS thread. During `getAIMove` (up to 5s on Expert), JS is blocked → the bar froze mid-fill. Multiple attempted fixes: translateX + native driver (worked but visually rough), scaleX + transformOrigin (worked but overcomplicated). Final decision: stripped the animation entirely, replaced with a fixed-height "Thinking…" text container. Revisit post-P6.
+
+**Round 2 (Gemini) — Chess evaluation + quiescence:**
+
+- **P1: Horizon effect — AI stopped mid-capture sequence.** Benchmarks showed the AI repeatedly hanging pieces in forced trades. At depth 0, minimax returned raw static eval — fine for quiet positions, terrible mid-trade (AI thought "I'm up a knight!" the ply before recapture). Fixed by adding a `quiescence` function called at depth 0: stand-pat + only search captures (MVV-LVA ordered) until the position is quiet. Delta pruning skips captures whose best gain can't reach alpha. Measurable improvement in move quality at the same nominal depth.
+- **P2: Evaluation too material-only, no positional awareness.** Added mobility (3cp/move for side to move), bishop pair (±50cp), doubled pawns (−15cp per extra pawn on same file), isolated pawns (−10cp each), king-safety pawn shield (+15cp/pawn within 1 square of king, middlegame only). All collected in a single pass through the board using in-loop counters. Test threshold for starting-position eval widened from ±50 to ±80 to account for mobility's one-sided contribution.
+- **P2: Time limits drift between files.** Both `chessAI.ts` and `useChess.ts` had their own time-budget constants. Unified into a single exported `TIME_LIMITS_MS` in chessAI.ts that useChess imports — single source of truth, no drift risk.
+
+**Session 16 auditor summary:** 13 P0/P1 findings, 3 P2. All fixed. Performance improvement from audit fixes alone was ~2-3× at all depths (root alpha-beta + PV reordering). Quiescence + evaluation improvements added measurable move-quality gains confirmed via self-play benchmark test.
+
+### Session 17 — P6 Chess Engine Audit Findings
+
+**Round 1 (Codex + Gemini) — engine upgrades from Prompts 1-3:**
+
+- **Min-depth guarantee broken (CRITICAL).** `findBestMove` skipped the outer `isTimeUp()` check below `minDepth`, but `isTimeUp()` inside `minimax` and `quiescence` still fired — so the engine started each mandatory depth but immediately bailed on every node, returning static evals. The difficulty floor was effectively a no-op. Fixed with a module-level `searchMinDepthActive` flag set `true` while `depth <= minDepth`; `isTimeUp()` returns `false` during that window. Flag reset after the IDS loop.
+- **En-passant flag mismatch.** `scoreMoveForOrdering` and the killer-move storage guards used `move.flags.includes('c')` to detect captures, but chess.js uses flag `'e'` for en-passant captures. En-passant was treated as a quiet move and could pollute the killer table. Switched all 3 call sites to `move.captured` (chess.js populates the field for any capture type, including en passant).
+- **Killer scores outranked winning captures.** Killer slots were scored 900/800, beating every MVV-LVA capture score (PxQ ≈ 890 at highest). Killers should rank below meaningful captures. Lowered to 90/80 — still comfortably above quiet moves (0) but below equal/winning captures.
+- **TT key ignored halfmove clock.** The TT key used only the first 4 FEN fields, so two positions with identical boards but different 50-move-rule state shared a cache entry. A value proven safe with 50 halfmoves of runway was wrongly re-used when only 5 halfmoves remained. Expanded the key to include the halfmove clock (5 FEN fields).
+- **Mate-score TT instability.** Mate scores (±100000) were stored in the TT without ply adjustment. Added `adjustMateScoreForTT(score, ply)` / `adjustMateScoreFromTT(score, ply)` — mate scores are now stored relative to the current node, so TT hits from different plies stay consistent.
+
+**Round 2 (user testing) — min-depth caused unbounded searches:**
+
+- **Unbounded min-depth search.** The round-1 fix for the min-depth guarantee completely disabled `isTimeUp()` during mandatory depths, which caused 25-30 second searches on complex middlegame positions at minDepth=4 (especially on phone). The "all 5 levels" Jest test jumped from ~8 s to 43 s. Fixed by adding a second deadline, `searchSafetyDeadline = now + timeLimitMs × 3`, that fires even while `searchMinDepthActive` is set. `isTimeUp()` checks the safety ceiling in min-depth mode and the normal deadline otherwise. Also lowered `minDepth` values to realistic targets (Beginner/Casual 1, Intermediate/Advanced 2, Expert 3). Worst-case Expert is now ~15 s instead of unbounded.
+
+**Session 17 auditor summary:** 6 findings (5 from the engine-upgrades audit + 1 from user device-testing feedback). All fixed. 232 tests passing across 9 suites (69 chessAI tests, up from 24).
+
+### Session 18 — P6 Checkers Audit Findings
+
+**Round 1 (Codex + Gemini) — checkers engine + integration:**
+
+- **CRITICAL: evaluateBoard called generateMoves for both colors.** `evaluateBoard` computed mobility bonuses (+3 per legal move) and detected blocked-piece game-over by calling `generateMoves(board, 'r')` and `generateMoves(board, 'b')` — full recursive DFS at every leaf node. This made the engine catastrophically slow. Removed all `generateMoves` calls from eval. Now pure material + positional only. `minimax` already handles "no legal moves = game over" correctly.
+- **MAJOR: Flat mate scores corrupted TT.** `minimax` returned flat `±100000` for game-over positions. `adjustMateScoreForTT`/`adjustMateScoreFromTT` shift by ply, but on a score with no ply component. Fixed: `return maximizingRed ? -100000 + ply : 100000 - ply` — AI now prefers faster mates, TT entries consistent.
+- **MAJOR: AI null return froze game.** `triggerAIMove` only called `checkGameOver` inside `if (aiMove)`. If `getAIMove` returned null (no legal moves), game-over was never detected and the game froze on the AI's turn. Fixed: moved `checkGameOver` call outside the conditional so it runs regardless.
+
+**Session 18 also removed freestyle mode** (American/Freestyle variant system built and stripped in same session — scope creep). No bugs, just API cleanup across engine, hook, screen, storage, and tests.
+
+**50 audits total.** Every ship preceded by at least one audit.
+
+---
+
+### Session 21 — Chess Overhaul + Fonts Audit Findings
+
+**Round 1 (chess features):**
+- **P1: isInCheck gated by !isGameOver** — `const isInCheck = !!game && game.isCheck() && !isGameOver` caused the red king highlight to vanish on the final checkmate frame. Players couldn't see why the game ended. Fixed: removed `!isGameOver` guard.
+- **P1: Duplicate FEN pushed on resign** — `resign()` unconditionally pushed `g.fen()` to fenHistoryRef, creating a duplicate entry when the current position was already the last entry. Caused a phantom review step at the end. Fixed: only push if FEN differs from last entry.
+- **P1: Double haptic on AI check move** — `triggerAIMove` fired both `hapticHeavy()` for check AND `hapticLight()` for it being the player's turn, back-to-back. Fixed: added `&& !c2.isCheck()` guard to the hapticLight call.
+- **P2: Review captures showed final game state** — Captured piece trays in review mode showed the full game's captures regardless of review position, which was misleading. Fixed: removed capture trays from review mode entirely (missing pieces visible by their absence on the board).
+- **P2: CHECK! only showed on player's turn** — Status bar condition `chess.isInCheck && chess.isPlayerTurn` hid the CHECK! banner during AI's turn. Fixed: CHECK! now shows whenever isInCheck is true; pulses only when it's the player's turn.
+
+**Round 2 (polish):**
+- **P2: Review board squares not screen-reader accessible** — Review board used plain `<View>` without `accessible={true}`. Screen readers couldn't focus individual squares. Fixed: added `accessible={true}`.
+- **P2: Status bar text not announced to screen readers** — CHECK! and Your Move text had no live region. Fixed: added `accessibilityLiveRegion="polite"` + `accessibilityRole="alert"` on CHECK!, `accessibilityLiveRegion="polite"` on Your Move.
+- **P3: "Move 0 of N" confusing in review** — Review counter showed "Move 0 of N" at starting position. Fixed: shows "Start of N" at index 0.
+- **P3: Threatened/last-move not in accessibility labels** — Teaching mode highlights weren't reflected in square labels. Fixed: labels now append ", threatened" and ", last move".
+- **P2: Training mode highlights vanished on game-over** — `threatenedSquares` and `lastMoveSquares` useMemo hooks returned early when `!isPlayerTurn`. Since `isPlayerTurn` is false on game-over, highlights disappeared. Fixed: changed guard to `isAIThinking` instead.
+
+**Round 3 (production):**
+- **P1: Font loading hang** — `useFonts` error not handled, app stuck on splash screen forever if fonts failed to download. Fixed: error fallback proceeds with system fonts.
+- **P2: Double AI delay (800ms)** — `makePlayerMove` had a nested `setTimeout(AI_DELAY_MS)` before `InteractionManager.runAfterInteractions` which called `triggerAIMove` (which had its own `setTimeout(AI_DELAY_MS)`). Total delay was 800ms instead of 400ms. Fixed: removed the outer setTimeout, kept only `InteractionManager.runAfterInteractions(() => triggerAIMove())`.
+- **P2: Color picker buttons missing accessibility** — NoteEditorModal color picker circles had no `accessibilityLabel` or `accessibilityRole`. Fixed: added labels.
+- **P3: console.log in production** — AI move timing `console.log` in triggerAIMove shipped to production. Fixed: wrapped in `__DEV__` guard.
+
+**53 audits total.**
+
+### Session 22 — Font Rollout + Hook Extractions Audit Findings
+
+**Dual audit (Codex + Gemini) — 11 findings, all fixed:**
+- **Dead solutionGrid state in useSudoku:** `useState<Grid>([])` for solutionGrid was set but never read — hook already uses `solutionRef.current` everywhere. Removed useState and all setSolutionGrid calls.
+- **ColorPickerModal stale ref on reopen:** `pickedRef.current` retained previous session's color when modal reopened. The existing useEffect reset the ref, but the ColorPicker component didn't re-render with the new value. Fixed: added `key={visible ? initialColor : 'closed'}` to force remount.
+- **Dead uri prop on MemoCard:** `uri: string` in MemoCardProps was passed but never used inside the component. Removed from interface, destructured props, and NoteEditorModal call site.
+- **fontWeight leftovers (8 files):** Remaining `fontWeight` properties on Text styles in NoteEditorModal (colorCheck, fontColorCheck, thumbnailRemoveText), NoteVoiceMemo (memoDeleteText), EmojiPickerModal (closeBtnText), SoundPickerModal (closeBtnText, check), SwipeableRow (deleteText), SettingsScreen (close glyph), CreateAlarmScreen (close/info glyphs), App.tsx (migration failure UI). All replaced with `fontFamily: FONTS.xxx`. Also fixed ErrorBoundary and ImageLightbox (missed in Phase 2).
+- **Stale Nunito comment in fonts.ts:** File header still referenced "Nunito" after swap to Montserrat Alternates. Updated.
+- **Dead quickCaptureHeader style in HomeScreen:** Style definition remained after JSX was removed. Deleted.
+- **Unused @expo-google-fonts/nunito dependency:** Package still in package.json after font swap. Uninstalled.
+
+**54 audits total.**
+
+### Session 23 — Game Sounds + Media Icons + Close-X Audit Findings
+
+**3 audit rounds, 6 total fixes:**
+- **gameSounds default OFF** — `_gameSoundsEnabled` initialized as null, `playGameSound` returned early on falsy. First-time users got no game sounds. Fixed: default to true when kvGet returns null. Found by Gemini audit round 1.
+- **Chess pre-game/game-over card white-on-white in light mode** — Pre-game card and game-over overlay card used `colors.overlayText` (always white) for text on `colors.card` surfaces (white in light themes). Fixed: use `colors.textPrimary` / `colors.textSecondary` for text on card surfaces. Found by Gemini audit round 1.
+- **FAB horizontal position inconsistency** — NotepadScreen and VoiceMemoListScreen used `right: 20`, AlarmListScreen and ReminderScreen used `right: 24`. Standardized to 24. Found by both auditors round 1.
+- **Android GlowIcon shadow hole** — Views with transparent backgroundColor render shadow as hollow ring on Android. Fixed with translucent fill (`glowColor + '20'`). Found during live testing.
+- **Checkmate banner showed CHECK!** — `isInCheck` checked before `gameResult === 'checkmate'`. Since checkmate implies check, the checkmate branch was unreachable. Fixed by checking checkmate first. Found by Codex re-audit round 2.
+- **Take Back accessibility mismatch** — Visual label used `takeBackUsed` but accessibility label still used `takeBackAvailable`, causing TalkBack to announce "used" on fresh games. Fixed to derive from `takeBackUsed`. Found by Codex re-audit round 2.
+- **Dead styles from close-x swap** — Text→Image replacement left orphaned style entries (clearDateText, closeBtnText, closeText, thumbnailRemoveText, memoDeleteText, cancelBtnText) and dead imports in ImageLightbox. Cleaned up. Found by Codex re-audit round 2.
+
+**57 audits total.**
+
+### Session 24 — Full Codebase Audit Bugs
+
+**Bug: FAB plus icon hex hole (Android)**
+- Found: Session 24 Zerenn, live device
+- Cause: FAB used `backgroundColor: colors.accent + '15'` (~8% alpha) + `elevation: 8`. Android renders elevation shadow as a polygon outline when the fill alpha is low, producing a visible hex/octagon artifact inside the accent halo. Multiple alpha bumps, stacked-view halos, and bare-icon variants all produced some form of the outline
+- Fix: Replaced entirely with the chrome-circle pattern used by `BackButton`/`HomeButton`: theme-aware `rgba(30, 30, 40, 0.8)` dark fill + 1px white-rgba border, no elevation, no shadow. Applied across all 4 list screens (AlarmList, Notepad, Reminder, VoiceMemoList)
+- Related fix: plus icon `tintColor: colors.accent` removed so the natural silver `plus.webp` shows through instead of an accent-tinted silhouette
+
+**Bug: Alarm save blocked by `beforeRemove` guard**
+- Found: Session 24 Zerenn, manual testing
+- Cause: Added `beforeRemove` guard to `CreateAlarmScreen` so back with dirty form shows "Discard changes?" — but the save handler calls `navigation.goBack()` after persisting, which also tripped the guard. User saved an alarm and got a discard-changes prompt
+- Fix: `savedRef` ref pattern. `handleSave` flips the ref to `true` immediately before `goBack()`. Guard checks the ref and bypasses the prompt
+
+**Bug: VoiceRecord back → Home (stack gap)**
+- Found: Session 24 Zerenn, manual testing
+- Cause: Deep-link flow from Memory's Voice widget navigated `Home → VoiceRecord` directly, skipping `VoiceMemoList`. Hitting back from VoiceRecord took the user back to Home (correct per stack), but felt disorienting since the list was never on the stack
+- Fix: VoiceRecord back handler ensures `VoiceMemoList` is on the stack before popping. Confirmation dialog added for in-progress recordings
+
+**Bug: `autoBackup` crash on stale SAF URI**
+- Found: Session 24 audit (data safety category)
+- Cause: `autoExportBackup` called at app open. If the user's chosen SAF folder had been moved, deleted, or had its permission revoked (Google Drive sign-out, Downloads folder cleared), the SAF permission check threw — unhandled — and the app crashed on launch
+- Fix: `autoExportBackup` wrapped in try/catch. Errors logged and written to `lastBackupError` kv key, never propagated. Background operations now follow a "never throw" contract
+- Commit: `3e94a28`
+
+**Bug: NoteCard blank icon after emoji removal**
+- Found: Session 24 Zerenn, live device
+- Cause: During the emoji → icon sweep, the `📝` fallback in `NoteCard` + `DeletedNoteCard` was removed but the `APP_ICONS.notepad` `Image` fallback wasn't added. Notes without a user-chosen emoji rendered a blank iconCircle. Fix was added, then reverted with the rest of the FINAL prompt
+- Fix: Re-added the conditional: `note.icon ? <Text>{note.icon}</Text> : <Image source={APP_ICONS.notepad} size=22 />`. Applied to both `NoteCard.tsx` and `DeletedNoteCard.tsx` (the latter also required adding `Image` + `APP_ICONS` imports)
+
+**Bug: expo-audio type drift (addListener/release missing)**
+- Found: Session 24 `npx tsc --noEmit`
+- Cause: expo-audio 55.x declares `AudioPlayer extends SharedObject<AudioEvents>` where `SharedObject` is a re-export chain ending in `typeof ExpoGlobal.SharedObject`. That circular indirection prevents TypeScript from inheriting `addListener` (from EventEmitter) and `release` (from SharedObject) onto `AudioPlayer`. The runtime methods still exist — the breakage is purely at the type level
+- Partial fix: Created `src/utils/audioCompat.ts` exporting `PlayerWithEvents = AudioPlayer & { addListener(...) }`. Call sites are supposed to cast `createAudioPlayer(...)` to `PlayerWithEvents` and prefer `.remove()` (declared directly on `AudioPlayer`) over `.release()` (only reachable through the broken inheritance)
+- **Status:** compat file written but not yet adopted. `gameSounds.ts`, `soundFeedback.ts`, and `VoiceMemoListScreen.tsx` still use the raw `AudioPlayer` type and still throw TS errors on `addListener` + `release`. 10 TypeScript errors on `dev` branch currently, all from this issue
+
+**Bug: `GameNavButtons` references non-exported icons (stranded file)**
+- Found: Session 24 `npx tsc --noEmit`
+- Cause: `GameNavButtons.tsx` imports and renders `APP_ICONS.gameBack` and `APP_ICONS.gameHome`. The corresponding asset files exist (`assets/icons/icon-game-back.webp`, `icon-game-home.webp`) but the exports were never added to `appIconAssets.ts` — or the adds were reverted with the FINAL prompt cleanup. File is also not imported anywhere, so these errors don't manifest at runtime, but TSC flags them
+- **Status:** unresolved. Two paths: (1) wire it — add 8 game icon exports to `appIconAssets.ts`, swap `BackButton`/`HomeButton` usage in the 6 game screens for `GameNavButtons`, (2) delete it — remove `GameNavButtons.tsx` and the 8 stranded asset files. Decision pending
+
+**60 audits total.**
+
+### Session 25 — Audit Fix Redo + Notification + Navigation Bugs
+
+**Bug: Timer fires immediately on start**
+- Found: Session 25 Zerenn, live device
+- Cause: Adding `data: { timerId, timerProgress: 'true' }` to the countdown progress notification caused the background `DELIVERED` handler to read `timerId`, treat it as a completion notification, and immediately call `playAlarmSoundForNotification`. Timer "fired" the instant it was started
+- Fix: Removed the `data` field from `showTimerCountdownNotification` entirely. Distinguish progress vs completion by notification ID prefix instead — `countdown-{timerId}` for progress, `timer-done-{timerId}` for completion. Both background (`index.ts`) and foreground (`useNotificationRouting.ts`) handlers check `notifId?.startsWith('countdown-')` before falling into the completion path
+
+**Bug: Quick note editor infinite reopen**
+- Found: Session 25 Zerenn, live device
+- Cause: `closeEditor` in `useNotepad.ts` cleared `handledActionRef.current = ''`. The route-params effect then re-fired (because `editorVisible` had changed), saw `newNote: true` still in the route params, found `handledActionRef` empty, and reopened the editor. Infinite loop — user couldn't escape the editor on widget cold start
+- Fix: Removed the `handledActionRef.current = ''` line from `closeEditor`. The ref must persist across editor close/reopen cycles so the effect doesn't re-trigger on the same set of widget params
+
+**Bug: `savedRef` set before save succeeds**
+- Found: Session 25 audit
+- Cause: `CreateAlarmScreen` and `CreateReminderScreen` flipped `savedRef.current = true` immediately before calling `form.save()`. `form.save()` has multiple early-return paths (validation failures, confirmation dialogs). If save bailed out, the flag was already `true` and the `beforeRemove` guard was permanently bypassed for the rest of the screen's lifetime — silent dirty-form loss on subsequent back attempts
+- Fix: Moved `savedRef.current = true` into the `navigateBack` callback. The flag now flips only after `form.save()` actually invokes its success callback. Removed the eager assignments from both `handleSave` and from the alert "I like chaos" / "Vibes only" branches
+
+**Bug: `AlarmFireScreen` KeepAwake crash**
+- Found: Session 25 Zerenn, live device crash report
+- Cause: `activateKeepAwakeAsync()` rejects when the activity isn't available yet — specifically during cold-start when AlarmFireScreen mounts before the Android activity is fully attached. Unhandled promise rejection bubbled up and crashed the screen
+- Fix: Wrapped the call in an async IIFE with try/catch. KeepAwake is best-effort — if it fails during cold start, the screen still functions
+
+**Bug: VoiceMemoDetail no save button**
+- Found: Session 25 Zerenn, live device
+- Cause: Header rendered the "Edit" button only in view mode and showed nothing in edit mode for newly recorded memos. The bottom save/discard row had been removed in an earlier session, leaving no way to save a freshly recorded memo from the detail screen
+- Fix: Header now always renders the "Save" button when `!isViewMode`. Bottom row stays removed. Added a sarcastic no-title alert when the user tries to save without giving the memo a name
+
+**Bug: Quick Record back goes to Home instead of VoiceMemoList (warm app)**
+- Found: Session 25 Zerenn, live device
+- Cause: `App.tsx` cold-start initial nav stack already inserted `VoiceMemoList` between `Home` and `VoiceRecord`/`VoiceMemoDetail`, but the warm-app path on `HomeScreen.tsx` used `navigation.navigate('VoiceRecord')` directly, putting `VoiceRecord` straight on top of `Home`. Back popped to Home, skipping the memos list
+- Fix: Changed the Quick Record `onPress` on HomeScreen to `navigation.reset({ index: 2, routes: [Home, VoiceMemoList, VoiceRecord] })`. Back from VoiceRecord now lands on VoiceMemoList; back again lands on Home
+
+**Bug: Quick countdown notification tap did nothing**
+- Found: Session 25 Zerenn, live device
+- Cause: `showTimerCountdownNotification` set `pressAction.id = 'default'` but provided no data, so the press handler in `useNotificationRouting.ts` couldn't find a `timerId` or `alarmId` and did nothing
+- Fix: ID-prefix routing. On `EventType.PRESS`, both background and foreground handlers detect `countdown-` prefix and either navigate directly to the `Timers` route (if nav is ready) or store `pendingTimerAction` for the next foreground tick to drain
+
+### Session 26 — Voice Memo Clips + Photos Audit (Codex + Gemini)
+
+8 findings fixed across two audit rounds. Re-audit clean.
+
+**Bug: useFocusEffect only reloaded clips, not the full memo (HIGH — data loss)**
+- Found: Session 26 audit (Codex)
+- Cause: `VoiceMemoDetailScreen.useFocusEffect` reloaded `clips` via `getClipsForMemo(memoId)` but never re-read the memo row itself. If the user added clips via the add-clip flow which also wrote photos to `voice_memos.images`, the detail screen's `memo` state was stale on focus. The next photo add or delete from the detail screen would write back `memo.images` from the stale state and silently drop the photos that were saved during add-clip
+- Fix: `useFocusEffect` now reloads BOTH the memo (`getVoiceMemoById`) and clips. Title/note state and `initialTitleRef`/`initialNoteRef` are also refreshed so the unsaved-changes detector doesn't false-positive after a focus refresh
+
+**Bug: Non-atomic save in VoiceRecordScreen (HIGH — orphan rows)**
+- Found: Session 26 audit (Codex)
+- Cause: `saveAndNavigate` for new-memo mode called `addVoiceMemo` then `addClip` sequentially. If `addClip` threw (constraint violation, disk full, etc.), the memo row was left as an empty shell with no clips — orphaned in the DB
+- Fix: Wrapped `addClip` in its own try/catch. On clip failure, the memo row is rolled back via `permanentlyDeleteVoiceMemo(newMemoId)` and the audio file is deleted. Outer catch handles `addVoiceMemo` failures separately
+
+**Bug: VoiceRecordScreen add-clip path navigated on failure (HIGH)**
+- Found: Session 26 audit (Codex)
+- Cause: The `isAddClipMode` branch had `navigation.goBack()` outside the try block, so even when the clip save threw, the user got bounced back to the detail screen with a failure toast and no clip — but no indication anything was unrecoverable. Worse, the toast flashed past as the screen tore down
+- Fix: Moved `navigation.goBack()` inside the success branch of the try. The catch branch logs, shows the failure toast, and still navigates back (so the user isn't trapped on the record screen) but the success/failure paths are now distinct
+
+**Bug: Stale closure for `capturedPhotos` in AppState background handler (HIGH — photos lost)**
+- Found: Session 26 audit (Gemini)
+- Cause: The `AppState` background handler captures the `saveAndNavigate` closure created at mount. `saveAndNavigate` reads `capturedPhotos` from state. Photos taken before recording started weren't in the closure's view of state, so when the user backgrounded the app mid-recording and the auto-save fired, the photos were silently dropped
+- Fix: Added `capturedPhotosRef` (useRef), kept in sync via a useEffect that mirrors `capturedPhotos`. `saveAndNavigate` reads `photosToSave = capturedPhotosRef.current` instead of the state. The background closure now sees the latest photo array regardless of when it was captured
+
+**Bug: 5-photo cap ignored existing memo photos in add-clip mode (MEDIUM)**
+- Found: Session 26 audit (Codex)
+- Cause: `takePhoto` on VoiceRecordScreen only checked `capturedPhotos.length >= 5`. In add-clip mode, the user could already have 5 photos on the existing memo and capture 5 more during the add-clip flow — the cap was effectively 10
+- Fix: In add-clip mode, `takePhoto` loads `getVoiceMemoById(addToMemoId).images?.length` and checks `captured + existing >= 5`
+
+**Bug: Backup metadata missing voiceMemoImages count (MEDIUM)**
+- Found: Session 26 audit (Codex)
+- Cause: `BackupMeta.contents` had counts for `voiceMemos`, `noteImages`, `alarmPhotos`, `backgrounds` but not the new `voice-memo-images` directory. The folder was added to `MEDIA_FOLDERS` (so it zipped/unzipped correctly) but the manifest counts were stale
+- Fix: Added `voiceMemoImages: number` to `BackupMeta.contents` and `exportBackup` populates it via `countFilesInDir('voice-memo-images')`
+
+**Bug: AsyncStorage migration inserter missing images column (MEDIUM)**
+- Found: Session 26 audit (Codex)
+- Cause: `_insertVoiceMemos` (the AsyncStorage → SQLite migration helper) hadn't been updated for the new `images` column. On migration of legacy AsyncStorage data, the `INSERT` would either fail (NOT NULL constraint) or insert NULL — silently dropping any photo state from old backups
+- Fix: Added `images` to the column list and values, defaulting to `'[]'` via `jsonOrNull(v.images) ?? '[]'`
+
+**Bug: VoiceMemoCard accessibility label wrong for clips-based memos (LOW)**
+- Found: Session 26 audit (Gemini)
+- Cause: The play button on VoiceMemoCard used the label `'Play memo'`/`'Pause memo'` regardless of whether `memo.uri` was set. For clips-based memos (`uri === ''`), tapping the button navigates to the detail screen instead of playing — but screen readers announced it as a play button
+- Fix: Conditional label: `memo.uri ? (isPlaying ? 'Pause memo' : 'Play memo') : 'Open memo'`
+
+**Bug: `images` JSON parse missing Array.isArray validation (LOW)**
+- Found: Session 26 audit (Gemini)
+- Cause: `rowToMemo` parsed `row.images` with try/catch but assigned the result directly. If a malformed row stored a JSON string like `"null"` or `"42"` (e.g., from a botched migration), the parse would succeed and `images` would be set to a non-array value, crashing downstream `.map`/`.length` calls
+- Fix: Added `Array.isArray` guard after the parse: `parsedImages = Array.isArray(raw) ? raw : []`
+
+**Accepted/deferred:**
+- Foreign keys `PRAGMA foreign_keys = ON` not enabled — application code (`permanentlyDeleteVoiceMemo` → `deleteAllClipsForMemo`) handles the cascade. Enabling the PRAGMA could have side effects on other tables that weren't designed with FK constraints in mind
+- Non-contiguous clip positions after deletion — `ORDER BY position` works fine even with gaps, position renumbering deferred to future scope
+- Redundant `NOT NULL` on `voice_memos.uri`/`duration` — kept for backwards compat with the legacy schema, harmless empty/0 defaults
+- `validateBackup` not checking `voiceMemoImages` field — cosmetic, the folder zips/unzips correctly regardless of whether the count field is validated
+
+### Session 27 — NoteEditorModal Redesign + Note Titles Audit Findings
+
+**Bug: View-mode drawing tap showed dead Edit action**
+- Found: Session 27 audit
+- Cause: `NoteImageStrip` offered an Edit option on drawings in view mode, but the handler was a no-op since the editor wasn't in edit mode. Also showed a "Draw On" option on plain photos even in view mode
+- Fix: View-mode taps go straight to lightbox. Drawing alert (with Edit) and Photo alert (with Draw On) only shown in edit mode
+
+**Bug: TextInput didn't cap height with attachments**
+- Found: Session 27 audit
+- Cause: Edit-mode `TextInput` always had `flex: 1`, pushing images off-screen when attachments existed. With up to 5 attachments, the attachment strip became unreachable
+- Fix: Conditional `maxHeight: 300` on the TextInput (and matching `flex: undefined` on its container) when `editorImages.length > 0 || editorVoiceMemos.length > 0`
+
+**Bug: Image strip overflow with 5 attachments**
+- Found: Session 27 audit
+- Cause: Fixed horizontal row (`flexDirection: 'row', justifyContent: 'space-evenly'`) with no wrapping or scroll couldn't fit 5 thumbnails on typical phone widths
+- Fix: Wrapped in horizontal `ScrollView` with `flexGrow: 1, justifyContent: 'center', gap: 14` so <3 thumbnails center and 3+ thumbnails scroll naturally
+
+**Bug: confirmClose didn't dismiss panels**
+- Found: Session 27 audit
+- Cause: Top-left back button (which calls `confirmClose` rather than `onRequestClose`) triggered the unsaved-changes prompt even when the color picker or attachments panel was open. Hardware back (`onRequestClose`) already peeled panels first, but the UI back button skipped that check
+- Fix: `confirmClose` in the hook now peels `showColorPicker` → `showAttachments` → unsaved-changes check, matching `onRequestClose` behavior
+
+**Bug: TimerScreen missing accessibility**
+- Found: Session 27 audit
+- Cause: "Timer Sound" selector and "Emoji Circle" button in the timer creation modal lacked `accessibilityRole` and `accessibilityLabel` — the a11y pass from Session 24 missed them because they're inside a modal that isn't part of the main screen render
+- Fix: Added `accessibilityRole="button"` + `accessibilityLabel="Select timer sound"` / `accessibilityLabel="Choose emoji"` to both
+
+**Bug: Note title nullable across schema**
+- Found: Session 27 audit (title feature)
+- Cause: `title` column was added as `TEXT` without `NOT NULL DEFAULT ''`, `Note` type had `title?: string` optional, storage mapped NULL to undefined. Three-way nullable state (undefined vs null vs '') caused defensive `?? ''` sprinkled across render sites
+- Fix: Migration upgraded to `NOT NULL DEFAULT ''` + backfill of any NULLs from earlier migration runs. `Note.title` changed from optional to required `string`. `rowToNote` normalizes via `row.title ?? ''`. `addNote`/`updateNote` write `title || ''`. Empty string is the canonical "no title" sentinel
+
+**Bug: NoteCard/DeletedNoteCard ignored title field**
+- Found: Session 27 audit (title feature)
+- Cause: Both cards derived display text from `note.text` only (first line, truncated). A note with a title but empty body showed nothing; a note with both title and body showed the body preview where the title should be
+- Fix: Title-first render — `note.title` as primary line (15pt semiBold) when non-empty, `note.text` as 2-line preview (13pt regular, 60% opacity) below. Falls back to truncated text when title is empty. Accessibility label prefers title. DeletedNoteCard gets same treatment with opacity 0.7 to match dimmed look
+
+**Bug: Title not wired into share**
+- Found: Session 27 audit (title feature)
+- Cause: `ShareNoteModal` only received `noteText`, `noteIcon`, and `noteImages`. A title-only note (no body, no images) failed the share eligibility check and showed "Nothing to share", and even with a body, the title was missing from every share output (text share, PDF, Print)
+- Fix: `handleShare` eligibility includes `editorTitle.trim()`. `NoteEditorModal` passes `noteTitle={editor.editorTitle}` to `ShareNoteModal`. Added `noteTitle: string` prop. `buildNoteHtml` renders title as `<h2>` above the body `<pre>` when non-empty. Text share prepends title with newline separator. Print fallback (no-images branch) mirrors the same title HTML inline
+
+### Session 28 — Tutorial Overlay + VoiceMemoDetail Overhaul Audit Findings
+
+Triple audit (Codex + Claude + Gemini) on Session 28 work across two rounds. Round 1 (9 findings) covered the full Session 28 surface; Round 2 (3 findings) covered the tutorial voice clip wiring after the clips landed. All 12 findings fixed.
+
+#### Round 1 — Full Session 28 audit (9 findings)
+
+**Bug 1: Backup validation breaks old .dfw files (P1)**
+- Found: Session 28 audit
+- Cause: Session 26 added `voiceMemoImages` as a required field in `BackupMeta.contents` and `validateBackup` rejected any manifest missing it. Users importing `.dfw` files exported before Session 26 hit "Backup manifest has malformed contents" and couldn't restore
+- Fix: `BackupMeta.contents.voiceMemoImages` changed from `number` to `number?` (optional). Validator relaxed to `(meta.contents.voiceMemoImages !== undefined && typeof meta.contents.voiceMemoImages !== 'number')` — missing is valid, present-and-non-number still fails. Export side unchanged (new backups still write the count)
+
+**Bug 2: VoiceRecordScreen discards photos silently on Back (P1)**
+- Found: Session 28 audit
+- Cause: `beforeRemove` guard only triggered when `isRecordingRef.current === true`. Photos taken via the camera FAB (only usable in idle state, before recording starts) were stored in `capturedPhotos` state + `capturedPhotosRef` mirror — hitting Back without starting a recording bypassed the guard and the photos vanished with no warning
+- Fix: Guard extended to `const hasRecording = isRecordingRef.current; const hasPhotos = capturedPhotosRef.current.length > 0; if (!hasRecording && !hasPhotos) return;`. Alert title/message/cancel label dynamically adapt to recording-only ("Discard recording?"), photos-only ("Discard photos? / You have unsaved photos..."), or both ("Your recording and photos will be lost..."). Discard onPress only calls `recorder.stop()` when `hasRecording` was true
+
+**Bug 3: Share picker modal backdrop not theme-aware (P2)**
+- Found: Session 28 audit
+- Cause: The new scrollable share-picker modal (added to replace the Alert.alert 3-button Android limit for memos with 3+ clips) used hardcoded `backgroundColor: 'rgba(0,0,0,0.6)'` for the backdrop. Every other modal in the app uses `colors.modalOverlay`, which ranges from 0.5 in light themes to 0.85 in High Contrast. Fixed 0.6 was too dark in light themes and too light in High Contrast
+- Fix: `colors.modalOverlay` token used directly on the share-picker backdrop `TouchableOpacity`
+
+**Bug 4: Attachments count badge text hardcoded white (P3)**
+- Found: Session 28 audit
+- Cause: The little count badge on the bottom-toolbar paperclip button had `color: '#FFFFFF'` on top of a `sectionVoice`-colored circle. On Vivid theme where `sectionVoice` is `#42C6FF` (light cyan), white text was nearly invisible
+- Fix: `color: colors.mode === 'dark' ? '#FFFFFF' : '#000000'` — black on light themes, white on dark
+
+**Bug 5: Photo delete button border hardcoded white (P3)**
+- Found: Session 28 audit
+- Cause: The red X delete badge on edit-mode photo thumbnails had `borderColor: 'rgba(255,255,255,0.6)'` — fine on dark themes where the red-on-white-ring contrast works, but on light themes the white border on the red circle was low contrast against the light background
+- Fix: `borderColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.3)'`
+
+**Bug 6: Reminders tutorial tip said "6 hours" when actual is midnight next day (P3)**
+- Found: Session 28 audit
+- Cause: The "Mark Complete" tip body asserted "One-time ones get crossed off and hidden after 6 hours so they stop haunting you." The actual code (`ReminderScreen.tsx:292-298`) hides completed one-time reminders until midnight the next calendar day. `SIX_HOURS` exists as a constant but is used elsewhere (nearness-to-due calculations), not for the hide rule
+- Fix: Tip body rewritten to "tucked away after midnight so they stop haunting you by morning"
+
+**Bug 7: Calendar tutorial tip omitted voice memos (P3)**
+- Found: Session 28 audit
+- Cause: The "It's a Calendar" tip body said "It shows your alarms, reminders, and notes by date" but `CalendarScreen` also renders voice memos as purple dots. Users tapping the tutorial on the calendar screen would have been told their voice memos don't show there
+- Fix: Body updated to "It shows your alarms, reminders, notes, and voice memos by date"
+
+**Bug 8: Tutorial overlay flashed one frame before appearing (P3)**
+- Found: Session 28 audit
+- Cause: `useTutorial` started with `useState(false)` and flipped to `true` inside a `useEffect` that read `kvGet`. First render painted the screen without the overlay; the effect ran after commit and scheduled a second render with the overlay mounted. Visible as a one-frame flash where the screen was briefly unblocked
+- Fix: Replaced the effect with a lazy `useState` initializer that reads `kvGet` synchronously on mount. `expo-sqlite` is synchronous, so the correct initial state is known before the first render. `useEffect` import removed from the file
+
+**Bug 9: Tutorial TalkBack focus broken by backdrop parent + no-op card TouchableOpacity (P3)**
+- Found: Session 28 audit + follow-up TalkBack fix iterations
+- Cause: Two separate issues that compounded. **(A)** The card was wrapped in a `<TouchableOpacity activeOpacity={1} onPress={() => {}}>` purely to swallow taps so the backdrop's onDismiss wouldn't fire on card-area taps. Screen readers saw it as a real button with no action. **(B)** The card was nested inside the backdrop `TouchableOpacity`. The initial TalkBack fix attempted `importantForAccessibility="no-hide-descendants"` on the backdrop, but that property propagates to descendants, hiding the card content too. The fallback attempt (`importantForAccessibility="yes"` on the card) couldn't override the ancestor's `no-hide-descendants` per Android's accessibility tree rules. TalkBack users got either "exit tutorial, button" announced for the entire overlay (focus trapped on the backdrop) or complete silence (focus trapped on nothing)
+- Fix: Structural rewrite. Backdrop `TouchableOpacity` and card `View` are now **siblings** inside a wrapper `<View>`, not parent/child. The wrapper owns positioning (`position: 'absolute'`, `zIndex: 999`, flex centering); the backdrop is `position: 'absolute'` filling the wrapper with the dim background; the card is laid out by the wrapper's flex `justifyContent: 'center' / alignItems: 'center'`. Backdrop keeps `importantForAccessibility="no-hide-descendants"` (hidden from accessibility, still handles touch onPress). Card has `accessibilityViewIsModal={true}` but **no** `accessibilityLabel` (that collapses children into one focusable). Card-area taps don't propagate since backdrop is a sibling, not an ancestor. Dot row has `importantForAccessibility="no"`. TalkBack walks the card's children in order: title → body → Back (if visible) → Next/Got it
+
+#### Round 2 — Voice clip wiring audit (3 findings)
+
+Audit after the 15 ElevenLabs tutorial clips were wired through `tutorialClips.ts` and `TutorialOverlay.tsx`. All three findings are P3 polish but worth fixing before ship.
+
+**Bug 10: `handleNext` / `handlePrev` didn't stop the current clip synchronously (P3)**
+- Found: Round 2 audit
+- Cause: Audio stop only happened inside the `useEffect` cleanup tick when `currentIndex` changed. Between the user's tap and React committing the index change + running cleanup, the old clip kept playing for a few milliseconds — audible as a tail overlapping the start of the next clip on rapid advances
+- Fix: Added `stopClip()` at the top of `handleNext` and `handlePrev`, before `hapticLight()`. The ref-stored player is paused + removed synchronously the instant the user taps, so the tail is gone before the new clip fires. Same pattern already used in `handleGotIt` and `handleBackdropPress`
+
+**Bug 11: `playerRef.current = player` assigned after `player.play()` (P3)**
+- Found: Round 2 audit
+- Cause: The original async IIFE flow was `createAudioPlayer → volume → cancelled check → play() → assign ref`. Even though lines 155 and 156 are synchronous and no real yield happens between them, the theoretical window between `play()` starting and the ref being assigned meant a cleanup fired at exactly the wrong microtask couldn't find the player via `playerRef.current` to stop it. Defensive concern, not a reproducible leak
+- Fix: Moved `playerRef.current = player` to **immediately after** `createAudioPlayer` returns (before `volume = 1.0`, before the second `cancelled` check). The ref now points at the player from the instant it exists. The cancelled-branch was updated to also `playerRef.current = null` after the inline `player.remove()` so the ref doesn't dangle. `play()` fires last
+
+**Bug 12: No AppState listener — audio keeps playing in background (P3)**
+- Found: Round 2 audit
+- Cause: If the user backgrounded the app mid-tip, the MEDIA-stream clip kept playing (unlike alarm-stream clips which Android pauses on background automatically). No UI way to stop it from the lock screen since the tutorial overlay isn't a system notification
+- Fix: Added a second `useEffect([stopClip])` that subscribes to `AppState.addEventListener('change', ...)` and calls `stopClip()` whenever the next state is anything other than `'active'`. Cleanup returns `sub.remove()`. Matches the VoiceRecordScreen AppState pattern
