@@ -1,16 +1,16 @@
-import type { TriviaQuestion, TriviaCategory } from '../types/trivia';
+import type { TriviaQuestion, TriviaParentCategory, TriviaSubcategory } from '../types/trivia';
+import { PARENT_TO_SUBS } from '../types/trivia';
 
-// OpenTDB category ID mapping
-const CATEGORY_MAP: Partial<Record<TriviaCategory, number | number[]>> = {
-  general: 9,
-  science: 17,
-  history: 23,
-  music: 12,
-  movies_tv: [11, 14],
-  geography: 22,
-  sports: 21,
-  technology: 18,
-  // food has no OpenTDB equivalent
+// OpenTDB category ID mapping — all 8 parent categories have online backing
+const CATEGORY_MAP: Record<TriviaParentCategory, number | number[]> = {
+  general: 9,                       // General Knowledge
+  popCulture: [11, 12, 14, 26],    // Film, Music, Television, Celebrities
+  scienceTech: [17, 18, 30, 19],   // Science & Nature, Computers, Gadgets, Mathematics
+  historyPolitics: [23, 24, 25],   // History, Politics, Art
+  geography: 22,                    // Geography
+  sportsLeisure: [21, 16, 28],     // Sports, Board Games, Vehicles
+  gamingGeek: [15, 29, 31],        // Video Games, Comics, Anime & Manga
+  mythFiction: [20],               // Mythology
 };
 
 interface OpenTDBResponse {
@@ -49,12 +49,11 @@ function decodeHTML(text: string): string {
 }
 
 export async function fetchOnlineQuestions(
-  category: TriviaCategory,
+  category: TriviaParentCategory,
   count: number = 10,
   difficulty: 'all' | 'easy' | 'medium' | 'hard' = 'all',
 ): Promise<TriviaQuestion[] | null> {
   const mapping = CATEGORY_MAP[category];
-  if (!mapping) return null; // food/kids not available online
   const apiCategory = Array.isArray(mapping)
     ? mapping[Math.floor(Math.random() * mapping.length)]
     : mapping;
@@ -75,9 +74,11 @@ export async function fetchOnlineQuestions(
     const data: OpenTDBResponse = await response.json();
     if (data.response_code !== 0 || !data.results?.length) return null;
 
+    const defaultSub: TriviaSubcategory = PARENT_TO_SUBS[category]?.[0] ?? 'generalKnowledge';
     return data.results.map((item, index) => ({
       id: `online_${category}_${Date.now()}_${index}`,
       category,
+      subcategory: defaultSub,
       type: item.type,
       difficulty: item.difficulty,
       question: decodeHTML(item.question),

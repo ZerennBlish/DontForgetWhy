@@ -2,7 +2,7 @@ import { kvGet, kvSet, kvRemove } from './database';
 import { withLock } from '../utils/asyncMutex';
 import type {
   TriviaStats,
-  TriviaCategory,
+  TriviaParentCategory,
   TriviaRoundResult,
   TriviaCategoryStats,
 } from '../types/trivia';
@@ -10,17 +10,15 @@ import type {
 const STATS_KEY = 'triviaStats';
 const SEEN_KEY = 'triviaSeenQuestions';
 
-const ALL_CATEGORIES: TriviaCategory[] = [
+const ALL_CATEGORIES: TriviaParentCategory[] = [
   'general',
-  'science',
-  'history',
-  'music',
-  'movies_tv',
+  'popCulture',
+  'scienceTech',
+  'historyPolitics',
   'geography',
-  'sports',
-  'technology',
-  'food',
-  'kids',
+  'sportsLeisure',
+  'gamingGeek',
+  'mythFiction',
 ];
 
 function defaultCategoryStats(): TriviaCategoryStats {
@@ -28,7 +26,7 @@ function defaultCategoryStats(): TriviaCategoryStats {
 }
 
 function defaultStats(): TriviaStats {
-  const categoryStats = {} as Record<TriviaCategory, TriviaCategoryStats>;
+  const categoryStats = {} as Record<TriviaParentCategory, TriviaCategoryStats>;
   for (const cat of ALL_CATEGORIES) {
     categoryStats[cat] = defaultCategoryStats();
   }
@@ -60,7 +58,7 @@ function validateCategoryStats(raw: unknown): TriviaCategoryStats {
 
 function validateStats(parsed: Record<string, unknown>): TriviaStats {
   const catStatsRaw = parsed.categoryStats as Record<string, unknown> | undefined;
-  const categoryStats = {} as Record<TriviaCategory, TriviaCategoryStats>;
+  const categoryStats = {} as Record<TriviaParentCategory, TriviaCategoryStats>;
   for (const cat of ALL_CATEGORIES) {
     categoryStats[cat] = catStatsRaw
       ? validateCategoryStats(catStatsRaw[cat])
@@ -68,8 +66,8 @@ function validateStats(parsed: Record<string, unknown>): TriviaStats {
   }
 
   const bestCat = parsed.bestRoundCategory;
-  const validCat = typeof bestCat === 'string' && ALL_CATEGORIES.includes(bestCat as TriviaCategory)
-    ? (bestCat as TriviaCategory)
+  const validCat = typeof bestCat === 'string' && ALL_CATEGORIES.includes(bestCat as TriviaParentCategory)
+    ? (bestCat as TriviaParentCategory)
     : null;
 
   return {

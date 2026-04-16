@@ -240,9 +240,7 @@ export default function GamesScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}>
     <GameNavButtons topOffset={insets.top + 10} />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Image source={require('../../assets/icons/icon-controller.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
-      </View>
+      <View style={styles.header} />
       <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Brain Games</Text>
       <Text style={[styles.subtitle, { textAlign: 'center', paddingHorizontal: 20 }]}>Exercise that forgetful brain of yours</Text>
 
@@ -251,7 +249,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => handleGamePress('DailyRiddle')}
         activeOpacity={0.7}
-        accessibilityLabel="Daily Riddle"
+        accessibilityLabel={`Daily Riddle, ${isOnline ? 'cloud features active' : 'offline mode'}`}
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -274,7 +272,6 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View
           style={styles.globeBadge}
-          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
         >
           <Image
             source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
@@ -289,7 +286,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => handleGamePress('Chess', 'chess')}
         activeOpacity={0.7}
-        accessibilityLabel="Play Chess"
+        accessibilityLabel={`Play Chess, ${isOnline ? 'cloud features active' : 'offline mode'}`}
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -305,7 +302,6 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View
           style={styles.globeBadge}
-          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
         >
           <Image
             source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
@@ -320,7 +316,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => handleGamePress('Checkers', 'checkers')}
         activeOpacity={0.7}
-        accessibilityLabel="Play Checkers"
+        accessibilityLabel={`Play Checkers, ${isOnline ? 'cloud features active' : 'offline mode'}`}
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -336,7 +332,6 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View
           style={styles.globeBadge}
-          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
         >
           <Image
             source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
@@ -351,7 +346,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => handleGamePress('Trivia', 'trivia')}
         activeOpacity={0.7}
-        accessibilityLabel="Play Trivia"
+        accessibilityLabel={`Play Trivia, ${isOnline ? 'cloud features active' : 'offline mode'}`}
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -369,7 +364,6 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View
           style={styles.globeBadge}
-          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
         >
           <Image
             source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
@@ -384,7 +378,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => handleGamePress('Sudoku', 'sudoku')}
         activeOpacity={0.7}
-        accessibilityLabel="Play Sudoku"
+        accessibilityLabel="Play Sudoku, offline game"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -400,7 +394,6 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View
           style={styles.globeBadge}
-          accessibilityLabel="Offline game"
         >
           <Image
             source={require('../../assets/icons/offline_globe.webp')}
@@ -415,7 +408,7 @@ export default function GamesScreen({ navigation }: Props) {
         style={styles.gameCard}
         onPress={() => handleGamePress('MemoryMatch', 'memoryMatch')}
         activeOpacity={0.7}
-        accessibilityLabel="Play Memory Match"
+        accessibilityLabel="Play Memory Match, offline game"
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
@@ -431,7 +424,6 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View
           style={styles.globeBadge}
-          accessibilityLabel="Offline game"
         >
           <Image
             source={require('../../assets/icons/offline_globe.webp')}

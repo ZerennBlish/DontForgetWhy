@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { EdgeInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
-import { TRIVIA_QUESTIONS, TRIVIA_CATEGORIES } from '../data/triviaQuestions';
+import { checkConnectivity } from '../utils/connectivity';
+import { getAllQuestions, getQuestionsForCategory, getQuestionsForSubcategory } from '../data/triviaBank';
 import { fetchOnlineQuestions, checkOnlineAvailable } from '../services/triviaAI';
 import {
   recordTriviaRound,
@@ -27,8 +28,10 @@ import {
   addSeenQuestionIds,
   resetSeenQuestionsForCategory,
 } from '../services/triviaStorage';
-import type { TriviaQuestion, TriviaCategory } from '../types/trivia';
+import type { TriviaQuestion, TriviaParentCategory, TriviaSubcategory } from '../types/trivia';
+import { PARENT_TO_SUBS, SUBCATEGORY_LABELS } from '../types/trivia';
 import { GameNavButtons } from '../components/GameNavButtons';
+import SubcategoryPickerModal from '../components/SubcategoryPickerModal';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trivia'>;
@@ -41,18 +44,27 @@ type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
 type SpeedOption = 'relaxed' | 'normal' | 'blitz';
 const SPEED_SECONDS: Record<SpeedOption, number> = { relaxed: 25, normal: 15, blitz: 8 };
 
-const CATEGORY_IMAGES: Record<TriviaCategory, ImageSourcePropType> = {
+const CATEGORY_IMAGES: Record<TriviaParentCategory, ImageSourcePropType> = {
   general: require('../../assets/trivia/trivia-general.webp'),
-  science: require('../../assets/trivia/trivia-science.webp'),
-  history: require('../../assets/trivia/trivia-history.webp'),
-  music: require('../../assets/trivia/trivia-music.webp'),
-  movies_tv: require('../../assets/trivia/trivia-movies.webp'),
+  popCulture: require('../../assets/trivia/popcorn_bucket.webp'),
+  scienceTech: require('../../assets/trivia/trivia-science.webp'),
+  historyPolitics: require('../../assets/trivia/trivia-history.webp'),
   geography: require('../../assets/trivia/trivia-geography.webp'),
-  sports: require('../../assets/trivia/trivia-sports.webp'),
-  technology: require('../../assets/trivia/trivia-technology.webp'),
-  food: require('../../assets/trivia/trivia-food.webp'),
-  kids: require('../../assets/trivia/trivia-kids.webp'),
+  sportsLeisure: require('../../assets/trivia/recliner_512.webp'),
+  gamingGeek: require('../../assets/trivia/d20_die.webp'),
+  mythFiction: require('../../assets/trivia/scroll_icon.webp'),
 };
+
+const TRIVIA_CATEGORIES: { id: TriviaParentCategory; label: string }[] = [
+  { id: 'general', label: 'General Knowledge' },
+  { id: 'popCulture', label: 'Pop Culture' },
+  { id: 'scienceTech', label: 'Science & Tech' },
+  { id: 'historyPolitics', label: 'History & Politics' },
+  { id: 'geography', label: 'Geography' },
+  { id: 'sportsLeisure', label: 'Sports & Leisure' },
+  { id: 'gamingGeek', label: 'Gaming & Geek' },
+  { id: 'mythFiction', label: 'Myth & Fiction' },
+];
 
 function shuffle<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -90,14 +102,20 @@ function selectFromPool(source: TriviaQuestion[], count: number, difficulty: Dif
 }
 
 function selectQuestions(
-  category: TriviaCategory,
+  category: TriviaParentCategory,
+  subcategory: TriviaSubcategory | 'all',
   seenIds: string[],
   difficulty: DifficultyFilter,
 ): { questions: TriviaQuestion[]; allSeen: boolean } {
-  // General Knowledge is the grab-bag: pulls from ALL categories
-  let pool = category === 'general'
-    ? TRIVIA_QUESTIONS
-    : TRIVIA_QUESTIONS.filter((q) => q.category === category);
+  let pool: TriviaQuestion[];
+  if (subcategory !== 'all') {
+    pool = getQuestionsForSubcategory(subcategory);
+  } else if (category === 'general') {
+    // General Knowledge is the grab-bag: pulls from ALL categories
+    pool = getAllQuestions();
+  } else {
+    pool = getQuestionsForCategory(category);
+  }
 
   // Apply difficulty filter to pool
   if (difficulty !== 'all') {
@@ -137,12 +155,15 @@ export default function TriviaScreen({ navigation }: Props) {
   // Phase state
   const [phase, setPhase] = useState<Phase>('category');
   const [onlineMode, setOnlineMode] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
   const [allSeenMessage, setAllSeenMessage] = useState<string | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('all');
   const [speedOption, setSpeedOption] = useState<SpeedOption>('normal');
 
   // Game state
-  const [selectedCategory, setSelectedCategory] = useState<TriviaCategory>('general');
+  const [selectedCategory, setSelectedCategory] = useState<TriviaParentCategory>('general');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<TriviaSubcategory | 'all'>('all');
+  const [subPickerVisible, setSubPickerVisible] = useState(false);
   const [questions, setQuestions] = useState<TriviaQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [shuffledAnswers, setShuffledAnswers] = useState<string[]>([]);
@@ -165,6 +186,23 @@ export default function TriviaScreen({ navigation }: Props) {
     checkOnlineAvailable().then((available) => {
       setOnlineMode(available);
     });
+  }, []);
+
+  // Live connectivity poll for globe indicator
+  useEffect(() => {
+    let cancelled = false;
+    checkConnectivity().then((result) => {
+      if (!cancelled) setIsOnline(result);
+    });
+    const interval = setInterval(() => {
+      checkConnectivity().then((result) => {
+        if (!cancelled) setIsOnline(result);
+      });
+    }, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   // Timer logic
@@ -233,8 +271,9 @@ export default function TriviaScreen({ navigation }: Props) {
 
     // Record the round if using offline questions
     if (!isOnlineRound) {
+      const seenKey = selectedSubcategory !== 'all' ? `${selectedCategory}_${selectedSubcategory}` : selectedCategory;
       const ids = questions.map((q) => q.id);
-      await addSeenQuestionIds(selectedCategory, ids);
+      await addSeenQuestionIds(seenKey, ids);
     }
 
     const avgTime = questionTimes.length > 0
@@ -250,9 +289,9 @@ export default function TriviaScreen({ navigation }: Props) {
       date: new Date().toISOString(),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questions, score, questionTimes, selectedCategory, isOnlineRound]);
+  }, [questions, score, questionTimes, selectedCategory, selectedSubcategory, isOnlineRound]);
 
-  const startRound = useCallback(async (category: TriviaCategory) => {
+  const startRound = useCallback(async (category: TriviaParentCategory) => {
     setSelectedCategory(category);
     setAllSeenMessage(null);
 
@@ -262,8 +301,8 @@ export default function TriviaScreen({ navigation }: Props) {
     let roundQuestions: TriviaQuestion[] | null = null;
     let usingOnline = false;
 
-    // Try online first if enabled and category is available
-    if (onlineMode && category !== 'food' && category !== 'kids') {
+    // Try online first if enabled
+    if (onlineMode) {
       const onlineQs = await fetchOnlineQuestions(category, QUESTIONS_PER_ROUND, difficultyFilter);
       if (onlineQs && onlineQs.length >= QUESTIONS_PER_ROUND) {
         roundQuestions = onlineQs;
@@ -273,13 +312,15 @@ export default function TriviaScreen({ navigation }: Props) {
 
     // Fall back to offline bank
     if (!roundQuestions) {
-      const seenIds = await getSeenQuestionIds(category);
-      const { questions: offlineQs, allSeen } = selectQuestions(category, seenIds, difficultyFilter);
+      const seenKey = selectedSubcategory !== 'all' ? `${category}_${selectedSubcategory}` : category;
+      const seenIds = await getSeenQuestionIds(seenKey);
+      const { questions: offlineQs, allSeen } = selectQuestions(category, selectedSubcategory, seenIds, difficultyFilter);
       roundQuestions = offlineQs;
       if (allSeen) {
         const catLabel = TRIVIA_CATEGORIES.find((c) => c.id === category)?.label || category;
-        setAllSeenMessage(`You've seen all ${catLabel} questions! Replaying from the start.`);
-        await resetSeenQuestionsForCategory(category);
+        const subLabel = selectedSubcategory !== 'all' ? ` (${SUBCATEGORY_LABELS[selectedSubcategory as TriviaSubcategory]})` : '';
+        setAllSeenMessage(`You've seen all ${catLabel}${subLabel} questions! Replaying from the start.`);
+        await resetSeenQuestionsForCategory(seenKey);
       }
     }
 
@@ -306,7 +347,7 @@ export default function TriviaScreen({ navigation }: Props) {
     setShuffledAnswers(getShuffledAnswers(roundQuestions[0]));
     setPhase('playing');
     hapticLight();
-  }, [onlineMode, timerWidth, difficultyFilter, speedOption]);
+  }, [onlineMode, timerWidth, difficultyFilter, speedOption, selectedSubcategory]);
 
   const handleAnswer = useCallback((answer: string) => {
     if (answerLocked.current || selectedAnswer !== null) return;
@@ -348,6 +389,24 @@ export default function TriviaScreen({ navigation }: Props) {
     setPhase('category');
   }, [timerWidth]);
 
+  const handleCategoryTap = useCallback((catId: TriviaParentCategory) => {
+    hapticLight();
+    playGameSound('triviaTap');
+    setSelectedCategory(catId);
+    setSelectedSubcategory('all');
+    const subs = PARENT_TO_SUBS[catId];
+    if (subs.length === 1) {
+      setSelectedSubcategory('all');
+    } else {
+      setSubPickerVisible(true);
+    }
+  }, []);
+
+  const handleSubcategorySelect = useCallback((sub: TriviaSubcategory | 'all') => {
+    setSelectedSubcategory(sub);
+    setSubPickerVisible(false);
+  }, []);
+
   // Intercept hardware back during active gameplay. Home nav's popToTop
   // dispatches POP_TO_TOP/RESET — let those through so Home actually
   // navigates away. Plain POP stays in-game (return to category).
@@ -387,10 +446,16 @@ export default function TriviaScreen({ navigation }: Props) {
       <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
       <GameNavButtons topOffset={insets.top + 10} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
-        </View>
+      <View style={styles.globeBadge}>
+        <Image
+          source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+          style={styles.globeImage}
+          resizeMode="contain"
+          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
+        />
+      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} scrollEnabled={false}>
+        <View style={styles.header} />
         <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Trivia Time</Text>
         {allSeenMessage && (
           <Text style={styles.seenNote}>{allSeenMessage}</Text>
@@ -401,13 +466,18 @@ export default function TriviaScreen({ navigation }: Props) {
             <TouchableOpacity
               key={cat.id}
               style={[styles.categoryCard, selectedCategory === cat.id && styles.categoryCardActive]}
-              onPress={() => { hapticLight(); playGameSound('triviaTap'); setSelectedCategory(cat.id); }}
+              onPress={() => handleCategoryTap(cat.id)}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={`Play ${cat.label} trivia`}
             >
               <Image source={CATEGORY_IMAGES[cat.id]} style={styles.categoryImage} resizeMode="contain" />
               <Text style={[styles.categoryLabel, selectedCategory === cat.id && styles.categoryLabelActive]}>{cat.label}</Text>
+              {selectedCategory === cat.id && selectedSubcategory !== 'all' && (
+                <Text style={styles.subcategoryLabel}>
+                  {SUBCATEGORY_LABELS[selectedSubcategory as TriviaSubcategory]}
+                </Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -466,6 +536,12 @@ export default function TriviaScreen({ navigation }: Props) {
           </View>
         </TouchableOpacity>
       </View>
+      <SubcategoryPickerModal
+        visible={subPickerVisible}
+        category={selectedCategory}
+        onSelect={handleSubcategorySelect}
+        onClose={() => setSubPickerVisible(false)}
+      />
       </View>
       </ImageBackground>
     );
@@ -478,10 +554,16 @@ export default function TriviaScreen({ navigation }: Props) {
       <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
       <GameNavButtons topOffset={insets.top + 10} />
+      <View style={styles.globeBadge}>
+        <Image
+          source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+          style={styles.globeImage}
+          resizeMode="contain"
+          accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
+        />
+      </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
-        </View>
+        <View style={styles.header} />
         <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Trivia Time</Text>
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsTitle}>Round Complete</Text>
@@ -555,6 +637,14 @@ export default function TriviaScreen({ navigation }: Props) {
     <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
     <GameNavButtons topOffset={insets.top + 10} onBack={handleBackFromGame} />
+    <View style={styles.globeBadge}>
+      <Image
+        source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+        style={styles.globeImage}
+        resizeMode="contain"
+        accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
+      />
+    </View>
     <View style={styles.container}>
       {/* Top bar */}
       <View style={styles.topBar}>
@@ -658,7 +748,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingTop: insets.top + 10,
+      paddingTop: insets.top + 60,
       paddingHorizontal: 20,
       paddingBottom: 4,
     },
@@ -675,6 +765,18 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       fontStyle: 'italic',
       marginHorizontal: 20,
       marginBottom: 12,
+    },
+
+    globeBadge: {
+      position: 'absolute',
+      top: insets.top + 10,
+      right: 16,
+      padding: 4,
+      zIndex: 10,
+    },
+    globeImage: {
+      width: 40,
+      height: 40,
     },
 
     // Category grid
@@ -712,6 +814,13 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
     },
     categoryLabelActive: {
       color: colors.accent,
+    },
+    subcategoryLabel: {
+      fontSize: 11,
+      fontFamily: FONTS.regular,
+      color: colors.accent,
+      marginTop: 2,
+      textAlign: 'center',
     },
     // Fixed bottom panel
     bottomPanel: {
@@ -777,7 +886,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingTop: insets.top + 12,
+      paddingTop: insets.top + 60,
       paddingHorizontal: 20,
       paddingBottom: 8,
     },

@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import { getRankFromScore } from '../data/memoryRanks';
 import { RIDDLES } from '../data/riddles';
-import { TRIVIA_CATEGORIES } from '../data/triviaQuestions';
+import { TRIVIA_CATEGORIES } from '../data/triviaBank';
 import { getTriviaStats } from '../services/triviaStorage';
 import {
   calculateCompositeScore,
@@ -100,15 +100,13 @@ const defaultTriviaStats: TriviaStats = {
   longestStreak: 0,
   categoryStats: {
     general: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
-    science: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
-    history: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
-    music: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
-    movies_tv: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    popCulture: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    scienceTech: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    historyPolitics: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
     geography: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
-    sports: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
-    technology: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
-    food: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
-    kids: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    sportsLeisure: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    gamingGeek: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
+    mythFiction: { roundsPlayed: 0, questionsAnswered: 0, correct: 0, bestScore: 0 },
   },
 };
 

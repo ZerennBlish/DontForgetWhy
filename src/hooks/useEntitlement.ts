@@ -73,10 +73,39 @@ export default function useEntitlement(): EntitlementState {
 
   useEffect(() => {
     if (!connected) return;
-    fetchProducts({ skus: [PRODUCT_ID], type: 'in-app' })
-      .catch((e) => {
-        console.warn('[useEntitlement] fetchProducts failed:', e);
-      });
+
+    let cancelled = false;
+    let attempt = 0;
+    const MAX_RETRIES = 4;
+    const BASE_DELAY = 1000;
+
+    const tryFetch = async () => {
+      while (attempt < MAX_RETRIES && !cancelled) {
+        try {
+          await fetchProducts({ skus: [PRODUCT_ID], type: 'in-app' });
+          return;
+        } catch (e: any) {
+          attempt++;
+          const isBillingNotReady =
+            e?.message?.includes('Billing client not ready') ||
+            e?.message?.includes('not ready');
+          if (isBillingNotReady && attempt < MAX_RETRIES && !cancelled) {
+            await new Promise((r) => setTimeout(r, BASE_DELAY * Math.pow(2, attempt - 1)));
+          } else {
+            if (!cancelled) {
+              console.warn('[useEntitlement] fetchProducts failed:', e);
+            }
+            return;
+          }
+        }
+      }
+    };
+
+    tryFetch();
+
+    return () => {
+      cancelled = true;
+    };
   }, [connected, fetchProducts]);
 
   useEffect(() => {
