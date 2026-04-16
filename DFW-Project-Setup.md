@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 30 (April 14, 2026) — v1.21.0 (versionCode 39) live on Play Store. Session 30 Firebase Auth + Firestore + Google Calendar sync work sits unshipped on `dev` until the next version bump (Settings redesign session).
+**Last updated:** Session 32 (April 16, 2026) — **v1.22.0 (versionCode 40) live on Play Store**. Session 31 Pro tier (v1.23.0 / vCode 41) and Session 32 Cloud Checkers + trivia overhaul + globe indicators sit unshipped on `dev`. Next ship bundles both under v2.0.0.
 
 ---
 
@@ -320,8 +320,8 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.21.0 (versionCode 39) live on Play Store; Session 30 code on `dev` unshipped |
-| Production status | v1.21.0 live on Google Play (Session 29 build); Session 30 Firebase Auth + Google Calendar sync work waits on `dev` for the next version bump |
+| Current version | v1.22.0 (versionCode 40) live on Play Store; Session 31 v1.23.0 / vCode 41 + Session 32 cloud/trivia work on `dev` unshipped |
+| Production status | v1.22.0 live on Google Play (Session 30 build); Session 31 Pro tier + Session 32 Cloud Checkers AI + trivia overhaul wait on `dev` for the v2.0.0 bundled ship |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
@@ -334,7 +334,7 @@ DontForgetWhy/
 | Phase 6 (Chess + Checkers) | COMPLETE |
 | Phase 8 (Firebase Auth + Firestore foundation) | COMPLETE (unshipped — Session 30) |
 | Audit status | Session 30 triple audit (Codex + Claude + Gemini) complete — 2 P1 (Firestore test-mode rules, calendar cache leak on sign-out) + 6 P2 (UTC timezone, 401 vs 403 recovery, duplicate fetch regression, auth hydration race, duplicate React keys, dead `calendarColor` field) all fixed. Rules published before ship. |
-| Jest tests | 17 suites / 379 tests passing: time, timeUtils, noteColors, soundModeUtils, safeParse, asyncMutex, backupRestore, widgetPins, settings, voiceClipStorage, proStatus, chessAI (69), checkersAI (52), tutorialTips, **firebaseAuth (Session 30), firestore (Session 30), googleCalendar (Session 30, 21 tests)** — ts-jest, node env |
+| Jest tests | **23 suites / 491 tests passing**: time, timeUtils, noteColors, soundModeUtils, safeParse, asyncMutex, backupRestore, widgetPins, settings, voiceClipStorage, proStatus, chessAI (69), checkersAI (52 + Session 32 eval/getTopMoves additions), tutorialTips, firebaseAuth, firestore, googleCalendar, **gameTrialStorage (Session 31), foundingStatus (Session 31), calendarSync (Session 31), cloudStockfish (Session 31, 17 tests), cloudCheckers (Session 32, 8 tests), triviaBank (Session 32, 14 tests)** — ts-jest, node env |
 | Voice clips | 84 total (68 original fire/snooze/timer/guess/dismiss/intro + 15 tutorial + Opening.mp3). ElevenLabs v3, same voice character throughout. `assets/voice/*.mp3` + `assets/voice/tutorial/*.mp3` |
 | EAS build credits | ~28 available (2 dev builds attempted Session 30 — 1 failed, 1 succeeded) |
 | ElevenLabs | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
@@ -353,6 +353,58 @@ DontForgetWhy/
 
 ### Packages Added (Session 29)
 - `expo-iap` — Expo-native Google Play Billing 8.x wrapper for the $1.99 `dfw_pro_unlock` IAP (P5.5 Premium Foundation). Native, requires a dev/production build. Registered in `app.json` `expo.plugins`.
+
+### Packages Added (Session 32)
+- No new client packages. Cloud Functions sub-project (`functions/`) has its own dependency tree — `firebase-admin ^13.8.0` + `firebase-functions ^7.2.5` + `typescript ^5.4.0` + `eslint ^8.57.0` + `firebase-functions-test ^3.0.0`, Node 20. Client app continues on RN 0.83.4 + Expo SDK 55 + TypeScript strict unchanged.
+
+### Firebase Cloud Functions Setup (Session 32)
+
+**Subproject location:** `functions/` at repo root. Separate Node 20 project with its own `package.json`, `tsconfig.json`, and `src/` directory. Compiled output goes to `functions/lib/` via `tsc`. `firebase.json` points at the `functions` codebase with `predeploy: npm --prefix $RESOURCE_DIR run build` so `firebase deploy --only functions` always runs `tsc` before pushing.
+
+**Files:**
+- `functions/src/index.ts` — `onRequest` HTTPS function `checkersAI`. Region `us-central1`, 512MiB, 30s timeout, maxInstances 10, `cors: true`. Validates `{ board, turn }` shape, calls `getTopMoves(board, turn, 20, 6000, 5)`, returns `{ moves: RankedMove[] }`.
+- `functions/src/checkersEngine.ts` — copy of `src/services/checkersAI.ts` minus client-specific exports (`getAIMove`, `DIFFICULTY_LEVELS`, `findBestMove`). Same types, same move generation, same evaluation heuristics, same minimax + TT + killers.
+- `functions/package.json` — Node 20 engines, `firebase-admin` + `firebase-functions` deps, `build` / `serve` / `deploy` / `logs` scripts.
+- `firebase.json` — single codebase `functions` config with `disallowLegacyRuntimeConfig: true`, `predeploy: npm --prefix $RESOURCE_DIR run build`, ignore list for build artifacts. Lint predeploy intentionally omitted — `tsc` build catches the errors that matter.
+
+**Deployed endpoint:** `https://checkersai-kte3lby5vq-uc.a.run.app`. Public unauth for now — App Check deferred to pre-Pro launch.
+
+**Deploy command:** `firebase deploy --only functions` from the repo root. Takes ~60-90s for a cold deploy. `firebase functions:log` tails the live logs for debugging.
+
+**`metro.config.js` (new in Session 32):**
+```javascript
+const { getDefaultConfig } = require('expo/metro-config');
+const config = getDefaultConfig(__dirname);
+config.resolver.assetExts.push('wav');
+config.resolver.blockList = [
+  ...(Array.isArray(config.resolver.blockList) ? config.resolver.blockList : []),
+  /functions\/.*/,
+];
+module.exports = config;
+```
+
+The `blockList` entry for `/functions\/.*/` stops the Metro bundler from trying to include the Cloud Functions sub-project in the React Native bundle — `functions/` has its own Node dependency tree that would otherwise confuse Metro's module resolution. The `Array.isArray` spread preserves Expo's default `blockList` (whatever shape that is in any given Expo SDK version) before appending. `wav` asset extension retained from Session 23 for game sound files.
+
+### New `assets/trivia/` icons (Session 32)
+
+**11 new custom DFW-style trivia icons** added alongside the trivia overhaul — used by the new parent category tiles and `SubcategoryPickerModal`. Each is a 512×512 WebP with DFW's anthropomorphic game-character art style (matching Session 19/20 treatment, not the chrome icon set):
+
+- `popcorn_bucket.webp` — Pop Culture parent
+- `d20_die.webp` — Gaming & Geek parent
+- `scroll_icon.webp` — Myth & Fiction parent + Mythology & Books subcategory
+- `crt_tv_icon.webp` — Television subcategory
+- `walk_of_fame_star.webp` — Celebrities subcategory
+- `lightbulb_icon.webp` — Gadgets subcategory
+- `chalkboard_icon.webp` — Mathematics subcategory
+- `gavel_icon.webp` — Politics subcategory
+- `paint_palette.webp` — Art subcategory
+- `recliner_512.webp` — Sports & Leisure parent (replaced earlier `trivia-sports.webp` reference)
+- `board_game_pawn_monocle.webp` — Board Games subcategory
+- `beat_up_car.webp` — Vehicles subcategory
+- `game_controller.webp` — Video Games subcategory
+- `explosion_speech_bubble.webp` — Comics & Anime subcategory
+
+(Some existing trivia assets retained: `trivia-general.webp`, `trivia-science.webp`, `trivia-history.webp`, `trivia-geography.webp`, `trivia-movies.webp`, `trivia-music.webp`, `trivia-sports.webp` still referenced for older subcategory slots.)
 
 ### Packages Added (Session 30)
 - `@react-native-firebase/app` — Firebase core module. Required by every other `@react-native-firebase/*` package. Native, requires a dev/production build. Registered in `app.json` `expo.plugins`.

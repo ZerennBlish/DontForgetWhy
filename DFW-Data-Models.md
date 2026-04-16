@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 31 (April 15, 2026)
+**Last updated:** Session 32 (April 16, 2026)
 
 ---
 
@@ -424,19 +424,69 @@ Stored as JSON string under kv_store key `checkersStats`. Composite Memory Score
 
 No draws in American checkers. Loss = 0 points. Resignation counts as a loss.
 
-### Checkers DifficultyLevel
+### Checkers DifficultyLevel (Session 18 shape, Session 32 cloud redesign)
 
 ```typescript
+interface PickRange {
+  minRank: number; // 0-indexed: 0 = best
+  maxRank: number; // inclusive upper bound
+}
+
 interface DifficultyLevel {
   name: string;
-  minDepth: number;
-  maxDepth: number;
-  timeLimitMs: number;
-  randomness: number;
+  minDepth: number;      // local engine — depths 1..minDepth complete unconditionally
+  maxDepth: number;      // local engine hard cap
+  timeLimitMs: number;   // local engine normal time budget (3× safety deadline on mandatory depths)
+  randomness: number;    // local engine — 0 = best-move, higher = static-eval noise threshold (cp)
+  cloudPickRange: PickRange; // Session 32 — band into the cloud's top-5 ranked moves
+}
+
+interface RankedMove {
+  move: CheckersMove;
+  score: number;
 }
 ```
 
-Current values: Beginner (2/4/500ms/0.4), Casual (3/6/800ms/0.2), Intermediate (4/8/1500ms/0.05), Advanced (5/10/3000ms/0), Expert (6/14/5000ms/0). Deeper than chess due to lower branching factor.
+**Session 32 current values** (all five levels cloud-first; difficulty = move quality, not search depth):
+
+| Level | minDepth | maxDepth | timeLimitMs | randomness | cloudPickRange |
+|-------|---------:|---------:|------------:|-----------:|:---------------|
+| Beginner | 2 | 4 | 500 | 0.4 | `{ 2, 4 }` (3rd-5th best) |
+| Casual | 3 | 6 | 800 | 0.2 | `{ 1, 3 }` (2nd-4th best) |
+| Intermediate | 4 | 8 | 1500 | 0.05 | `{ 0, 2 }` (best-3rd best) |
+| Advanced | 5 | 10 | 3000 | 0 | `{ 0, 1 }` (best-2nd best) |
+| Expert | 6 | 14 | 5000 | 0 | `{ 0, 0 }` (always best) |
+
+**Priority order** (per move): Cloud Function → local minimax. Checkers has no opening book. The `minDepth` / `maxDepth` / `timeLimitMs` / `randomness` fields govern **only the local fallback** path; the cloud path ignores them entirely and uses `cloudPickRange` instead.
+
+### Cloud Checkers Function (Session 32)
+
+Firebase Cloud Function at `https://checkersai-kte3lby5vq-uc.a.run.app` — public unauth HTTPS endpoint (App Check deferred to pre-Pro launch). Region `us-central1`, 512MiB, 30s timeout, maxInstances 10, `cors: true`.
+
+**Request shape:**
+```typescript
+POST / HTTP/1.1
+Content-Type: application/json
+
+{ board: Board; turn: PieceColor }   // Board is (Piece | null)[8][8]; PieceColor is 'r' | 'b'
+```
+
+**Response shape (200 OK):**
+```typescript
+{
+  moves: Array<{
+    move: {
+      from: [number, number];
+      to: [number, number];
+      captured: [number, number][];
+      crowned: boolean;
+    };
+    score: number;
+  }>;
+}
+```
+
+Server runs `getTopMoves(board, turn, 20, 6000, 5)` on the cloud copy of the engine (`functions/src/checkersEngine.ts`). Returns up to 5 ranked moves sorted best-first for the side to move. Error responses: 400 on invalid board/turn, 405 non-POST, 500 internal, all with `{ error: string }` body. Client treats any non-2xx, malformed shape, empty moves, or network/timeout failure as `null` and falls through to the local engine.
 
 ### Memory Score System (Session 18 overhaul)
 
@@ -649,3 +699,136 @@ The Session 22 `getDailyRiddleIndex(dateStr): number` function (year-seeded Fish
 ### Old `RIDDLES` array (kept for backward compat)
 
 The Session 22 `RIDDLES: Riddle[]` export (355 riddles with the old `RiddleCategory` union shape) is **kept** because users' existing `dailyRiddleStats.seenRiddleIds` may contain ids from the old id space. Removing the array would orphan those entries. The array is no longer read by any daily-riddle code path — `useDailyRiddle` reads exclusively from `YEARLY_RIDDLES` via `getDailyRiddleForDate`. The old `Riddle` type and `RiddleCategory` union are also kept for the same reason.
+
+---
+
+## 14. Trivia (Session 32 overhaul)
+
+### Type system
+
+```typescript
+// src/types/trivia.ts
+
+export type TriviaParentCategory =
+  | 'general'
+  | 'popCulture'
+  | 'scienceTech'
+  | 'historyPolitics'
+  | 'geography'
+  | 'sportsLeisure'
+  | 'gamingGeek'
+  | 'mythFiction';
+
+export type TriviaSubcategory =
+  | 'generalKnowledge'
+  | 'film' | 'music' | 'television' | 'celebrities'
+  | 'scienceNature' | 'computers' | 'gadgets' | 'mathematics'
+  | 'history' | 'politics' | 'art'
+  | 'geography'
+  | 'sports' | 'boardGames' | 'vehicles'
+  | 'videoGames' | 'comicsAnime'
+  | 'mythologyBooks';
+
+export const PARENT_TO_SUBS: Record<TriviaParentCategory, TriviaSubcategory[]> = {
+  general: ['generalKnowledge'],
+  popCulture: ['film', 'music', 'television', 'celebrities'],
+  scienceTech: ['scienceNature', 'computers', 'gadgets', 'mathematics'],
+  historyPolitics: ['history', 'politics', 'art'],
+  geography: ['geography'],
+  sportsLeisure: ['sports', 'boardGames', 'vehicles'],
+  gamingGeek: ['videoGames', 'comicsAnime'],
+  mythFiction: ['mythologyBooks'],
+};
+
+export const SUBCATEGORY_LABELS: Record<TriviaSubcategory, string> = { /* display strings */ };
+
+export interface TriviaQuestion {
+  id: string;                         // 'category_NNN' pattern
+  category: TriviaParentCategory;
+  subcategory: TriviaSubcategory;     // NEW in Session 32
+  type: 'multiple' | 'boolean';
+  difficulty: 'easy' | 'medium' | 'hard';
+  question: string;
+  correctAnswer: string;
+  incorrectAnswers: string[];
+}
+
+// Legacy alias — kept for any lingering imports
+export type TriviaCategory = TriviaParentCategory;
+```
+
+- **8 parent categories, 19 subcategories.** Parents with a single sub (`general`, `geography`, `mythFiction`) bypass the subcategory picker modal — tapping them in the TriviaScreen grid treats them as "All {parent}" selections immediately. Parents with 2+ subs open `SubcategoryPickerModal` for a second-level pick.
+- **Subcategory labels are separate from the taxonomy.** The union values are camelCase identifiers (`scienceNature`, `comicsAnime`); `SUBCATEGORY_LABELS` maps each to its display string ("Science & Nature", "Comics, Anime & Cartoons", etc.).
+- **`TriviaQuestion.subcategory` is required.** Every entry in every `triviaBank_*.ts` file has a non-null subcategory. The test suite (`__tests__/triviaBank.test.ts`) asserts this + that each question's subcategory is valid for its parent via `PARENT_TO_SUBS`.
+- **Legacy alias preserved.** `TriviaCategory = TriviaParentCategory` so any pre-Session-32 imports still compile.
+
+### Question bank layout
+
+```
+src/data/triviaBank.ts                    // barrel + helpers + TRIVIA_CATEGORIES display list
+src/data/triviaBank_general.ts            // default export: TriviaQuestion[]
+src/data/triviaBank_popCulture.ts
+src/data/triviaBank_scienceTech.ts
+src/data/triviaBank_historyPolitics.ts
+src/data/triviaBank_geography.ts
+src/data/triviaBank_sportsLeisure.ts
+src/data/triviaBank_gamingGeek.ts
+src/data/triviaBank_mythFiction.ts
+```
+
+**Total: 1,623 questions.** `triviaBank.ts` imports each file, concatenates into `ALL_QUESTIONS`, and exposes:
+
+```typescript
+export function getAllQuestions(): TriviaQuestion[];
+export function getQuestionsForCategory(cat: TriviaParentCategory): TriviaQuestion[];
+export function getQuestionsForSubcategory(sub: TriviaSubcategory): TriviaQuestion[];
+export function getQuestionCount(cat: TriviaParentCategory): number;
+export function getSubcategoryCount(sub: TriviaSubcategory): number;
+export const TRIVIA_CATEGORIES: { id: TriviaParentCategory; label: string }[];
+```
+
+Legacy `src/data/triviaQuestions.ts` (the Session 22 flat-category file) was **deleted** in Session 32; `TRIVIA_CATEGORIES` moved to the new barrel.
+
+### Seen-question composite keys
+
+`getSeenQuestionIds(key)` / `addSeenQuestionIds(key, ids)` / `resetSeenQuestionsForCategory(key)` in `triviaStorage.ts` all accept **opaque string keys**. `TriviaScreen` composes them at call sites:
+
+| Selection | Key format | Example |
+|-----------|-----------|---------|
+| "All {parent}" (`selectedSubcategory === 'all'`) | `{category}` | `'popCulture'` |
+| Specific sub | `{category}_{subcategory}` | `'popCulture_film'` |
+
+This preserves granular per-view recycling (each "view" has its own seen cycle) at the cost of some cross-view dedup — a question seen via "All Pop Culture" isn't marked as seen when the user next plays Film-only. Flagged as a known P2 in Session 32 audit; intentional for now.
+
+### Online trivia (Session 32 expansion of Session 31)
+
+`src/services/triviaAI.ts` `CATEGORY_MAP` now covers all 8 parent categories:
+
+```typescript
+const CATEGORY_MAP: Record<TriviaParentCategory, number | number[]> = {
+  general: 9,
+  popCulture: [11, 12, 14, 26],       // Film, Music, Television, Celebrities
+  scienceTech: [17, 18, 30, 19],      // Science & Nature, Computers, Gadgets, Mathematics
+  historyPolitics: [23, 24, 25],      // History, Politics, Art
+  geography: 22,
+  sportsLeisure: [21, 16, 28],        // Sports, Board Games, Vehicles
+  gamingGeek: [15, 29, 31],           // Video Games, Comics, Anime & Manga
+  mythFiction: [20],                  // Mythology
+};
+```
+
+Multi-ID categories pick a random OpenTDB category per fetch. Food + Kids (pre-Session-32 categories without OpenTDB coverage) are gone — those questions were remapped into `general` on Session 32. No dead categories remain.
+
+**Online question synthesis.** `fetchOnlineQuestions(category, count, difficulty)` returns questions with:
+- `id: 'online_{category}_{timestamp}_{index}'` — synthetic id, won't collide with offline `category_NNN` pattern.
+- `category: <the requested parent>`.
+- `subcategory: PARENT_TO_SUBS[category][0]` — default first sub, since OpenTDB doesn't expose subcategory-level queries.
+- Decoded HTML entities in question + answers.
+
+Online rounds don't write to `seenQuestionIds`, so they don't affect the offline seen cycle.
+
+### Stats keyed by parent only
+
+`TriviaStats.categoryStats` is keyed by `TriviaParentCategory` — no per-subcategory stats tracking. Subcategory granularity lives only in the seen-question cycling; aggregate stats ("best round", "total correct per category") are parent-level.
+
+Migration is silent: old stats entries for deleted categories (food, kids) drop on first load — `validateStats` rebuilds `categoryStats` keyed by the current `ALL_CATEGORIES` list in `triviaStorage.ts`.

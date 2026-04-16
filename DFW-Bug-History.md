@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 31 (April 15, 2026)
+**Last updated:** Session 32 (April 16, 2026)
 
 ---
 
@@ -880,3 +880,29 @@ A secondary audit ran after the Session 31 P7 ship on the Phase 2 work: chess AI
 - Found: Phase 2 audit (preemptive — no user-reported crash yet)
 - Cause: The `chess_game` SQLite table has `difficulty INTEGER NOT NULL CHECK (difficulty BETWEEN 0 AND 4)`, but SQLite CHECK constraints only apply to new writes — they don't retroactively validate existing rows. A legacy save from a build that shipped a 6th Cloud-difficulty level (index 5) could still exist in the wild, and reading it via `loadChessGame` would return a `SavedChessGame` with `difficulty = 5`. That value would then index into `DIFFICULTY_LEVELS[5]` (undefined) and either crash the game or produce blank labels
 - Fix: Added a `Math.min(Math.max(row.difficulty ?? 1, 0), 4)` clamp in **two places**: (a) `chessStorage.rowToGame` as the primary read-side clamp — every caller now gets a safe value; (b) `useChess`'s saved-game-restore path as a belt-and-suspenders second line of defense against any future refactor that bypasses `rowToGame`. Stale index 5 now resolves to Master (index 4) rather than undefined. `teachingEligible` is derived from the clamped value as well
+
+### Session 32 — Cloud Checkers + Trivia Overhaul + Globe Indicators Audit Findings
+
+Triple audit (Codex + Claude + Gemini) on the Session 32 scope (Cloud Checkers AI, trivia overhaul, globe indicators, IAP retry) found 1 P1 + 3 P2. All fixed.
+
+**Bug: Stale `selectedSubcategory` on parent-category switch corrupts seen-question keys + stats (P1)**
+- Found: Session 32 audit (Claude)
+- Cause: `TriviaScreen.handleCategoryTap` only reset `selectedSubcategory` to `'all'` when the tapped parent had exactly one subcategory. For multi-sub parents it opened `SubcategoryPickerModal` without pre-resetting. If the user had previously picked a specific sub in a different parent (e.g. "Film" under Pop Culture) and then tapped a new multi-sub parent (e.g. Science & Tech) and **dismissed the picker without making a selection** (backdrop tap or close-X), the state ended up mismatched: `selectedCategory = 'scienceTech'` + `selectedSubcategory = 'film'`. Starting the round then pulled questions via `getQuestionsForSubcategory('film')` (pop-culture questions), recorded stats under `category: 'scienceTech'`, and wrote seen-question IDs under the orphan composite key `'scienceTech_film'`. Silent data corruption — users saw film questions labeled as science & tech in results, and category stats drifted over time
+- Fix: `handleCategoryTap` now calls `setSelectedSubcategory('all')` unconditionally, **before** the subcategory-count branch. Every parent tap resets the sub to 'all'; single-sub parents pass through the unconditional reset as a no-op; multi-sub parents open the picker with 'all' already set as the default — so dismissing the picker yields the "All {new parent}" behavior instead of leaving stale state from a different parent. Verified `tsc --noEmit` clean, jest suite green
+
+**Bug: IAP retry off-by-one (P2)**
+- Found: Session 32 audit (Claude)
+- Cause: The Session 32 `fetchProducts` retry loop in `useEntitlement.ts` was introduced with `MAX_RETRIES = 3` under the expectation of 3 retries at 1s / 2s / 4s delays. The actual behavior: initial attempt fails → attempt=1 → delay 1s → attempt fails → attempt=2 → delay 2s → attempt fails → attempt=3 → `attempt < MAX_RETRIES` is false, loop exits. Total: 3 attempts (initial + 2 retries), delays 1s + 2s. The promised 4s retry never fired
+- Fix: Bumped `MAX_RETRIES = 4` so the loop actually runs the full initial attempt + 3 retries with exponential backoff at 1s / 2s / 4s. Behavior now matches the intended "give Play Billing up to ~7 seconds of backoff before giving up" contract
+
+**Bug: `metro.config.js` blockList overwrote Expo defaults (P2)**
+- Found: Session 32 audit (Claude)
+- Cause: The Session 32 `metro.config.js` addition assigned `config.resolver.blockList = [/functions\/.*/]` directly, replacing whatever Expo's `getDefaultConfig(__dirname)` had put there. Expo's default blockList can include internal exclusions (e.g. test directories, `.git`, platform-specific overrides); overwriting it could silently reintroduce unwanted bundling
+- Fix: Changed to spread the existing value via `[...(Array.isArray(config.resolver.blockList) ? config.resolver.blockList : []), /functions\/.*/]`. `Array.isArray` guard handles the `undefined` case cleanly (empty array spread + our regex) without assuming the default is always an array
+
+**Bug: Globe accessibility labels on inner `<View>` ignored by parent `TouchableOpacity` (P2)**
+- Found: Session 32 audit (Claude)
+- Cause: Each game card on `GamesScreen` rendered the globe badge as a `<View>` with its own `accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}` inside the parent `<TouchableOpacity accessibilityRole="button" accessibilityLabel="Play Chess">`. React Native groups accessibility of touchable children by default — the parent's `accessibilityLabel` absorbs the card contents into a single focus target, but the inner `<View>`'s own label is **not** appended to the parent label. Screen reader users never heard the globe state
+- Fix: Merged the globe state into each card's parent `accessibilityLabel` via template literal (e.g. `` `Play Chess, ${isOnline ? 'cloud features active' : 'offline mode'}` ``). Six cards updated (Daily Riddle, Chess, Checkers, Trivia = live toggle; Sudoku, Memory Match = static "offline game"; Trophies has no globe). The now-redundant `accessibilityLabel` prop was removed from every inner globe `<View>` using two `replace_all` Edit passes (one for the 4 live-toggle cards with identical `<View>` JSX, one for the 2 static offline cards)
+
+**Note on legacy stats migration (downgraded from flagged):** Old trivia stats from pre-Session-32 category names (food, kids) are silently dropped on first load — `validateStats` rebuilds `categoryStats` keyed by the current `ALL_CATEGORIES` list. This was flagged during audit as a potential data-loss concern but downgraded: the Session 32 scope is pre-2.0 testers only (no production build shipped this session), the old stats were never user-facing in a way that exposed the dropped category names, and the per-category aggregate values (round counts, accuracy) weren't meaningful across the taxonomy change. Documented here for the record — if a future migration ever needs to round-trip pre-Session-32 stats, this note is the starting point
