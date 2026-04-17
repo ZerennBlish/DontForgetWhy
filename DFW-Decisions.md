@@ -129,6 +129,9 @@
 - Both CreateAlarmScreen and CreateReminderScreen now have identical three-tier one-time scheduling: (1) selectedDate, (2) selectedDays single day calculation, (3) today/tomorrow fallback
 - Same UI = same behavior = same logic across both screens
 
+### Monetization Philosophy
+All features ship free until enough Pro-worthy features accumulate to justify a paywall. Early adopters grandfathered with named tiers (Founding Tester / Founding User / Early Supporter). New users pay. Pro billing infrastructure shipped in v1.23.0, activation at v2.0.0. No ads ever. ~$1.99 one-time unlock.
+
 ### Process
 - PrimeTestLab: provides install numbers, not real QA. All real bugs found by Zerenn and his buddy.
 - Firebase over Azure for backend ($300 credits, simpler DX, Google ecosystem alignment).

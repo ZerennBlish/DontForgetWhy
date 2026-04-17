@@ -137,6 +137,27 @@ Edit mode: 5 persistent action buttons — **Attached** (paperclip with count ba
 
 **Purchase flow:** all paths flow through `entitlement.purchase()` → `useIAP.requestPurchase` → `onPurchaseSuccess` → `finishTransaction({ isConsumable: false })` → `setProStatus` → entitlement flip. **Restore flow:** `entitlement.restore()` → `useIAP.restorePurchases` → `availablePurchases` scan → `finishTransaction` → `setProStatus`. Local cache survives reinstalls via .dfw backup.
 
+#### What's Pro-Gated
+- Games beyond 3 free trial rounds (Chess, Checkers, Trivia, Sudoku, Memory Match)
+- Themes: Vivid, Sunset, Ruby
+- Google Calendar write-back (manual sync)
+- Bonus Riddles (online fresh riddles)
+- Cloud-powered checkers AI — all difficulty levels use cloud when online, local fallback when offline
+- Multiplayer chess (future)
+
+#### What's Free Forever
+- All core utility (alarms, reminders, timer, notes, voice memos)
+- Google Calendar read
+- Local backup/restore
+- Dark/Light/High Contrast themes
+- All voice clips
+- Widgets
+- Daily Riddle (offline bank)
+- Guess Why
+- Trophies
+- 3-round game trials
+- Cloud-powered chess (Lichess) and checkers (Firebase) — free users get cloud AI during trial rounds
+
 ### Google Calendar Write-Back (Pro-gated)
 Free tier gets read sync; Pro tier adds write that pushes DFW alarms + reminders to a dedicated calendar.
 - **Manual "Sync Now"** — no auto-sync, no background scheduling.

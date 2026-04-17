@@ -112,6 +112,23 @@ VoiceMemoDetailScreen and NoteEditorModal use `isViewMode` state for existing it
 ### Migration
 All old theme names migrate to current 6: midnight/ember/neon/void→dark, frost/sand→light, custom→dark. Legacy names from pre-6-theme era also mapped. Applied in both ThemeContext.tsx and widget theme loader.
 
+### UI Pattern Rules
+
+Design-system rules that span all screens. When a new screen or component is added, it MUST follow these.
+
+- **Cards:** dark bar style with section-colored full border + thicker left accent (`borderLeftWidth: 3`). `elevation: 2` + shadow for depth. `backgroundColor` mode-aware: dark uses `colors.card + 'E6'`, light uses `sectionColor + '15'` (tinted, not white). When personal photo is set, light mode tint increases to 90%.
+- **Capsule pill buttons (Pin/Delete):** mode-aware backgrounds — dark: `rgba(30,30,40,0.7)`, light: `rgba(0,0,0,0.15)`. `borderRadius: 20`. This is the ONLY acceptable button style for card actions.
+- **Pin indicator:** small filled dot (6px, accent-colored, `marginLeft: 6`). Pin button: text capsule saying "Pin"/"Pinned". NO pushpin emoji or icon.
+- **Icons:** View-based only (from `src/components/Icons.tsx`). NO emoji for app chrome. User-chosen emoji (alarm icon picker, note icon picker) stays. Icons are decorative by default (`importantForAccessibility="no-hide-descendants"`), labelable when used standalone.
+- **Play/pause icons:** View-based shapes (CSS border triangles for play, dual bars for pause), NOT emoji.
+- **Section colors:** ALWAYS use theme values (`colors.sectionAlarm`, etc.), NEVER hardcoded hex. The only place hardcoded hex exists is in `colors.ts` theme definitions.
+- **Background photo overlay:** ALWAYS dark (`rgba(0,0,0,${bgOpacity})`), regardless of theme mode. The photo is untouched. Light mode is expressed through UI elements, not by bleaching the photo.
+- **Watermark:** transparent grayscale image. Opacity: `colors.mode === 'dark' ? 0.15 : 0.06`.
+- **Back/Home buttons:** circle with mode-aware background. Dark: `rgba(30,30,40,0.8)`. Light: `rgba(0,0,0,0.15)`.
+- **Accessibility:** every interactive `TouchableOpacity` gets `accessibilityRole="button"` + meaningful `accessibilityLabel`. Filter/sort pills get `accessibilityState={{ selected }}`.
+- **FlatList optimization:** all main list screens use `removeClippedSubviews={true}`, `windowSize={5}`, `maxToRenderPerBatch={8}`, `initialNumToRender={8}`.
+- **Assets:** all background images are WebP format (1440px max, quality 80). App icons (`icon.png`, `adaptive-icon.png`) stay PNG.
+
 ---
 
 ## 4. Widget System
@@ -681,3 +698,14 @@ Deeper than chess due to lower branching factor (~7-10 moves vs ~30-35). The Clo
 - No quiescence search, no opening book, no null-move pruning, no blunder analysis.
 - No take-back, no roasts.
 - Board flipped 180° for black player (same as chess).
+
+### Firebase Cloud Function Deployment
+
+The checkers engine ships in two places: bundled in the React Native app and deployed as a Firebase Cloud Function. They serve different roles and have different constraints.
+
+- **Standalone sub-project:** `functions/` at the repo root is a separate Node.js project with its own `package.json`, `tsconfig.json`, and `src/` tree. Not part of the React Native bundle — Metro excludes it via the project-local blockList regex in `metro.config.js`.
+- **Deployed Cloud Function:** `checkersAI` at `https://checkersai-kte3lby5vq-uc.a.run.app`. Region `us-central1`. Resource limits: 512MiB memory, 30s timeout, `maxInstances: 10`, `cors: true`. Runs the full minimax + alpha-beta + TT + improved-eval engine with server-tuned search params (`maxDepth=20`, `timeLimitMs=6000`). Returns the top-5 ranked moves.
+- **Client service:** `src/services/cloudCheckers.ts` mirrors the `cloudStockfish.ts` pattern — connectivity check → POST → `AbortController` timeout → validate shape → pick from `cloudPickRange` band → null on any failure so the caller can fall through to the local engine.
+- **Engine sync rule:** `functions/src/checkersEngine.ts` is a **manually-maintained copy** of `src/services/checkersAI.ts` (minus client-only exports like `getAIMove` and `DIFFICULTY_LEVELS`). When the local engine's move generation, evaluation, or search code changes, the cloud copy MUST be updated in the same commit. There is no automated sync.
+- **Auth status:** public unauth endpoint. Anyone with a valid `{ board, turn }` payload gets a ranked-move response. Acceptable until Pro launches — at which point Firebase App Check becomes mandatory (see DFW-Decisions.md Session 32 decision "Cloud endpoint auth deferred to pre-Pro launch").
+- **Deploy workflow:** see DFW-Project-Setup.md for the `firebase deploy --only functions` workflow and `predeploy` build step.
