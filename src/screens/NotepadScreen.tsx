@@ -309,18 +309,20 @@ export default function NotepadScreen({ navigation, route }: Props) {
         />
       </View>
 
-      <NoteEditorModal
-        visible={notepad.editorVisible}
-        note={notepad.editingNote}
-        customBgColor={notepad.customBgColor}
-        customFontColor={notepad.customFontColor}
-        onSave={notepad.handleEditorSave}
-        onDelete={notepad.handleEditorDelete}
-        onClose={notepad.closeEditor}
-        onCustomBgColorChange={notepad.onCustomBgColorChange}
-        onCustomFontColorChange={notepad.onCustomFontColorChange}
-        dirtyRef={notepad.editorDirtyRef}
-      />
+      {notepad.editorVisible && (
+        <NoteEditorModal
+          visible={notepad.editorVisible}
+          note={notepad.editingNote}
+          customBgColor={notepad.customBgColor}
+          customFontColor={notepad.customFontColor}
+          onSave={notepad.handleEditorSave}
+          onDelete={notepad.handleEditorDelete}
+          onClose={notepad.closeEditor}
+          onCustomBgColorChange={notepad.onCustomBgColorChange}
+          onCustomFontColorChange={notepad.onCustomFontColorChange}
+          dirtyRef={notepad.editorDirtyRef}
+        />
+      )}
 
       {tutorial.showTutorial && (
         <TutorialOverlay
