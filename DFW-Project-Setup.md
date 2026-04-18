@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 32 (April 16, 2026) — **v1.22.0 (versionCode 40) live on Play Store**. Session 31 Pro tier (v1.23.0 / vCode 41) and Session 32 Cloud Checkers + trivia overhaul + globe indicators sit unshipped on `dev`. Next ship bundles both under v2.0.0.
+**Last updated:** Session 36 (April 18, 2026) — **v1.23.0 (versionCode 42) live on Play Store**. v1.24.0 (versionCode 43) production build pending upload.
 
 ---
 
@@ -334,9 +334,9 @@ DontForgetWhy/
 | Phase 6 (Chess + Checkers) | COMPLETE |
 | Phase 8 (Firebase Auth + Firestore foundation) | COMPLETE (unshipped — Session 30) |
 | Audit status | Session 30 triple audit (Codex + Claude + Gemini) complete — 2 P1 (Firestore test-mode rules, calendar cache leak on sign-out) + 6 P2 (UTC timezone, 401 vs 403 recovery, duplicate fetch regression, auth hydration race, duplicate React keys, dead `calendarColor` field) all fixed. Rules published before ship. |
-| Jest tests | **23 suites / 491 tests passing**: time, timeUtils, noteColors, soundModeUtils, safeParse, asyncMutex, backupRestore, widgetPins, settings, voiceClipStorage, proStatus, chessAI (69), checkersAI (52 + Session 32 eval/getTopMoves additions), tutorialTips, firebaseAuth, firestore, googleCalendar, **gameTrialStorage (Session 31), foundingStatus (Session 31), calendarSync (Session 31), cloudStockfish (Session 31, 17 tests), cloudCheckers (Session 32, 8 tests), triviaBank (Session 32, 14 tests)** — ts-jest, node env |
+| Jest tests | **24 suites / 511 tests passing**: time, timeUtils, noteColors, soundModeUtils, safeParse, asyncMutex, backupRestore, widgetPins, settings, voiceClipStorage, proStatus, chessAI (69), checkersAI (52 + Session 32 eval/getTopMoves additions), tutorialTips, firebaseAuth, firestore, googleCalendar, gameTrialStorage (Session 31), foundingStatus (Session 31), calendarSync (Session 31), cloudStockfish (Session 31, 17 tests), cloudCheckers (Session 32, 8 tests), triviaBank (Session 32, 14 tests), **gameSounds (Session 35, 9 tests)** — ts-jest, node env |
 | Voice clips | 84 total (68 original fire/snooze/timer/guess/dismiss/intro + 15 tutorial + Opening.mp3). ElevenLabs v3, same voice character throughout. `assets/voice/*.mp3` + `assets/voice/tutorial/*.mp3` |
-| EAS build credits | ~28 available (2 dev builds attempted Session 30 — 1 failed, 1 succeeded) |
+| EAS build credits | ~19 available |
 | ElevenLabs | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
 | Firebase | Project `dont-forget-why` on Blaze plan. **$300 credit activated April 14, 2026 — expires July 14, 2026.** Firestore rules published (`users/{uid}` self-only). Google Calendar API enabled in Google Cloud Console. `google-services.json` at project root, referenced via `android.googleServicesFile` in `app.json` for EAS prebuild. |
 
@@ -405,6 +405,11 @@ The `blockList` entry for `/functions\/.*/` stops the Metro bundler from trying 
 - `explosion_speech_bubble.webp` — Comics & Anime subcategory
 
 (Some existing trivia assets retained: `trivia-general.webp`, `trivia-science.webp`, `trivia-history.webp`, `trivia-geography.webp`, `trivia-movies.webp`, `trivia-music.webp`, `trivia-sports.webp` still referenced for older subcategory slots.)
+
+### Packages Added (Session 35/36)
+- `patch-package` — dev dependency, auto-applies patches via `postinstall` hook. Used for the `react-native-zip-archive` JDK 21 fix (casts `double` → `int` in `RNZipArchiveModule.java` switch selector). Patch file lives at `patches/react-native-zip-archive+7.1.0.patch`. `react-native-zip-archive` pinned exactly to `"7.1.0"` (no tilde) so a future 7.1.1 can't silently break the patch by filename mismatch.
+- `react-native-worklets` bumped `0.7.2 → ~0.7.4` — required by `expo-modules-core@55.0.22` peer tightening. Caught via EAS build failure (`npx expo install --check` does not flag worklets since it is not Expo-owned).
+- 17 Expo SDK 55 packages bumped to latest patch versions via `npx expo install --check` (expo, expo-asset, expo-clipboard, expo-constants, expo-dev-client, expo-device, expo-document-picker, expo-file-system, expo-haptics, expo-image-picker, expo-keep-awake, expo-notifications, expo-print, expo-sharing, expo-splash-screen, expo-sqlite, expo-status-bar). `expo-audio` intentionally pinned at `55.0.13` from Session 33; `expo-font` already at latest-resolvable.
 
 ### Packages Added (Session 30)
 - `@react-native-firebase/app` — Firebase core module. Required by every other `@react-native-firebase/*` package. Native, requires a dev/production build. Registered in `app.json` `expo.plugins`.

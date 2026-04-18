@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 34 (April 17, 2026)
+### Source of Truth · Updated: Session 36 (April 18, 2026)
 
 ---
 
@@ -7,13 +7,13 @@
 
 | | |
 |---|---|
-| **Current Version** | **v1.23.0 (versionCode 42) LIVE on Play Store at 100% rollout (shipped Session 33).** Session 34 voice memo UX work on `dev`, unshipped — rides with whatever v1.24.0 becomes. |
-| **Branch** | `dev` (two Session 34 commits ahead of origin pre-push, synced after) |
-| **Production Status** | v1.23.0 live. Dormant paywall active (founding grant unconditional on first launch until v2.0.0). Cloud Checkers AI live. Trivia overhaul (1,623 / 8 / 19) live. |
-| **Current Focus** | Session 34 shipped: card bg doc drift fix, ROADMAP Pro/Free collapsed to pointer, voice memo UX overhaul (open-in-edit for empty memos, 3-button discard guard with DFW voice, empty-memo cascade on last-clip delete, tone pass on all three VoiceMemoDetailScreen Alerts). No production build this session. |
+| **Current Version** | **v1.24.0 (versionCode 43)** — production build in progress, unshipped. |
+| **Branch** | `dev` |
+| **Production Status** | v1.23.0 live. v1.24.0 pending upload. |
+| **Current Focus** | Session 35 shipped game audio pool refactor (fixes MediaCodec leak on long play sessions), win/loss sound filename fix, useNoteEditor dead code removal, tsconfig exclude hardening. Dep-alignment shipped: patch-package for react-native-zip-archive JDK 21 fix, react-native-worklets 0.7.2→0.7.4, 17 Expo SDK 55 patch bumps. |
 | **Blocked By** | Nothing |
 | **Next Action** | v1.24.0 primary: game audio reliability investigation (friend reports games start with weird sound, then right sound, then silent within minutes — `expo-audio` 55.0.13 did not fix). Secondary: modal-mounting pattern refactor per Session 33 DFW-Architecture.md lazy-mount rule. Cleanup: `useNoteEditor` dead code (`if (!visible)` branch unreachable after NotepadScreen lazy-mount change). |
-| **EAS Credits** | ~21 remaining (2 production builds this session — RC1 failed on Metro blockList regex, RC2 shipped v1.23.0). Reset on the 12th each month. |
+| **EAS Credits** | ~19 remaining (1 dev build + 1 production build this session). Reset May 12. |
 | **Firebase Credits** | **$300 activated — expires July 14, 2026.** Auth + Firestore + Google Calendar API all active. OAuth consent screen unverified (shows warning on write scope). |
 | **ElevenLabs** | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
 
@@ -468,7 +468,7 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 - **Online Checkers difficulty tuning** — cloudPickRange bands for Beginner/Casual/Intermediate/Advanced/Expert were calibrated from chess values; retest after a few weeks of Cloud Checkers play and adjust.
 - **Multiplayer trivia** — async + realtime. Post-2.0.
 - **Multiplayer chess + checkers** — async + realtime. Post-2.0.
-- **Dice game (Yahtzee-style)** — different name, same mechanic. Post-2.0.
+- **That One Dice Game** — different name, same mechanic. Post-2.0.
 
 ### Deferred from Session 24
 - **Board memoization** — Sudoku 81-cell rebuild on every render, Chess/Checkers 64-cell rebuild. Audited, prompts written, not applied (scope + risk of breaking stable game UX).

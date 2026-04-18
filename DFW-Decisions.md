@@ -1,8 +1,14 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 34 (April 17, 2026)
+**Last updated:** Session 36 (April 18, 2026)
 
 **For Sessions 1-28 decision history, see DFW-Decisions-Archive.md.**
+
+### Session 35/36 Additions
+
+- **patch-package for react-native-zip-archive** — `RNZipArchiveModule.java` uses `double` as a switch selector. JDK 21 (shipped with Expo 55.0.15's Gradle toolchain) rejects this as a hard compile error. Library is flagged "Untested on New Architecture" by expo-doctor. v7.1.0 (latest) still has the bug. Decision: use `patch-package` with exact pin to `"7.1.0"`. One-line fix: `switch ((int) compressionLevel)`. The `postinstall` hook auto-applies on every `npm install` and every EAS build. Rejected alternatives: (a) replace with `react-native-file-access` — only has unzip, no zip creation; (b) replace with JSZip (pure JS) — performance penalty on large backups; (c) wait for upstream fix — library is maintained but no fix shipped. Exact-pin rationale: `~7.1.0` allows future 7.1.x drift; patch-package matches by filename (`+7.1.0.patch`). If 7.1.1 ever ships and the lockfile regenerates, the patch silently stops applying. Exact pin prevents this silent-failure mode.
+- **Keep `@notifee/react-native` despite "Unmaintained" flag** — expo-doctor flags notifee as unmaintained. No replacement exists that covers DFW's usage: dynamic per-alarm sound channels, USAGE_ALARM audio attributes via native config plugin, timestamp triggers with repeat frequency, full-screen alarm firing. Decision: keep notifee. The `withAlarmChannel.js` config plugin already bypasses notifee's JS channel API for the critical alarm audio path. When notifee eventually breaks, migration path is expanding the native `AlarmChannelModule` to handle scheduling — replacing notifee's JS layer with custom native code. Future v2.x+ work. Rejected: `expo-notifications` alone — cannot replicate per-channel custom sound routing.
+- **react-native-worklets 0.7.2 → 0.7.4** — `expo-modules-core@55.0.22` tightened peer requirement from `0.7.2` to `^0.7.4 || ^0.8.0`. `npx expo install --check` did not flag this (worklets is not Expo-owned). Discovered via EAS build failure. Decision: bump to `~0.7.4`. Tilde range avoids accidental 0.8.x adoption (potential breaking changes per semver).
 
 ### Session 32 Additions
 

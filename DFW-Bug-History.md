@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 34 (April 17, 2026)
+**Last updated:** Session 36 (April 18, 2026)
 
 **For Sessions 1-28 bug history, see DFW-Bug-History-Archive.md.**
 
@@ -173,3 +173,17 @@ Triple audit (Codex + Claude + Gemini) on the Session 34 voice memo changes in `
 **Skipped findings (documented for traceability):**
 - *Claude P3 — `player` missing from `beforeRemove` useEffect dep array.* Preexisting pattern, predates Session 34, under existing `eslint-disable-next-line`. Adding `player` to the deps would cause the effect to re-register on every clip source change, which is worse. Skipped as out-of-Session-34-scope
 - *Codex P3 — extract an `isMemoContentEmpty` helper to unify `isDisposable` and `memoOtherwiseEmpty`.* The two checks have deliberately different semantics (one includes the user's live-input state for "has the user touched anything yet", the other doesn't) so a single helper would paper over real differences. Skipped as premature abstraction
+
+### Session 35 — Game Audio Pool Refactor + Win/Loss Sound Fix
+
+**Bug: Game audio MediaCodec leak over long sessions (UX, Zerenn-found)**
+- Found: Friend report on Galaxy S23 Ultra, reproducible across v1.22.0 and v1.23.0
+- Symptom: Game sounds degrade over long play sessions — weird sound → right sound → silent. `expo-audio` 55.0.13 bump (Session 33) did not fix
+- Cause: `playGameSound` created a fresh `AudioPlayer` per call, cleaned up only on `didJustFinish`. When that event didn't fire (errors, backgrounding, interruption, rapid-fire overlap), the player leaked an ExoPlayer/MediaCodec instance. Android's codec pool exhausted over time
+- Fix: Lazy-initialized player pool in `gameSounds.ts` — one persistent player per sound name, reused via `seekTo(0) + play()`. Players live for app lifetime. Audit P2 fix: `seekTo` now awaited before `play()` to prevent race on rapid retriggers
+- Files: `src/utils/gameSounds.ts`, `__tests__/gameSounds.test.ts` (9 tests)
+
+**Bug: `gameWin` sound silent in chess/checkers due to ampersand in filename**
+- Symptom: `gameWin` sound did not play in chess/checkers (but worked in Memory Match via `memoryWin`)
+- Cause: `Chess&Checkers-Win-Round.wav` had an ampersand in the filename. Metro's `require()` resolver failed silently on the require call
+- Fix: Renamed to `Chess-Checkers-Win-Round.wav`. Also fixed typo `Loseing` → `Losing` in the loss sound filename. Updated `require()` paths in `gameSounds.ts`
