@@ -305,7 +305,8 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         title === '' &&
         note === '' &&
         initialTitleRef.current === '' &&
-        initialNoteRef.current === '';
+        initialNoteRef.current === '' &&
+        (!memo.images || memo.images.length === 0);
       if (isDisposable) {
         e.preventDefault();
         try { player.pause(); } catch { /* */ }
@@ -318,14 +319,18 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               text: 'Toss',
               style: 'destructive',
               onPress: async () => {
+                // Latch exitingRef BEFORE the await so a second back-press
+                // during the delete window can't re-fire the guard.
+                exitingRef.current = true;
                 try {
                   await permanentlyDeleteVoiceMemo(memoId);
                   refreshWidgets();
+                  navigation.dispatch(e.data.action);
                 } catch (err) {
                   console.error('[VoiceMemoDetail] discard failed:', err);
+                  exitingRef.current = false;
+                  ToastAndroid.show('Delete failed — try again', ToastAndroid.SHORT);
                 }
-                exitingRef.current = true;
-                navigation.dispatch(e.data.action);
               },
             },
             {
@@ -503,9 +508,13 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     // deleting it leaves a content-free shell. Cascade to full memo
     // deletion so we don't persist empty memos.
     const isLastClip = clips.length === 1 && clips[0].id === clipId;
+    // Check saved state via the initial refs, not live title/note — a user
+    // who temporarily cleared the title TextInput without saving still has
+    // persisted content worth preserving. Unsaved edits do not license a
+    // destructive cascade.
     const memoOtherwiseEmpty =
-      title === '' &&
-      note === '' &&
+      initialTitleRef.current === '' &&
+      initialNoteRef.current === '' &&
       (!memo?.images || memo.images.length === 0);
     const shouldDeleteMemo = isLastClip && memoOtherwiseEmpty;
 
@@ -526,14 +535,18 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               setActiveClipId(null);
             }
             if (shouldDeleteMemo) {
+              // Latch exitingRef BEFORE the await so a second back/delete
+              // press during the cascade can't re-fire the guard.
+              exitingRef.current = true;
               try {
                 await permanentlyDeleteVoiceMemo(memoId);
                 refreshWidgets();
+                navigation.goBack();
               } catch (err) {
                 console.error('[VoiceMemoDetail] empty memo cleanup failed:', err);
+                exitingRef.current = false;
+                ToastAndroid.show('Delete failed — try again', ToastAndroid.SHORT);
               }
-              exitingRef.current = true;
-              navigation.goBack();
               return;
             }
             try {
