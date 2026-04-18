@@ -65,19 +65,36 @@ const VOLUMES: Record<SoundName, number> = {
   triviaWrong: 0.5,
 };
 
+// Player pool — one persistent player per sound name, created lazily on first use.
+// Players live for app lifetime. No didJustFinish cleanup. Replay via seekTo(0) + play().
+// Avoids MediaCodec/ExoPlayer leaks that accumulated when didJustFinish didn't fire
+// (errors, backgrounding, interruption) in the per-call creation pattern.
+const _players: Partial<Record<SoundName, PlayerWithEvents>> = {};
+
+function getOrCreatePlayer(name: SoundName): PlayerWithEvents | null {
+  const existing = _players[name];
+  if (existing) return existing;
+
+  try {
+    const player = createAudioPlayer(SOUNDS[name]) as PlayerWithEvents;
+    player.volume = VOLUMES[name];
+    _players[name] = player;
+    return player;
+  } catch {
+    return null;
+  }
+}
+
 export function playGameSound(name: SoundName): void {
   if (!_gameSoundsEnabled) return;
+
+  const player = getOrCreatePlayer(name);
+  if (!player) return;
+
   try {
-    const player = createAudioPlayer(SOUNDS[name]);
-    player.volume = VOLUMES[name];
-
-    const sub = (player as PlayerWithEvents).addListener('playbackStatusUpdate', (status) => {
-      if (status.didJustFinish) {
-        sub.remove();
-        player.remove();
-      }
-    });
-
+    // seekTo(0) before play() so rapid-fire calls replay from the start
+    // instead of being ignored when the player is already playing.
+    player.seekTo(0);
     player.play();
   } catch {}
 }
