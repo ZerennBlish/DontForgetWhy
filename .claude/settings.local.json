@@ -91,7 +91,8 @@
       "Bash(npm run *)",
       "Bash(git -C /mnt/c/DontForgetWhy show HEAD:DFW-Features.md)",
       "Bash(git diff *)",
-      "Bash(dos2unix src/utils/gameSounds.ts __tests__/gameSounds.test.ts)"
+      "Bash(dos2unix src/utils/gameSounds.ts __tests__/gameSounds.test.ts)",
+      "Bash(npx patch-package *)"
     ]
   }
 }
