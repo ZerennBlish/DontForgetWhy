@@ -25,6 +25,7 @@ import {
   getVoiceMemoById,
   updateVoiceMemo,
   deleteVoiceMemo,
+  permanentlyDeleteVoiceMemo,
 } from '../services/voiceMemoStorage';
 import {
   getClipsForMemo,
@@ -148,6 +149,13 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         initialNoteRef.current = found.note;
         const loadedClips = getClipsForMemo(memoId);
         setClips(loadedClips);
+        // Empty memos (fresh from record flow, or legacy orphans) open in
+        // edit mode so the title/note fields are immediately visible. Pairs
+        // with the discard-on-back guard: the user sees the title input,
+        // chooses whether to fill it, and gets a coherent prompt on exit.
+        if (found.title === '' && found.note === '') {
+          setIsViewMode(false);
+        }
       }
       setLoading(false);
     })();
@@ -283,6 +291,48 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                   exitingRef.current = true;
                   navigation.dispatch(e.data.action);
                 }
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      // Disposable-memo guard: memo was created with empty title+note
+      // (e.g. fresh out of the record flow) and the user has not edited
+      // either field. Offer to discard the orphaned recording on exit.
+      const isDisposable = !!memo &&
+        title === '' &&
+        note === '' &&
+        initialTitleRef.current === '' &&
+        initialNoteRef.current === '';
+      if (isDisposable) {
+        e.preventDefault();
+        try { player.pause(); } catch { /* */ }
+        Alert.alert(
+          'Discard recording?',
+          'No title or note yet. Toss the recording, or keep it as-is?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Discard',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await permanentlyDeleteVoiceMemo(memoId);
+                  refreshWidgets();
+                } catch (err) {
+                  console.error('[VoiceMemoDetail] discard failed:', err);
+                }
+                exitingRef.current = true;
+                navigation.dispatch(e.data.action);
+              },
+            },
+            {
+              text: 'Keep',
+              onPress: () => {
+                exitingRef.current = true;
+                navigation.dispatch(e.data.action);
               },
             },
           ],
@@ -449,9 +499,21 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   };
 
   const handleDeleteClip = (clipId: string) => {
+    // If this is the last clip of a memo with no title, note, or photos,
+    // deleting it leaves a content-free shell. Cascade to full memo
+    // deletion so we don't persist empty memos.
+    const isLastClip = clips.length === 1 && clips[0].id === clipId;
+    const memoOtherwiseEmpty =
+      title === '' &&
+      note === '' &&
+      (!memo?.images || memo.images.length === 0);
+    const shouldDeleteMemo = isLastClip && memoOtherwiseEmpty;
+
     Alert.alert(
-      'Delete this clip?',
-      'This recording will be permanently removed.',
+      shouldDeleteMemo ? 'Delete this memo?' : 'Delete this clip?',
+      shouldDeleteMemo
+        ? 'This is the only clip and there\'s no title, note, or photos. Deleting it removes the memo entirely.'
+        : 'This recording will be permanently removed.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -462,6 +524,17 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             if (activeClipId === clipId) {
               try { player.pause(); } catch { /* */ }
               setActiveClipId(null);
+            }
+            if (shouldDeleteMemo) {
+              try {
+                await permanentlyDeleteVoiceMemo(memoId);
+                refreshWidgets();
+              } catch (err) {
+                console.error('[VoiceMemoDetail] empty memo cleanup failed:', err);
+              }
+              exitingRef.current = true;
+              navigation.goBack();
+              return;
             }
             try {
               await deleteClip(clipId);
