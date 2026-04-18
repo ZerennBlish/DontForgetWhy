@@ -85,16 +85,18 @@ function getOrCreatePlayer(name: SoundName): PlayerWithEvents | null {
   }
 }
 
-export function playGameSound(name: SoundName): void {
+export async function playGameSound(name: SoundName): Promise<void> {
   if (!_gameSoundsEnabled) return;
 
   const player = getOrCreatePlayer(name);
   if (!player) return;
 
   try {
-    // seekTo(0) before play() so rapid-fire calls replay from the start
-    // instead of being ignored when the player is already playing.
-    player.seekTo(0);
+    // Await seekTo before play so the playhead actually resets before playback
+    // starts. expo-audio's seekTo is async (expo/expo#37653) — firing play()
+    // without awaiting can produce silence or wrong-position playback on
+    // rapid retriggers.
+    await player.seekTo(0);
     player.play();
   } catch {}
 }

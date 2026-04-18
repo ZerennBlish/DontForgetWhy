@@ -13,7 +13,7 @@ function makeMockPlayer(): MockPlayer {
   return {
     volume: 0,
     play: jest.fn(),
-    seekTo: jest.fn(),
+    seekTo: jest.fn(() => Promise.resolve()),
     addListener: jest.fn(() => ({ remove: jest.fn() })),
   };
 }
@@ -58,48 +58,48 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('playGameSound — player pool', () => {
-  it('creates a player on first call for a sound name', () => {
+  it('creates a player on first call for a sound name', async () => {
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     expect(audio.createAudioPlayer).toHaveBeenCalledTimes(1);
   });
 
-  it('reuses the same player on subsequent calls for the same sound name', () => {
+  it('reuses the same player on subsequent calls for the same sound name', async () => {
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('tap');
-    mod.playGameSound('tap');
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
+    await mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     expect(audio.createAudioPlayer).toHaveBeenCalledTimes(1);
   });
 
-  it('calls seekTo(0) then play() on every call', () => {
+  it('calls seekTo(0) then play() on every call', async () => {
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('gameWin');
+    await mod.playGameSound('gameWin');
     const player = (audio.createAudioPlayer as jest.Mock).mock.results[0].value as MockPlayer;
 
     expect(player.seekTo).toHaveBeenCalledWith(0);
     expect(player.play).toHaveBeenCalledTimes(1);
 
     // Second call — seekTo and play should each fire again on the same player.
-    mod.playGameSound('gameWin');
+    await mod.playGameSound('gameWin');
     expect(player.seekTo).toHaveBeenCalledTimes(2);
     expect(player.play).toHaveBeenCalledTimes(2);
   });
 
-  it('seekTo is called before play (replay-from-start ordering)', () => {
+  it('seekTo is called before play (replay-from-start ordering)', async () => {
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     const player = (audio.createAudioPlayer as jest.Mock).mock.results[0].value as MockPlayer;
     const seekOrder = player.seekTo.mock.invocationCallOrder[0];
     const playOrder = player.play.mock.invocationCallOrder[0];
     expect(seekOrder).toBeLessThan(playOrder);
   });
 
-  it('different sound names get different player instances', () => {
+  it('different sound names get different player instances', async () => {
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('tap');
-    mod.playGameSound('gameWin');
-    mod.playGameSound('pickUp');
+    await mod.playGameSound('tap');
+    await mod.playGameSound('gameWin');
+    await mod.playGameSound('pickUp');
     expect(audio.createAudioPlayer).toHaveBeenCalledTimes(3);
 
     const results = (audio.createAudioPlayer as jest.Mock).mock.results;
@@ -117,23 +117,23 @@ describe('playGameSound — player pool', () => {
 // ---------------------------------------------------------------------------
 
 describe('playGameSound — disabled', () => {
-  it('does nothing when gameSoundsEnabled is false', () => {
+  it('does nothing when gameSoundsEnabled is false', async () => {
     kvStore.set('gameSoundsEnabled', 'false');
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     expect(audio.createAudioPlayer).not.toHaveBeenCalled();
   });
 
-  it('plays normally when gameSoundsEnabled key is missing (default = true)', () => {
+  it('plays normally when gameSoundsEnabled key is missing (default = true)', async () => {
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     expect(audio.createAudioPlayer).toHaveBeenCalledTimes(1);
   });
 
-  it('plays normally when gameSoundsEnabled is anything other than "false"', () => {
+  it('plays normally when gameSoundsEnabled is anything other than "false"', async () => {
     kvStore.set('gameSoundsEnabled', 'true');
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     expect(audio.createAudioPlayer).toHaveBeenCalledTimes(1);
   });
 });
@@ -143,31 +143,31 @@ describe('playGameSound — disabled', () => {
 // ---------------------------------------------------------------------------
 
 describe('playGameSound — failure modes', () => {
-  it('createAudioPlayer throwing does not crash', () => {
+  it('createAudioPlayer throwing does not crash', async () => {
     const { mod, audio } = loadFreshModule();
     (audio.createAudioPlayer as jest.Mock).mockImplementationOnce(() => {
       throw new Error('codec init failed');
     });
-    expect(() => mod.playGameSound('tap')).not.toThrow();
+    await expect(mod.playGameSound('tap')).resolves.not.toThrow();
   });
 
-  it('player.play() throwing does not crash', () => {
+  it('player.play() throwing does not crash', async () => {
     const { mod, audio } = loadFreshModule();
     const broken = makeMockPlayer();
     broken.play.mockImplementationOnce(() => {
       throw new Error('playback failed');
     });
     (audio.createAudioPlayer as jest.Mock).mockImplementationOnce(() => broken);
-    expect(() => mod.playGameSound('tap')).not.toThrow();
+    await expect(mod.playGameSound('tap')).resolves.not.toThrow();
   });
 
-  it('does not cache a null player — next call retries creation', () => {
+  it('does not cache a null player — next call retries creation', async () => {
     const { mod, audio } = loadFreshModule();
     (audio.createAudioPlayer as jest.Mock).mockImplementationOnce(() => {
       throw new Error('transient failure');
     });
-    mod.playGameSound('tap');
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     expect(audio.createAudioPlayer).toHaveBeenCalledTimes(2);
   });
 });
@@ -177,23 +177,23 @@ describe('playGameSound — failure modes', () => {
 // ---------------------------------------------------------------------------
 
 describe('playGameSound — volume', () => {
-  it('sets tap volume to 0.4', () => {
+  it('sets tap volume to 0.4', async () => {
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     const player = (audio.createAudioPlayer as jest.Mock).mock.results[0].value as MockPlayer;
     expect(player.volume).toBe(0.4);
   });
 
-  it('sets gameWin volume to 0.5', () => {
+  it('sets gameWin volume to 0.5', async () => {
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('gameWin');
+    await mod.playGameSound('gameWin');
     const player = (audio.createAudioPlayer as jest.Mock).mock.results[0].value as MockPlayer;
     expect(player.volume).toBe(0.5);
   });
 
-  it('sets pickUp volume to 0.25', () => {
+  it('sets pickUp volume to 0.25', async () => {
     const { mod, audio } = loadFreshModule();
-    mod.playGameSound('pickUp');
+    await mod.playGameSound('pickUp');
     const player = (audio.createAudioPlayer as jest.Mock).mock.results[0].value as MockPlayer;
     expect(player.volume).toBe(0.25);
   });
@@ -208,26 +208,26 @@ describe('refreshGameSoundsSetting', () => {
     kvStore.set('gameSoundsEnabled', 'false');
     const { mod, audio } = loadFreshModule();
 
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     expect(audio.createAudioPlayer).not.toHaveBeenCalled();
 
     kvStore.delete('gameSoundsEnabled');
     await mod.refreshGameSoundsSetting();
 
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     expect(audio.createAudioPlayer).toHaveBeenCalledTimes(1);
   });
 
   it('re-reads kv store and disables sounds when stored value changes to "false"', async () => {
     const { mod, audio } = loadFreshModule();
 
-    mod.playGameSound('tap');
+    await mod.playGameSound('tap');
     expect(audio.createAudioPlayer).toHaveBeenCalledTimes(1);
 
     kvStore.set('gameSoundsEnabled', 'false');
     await mod.refreshGameSoundsSetting();
 
-    mod.playGameSound('gameWin');
+    await mod.playGameSound('gameWin');
     // Still only the first call — second was blocked by the refreshed disabled flag.
     expect(audio.createAudioPlayer).toHaveBeenCalledTimes(1);
   });

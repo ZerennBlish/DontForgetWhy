@@ -3,5 +3,14 @@
   "compilerOptions": {
     "strict": true
   },
-  "exclude": ["functions", "dist", "node_modules"]
+  "exclude": [
+    "functions",
+    "dist",
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "jest.config.js",
+    "android",
+    "ios"
+  ]
 }
