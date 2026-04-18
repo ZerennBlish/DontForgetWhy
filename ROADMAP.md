@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 32 (April 16, 2026)
+### Source of Truth · Updated: Session 34 (April 17, 2026)
 
 ---
 
@@ -7,14 +7,14 @@
 
 | | |
 |---|---|
-| **Current Version** | v2.0.0 prepared on `dev` — Session 32 Cloud Checkers + Trivia overhaul + globe indicators merged to `main` as checkpoint (no production build this session) |
-| **Branch** | `dev` (Session 32 checkpoint also on `main`) |
-| **Production Status** | **v1.22.0 (versionCode 40) live on Play Store.** Session 31 Pro tier work (v1.23.0 / vCode 41) and Session 32 cloud/trivia work are both unshipped on `dev`. Next ship bundles both under v2.0.0. |
-| **Current Focus** | Session 32: Cloud Checkers AI (Firebase Cloud Function at `checkersai-kte3lby5vq-uc.a.run.app` returning top-5 ranked moves, difficulty = rank band + local fallback), full trivia overhaul (1,623 questions, 8 parent categories, 19 subcategories, SubcategoryPickerModal, 11 new DFW-style icons), online/offline globe indicators (per-card on GamesScreen, top-right on TriviaScreen, 30s polling), IAP retry fix. Triple audit (Codex + Claude + Gemini): 1 P1 + 3 P2 found, all fixed. |
+| **Current Version** | **v1.23.0 (versionCode 42) LIVE on Play Store at 100% rollout (shipped Session 33).** Session 34 voice memo UX work on `dev`, unshipped — rides with whatever v1.24.0 becomes. |
+| **Branch** | `dev` (two Session 34 commits ahead of origin pre-push, synced after) |
+| **Production Status** | v1.23.0 live. Dormant paywall active (founding grant unconditional on first launch until v2.0.0). Cloud Checkers AI live. Trivia overhaul (1,623 / 8 / 19) live. |
+| **Current Focus** | Session 34 shipped: card bg doc drift fix, ROADMAP Pro/Free collapsed to pointer, voice memo UX overhaul (open-in-edit for empty memos, 3-button discard guard with DFW voice, empty-memo cascade on last-clip delete, tone pass on all three VoiceMemoDetailScreen Alerts). No production build this session. |
 | **Blocked By** | Nothing |
-| **Next Action** | Ship v2.0.0 to Play Store (bundles Session 31 + 32). Then P7.4 Android compliance (edge-to-edge, orientation), P7.5 reminder fire → Guess Why, Master tier for chess/checkers, multiplayer chess, cloud endpoint auth via App Check before Pro launch. |
-| **EAS Credits** | ~28 available (2 dev builds attempted this session — 1 failed, 1 succeeded; reset April 12 already rolled) |
-| **Firebase Credits** | **$300 activated — 90-day clock started April 14, expires July 14, 2026.** Firestore rules published (`users/{uid}` locked to `request.auth.uid == uid`). Google Calendar API enabled in Google Cloud Console. |
+| **Next Action** | v1.24.0 primary: game audio reliability investigation (friend reports games start with weird sound, then right sound, then silent within minutes — `expo-audio` 55.0.13 did not fix). Secondary: modal-mounting pattern refactor per Session 33 DFW-Architecture.md lazy-mount rule. Cleanup: `useNoteEditor` dead code (`if (!visible)` branch unreachable after NotepadScreen lazy-mount change). |
+| **EAS Credits** | ~21 remaining (2 production builds this session — RC1 failed on Metro blockList regex, RC2 shipped v1.23.0). Reset on the 12th each month. |
+| **Firebase Credits** | **$300 activated — expires July 14, 2026.** Auth + Firestore + Google Calendar API all active. OAuth consent screen unverified (shows warning on write scope). |
 | **ElevenLabs** | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
 
 ---
