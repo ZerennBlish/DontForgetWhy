@@ -272,11 +272,11 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         try { player.pause(); } catch { /* */ }
         Alert.alert(
           'Unsaved changes',
-          "You've made changes. Save before leaving?",
+          "You edited something and didn't save. Save it, ditch it, or stick around?",
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: 'Stick around', style: 'cancel' },
             {
-              text: 'Discard',
+              text: 'Ditch it',
               style: 'destructive',
               onPress: () => {
                 exitingRef.current = true;
@@ -284,7 +284,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               },
             },
             {
-              text: 'Save & Exit',
+              text: 'Save it',
               onPress: async () => {
                 const success = await handleSaveExisting();
                 if (success) {
@@ -310,12 +310,12 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         e.preventDefault();
         try { player.pause(); } catch { /* */ }
         Alert.alert(
-          'Discard recording?',
-          'No title or note yet. Toss the recording, or keep it as-is?',
+          'Unlabeled mystery?',
+          'You recorded a thing and gave it zero context. Keep the mystery or toss it?',
           [
             { text: 'Cancel', style: 'cancel' },
             {
-              text: 'Discard',
+              text: 'Toss',
               style: 'destructive',
               onPress: async () => {
                 try {
@@ -510,9 +510,9 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
     const shouldDeleteMemo = isLastClip && memoOtherwiseEmpty;
 
     Alert.alert(
-      shouldDeleteMemo ? 'Delete this memo?' : 'Delete this clip?',
+      shouldDeleteMemo ? 'Goodbye, whole memo?' : 'Delete this clip?',
       shouldDeleteMemo
-        ? 'This is the only clip and there\'s no title, note, or photos. Deleting it removes the memo entirely.'
+        ? 'Last clip, no title, no note. Nothing left to hold onto.'
         : 'This recording will be permanently removed.',
       [
         { text: 'Cancel', style: 'cancel' },
