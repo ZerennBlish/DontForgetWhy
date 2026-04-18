@@ -20,7 +20,6 @@ import type { StrokeData } from '../components/DrawingCanvas';
 import type { TextInput } from 'react-native';
 
 interface UseNoteEditorParams {
-  visible: boolean;
   note: Note | null;
   customBgColor: string | null;
   customFontColor: string | null;
@@ -43,7 +42,6 @@ interface UseNoteEditorParams {
 }
 
 export function useNoteEditor({
-  visible,
   note,
   customBgColor,
   customFontColor,
@@ -90,25 +88,8 @@ export function useNoteEditor({
 
   // ── Effects ────────────────────────────────────────────────────────
 
-  // Visibility / note-load effect
+  // Note-load effect
   useEffect(() => {
-    if (!visible) {
-      setShowColorPicker(false);
-      setShowAttachments(false);
-      setShowBgPicker(false);
-      setShowFontPicker(false);
-      setLightboxUri(null);
-      setShowDrawing(false);
-      setShowShareModal(false);
-      setEditingDrawingData(null);
-      setEditingImageUri(null);
-      try { player.pause(); } catch { /* best-effort */ }
-      setActivePlayerUri(null);
-      setEditorVoiceMemos([]);
-      loadedSnapshotRef.current = '';
-      if (dirtyRef) dirtyRef.current = false;
-      return;
-    }
     if (note) {
       setEditorTitle(note.title ?? '');
       setEditorText(note.text);
@@ -151,11 +132,10 @@ export function useNoteEditor({
     setEditorPlaceholder(EDITOR_PLACEHOLDERS[Math.floor(Math.random() * EDITOR_PLACEHOLDERS.length)]);
     pickedBgRef.current = customBgColor || '#4A90D9';
     pickedFontRef.current = customFontColor || '#FF6B6B';
-  }, [visible, note]);
+  }, [note]);
 
   // Dirty-tracking effect
   useEffect(() => {
-    if (!visible) return;
     if (!dirtyRef) return;
     if (!loadedSnapshotRef.current) return;
     const current = JSON.stringify({
@@ -169,7 +149,6 @@ export function useNoteEditor({
     });
     dirtyRef.current = current !== loadedSnapshotRef.current;
   }, [
-    visible,
     editorTitle,
     editorText,
     editorColor,

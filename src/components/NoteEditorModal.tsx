@@ -37,7 +37,7 @@ export default function NoteEditorModal({
   const insets = useSafeAreaInsets();
 
   const editor = useNoteEditor({
-    visible, note, customBgColor, customFontColor,
+    note, customBgColor, customFontColor,
     onSave, onDelete, onClose,
     onCustomBgColorChange, onCustomFontColorChange, dirtyRef,
   });
