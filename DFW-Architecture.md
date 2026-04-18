@@ -86,7 +86,7 @@ All prior channel versions deleted on every app startup.
 ThemeColors interface includes per-section color tokens: `sectionAlarm`, `sectionReminder`, `sectionCalendar`, `sectionNotepad`, `sectionVoice`, `sectionTimer`, `sectionGames`. Each theme defines its own palette (e.g., Vivid uses completely different section colors than Dark). All hardcoded section hex values throughout the app replaced with `colors.section*` references.
 
 ### Mode-Aware Rendering
-Capsule buttons use mode-aware rgba; watermark opacity adapts (0.15 dark / 0.06 light). Card backgrounds use section-colored tint in both modes — dark `sectionColor + '20'`, light `sectionColor + '15'`. Photo overlay always uses dark dim regardless of mode. HomeScreen grid cells/today container/banner increase opacity when a background photo is set.
+Capsule buttons use mode-aware rgba; watermark opacity adapts (0.15 dark / 0.06 light). Card backgrounds are mode-aware — dark uses `colors.card + 'E6'` (neutral tinted card bg), light uses `sectionColor + '15'` (section-tinted). Photo overlay always uses dark dim regardless of mode. HomeScreen grid cells/today container/banner increase opacity when a background photo is set.
 
 ### Overlay Text Strategy
 Two patterns for text on dark overlays:

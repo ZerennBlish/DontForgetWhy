@@ -506,36 +506,7 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 
 ## PRO vs FREE BREAKDOWN
 
-### Free Tier — Polished, Fully Functional Core
-- All alarms, reminders, timers, notepad
-- In-app calendar (day/week/month views)
-- 3 free themes (Dark, Light, High Contrast)
-- Home screen + 4 widgets
-- All personality content (text quotes, roasts, snooze messages, placeholders)
-- Sound picker + custom alarm sounds
-- Privacy mode, Silence All mode
-- Guess Why (built into alarm dismissal) — **free forever**
-- Memory Score tracking + Trophies — **free forever**
-- Daily Riddle — **free forever** (daily engagement hook)
-- 3 free rounds per game for Chess, Checkers, Trivia, Sudoku, Memory Match (then ProGate)
-- Voice memos
-- Custom photo backgrounds + note images
-- Drawing canvas
-- Backup & Restore (.dfw export/import + auto-export)
-- Google Calendar **read** sync (in-app Calendar shows your Google events)
-- Starter voice roast pack (limited lines)
-
-### Pro Tier — $1.99 One-Time Unlock
-- Unlimited rounds for Chess, Checkers, Trivia, Sudoku, Memory Match (Master tier deferred)
-- Premium themes: **Vivid, Sunset, Ruby**
-- **Google Calendar write-back** — push your DFW alarms + reminders to a dedicated "Don't Forget Why" calendar in your Google account
-- Multiplayer chess (P8)
-- Cloud Stockfish AI for chess (P8)
-- Online riddles + leaderboards (P8)
-- Full voice roast pack + female voice character (P6.5+)
-
-### Founding User
-- Existing users (anyone who completed onboarding before v1.23.0) — **auto-granted Pro forever** with a "Founding User" badge in Settings. Migration runs once on first launch after upgrade and is idempotent.
+See `DFW-Features.md` §Pro Tier for the canonical tier breakdown (what's Pro-gated, what's free forever, founding user details). This roadmap no longer duplicates that content to prevent drift.
 
 ---
 
