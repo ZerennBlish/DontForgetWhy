@@ -12,7 +12,7 @@
 | **Production Status** | v1.23.0 live. v1.24.0 pending upload. |
 | **Current Focus** | Session 35 shipped game audio pool refactor (fixes MediaCodec leak on long play sessions), win/loss sound filename fix, useNoteEditor dead code removal, tsconfig exclude hardening. Dep-alignment shipped: patch-package for react-native-zip-archive JDK 21 fix, react-native-worklets 0.7.2→0.7.4, 17 Expo SDK 55 patch bumps. |
 | **Blocked By** | Nothing |
-| **Next Action** | v1.24.0 primary: game audio reliability investigation (friend reports games start with weird sound, then right sound, then silent within minutes — `expo-audio` 55.0.13 did not fix). Secondary: modal-mounting pattern refactor per Session 33 DFW-Architecture.md lazy-mount rule. Cleanup: `useNoteEditor` dead code (`if (!visible)` branch unreachable after NotepadScreen lazy-mount change). |
+| **Next Action** | Branding refresh — app reads as alarm-only on Play Store; icon and feature graphic need rethink. Secondary: `soundFeedback.ts` pool refactor for consistency with `gameSounds.ts` pattern. |
 | **EAS Credits** | ~19 remaining (1 dev build + 1 production build this session). Reset May 12. |
 | **Firebase Credits** | **$300 activated — expires July 14, 2026.** Auth + Firestore + Google Calendar API all active. OAuth consent screen unverified (shows warning on write scope). |
 | **ElevenLabs** | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |

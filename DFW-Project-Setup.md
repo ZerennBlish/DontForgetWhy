@@ -513,3 +513,16 @@ Plus the Android-specific `googleServicesFile` setting:
 | `main` | Production. Synced with dev at v1.8.0. | Active, clean |
 | `dev` | v1.10.0 — Visual overhaul, swipe-to-delete, emoji picker, button hierarchy, widget section colors, Jest. | Active — all new work goes here |
 | `testing-setup` | Jest work branch. Merge main INTO testing-setup only. | Merged to dev (Session 11) |
+
+---
+
+## 8. Weekly Maintenance Cadence
+
+Lightweight dependency drift check run weekly. Keeps `dev` from accumulating small SDK/patch drift between shipped versions so that larger bumps don't blindside a ship.
+
+- **Scheduled via DFW alarm** — the app's own recurring alarm is the reminder (dogfood the product).
+- **Branch off `dev`** — short-lived maintenance branch from current `dev`, not `main`.
+- **Run `npx expo install --check`** — Expo's SDK compatibility check. Surfaces Expo-owned packages that have drifted from the current matrix.
+- **Narrow-bump if drifted** — patch/minor bumps only for what the check flags. Nothing speculative, nothing outside the Expo matrix.
+- **Close branch if nothing changed** — clean check → delete the branch. No empty commits, no drift-session churn.
+- **Dedicated dep-alignment sessions scheduled separately for larger work** — SDK upgrades, worklets/Skia/reanimated family bumps, or anything that needs its own EAS build + audit land in their own sessions. The weekly check is a drift guard, not a vehicle for major version jumps.
