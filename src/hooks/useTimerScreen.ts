@@ -12,8 +12,6 @@ import {
   saveActiveTimers,
   loadUserTimers,
   saveUserTimer,
-  deleteUserTimer,
-  updateUserTimer,
 } from '../services/timerStorage';
 import { scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
 import { getPinnedPresets, togglePinPreset, isPinned, unpinPreset } from '../services/widgetPins';
@@ -64,7 +62,6 @@ interface UseTimerScreenResult {
   bgOpacity: number;
 
   // Presets
-  presets: TimerPreset[];
   recentPresets: TimerPreset[];
   restPresets: TimerPreset[];
   customPreset: TimerPreset | null;
@@ -76,7 +73,6 @@ interface UseTimerScreenResult {
 
   // Modal state
   customModal: TimerPreset | null;
-  setCustomModal: React.Dispatch<React.SetStateAction<TimerPreset | null>>;
   customHours: number;
   setCustomHours: React.Dispatch<React.SetStateAction<number>>;
   customMinutes: number;
@@ -90,7 +86,6 @@ interface UseTimerScreenResult {
   setNewTimerName: React.Dispatch<React.SetStateAction<string>>;
   newTimerIcon: string;
   setNewTimerIcon: React.Dispatch<React.SetStateAction<string>>;
-  editingUserTimer: UserTimer | null;
   timeInputMode: 'scroll' | 'type';
   iconInputRef: React.RefObject<TextInput | null>;
 
@@ -107,7 +102,6 @@ interface UseTimerScreenResult {
   handleTogglePause: (id: string) => Promise<void>;
   handlePinToggle: (preset: TimerPreset) => Promise<void>;
   handleStartUserTimer: (ut: UserTimer) => Promise<void>;
-  handleUserTimerLongPress: (ut: UserTimer) => void;
   handleModalSave: () => Promise<void> | void;
   handleModalSaveOnly: () => Promise<void> | void;
   handleTimerSoundSelect: (sound: SystemSound | null) => Promise<void>;
@@ -130,7 +124,6 @@ export function useTimerScreen(): UseTimerScreenResult {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newTimerName, setNewTimerName] = useState('');
   const [newTimerIcon, setNewTimerIcon] = useState('\u{1F60A}');
-  const [editingUserTimer, setEditingUserTimer] = useState<UserTimer | null>(null);
   const [timeInputMode, setTimeInputMode] = useState<'scroll' | 'type'>('scroll');
   const [timerSoundName, setTimerSoundName] = useState<string | null>(null);
   const [timerSoundID, setTimerSoundID] = useState<number | null>(null);
@@ -443,7 +436,6 @@ export function useTimerScreen(): UseTimerScreenResult {
   const closeModal = () => {
     setCustomModal(null);
     setIsCreatingNew(false);
-    setEditingUserTimer(null);
     setNewTimerName('');
     setNewTimerIcon('\u{1F60A}');
   };
@@ -511,53 +503,6 @@ export function useTimerScreen(): UseTimerScreenResult {
     }
   };
 
-  const handleSaveEditTimer = async () => {
-    if (!editingUserTimer) return;
-    const hours = Math.min(customHours, 23);
-    const mins = Math.min(customMinutes, 59);
-    const secs = Math.min(customSeconds, 59);
-    const totalSeconds = hours * 3600 + mins * 60 + secs;
-
-    if (!newTimerName.trim()) {
-      ToastAndroid.show('Give your timer a name', ToastAndroid.SHORT);
-      return;
-    }
-    if (totalSeconds <= 0) {
-      closeModal();
-      return;
-    }
-
-    const timerSoundId = soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined;
-    const updatedLabel = newTimerName.trim();
-    const updatedIcon = newTimerIcon || '\u{23F1}\u{FE0F}';
-
-    await updateUserTimer(editingUserTimer.id, { seconds: totalSeconds, soundId: timerSoundId, label: updatedLabel, icon: updatedIcon });
-    setUserTimers((prev) =>
-      prev.map((t) =>
-        t.id === editingUserTimer.id ? { ...t, seconds: totalSeconds, soundId: timerSoundId, label: updatedLabel, icon: updatedIcon } : t
-      )
-    );
-
-    const activeTimer: ActiveTimer = {
-      id: uuidv4(),
-      presetId: editingUserTimer.id,
-      label: updatedLabel,
-      icon: updatedIcon,
-      totalSeconds,
-      remainingSeconds: totalSeconds,
-      startedAt: new Date().toISOString(),
-      isRunning: true,
-      soundId: timerSoundId,
-    };
-
-    closeModal();
-    try {
-      await handleAddTimer(activeTimer);
-    } catch (error) {
-      console.error('[handleSaveEditTimer] handleAddTimer failed:', error);
-    }
-  };
-
   const handleStartUserTimer = async (ut: UserTimer) => {
     hapticLight();
     const activeTimer: ActiveTimer = {
@@ -578,55 +523,8 @@ export function useTimerScreen(): UseTimerScreenResult {
     }
   };
 
-  const handleUserTimerLongPress = (ut: UserTimer) => {
-    hapticLight();
-    Alert.alert(ut.icon + ' ' + ut.label, undefined, [
-      {
-        text: 'Edit',
-        onPress: () => {
-          const hours = Math.floor(ut.seconds / 3600);
-          const mins = Math.floor((ut.seconds % 3600) / 60);
-          const secs = ut.seconds % 60;
-          setCustomHours(hours);
-          setCustomMinutes(mins);
-          setCustomSeconds(secs);
-          setNewTimerName(ut.label);
-          setNewTimerIcon(ut.icon);
-          setSoundMode(
-            ut.soundId === 'silent' ? 'vibrate' : ut.soundId === 'true_silent' ? 'silent' : 'sound'
-          );
-          setEditingUserTimer(ut);
-          setCustomModal({ id: ut.id, icon: ut.icon, label: ut.label, seconds: ut.seconds });
-        },
-      },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          Alert.alert('Delete ' + ut.label + '?', undefined, [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: async () => {
-                hapticHeavy();
-                await deleteUserTimer(ut.id);
-                await unpinPreset(ut.id);
-                setUserTimers((prev) => prev.filter((t) => t.id !== ut.id));
-                setPinnedIds((prev) => prev.filter((id) => id !== ut.id));
-                refreshWidgets().catch(() => {});
-              },
-            },
-          ]);
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
   const handleModalSave = () => {
     if (isCreatingNew) return handleSaveNewTimer();
-    if (editingUserTimer) return handleSaveEditTimer();
     return handleSaveCustom();
   };
 
@@ -682,39 +580,8 @@ export function useTimerScreen(): UseTimerScreenResult {
     ToastAndroid.show('Timer saved', ToastAndroid.SHORT);
   };
 
-  const handleSaveEditTimerOnly = async () => {
-    if (!editingUserTimer) return;
-    const hours = Math.min(customHours, 23);
-    const mins = Math.min(customMinutes, 59);
-    const secs = Math.min(customSeconds, 59);
-    const totalSeconds = hours * 3600 + mins * 60 + secs;
-
-    if (!newTimerName.trim()) {
-      ToastAndroid.show('Give your timer a name', ToastAndroid.SHORT);
-      return;
-    }
-    if (totalSeconds <= 0) {
-      closeModal();
-      return;
-    }
-
-    const timerSoundId = soundMode === 'vibrate' ? 'silent' : soundMode === 'silent' ? 'true_silent' : undefined;
-    const updatedLabel = newTimerName.trim();
-    const updatedIcon = newTimerIcon || '\u{23F1}\u{FE0F}';
-
-    await updateUserTimer(editingUserTimer.id, { seconds: totalSeconds, soundId: timerSoundId, label: updatedLabel, icon: updatedIcon });
-    setUserTimers((prev) =>
-      prev.map((t) =>
-        t.id === editingUserTimer.id ? { ...t, seconds: totalSeconds, soundId: timerSoundId, label: updatedLabel, icon: updatedIcon } : t
-      )
-    );
-    closeModal();
-    ToastAndroid.show('Timer updated', ToastAndroid.SHORT);
-  };
-
   const handleModalSaveOnly = () => {
     if (isCreatingNew) return handleSaveNewTimerOnly();
-    if (editingUserTimer) return handleSaveEditTimerOnly();
     return handleSaveCustomOnly();
   };
 
@@ -728,7 +595,6 @@ export function useTimerScreen(): UseTimerScreenResult {
     bgOpacity,
 
     // Presets
-    presets,
     recentPresets,
     restPresets,
     customPreset,
@@ -740,7 +606,6 @@ export function useTimerScreen(): UseTimerScreenResult {
 
     // Modal state
     customModal,
-    setCustomModal,
     customHours,
     setCustomHours,
     customMinutes,
@@ -754,7 +619,6 @@ export function useTimerScreen(): UseTimerScreenResult {
     setNewTimerName,
     newTimerIcon,
     setNewTimerIcon,
-    editingUserTimer,
     timeInputMode,
     iconInputRef,
 
@@ -771,7 +635,6 @@ export function useTimerScreen(): UseTimerScreenResult {
     handleTogglePause,
     handlePinToggle,
     handleStartUserTimer,
-    handleUserTimerLongPress,
     handleModalSave,
     handleModalSaveOnly,
     handleTimerSoundSelect,

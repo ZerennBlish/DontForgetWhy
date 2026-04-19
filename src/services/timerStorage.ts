@@ -193,21 +193,3 @@ export async function saveUserTimer(timer: UserTimer): Promise<void> {
   );
 }
 
-export async function deleteUserTimer(id: string): Promise<void> {
-  const db = getDb();
-  db.runSync('DELETE FROM user_timers WHERE id=?', [id]);
-}
-
-export async function updateUserTimer(
-  id: string,
-  updates: Partial<UserTimer>,
-): Promise<void> {
-  const db = getDb();
-  const current = db.getFirstSync<UserTimerRow>('SELECT * FROM user_timers WHERE id=?', [id]);
-  if (!current) return;
-  const merged = { ...rowToUserTimer(current), ...updates };
-  db.runSync(
-    'UPDATE user_timers SET icon=?, label=?, seconds=?, soundId=? WHERE id=?',
-    [merged.icon, merged.label, merged.seconds, merged.soundId ?? null, id],
-  );
-}

@@ -80,7 +80,7 @@ borderColor:    colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 
 `NoteCard.tsx` + `DeletedNoteCard.tsx`: when `note.icon` set, renders as `<Text>`. When empty, falls back to `<Image source={APP_ICONS.notepad} size=22 />` (silver notepad, no tint).
 
 ### Timer Save vs Start
-Modal has three circle action buttons: red **cancel** (`closeX`), accent **save-only** (`save`), success **start** (`MEDIA_ICONS.play`). `handleModalSaveOnly` saves without starting (three variants: `handleSaveCustomOnly`, `handleSaveNewTimerOnly`, `handleSaveEditTimerOnly`). Toast feedback.
+Modal has three circle action buttons: red **cancel** (`closeX`), accent **save-only** (`save`), success **start** (`MEDIA_ICONS.play`). `handleModalSaveOnly` saves without starting (two variants: `handleSaveCustomOnly`, `handleSaveNewTimerOnly`). Toast feedback. Edit/delete for user-created timers is not currently supported via the UI.
 
 ### Icon System
 - Chrome icons: `APP_ICONS.save` (floppy-disk), `APP_ICONS.edit` (pencil), 512×512 WebP.

@@ -53,7 +53,6 @@ export default function TimerScreen({ navigation }: Props) {
     isCreatingNew,
     newTimerName, setNewTimerName,
     newTimerIcon, setNewTimerIcon,
-    editingUserTimer,
     timeInputMode,
     iconInputRef,
     timerSoundName, timerSoundID,
@@ -581,7 +580,7 @@ export default function TimerScreen({ navigation }: Props) {
       <Modal transparent visible={!!customModal} animationType="fade" onRequestClose={() => { hapticLight(); closeModal(); }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard} accessibilityViewIsModal={true}>
-            {isCreatingNew || editingUserTimer ? (
+            {isCreatingNew ? (
               <>
                 <View style={styles.newTimerHeaderRow}>
                   <TouchableOpacity
