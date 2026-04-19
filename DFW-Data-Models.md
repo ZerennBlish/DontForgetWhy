@@ -644,26 +644,11 @@ export type RiddleDifficulty = 'easy' | 'medium' | 'hard';
 export interface DailyRiddleEntry {
   id: number;                    // 1..366, matches dayOfYear for the canonical bank
   dayOfYear: number;             // 1..366, primary lookup key
-  category: string;              // one of RIDDLE_CATEGORIES (12 display strings)
+  category: string;              // 12 display strings (see authoring comment in dfw_yearly_riddles.ts)
   difficulty: RiddleDifficulty;
   question: string;
   answer: string;
 }
-
-export const RIDDLE_CATEGORIES = [
-  "Home & Objects",
-  "Nature & Weather",
-  "Food & Kitchen",
-  "Animals",
-  "Body & Health",
-  "School & Work",
-  "Travel & Places",
-  "Technology",
-  "Science & Space",
-  "Time & Calendar",
-  "Fantasy & Fun",
-  "Logic & Wordplay",
-] as const;
 
 export const YEARLY_RIDDLES: DailyRiddleEntry[] = [ /* 366 entries */ ];
 ```
@@ -692,9 +677,9 @@ export function getDailyRiddleForDate(dateStr: string): DailyRiddleEntry {
 - **`+ 1` to match 1-indexed `dayOfYear`.** January 1 → delta 0 days → `dayOfYear = 1`. December 31 in a leap year → delta 365 days → `dayOfYear = 366`. Matches the `YEARLY_RIDDLES` primary key.
 - **Defensive fallback.** `(dayOfYear - 1) % YEARLY_RIDDLES.length` wraps if the bank ever ships fewer than 366 entries or if the date math produces an out-of-range `dayOfYear` for any reason. Should never fire in practice — the fallback is a belt-and-suspenders safety net against a future refactor that leaves the bank partially populated.
 
-### Legacy `getDailyRiddleIndex` (deprecated)
+### Legacy `getDailyRiddleIndex` (removed Session 36)
 
-The Session 22 `getDailyRiddleIndex(dateStr): number` function (year-seeded Fisher-Yates shuffle returning an index into the old 355-entry `RIDDLES` array) is **kept with `@deprecated`** rather than deleted. Any stale import that wasn't caught by the grep will still compile. The body is unchanged from Session 22 — it still runs the LCG PRNG + shuffle — but nothing in the app calls it anymore. Safe to remove in a future session once a full import scan confirms zero callers.
+Removed Session 36 — Session 31 Phase 2 replaced it with `getDailyRiddleForDate` (DST-safe day-of-year computation); Session 36 dead-code audit then confirmed zero callers.
 
 ### Old `RIDDLES` array (kept for backward compat)
 

@@ -404,14 +404,6 @@ export const RIDDLES: Riddle[] = [
   { id: 365, question: 'What can be measured but has no length, width, or height?', answer: 'Temperature', difficulty: 'hard', category: 'quick' },
 ];
 
-export const CATEGORY_LABELS: Record<RiddleCategory, string> = {
-  memory: 'Memory',
-  classic: 'Classic',
-  wordplay: 'Wordplay',
-  logic: 'Logic',
-  quick: 'Quick',
-};
-
 const DIFFICULTY_COLORS: Record<RiddleDifficulty, string> = {
   easy: '#4CAF50',
   medium: '#FF9800',
@@ -431,31 +423,4 @@ export function getDailyRiddleForDate(dateStr: string): DailyRiddleEntry {
     Math.floor((date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const match = YEARLY_RIDDLES.find((r) => r.dayOfYear === dayOfYear);
   return match ?? YEARLY_RIDDLES[(dayOfYear - 1) % YEARLY_RIDDLES.length];
-}
-
-/**
- * @deprecated Replaced by `getDailyRiddleForDate`, which returns an entry
- * from the fixed 366-day yearly bank. Kept temporarily so any stale import
- * still compiles; remove once no callers remain.
- *
- * Year-seeded Fisher-Yates shuffle so every riddle appears exactly once per
- * calendar year before repeating. Same year → same shuffle; `dayOfYear`
- * (0-indexed) walks through the shuffled list. If the bank is smaller than
- * the number of days in the year, the tail wraps around.
- */
-export function getDailyRiddleIndex(dateStr: string): number {
-  const date = new Date(dateStr + 'T00:00:00');
-  const year = date.getFullYear();
-  const startOfYear = new Date(year, 0, 1);
-  const dayOfYear = Math.floor(
-    (date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  const indices = Array.from({ length: RIDDLES.length }, (_, i) => i);
-  let seed = year;
-  for (let i = indices.length - 1; i > 0; i--) {
-    seed = (seed * 1664525 + 1013904223) & 0x7fffffff;
-    const j = seed % (i + 1);
-    [indices[i], indices[j]] = [indices[j], indices[i]];
-  }
-  return indices[dayOfYear % indices.length];
 }

@@ -9,20 +9,11 @@ export interface DailyRiddleEntry {
   answer: string;
 }
 
-export const RIDDLE_CATEGORIES = [
-  "Home & Objects",
-  "Nature & Weather",
-  "Food & Kitchen",
-  "Animals",
-  "Body & Health",
-  "School & Work",
-  "Travel & Places",
-  "Technology",
-  "Science & Space",
-  "Time & Calendar",
-  "Fantasy & Fun",
-  "Logic & Wordplay",
-] as const;
+// Riddle category display strings used during manual authoring of this file.
+// Keep this list in sync if new categories are added:
+// "Home & Objects", "Nature & Weather", "Food & Kitchen", "Animals",
+// "Body & Health", "School & Work", "Travel & Places", "Technology",
+// "Science & Space", "Time & Calendar", "Fantasy & Fun", "Logic & Wordplay"
 
 export const YEARLY_RIDDLES: DailyRiddleEntry[] = [
   {
@@ -2946,5 +2937,3 @@ export const YEARLY_RIDDLES: DailyRiddleEntry[] = [
     answer: "the future",
   },
 ];
-
-export const TOTAL_YEARLY_RIDDLES = YEARLY_RIDDLES.length;
