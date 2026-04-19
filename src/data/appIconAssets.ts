@@ -25,7 +25,6 @@ const APP_ICONS = {
   share: require('../../assets/app-icons/share.webp') as ImageSourcePropType,
   flame: require('../../assets/app-icons/flame.webp') as ImageSourcePropType,
   warning: require('../../assets/app-icons/warning.webp') as ImageSourcePropType,
-  search: require('../../assets/app-icons/search.webp') as ImageSourcePropType,
   backArrow: require('../../assets/app-icons/back-arrow.webp') as ImageSourcePropType,
   'beach-chair': require('../../assets/app-icons/beach-chair.webp') as ImageSourcePropType,
   palette: require('../../assets/app-icons/painting_palette.webp') as ImageSourcePropType,

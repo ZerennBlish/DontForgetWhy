@@ -1,5 +1,6 @@
 import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
+import { getTextColor } from '../utils/noteColors';
 
 export interface WidgetNote {
   id: string;
@@ -50,15 +51,6 @@ const EMPTY_MESSAGES = [
   'No notes? Living dangerously.',
   'Your future self is judging you.',
 ];
-
-function getTextColor(bgHex: string): string {
-  const hex = bgHex.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 150 ? '#1A1A2E' : '#FFFFFF';
-}
 
 function NoteCell({ note, accent }: { note: WidgetNote; accent: string }) {
   const label = note.icon ? `${note.icon} ${note.text}` : note.text;

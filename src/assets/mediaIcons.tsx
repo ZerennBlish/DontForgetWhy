@@ -9,8 +9,6 @@ const MEDIA_ICONS = {
   play: require('../../assets/icons/play-app.webp') as ImageSourcePropType,
   /** Chrome pause bars — for all pause states */
   pause: require('../../assets/icons/pause.webp') as ImageSourcePropType,
-  /** Chrome record circle — for voice recording */
-  record: require('../../assets/icons/record.webp') as ImageSourcePropType,
   /** Chrome stop square — for stopping recording/playback */
   stop: require('../../assets/icons/stop.webp') as ImageSourcePropType,
   /** Chrome repeat loop — for voice clip repeat mode */

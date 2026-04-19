@@ -20,7 +20,6 @@ import { refreshHapticsSetting } from '../utils/haptics';
 import { safeParse } from '../utils/safeParse';
 import { refreshWidgets } from '../widget/updateWidget';
 import { loadActiveTimers, saveActiveTimers } from '../services/timerStorage';
-import { getAlarmById } from '../services/storage';
 import { getReminderById } from '../services/reminderStorage';
 import { getVoiceMemoById } from '../services/voiceMemoStorage';
 import {
