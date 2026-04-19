@@ -10,7 +10,6 @@ export interface SavedChessGame {
   difficulty: number;       // index into DIFFICULTY_LEVELS (0-4)
   moveHistory: string[];    // SAN moves in order
   takeBackUsed: boolean;
-  blunderCount: number;
   startedAt: string;        // ISO
   updatedAt: string;        // ISO
 }
@@ -22,7 +21,6 @@ interface ChessGameRow {
   difficulty: number;
   moveHistory: string;
   takeBackUsed: number;
-  blunderCount: number;
   startedAt: string;
   updatedAt: string;
 }
@@ -44,7 +42,6 @@ function rowToGame(row: ChessGameRow): SavedChessGame {
     difficulty: clampedDifficulty,
     moveHistory,
     takeBackUsed: !!row.takeBackUsed,
-    blunderCount: row.blunderCount,
     startedAt: row.startedAt,
     updatedAt: row.updatedAt,
   };
@@ -55,15 +52,14 @@ export async function saveChessGame(game: SavedChessGame): Promise<void> {
   const db = getDb();
   db.runSync(
     `INSERT OR REPLACE INTO chess_game
-      (id, fen, playerColor, difficulty, moveHistory, takeBackUsed, blunderCount, startedAt, updatedAt)
-     VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, fen, playerColor, difficulty, moveHistory, takeBackUsed, startedAt, updatedAt)
+     VALUES (1, ?, ?, ?, ?, ?, ?, ?)`,
     [
       game.fen,
       game.playerColor,
       game.difficulty,
       JSON.stringify(game.moveHistory ?? []),
       game.takeBackUsed ? 1 : 0,
-      game.blunderCount,
       game.startedAt,
       game.updatedAt,
     ],

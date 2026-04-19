@@ -477,7 +477,7 @@ All persistent storage migrated from `@react-native-async-storage/async-storage`
 | `voice_clips` | Per-memo audio clips — `id TEXT PK, memoId TEXT FK→voice_memos(id) ON DELETE CASCADE, uri, duration, position, label, createdAt` |
 | `active_timers` | Currently running timers |
 | `user_timers` | User-created custom timer presets |
-| `chess_game` | Single-row (CHECK id=1) in-progress chess — fen, playerColor, difficulty, moveHistory (JSON), takeBackUsed, blunderCount, startedAt, updatedAt |
+| `chess_game` | Single-row (CHECK id=1) in-progress chess — fen, playerColor, difficulty, moveHistory (JSON), takeBackUsed, startedAt, updatedAt |
 | `checkers_game` | Single-row (CHECK id=1) in-progress checkers — board (JSON), turn, playerColor, difficulty, rules, moveCount, startedAt, updatedAt |
 | `kv_store` | Key-value pairs for settings, game stats, widget pins, pending actions, flags |
 
@@ -637,13 +637,13 @@ Randomness path: find best move with deep search, then score all moves with stat
 ### useChess Hook — Key Patterns
 - Chess instance in a ref, re-render triggered by a version counter (`bump()`). Avoids expensive clone-on-every-move.
 - `sessionIdRef` incremented on startGame, newGame, resign, unmount. Deferred callbacks check session before mutating state → prevents stale AI moves after the user left/resigned/restarted.
-- Refs mirror state for sync access inside closures (`playerColorRef`, `difficultyRef`, `takeBackUsedRef`, `blunderCountRef`, `startedAtRef`) — setState is async.
+- Refs mirror state for sync access inside closures (`playerColorRef`, `difficultyRef`, `takeBackUsedRef`, `startedAtRef`) — setState is async.
 - AI scheduling: 400ms pre-delay → `InteractionManager.runAfterInteractions` → `setIsAIThinking(true)` → 400ms think → inner `setTimeout(0)` yield → book/cloud/local resolves move → apply.
 - Difficulty clamp on restore: `Math.min(Math.max(saved.difficulty, 0), 4)` in both `loadChessGame` and `chessStorage.rowToGame`.
 - Restore from saved game: replays all saved SAN moves on a fresh `new Chess()` to rebuild `_history` (raw FEN load produces empty history, breaks take-back + move count).
 
 ### Blunder Analysis
-`setTimeout(0)` after every player move so the board renders first. `analyzeMove(fenBefore, playedSan, 2)` runs `findBestMove` at depth 2, then scores both the best move and the played move via shallow minimax (depth 1). Severity by centipawn loss: good <50, inaccuracy <150, mistake <300, blunder <600, catastrophe ≥600. Blunder + catastrophe increment `blunderCountRef`. Take-back has its own roast pool.
+`setTimeout(0)` after every player move so the board renders first. `analyzeMove(fenBefore, playedSan, 2)` runs `findBestMove` at depth 2, then scores both the best move and the played move via shallow minimax (depth 1). Severity by centipawn loss: good <50, inaccuracy <150, mistake <300, blunder <600, catastrophe ≥600. Take-back has its own roast pool.
 
 ---
 

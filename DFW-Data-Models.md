@@ -269,7 +269,6 @@ interface SavedChessGame {
   difficulty: number;       // 0..4 index into DIFFICULTY_LEVELS
   moveHistory: string[];    // SAN moves in order — replayed on load
   takeBackUsed: boolean;
-  blunderCount: number;     // player's blunders + catastrophes this game
   startedAt: string;        // ISO
   updatedAt: string;        // ISO
 }
@@ -285,7 +284,7 @@ CREATE TABLE IF NOT EXISTS chess_game (
   difficulty INTEGER NOT NULL CHECK (difficulty BETWEEN 0 AND 4),
   moveHistory TEXT NOT NULL DEFAULT '[]',
   takeBackUsed INTEGER NOT NULL DEFAULT 0,
-  blunderCount INTEGER NOT NULL DEFAULT 0,
+  blunderCount INTEGER NOT NULL DEFAULT 0,  -- Legacy column — no longer read or written by app code (removed Session 36). DEFAULT 0 fills new rows.
   startedAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL
 );
