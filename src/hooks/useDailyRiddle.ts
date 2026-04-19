@@ -1,14 +1,10 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Animated } from 'react-native';
 import { kvGet, kvSet } from '../services/database';
 import { useFocusEffect } from '@react-navigation/native';
 import { hapticMedium } from '../utils/haptics';
-import { checkConnectivity } from '../utils/connectivity';
 import {
-  RIDDLES,
   getDailyRiddleForDate,
-  type RiddleCategory,
-  type Riddle,
   type DailyRiddleEntry,
 } from '../data/riddles';
 import {
@@ -49,8 +45,6 @@ const WRONG_MESSAGES = [
   "Don't worry, tomorrow's riddle will be easier. Probably.",
   'Your brain has left the chat.',
 ];
-
-export const ALL_CATEGORIES: RiddleCategory[] = ['memory', 'classic', 'logic', 'wordplay', 'quick'];
 
 const DEFAULT_STATS: DailyRiddleStats = {
   lastPlayedDate: '',
@@ -115,18 +109,8 @@ interface UseDailyRiddleResult {
   revealed: boolean;
   answered: boolean;
   resultMessage: string;
-  gotIt: boolean;
   alreadyPlayedToday: boolean;
   revealAnim: Animated.Value;
-
-  // Browse
-  selectedCategory: RiddleCategory | 'all';
-  setSelectedCategory: React.Dispatch<React.SetStateAction<RiddleCategory | 'all'>>;
-  searchQuery: string;
-  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
-  expandedRiddleId: number | null;
-  setExpandedRiddleId: React.Dispatch<React.SetStateAction<number | null>>;
-  filteredRiddles: Riddle[];
 
   // Online browse
   onlineRiddles: OnlineRiddle[];
@@ -134,7 +118,6 @@ interface UseDailyRiddleResult {
   onlineError: boolean;
   expandedOnlineId: string | null;
   setExpandedOnlineId: React.Dispatch<React.SetStateAction<string | null>>;
-  isOnlineAvailable: boolean;
 
   // Callbacks
   handleReveal: () => void;
@@ -148,20 +131,13 @@ export function useDailyRiddle(): UseDailyRiddleResult {
   const [revealed, setRevealed] = useState(false);
   const [answered, setAnswered] = useState(false);
   const [resultMessage, setResultMessage] = useState('');
-  const [gotIt, setGotIt] = useState(false);
   const [alreadyPlayedToday, setAlreadyPlayedToday] = useState(false);
-
-  // Browse mode state
-  const [selectedCategory, setSelectedCategory] = useState<RiddleCategory | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedRiddleId, setExpandedRiddleId] = useState<number | null>(null);
 
   // Online browse state
   const [onlineRiddles, setOnlineRiddles] = useState<OnlineRiddle[]>([]);
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [onlineError, setOnlineError] = useState(false);
   const [expandedOnlineId, setExpandedOnlineId] = useState<string | null>(null);
-  const [isOnlineAvailable, setIsOnlineAvailable] = useState(true);
 
   // Reveal animation
   const revealAnim = useRef(new Animated.Value(0)).current;
@@ -173,11 +149,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
   const [dailyRiddle, setDailyRiddle] = useState<DailyRiddleEntry>(
     () => getDailyRiddleForDate(getTodayString()),
   );
-
-  // Check internet connectivity on mount
-  useEffect(() => {
-    checkConnectivity().then(setIsOnlineAvailable);
-  }, []);
 
   // Refresh stats + today's riddle on focus. The riddle itself is
   // deterministic (pure function of dateStr → YEARLY_RIDDLES lookup), so
@@ -195,7 +166,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
           setAlreadyPlayedToday(true);
           setRevealed(true);
           setAnswered(true);
-          setGotIt(s.lastPlayedCorrect);
         } else {
           setAlreadyPlayedToday(false);
           setRevealed(false);
@@ -224,7 +194,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     async (correct: boolean) => {
       hapticMedium();
       setAnswered(true);
-      setGotIt(correct);
 
       const msgs = correct ? CORRECT_MESSAGES : WRONG_MESSAGES;
       setResultMessage(msgs[Math.floor(Math.random() * msgs.length)]);
@@ -276,22 +245,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
-  const filteredRiddles = useMemo(() => {
-    let list = RIDDLES;
-    if (selectedCategory !== 'all') {
-      list = list.filter((r) => r.category === selectedCategory);
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(
-        (r) =>
-          r.question.toLowerCase().includes(q) ||
-          r.answer.toLowerCase().includes(q),
-      );
-    }
-    return list;
-  }, [selectedCategory, searchQuery]);
-
   return {
     // Mode
     mode,
@@ -303,18 +256,8 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     revealed,
     answered,
     resultMessage,
-    gotIt,
     alreadyPlayedToday,
     revealAnim,
-
-    // Browse
-    selectedCategory,
-    setSelectedCategory,
-    searchQuery,
-    setSearchQuery,
-    expandedRiddleId,
-    setExpandedRiddleId,
-    filteredRiddles,
 
     // Online browse
     onlineRiddles,
@@ -322,7 +265,6 @@ export function useDailyRiddle(): UseDailyRiddleResult {
     onlineError,
     expandedOnlineId,
     setExpandedOnlineId,
-    isOnlineAvailable,
 
     // Callbacks
     handleReveal,
