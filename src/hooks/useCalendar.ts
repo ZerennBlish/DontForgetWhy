@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -30,7 +30,6 @@ interface UseCalendarResult {
   handleCalNext: () => void;
   handleSelectDate: (day: number) => void;
   toggleCalendar: () => void;
-  calendarDays: (number | null)[];
   calDays: number;
   calFirstDay: number;
   MONTH_NAMES: string[];
@@ -78,12 +77,6 @@ export function useCalendar({ initialMonth, initialYear, onSelectDate }: UseCale
   const calDays = getDaysInMonth(calendarYear, calendarMonth);
   const calFirstDay = getFirstDayOfMonth(calendarYear, calendarMonth);
 
-  const calendarDays = useMemo(() => {
-    const blanks: (null)[] = Array.from({ length: calFirstDay }, () => null);
-    const days: (number)[] = Array.from({ length: calDays }, (_, i) => i + 1);
-    return [...blanks, ...days] as (number | null)[];
-  }, [calFirstDay, calDays]);
-
   return {
     calendarMonth,
     calendarYear,
@@ -94,7 +87,6 @@ export function useCalendar({ initialMonth, initialYear, onSelectDate }: UseCale
     handleCalNext,
     handleSelectDate,
     toggleCalendar,
-    calendarDays,
     calDays,
     calFirstDay,
     MONTH_NAMES,

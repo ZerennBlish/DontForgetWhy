@@ -138,7 +138,6 @@ interface InitState {
 
 interface UseNotificationRoutingResult {
   navigationRef: React.MutableRefObject<NavigationContainerRef<RootStackParamList> | null>;
-  isNavigationReady: React.MutableRefObject<boolean>;
   initState: InitState | null;
   onNavigationReady: () => void;
 }
@@ -1091,7 +1090,6 @@ export function useNotificationRouting(): UseNotificationRoutingResult {
 
   return {
     navigationRef,
-    isNavigationReady,
     initState,
     onNavigationReady,
   };

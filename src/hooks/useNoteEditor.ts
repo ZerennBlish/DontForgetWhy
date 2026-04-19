@@ -36,8 +36,6 @@ interface UseNoteEditorParams {
   }) => void;
   onDelete: (noteId: string) => void;
   onClose: () => void;
-  onCustomBgColorChange: (color: string) => void;
-  onCustomFontColorChange: (color: string) => void;
   dirtyRef?: React.MutableRefObject<boolean>;
 }
 

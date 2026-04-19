@@ -39,7 +39,7 @@ export default function NoteEditorModal({
   const editor = useNoteEditor({
     note, customBgColor, customFontColor,
     onSave, onDelete, onClose,
-    onCustomBgColorChange, onCustomFontColorChange, dirtyRef,
+    dirtyRef,
   });
 
   const styles = useMemo(() => StyleSheet.create({

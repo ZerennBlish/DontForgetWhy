@@ -80,7 +80,6 @@ interface UseSettingsResult {
   silenceAll: boolean;
   silenceRemaining: string | null;
   silencePickerVisible: boolean;
-  setSilencePickerVisible: React.Dispatch<React.SetStateAction<boolean>>;
   pickerHours: number;
   setPickerHours: React.Dispatch<React.SetStateAction<number>>;
   pickerMinutes: number;
@@ -655,7 +654,6 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     silenceAll,
     silenceRemaining,
     silencePickerVisible,
-    setSilencePickerVisible,
     pickerHours,
     setPickerHours,
     pickerMinutes,
