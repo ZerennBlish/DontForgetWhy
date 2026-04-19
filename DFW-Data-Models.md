@@ -767,8 +767,6 @@ src/data/triviaBank_mythFiction.ts
 export function getAllQuestions(): TriviaQuestion[];
 export function getQuestionsForCategory(cat: TriviaParentCategory): TriviaQuestion[];
 export function getQuestionsForSubcategory(sub: TriviaSubcategory): TriviaQuestion[];
-export function getQuestionCount(cat: TriviaParentCategory): number;
-export function getSubcategoryCount(sub: TriviaSubcategory): number;
 export const TRIVIA_CATEGORIES: { id: TriviaParentCategory; label: string }[];
 ```
 

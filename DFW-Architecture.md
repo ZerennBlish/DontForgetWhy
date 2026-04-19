@@ -249,7 +249,7 @@ Two-level taxonomy: 8 **parent categories** for the main tile grid, each contain
 - **`TriviaSubcategory`** (19 values) mapped via `PARENT_TO_SUBS`. Parents with a single sub (`general`, `geography`, `mythFiction`) skip the modal — treated as instant "All {parent}" selections. Parents with >1 subs open `SubcategoryPickerModal`.
 - **`SUBCATEGORY_LABELS`** keeps display text out of the taxonomy.
 
-**1,623 questions in 8 data files.** Each parent has its own `src/data/triviaBank_{parent}.ts` exporting a `TriviaQuestion[]`. `src/data/triviaBank.ts` barrel exposes `getAllQuestions`, `getQuestionsForCategory`, `getQuestionsForSubcategory`, `getQuestionCount`, `getSubcategoryCount`. Question ids follow `category_NNN`.
+**1,623 questions in 8 data files.** Each parent has its own `src/data/triviaBank_{parent}.ts` exporting a `TriviaQuestion[]`. `src/data/triviaBank.ts` barrel exposes `getAllQuestions`, `getQuestionsForCategory`, `getQuestionsForSubcategory`. Question ids follow `category_NNN`.
 
 **`selectQuestions` branch table** (offline rounds):
 1. `subcategory !== 'all'` → `getQuestionsForSubcategory(sub)` — strict sub filter.

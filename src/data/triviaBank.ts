@@ -32,14 +32,6 @@ export function getQuestionsForSubcategory(subcategory: TriviaSubcategory): Triv
   return ALL_QUESTIONS.filter((q) => q.subcategory === subcategory);
 }
 
-export function getQuestionCount(category: TriviaParentCategory): number {
-  return ALL_QUESTIONS.filter((q) => q.category === category).length;
-}
-
-export function getSubcategoryCount(subcategory: TriviaSubcategory): number {
-  return ALL_QUESTIONS.filter((q) => q.subcategory === subcategory).length;
-}
-
 export const TRIVIA_CATEGORIES: { id: TriviaParentCategory; label: string }[] = [
   { id: 'general', label: 'General Knowledge' },
   { id: 'popCulture', label: 'Pop Culture' },
