@@ -31,9 +31,7 @@ interface UseAlarmFormResult {
   // Time state
   timeFormat: '12h' | '24h';
   hourText: string;
-  setHourText: React.Dispatch<React.SetStateAction<string>>;
   minuteText: string;
-  setMinuteText: React.Dispatch<React.SetStateAction<string>>;
   ampm: 'AM' | 'PM';
   setAmpm: React.Dispatch<React.SetStateAction<'AM' | 'PM'>>;
   pickerHours: number;
@@ -67,22 +65,15 @@ interface UseAlarmFormResult {
   setSelectedPrivate: React.Dispatch<React.SetStateAction<boolean>>;
   privateHint: string;
   mode: 'recurring' | 'one-time';
-  setMode: React.Dispatch<React.SetStateAction<'recurring' | 'one-time'>>;
   selectedDate: string | null;
   setSelectedDate: React.Dispatch<React.SetStateAction<string | null>>;
-  iconInputRef: React.RefObject<TextInput | null>;
   // Sound state
   soundMode: SoundMode;
   setSoundMode: React.Dispatch<React.SetStateAction<SoundMode>>;
-  selectedSoundUri: string | null;
-  setSelectedSoundUri: React.Dispatch<React.SetStateAction<string | null>>;
   selectedSoundName: string | null;
-  setSelectedSoundName: React.Dispatch<React.SetStateAction<string | null>>;
   selectedSystemSoundID: number | null;
-  setSelectedSystemSoundID: React.Dispatch<React.SetStateAction<number | null>>;
   // Day selection
   selectedDays: AlarmDay[];
-  setSelectedDays: React.Dispatch<React.SetStateAction<AlarmDay[]>>;
   handleToggleDay: (day: AlarmDay, currentMode: 'one-time' | 'recurring', clearDateFn?: () => void) => void;
   handleQuickDays: (preset: AlarmDay[], clearDateFn?: () => void) => void;
   isWeekdaysSelected: boolean;
@@ -189,7 +180,6 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
   const [selectedDate, setSelectedDate] = useState<string | null>(
     existingAlarm?.date || initialDate || null
   );
-  const iconInputRef = useRef<TextInput>(null);
 
   // Sound state
   const [soundMode, setSoundMode] = useState<SoundMode>(() => soundIdToSoundMode(existingAlarm?.soundId));
@@ -753,7 +743,7 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
 
   return {
     // Time state
-    timeFormat, hourText, setHourText, minuteText, setMinuteText,
+    timeFormat, hourText, minuteText,
     ampm, setAmpm, pickerHours, pickerMinutes, timeInputMode,
     modalHours, modalMinutes, modalAmpm, setModalAmpm,
     hourRef, minuteRef,
@@ -766,16 +756,14 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
     selectedIcon, setSelectedIcon,
     guessWhy, setGuessWhy,
     selectedPrivate, setSelectedPrivate, privateHint,
-    mode, setMode,
+    mode,
     selectedDate, setSelectedDate,
-    iconInputRef,
     // Sound state
     soundMode, setSoundMode,
-    selectedSoundUri, setSelectedSoundUri,
-    selectedSoundName, setSelectedSoundName,
-    selectedSystemSoundID, setSelectedSystemSoundID,
+    selectedSoundName,
+    selectedSystemSoundID,
     // Day selection
-    selectedDays, setSelectedDays,
+    selectedDays,
     handleToggleDay, handleQuickDays,
     isWeekdaysSelected, isWeekendsSelected, isEverydaySelected,
     // Calendar

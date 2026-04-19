@@ -34,9 +34,7 @@ interface UseReminderFormResult {
   // Time state
   timeFormat: '12h' | '24h';
   hourText: string;
-  setHourText: React.Dispatch<React.SetStateAction<string>>;
   minuteText: string;
-  setMinuteText: React.Dispatch<React.SetStateAction<string>>;
   ampm: 'AM' | 'PM';
   setAmpm: React.Dispatch<React.SetStateAction<'AM' | 'PM'>>;
   pickerHours: number;
@@ -69,14 +67,11 @@ interface UseReminderFormResult {
   setSelectedPrivate: React.Dispatch<React.SetStateAction<boolean>>;
   privateHint: string;
   mode: 'one-time' | 'recurring';
-  setMode: React.Dispatch<React.SetStateAction<'one-time' | 'recurring'>>;
   selectedDate: string | null;
   setSelectedDate: React.Dispatch<React.SetStateAction<string | null>>;
-  iconInputRef: React.RefObject<TextInput | null>;
   editReady: boolean;
   // Day selection
   selectedDays: AlarmDay[];
-  setSelectedDays: React.Dispatch<React.SetStateAction<AlarmDay[]>>;
   handleToggleDay: (day: AlarmDay, currentMode: 'one-time' | 'recurring', clearDateFn?: () => void) => void;
   handleQuickDays: (preset: AlarmDay[], clearDateFn?: () => void) => void;
   isWeekdaysSelected: boolean;
@@ -99,7 +94,6 @@ interface UseReminderFormResult {
   save: (onSuccess: () => void) => Promise<void>;
   switchMode: (newMode: 'one-time' | 'recurring') => void;
   // Computed
-  isEditing: boolean;
   isDirty: boolean;
   notFound: boolean;
 }
@@ -143,7 +137,6 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams):
     return hints[Math.floor(Math.random() * hints.length)];
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(initialDate || null);
-  const iconInputRef = useRef<TextInput>(null);
   const [mode, setMode] = useState<'one-time' | 'recurring'>('one-time');
   const [placeholder] = useState(getRandomPlaceholder);
   const [editReady, setEditReady] = useState(!editId);
@@ -681,7 +674,7 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams):
 
   return {
     // Time state
-    timeFormat, hourText, setHourText, minuteText, setMinuteText,
+    timeFormat, hourText, minuteText,
     ampm, setAmpm, pickerHours, pickerMinutes, timeInputMode,
     modalHours, modalMinutes, modalAmpm, setModalAmpm,
     hourRef, minuteRef,
@@ -693,11 +686,11 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams):
     existing, text, setText, nickname, setNickname, placeholder,
     selectedIcon, setSelectedIcon,
     selectedPrivate, setSelectedPrivate, privateHint,
-    mode, setMode,
+    mode,
     selectedDate, setSelectedDate,
-    iconInputRef, editReady,
+    editReady,
     // Day selection
-    selectedDays, setSelectedDays,
+    selectedDays,
     handleToggleDay, handleQuickDays,
     isWeekdaysSelected, isWeekendsSelected, isEverydaySelected,
     // Calendar
@@ -708,7 +701,6 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams):
     // Actions
     clearDate, hasContent, save, switchMode,
     // Computed
-    isEditing: !!existing,
     isDirty,
     notFound,
   };
