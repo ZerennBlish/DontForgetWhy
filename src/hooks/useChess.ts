@@ -53,8 +53,6 @@ interface UseChessReturn {
 
   // AI thinking
   isAIThinking: boolean;
-  aiTimeBudget: number;
-  aiThinkStart: number;
 
   // Teaching mode
   teachingMode: boolean;
@@ -68,7 +66,6 @@ interface UseChessReturn {
   reviewBoard: Cell[][];
   fenHistoryLength: number;
   enterReview: () => void;
-  exitReview: () => void;
   reviewStepBack: () => void;
   reviewStepForward: () => void;
   reviewGoToStart: () => void;
@@ -111,7 +108,6 @@ export function useChess(): UseChessReturn {
   const [difficulty, setDifficultyState] = useState(1);
   const takeBackUsedRef = useRef(false);
   const [takeBackUsed, setTakeBackUsedState] = useState(false);
-  const blunderCountRef = useRef(0);
   const startedAtRef = useRef('');
 
   const setPlayerColor = (c: 'w' | 'b') => {
@@ -142,8 +138,6 @@ export function useChess(): UseChessReturn {
   const [currentRoast, setCurrentRoast] = useState<string | null>(null);
   const [roastSeverity, setRoastSeverity] = useState<string | null>(null);
   const [isAIThinking, setIsAIThinking] = useState(false);
-  const [aiTimeBudget, setAiTimeBudget] = useState(0);
-  const [aiThinkStart, setAiThinkStart] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [gameResult, setGameResult] = useState<string | null>(null);
   const [winner, setWinner] = useState<'w' | 'b' | null>(null);
@@ -178,7 +172,6 @@ export function useChess(): UseChessReturn {
       difficulty: difficultyRef.current,
       moveHistory: g.history(),
       takeBackUsed: takeBackUsedRef.current,
-      blunderCount: blunderCountRef.current,
       startedAt: startedAtRef.current,
       updatedAt: new Date().toISOString(),
     });
@@ -236,41 +229,25 @@ export function useChess(): UseChessReturn {
       aiThinkRef.current = null;
       if (sessionIdRef.current !== currentSession) {
         setIsAIThinking(false);
-        setAiTimeBudget(0);
-        setAiThinkStart(0);
         return;
       }
       const current = gameRef.current;
       if (!current || current.isGameOver()) {
         setIsAIThinking(false);
-        setAiTimeBudget(0);
-        setAiThinkStart(0);
         return;
       }
       const level =
         DIFFICULTY_LEVELS[difficultyRef.current] ?? DIFFICULTY_LEVELS[1];
-      const budget = level.timeLimitMs;
-
-      // Publish the budget/start so the UI can start its progress bar
-      // animation BEFORE getAIMove blocks the JS thread. The setTimeout(0)
-      // yields to React so the state commits and the native animation
-      // registers before the search begins.
-      setAiThinkStart(Date.now());
-      setAiTimeBudget(budget);
       setTimeout(async () => {
         // Bail if the user resigned / started a new game / unmounted
         // while we were yielding to React.
         if (sessionIdRef.current !== currentSession) {
           setIsAIThinking(false);
-          setAiTimeBudget(0);
-          setAiThinkStart(0);
           return;
         }
         const c2 = gameRef.current;
         if (!c2 || c2.isGameOver()) {
           setIsAIThinking(false);
-          setAiTimeBudget(0);
-          setAiThinkStart(0);
           return;
         }
         const t2 = Date.now();
@@ -290,15 +267,11 @@ export function useChess(): UseChessReturn {
           // Bail if session changed during the cloud request.
           if (sessionIdRef.current !== currentSession) {
             setIsAIThinking(false);
-            setAiTimeBudget(0);
-            setAiThinkStart(0);
             return;
           }
           // Re-check game state — could have changed while awaiting.
           if (!gameRef.current || gameRef.current !== c2 || c2.isGameOver()) {
             setIsAIThinking(false);
-            setAiTimeBudget(0);
-            setAiThinkStart(0);
             return;
           }
           if (!aiSan) {
@@ -323,8 +296,6 @@ export function useChess(): UseChessReturn {
           }
         }
         setIsAIThinking(false);
-        setAiTimeBudget(0);
-        setAiThinkStart(0);
         bump();
         saveCurrentGame();
         checkGameOver(c2);
@@ -376,12 +347,6 @@ export function useChess(): UseChessReturn {
         if (sessionIdRef.current !== analysisSession) return;
         if (gameRef.current !== g) return;
         const analysis = analyzeMove(fenBefore, moveSan, ANALYSIS_DEPTH);
-        if (
-          analysis.severity === 'blunder' ||
-          analysis.severity === 'catastrophe'
-        ) {
-          blunderCountRef.current += 1;
-        }
         const roast = getRoastForMove(analysis);
         showRoast(roast.roastText, roast.severity);
         saveCurrentGame();
@@ -472,9 +437,6 @@ export function useChess(): UseChessReturn {
       aiThinkRef.current = null;
     }
     setIsAIThinking(false);
-    setAiTimeBudget(0);
-    setAiThinkStart(0);
-
     showRoast(getTakeBackRoast(), 'takeBack');
 
     bump();
@@ -495,8 +457,6 @@ export function useChess(): UseChessReturn {
     sessionIdRef.current += 1;
     clearTimers();
     setIsAIThinking(false);
-    setAiTimeBudget(0);
-    setAiThinkStart(0);
     setGameResult('resigned');
     setWinner(playerColorRef.current === 'w' ? 'b' : 'w');
     playGameSound('gameLoss');
@@ -518,15 +478,12 @@ export function useChess(): UseChessReturn {
     setDifficulty(1);
     setTakeBackUsed(false);
     setTeachingModeWrapped(false);
-    blunderCountRef.current = 0;
     startedAtRef.current = '';
     setSelectedSquare(null);
     setValidMoves([]);
     setCurrentRoast(null);
     setRoastSeverity(null);
     setIsAIThinking(false);
-    setAiTimeBudget(0);
-    setAiThinkStart(0);
     setGameResult(null);
     setWinner(null);
     bump();
@@ -547,15 +504,12 @@ export function useChess(): UseChessReturn {
       setTakeBackUsed(false);
       const teachingEligible = difficultyIndex <= 2;
       setTeachingModeWrapped(teachingEligible);
-      blunderCountRef.current = 0;
       startedAtRef.current = now;
       setSelectedSquare(null);
       setValidMoves([]);
       setCurrentRoast(null);
       setRoastSeverity(null);
       setIsAIThinking(false);
-      setAiTimeBudget(0);
-      setAiThinkStart(0);
       setGameResult(null);
       setWinner(null);
       bump();
@@ -567,7 +521,6 @@ export function useChess(): UseChessReturn {
         difficulty: difficultyIndex,
         moveHistory: [],
         takeBackUsed: false,
-        blunderCount: 0,
         startedAt: now,
         updatedAt: now,
       });
@@ -589,11 +542,6 @@ export function useChess(): UseChessReturn {
     setIsReviewing(true);
     setReviewIndex(fenHistoryRef.current.length - 1);
   }, [gameResult]);
-
-  const exitReview = useCallback(() => {
-    setIsReviewing(false);
-    setReviewIndex(0);
-  }, []);
 
   const reviewStepBack = useCallback(() => {
     setReviewIndex((i) => Math.max(0, i - 1));
@@ -658,7 +606,6 @@ export function useChess(): UseChessReturn {
           setTakeBackUsed(saved.takeBackUsed);
           const teachingEligible = safeDifficulty <= 2;
           setTeachingModeWrapped(teachingEligible);
-          blunderCountRef.current = saved.blunderCount;
           startedAtRef.current = saved.startedAt;
           bump();
           // If it's the AI's turn in the restored position, run it.
@@ -781,8 +728,6 @@ export function useChess(): UseChessReturn {
     takeBackAvailable,
     takeBackUsed,
     isAIThinking,
-    aiTimeBudget,
-    aiThinkStart,
     teachingMode,
     setTeachingMode: setTeachingModeWrapped,
     threatenedSquares,
@@ -792,7 +737,6 @@ export function useChess(): UseChessReturn {
     reviewBoard,
     fenHistoryLength: fenHistoryRef.current.length,
     enterReview,
-    exitReview,
     reviewStepBack,
     reviewStepForward,
     reviewGoToStart,

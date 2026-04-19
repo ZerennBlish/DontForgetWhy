@@ -28,9 +28,7 @@ interface UseCheckersReturn {
   // Game state
   board: Board;
   playerColor: PieceColor;
-  turn: PieceColor;
   difficulty: number;
-  isPlayerTurn: boolean;
   isGameOver: boolean;
   gameResult: 'red_wins' | 'black_wins' | 'resigned' | null;
   winner: PieceColor | null;
@@ -72,7 +70,6 @@ export function useCheckers(): UseCheckersReturn {
   const playerColorRef = useRef<PieceColor>('r');
   const [playerColor, setPlayerColorState] = useState<PieceColor>('r');
   const turnRef = useRef<PieceColor>('r');
-  const [turn, setTurnState] = useState<PieceColor>('r');
   const difficultyRef = useRef(1);
   const [difficulty, setDifficultyState] = useState(1);
   const moveCountRef = useRef(0);
@@ -85,7 +82,6 @@ export function useCheckers(): UseCheckersReturn {
   };
   const setTurn = (t: PieceColor) => {
     turnRef.current = t;
-    setTurnState(t);
   };
   const setDifficulty = (d: number) => {
     difficultyRef.current = d;
@@ -437,8 +433,6 @@ export function useCheckers(): UseCheckersReturn {
   }, [hasBoard, version, playerColor]);
 
   const isGameOver = gameResult !== null;
-  const isPlayerTurn =
-    hasBoard && !isAIThinking && !isGameOver && turn === playerColor;
 
   const { redCount, blackCount, redKings, blackKings } = useMemo(() => {
     const b = boardRef.current;
@@ -463,9 +457,7 @@ export function useCheckers(): UseCheckersReturn {
   return {
     board,
     playerColor,
-    turn,
     difficulty,
-    isPlayerTurn,
     isGameOver,
     gameResult,
     winner,

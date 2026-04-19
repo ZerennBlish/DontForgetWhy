@@ -137,10 +137,8 @@ interface UseSudokuResult {
 
   // Computed
   remainingCounts: Record<number, number>;
-  showHighlighting: boolean;
   showRemainingCounts: boolean;
   showMistakesDuringPlay: boolean;
-  hasEmptyCells: boolean;
   hintDisabled: boolean;
   cellFlags: SudokuCellFlags[][];
 
@@ -154,8 +152,6 @@ interface UseSudokuResult {
   handleErase: () => void;
   handleHint: () => void;
   handleNewGameConfirm: () => void;
-  isHighlighted: (row: number, col: number) => boolean;
-  isSameNumber: (row: number, col: number) => boolean;
   clearSavedGame: () => void;
 }
 
@@ -567,43 +563,41 @@ export function useSudoku(): UseSudokuResult {
 
   const hintDisabled = hintsUsed >= MAX_HINTS || !hasEmptyCells;
 
-  const isHighlighted = useCallback((row: number, col: number): boolean => {
-    if (!showHighlighting) return false;
-    if (!selectedCell) return false;
-    const [sr, sc] = selectedCell;
-    if (row === sr || col === sc) return true;
-    if (Math.floor(row / 3) === Math.floor(sr / 3) && Math.floor(col / 3) === Math.floor(sc / 3)) return true;
-    return false;
-  }, [selectedCell, showHighlighting]);
-
-  const isSameNumber = useCallback((row: number, col: number): boolean => {
-    if (!showHighlighting) return false;
-    if (!selectedCell) return false;
-    const [sr, sc] = selectedCell;
-    const selVal = playerGrid[sr]?.[sc];
-    if (!selVal || selVal === 0) return false;
-    return playerGrid[row]?.[col] === selVal;
-  }, [selectedCell, playerGrid, showHighlighting]);
-
   // Pre-compute the highlight flags for every cell once per
   // (selectedCell, playerGrid, showHighlighting) change. The screen
-  // reads from this 9×9 array instead of calling isHighlighted/isSameNumber
-  // 162 times on every render — critical because the timer ticks every
-  // second and would otherwise re-run those helpers across the whole grid.
+  // reads from this 9×9 array instead of recomputing flags per cell on
+  // every render — critical because the timer ticks every second and
+  // would otherwise re-run the highlight logic across the whole grid.
   const cellFlags = useMemo<SudokuCellFlags[][]>(() => {
     const flags: SudokuCellFlags[][] = [];
+    const canHighlight = showHighlighting && !!selectedCell;
+    const sr = selectedCell?.[0] ?? -1;
+    const sc = selectedCell?.[1] ?? -1;
+    const selVal = canHighlight ? playerGrid[sr]?.[sc] ?? 0 : 0;
     for (let r = 0; r < 9; r++) {
       const row: SudokuCellFlags[] = [];
       for (let c = 0; c < 9; c++) {
-        row.push({
-          isHighlighted: isHighlighted(r, c),
-          isSameNumber: isSameNumber(r, c),
-        });
+        let isHighlighted = false;
+        let isSameNumber = false;
+        if (canHighlight) {
+          if (r === sr || c === sc) {
+            isHighlighted = true;
+          } else if (
+            Math.floor(r / 3) === Math.floor(sr / 3) &&
+            Math.floor(c / 3) === Math.floor(sc / 3)
+          ) {
+            isHighlighted = true;
+          }
+          if (selVal !== 0 && playerGrid[r]?.[c] === selVal) {
+            isSameNumber = true;
+          }
+        }
+        row.push({ isHighlighted, isSameNumber });
       }
       flags.push(row);
     }
     return flags;
-  }, [isHighlighted, isSameNumber]);
+  }, [selectedCell, playerGrid, showHighlighting]);
 
   return {
     // Game phase
@@ -638,10 +632,8 @@ export function useSudoku(): UseSudokuResult {
 
     // Computed
     remainingCounts,
-    showHighlighting,
     showRemainingCounts,
     showMistakesDuringPlay,
-    hasEmptyCells,
     hintDisabled,
     cellFlags,
 
@@ -655,8 +647,6 @@ export function useSudoku(): UseSudokuResult {
     handleErase,
     handleHint,
     handleNewGameConfirm,
-    isHighlighted,
-    isSameNumber,
     clearSavedGame,
   };
 }
