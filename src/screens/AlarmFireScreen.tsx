@@ -82,7 +82,7 @@ const DISMISS_MESSAGES = [
 export default function AlarmFireScreen({ route, navigation }: Props) {
   useEffect(() => {
     try { activateKeepAwakeAsync().catch(() => {}); } catch {}
-    return () => { try { deactivateKeepAwake(); } catch {} };
+    return () => { try { Promise.resolve(deactivateKeepAwake()).catch(() => {}); } catch {} };
   }, []);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
