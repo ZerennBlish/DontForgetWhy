@@ -15,6 +15,7 @@ import {
 } from '../services/multiplayerTrivia';
 import { getCurrentUser } from '../services/firebaseAuth';
 import { playGameSound } from '../utils/gameSounds';
+import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import type { TriviaQuestion } from '../types/trivia';
 
 const QUESTION_TIMER_SECONDS = 15;
@@ -125,7 +126,7 @@ export function useMultiplayerTrivia({
         setLastAnswer(trivia.lastAnswer ?? null);
         setWinner(trivia.winner ?? null);
 
-        // Sound on new answer event
+        // Sound + haptic on new answer event
         if (trivia.lastAnswer) {
           const key = `${trivia.lastAnswer.uid}|${trivia.lastAnswer.answer}|${trivia.currentQuestionIndex}`;
           if (key !== prevAnswerKeyRef.current) {
@@ -133,6 +134,11 @@ export function useMultiplayerTrivia({
             playGameSound(
               trivia.lastAnswer.correct ? 'triviaCorrect' : 'triviaWrong',
             );
+            // Haptic only for the answerer (other players get sound only).
+            if (trivia.lastAnswer.uid === myUid) {
+              if (trivia.lastAnswer.correct) hapticMedium();
+              else hapticHeavy();
+            }
           }
         } else {
           // lastAnswer was cleared — allow the next answer key to re-fire.
@@ -144,6 +150,8 @@ export function useMultiplayerTrivia({
           endedRef.current = true;
           const iWon = !!trivia.winner && trivia.winner === myUid;
           playGameSound(iWon ? 'gameWin' : 'gameLoss');
+          if (iWon) hapticMedium();
+          else hapticHeavy();
           onGameEndRef.current?.();
         }
       },
@@ -218,6 +226,7 @@ export function useMultiplayerTrivia({
   const handleSubmitAnswer = useCallback(
     (answer: string) => {
       if (!isMyTurn || phase !== 'question') return;
+      hapticLight();
       playGameSound('tap');
       submitAnswerService(gameCode, answer).catch((e) =>
         console.warn('[useMultiplayerTrivia] submitAnswer failed:', e),

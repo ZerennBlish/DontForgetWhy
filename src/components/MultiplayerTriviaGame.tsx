@@ -575,7 +575,13 @@ export default function MultiplayerTriviaGame({
       >
         <View style={styles.lobbyCard}>
           <Text style={styles.lobbyLabel}>Your game code</Text>
-          <Text style={styles.codeDisplay}>{code}</Text>
+          <Text
+            style={styles.codeDisplay}
+            accessibilityLabel={`Game code: ${code.split('').join(' ')}`}
+            accessibilityRole="text"
+          >
+            {code}
+          </Text>
           <Text style={styles.codeHint}>
             Share this with up to 3 friends. They enter it on the Join screen.
           </Text>
@@ -758,9 +764,20 @@ export default function MultiplayerTriviaGame({
         })}
       </View>
 
-      <View style={styles.turnBanner}>
+      <View
+        style={styles.turnBanner}
+        accessibilityLiveRegion="polite"
+      >
         {isStealAttempt && <Text style={styles.stealLabel}>STEAL!</Text>}
-        <Text style={[styles.turnText, mp.isMyTurn && styles.turnTextMine]}>
+        <Text
+          style={[styles.turnText, mp.isMyTurn && styles.turnTextMine]}
+          accessibilityLabel={
+            (isStealAttempt ? 'Steal attempt. ' : '') +
+            (mp.isMyTurn
+              ? 'Your turn'
+              : `${activePlayer?.displayName ?? 'Opponent'}'s turn`)
+          }
+        >
           {mp.isMyTurn
             ? 'Your Turn!'
             : `${activePlayer?.displayName ?? 'Opponent'}'s Turn`}

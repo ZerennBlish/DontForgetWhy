@@ -147,7 +147,6 @@ export function useMultiplayerCheckers({
 
   const myUidRef = useRef<string>('');
   const [playerColor, setPlayerColor] = useState<PieceColor>('r');
-  const playerColorRef = useRef<PieceColor>('r');
 
   const [opponentName, setOpponentName] = useState<string>('Opponent');
   const [opponentUid, setOpponentUid] = useState<string>('');
@@ -196,7 +195,6 @@ export function useMultiplayerCheckers({
       const hostPc = hostColorToPc(game.hostColor);
       const pc: PieceColor =
         game.host.uid === user.uid ? hostPc : hostPc === 'r' ? 'b' : 'r';
-      playerColorRef.current = pc;
       setPlayerColor(pc);
 
       // Opponent info

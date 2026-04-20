@@ -725,7 +725,6 @@ export default function TriviaScreen({ navigation, route }: Props) {
         ) : (
           activeMpGames.map((g) => {
             const myUid = getCurrentUser()?.uid ?? '';
-            const myTurn = g.players[0] === myUid; // placeholder — real turn check uses triviaPlayers[activePlayerIndex]
             const activeName =
               g.triviaPlayers?.[g.activePlayerIndex]?.displayName ?? 'Someone';
             const isMyTurn =

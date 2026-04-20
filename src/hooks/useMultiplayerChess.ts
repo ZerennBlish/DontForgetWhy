@@ -126,7 +126,6 @@ export function useMultiplayerChess({
 
   const myUidRef = useRef<string>('');
   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
-  const playerColorRef = useRef<'w' | 'b'>('w');
 
   const [opponentName, setOpponentName] = useState<string>('Opponent');
   const [opponentUid, setOpponentUid] = useState<string>('');
@@ -180,7 +179,6 @@ export function useMultiplayerChess({
           : game.hostColor === 'w'
             ? 'b'
             : 'w';
-      playerColorRef.current = pc;
       setPlayerColor(pc);
 
       // Opponent info

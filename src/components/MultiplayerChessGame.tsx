@@ -52,6 +52,15 @@ const SQUARE_SIZE = INNER_BOARD / 8;
 const FILES_WHITE = 'abcdefgh';
 const FILES_BLACK = 'hgfedcba';
 
+const PIECE_NAMES: Record<string, string> = {
+  p: 'pawn',
+  n: 'knight',
+  b: 'bishop',
+  r: 'rook',
+  q: 'queen',
+  k: 'king',
+};
+
 function rankLabelText(row: number, playerColor: 'w' | 'b'): string {
   return playerColor === 'b' ? String(row + 1) : String(8 - row);
 }
@@ -579,6 +588,21 @@ export default function MultiplayerChessGame({
 
                 const showRank = colIdx === 0;
                 const showFile = rowIdx === 7;
+
+                // Build accessibility label: square name, piece, state.
+                const sqName = `${fileLabelText(colIdx, mp.playerColor)}${rankLabelText(rowIdx, mp.playerColor)}`;
+                const pieceLabel = cell
+                  ? `${cell.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[cell.type] ?? cell.type}`
+                  : 'empty';
+                const stateBits: string[] = [];
+                if (selected) stateBits.push('selected');
+                else if (legal) stateBits.push('can move here');
+                if (kingInCheck) stateBits.push('in check');
+                if (lastFromTo) stateBits.push('last move');
+                const a11yLabel = `${sqName}, ${pieceLabel}${
+                  stateBits.length ? ', ' + stateBits.join(', ') : ''
+                }`;
+
                 const content = (
                   <>
                     {showRank && (
@@ -608,6 +632,8 @@ export default function MultiplayerChessGame({
                     <View
                       key={colIdx}
                       style={[styles.square, { backgroundColor: bg }]}
+                      accessible={true}
+                      accessibilityLabel={a11yLabel}
                     >
                       {content}
                     </View>
@@ -621,6 +647,7 @@ export default function MultiplayerChessGame({
                     onPress={() => mp.handleSquarePress(rowIdx, colIdx)}
                     activeOpacity={0.7}
                     accessibilityRole="button"
+                    accessibilityLabel={a11yLabel}
                   >
                     {content}
                   </TouchableOpacity>
@@ -742,7 +769,13 @@ export default function MultiplayerChessGame({
       <View style={styles.center}>
         <View style={styles.waitingCard}>
           <Text style={styles.waitingLabel}>Your game code</Text>
-          <Text style={styles.codeDisplay}>{code}</Text>
+          <Text
+            style={styles.codeDisplay}
+            accessibilityLabel={`Game code: ${code.split('').join(' ')}`}
+            accessibilityRole="text"
+          >
+            {code}
+          </Text>
           <Text style={styles.codeHint}>
             Share this with your opponent. They enter it on the Join screen.
           </Text>
@@ -788,10 +821,18 @@ export default function MultiplayerChessGame({
         </View>
         <View
           style={[styles.turnPill, !mp.isPlayerTurn && styles.turnPillInactive]}
+          accessibilityLiveRegion="polite"
         >
           <Text
             style={
               mp.isPlayerTurn ? styles.turnPillText : styles.turnPillInactiveText
+            }
+            accessibilityLabel={
+              mp.isGameOver
+                ? 'Game over'
+                : mp.isPlayerTurn
+                  ? 'Your turn'
+                  : `${mp.opponentName || 'Opponent'}'s turn`
             }
           >
             {mp.isGameOver

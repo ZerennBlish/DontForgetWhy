@@ -481,6 +481,7 @@ export async function getTriviaGames(
   const snap = await gamesCollection()
     .where('players', 'array-contains', uid)
     .where('status', 'in', ['waiting', 'active'])
+    .orderBy('lastMoveAt', 'desc')
     .get();
   const all = snap.docs.map((d) => d.data() as TriviaMultiplayerGame);
   return all.filter((g) => g.type === 'trivia');

@@ -538,6 +538,17 @@ export default function MultiplayerCheckersGame({
                 );
               }
 
+              // Build accessibility label: logical position, piece, state.
+              const pieceLabel = cell
+                ? `${cell.color === 'r' ? 'red' : 'black'}${cell.king ? ' king' : ''} piece`
+                : 'empty';
+              const stateBits: string[] = [];
+              if (isSelected) stateBits.push('selected');
+              else if (isLegalTarget) stateBits.push('can move here');
+              const a11yLabel = `Row ${logRow + 1}, column ${logCol + 1}, ${pieceLabel}${
+                stateBits.length ? ', ' + stateBits.join(', ') : ''
+              }`;
+
               return (
                 <TouchableOpacity
                   key={displayCol}
@@ -545,6 +556,7 @@ export default function MultiplayerCheckersGame({
                   onPress={() => mp.selectSquare(logRow, logCol)}
                   activeOpacity={0.7}
                   accessibilityRole="button"
+                  accessibilityLabel={a11yLabel}
                 >
                   {cell && (
                     <Image
@@ -595,7 +607,13 @@ export default function MultiplayerCheckersGame({
       <View style={styles.center}>
         <View style={styles.waitingCard}>
           <Text style={styles.waitingLabel}>Your game code</Text>
-          <Text style={styles.codeDisplay}>{code}</Text>
+          <Text
+            style={styles.codeDisplay}
+            accessibilityLabel={`Game code: ${code.split('').join(' ')}`}
+            accessibilityRole="text"
+          >
+            {code}
+          </Text>
           <Text style={styles.codeHint}>
             Share this with your opponent. They enter it on the Join screen.
           </Text>
@@ -648,10 +666,18 @@ export default function MultiplayerCheckersGame({
         </View>
         <View
           style={[styles.turnPill, !mp.isPlayerTurn && styles.turnPillInactive]}
+          accessibilityLiveRegion="polite"
         >
           <Text
             style={
               mp.isPlayerTurn ? styles.turnPillText : styles.turnPillInactiveText
+            }
+            accessibilityLabel={
+              mp.isGameOver
+                ? 'Game over'
+                : mp.isPlayerTurn
+                  ? 'Your turn'
+                  : `${mp.opponentName || 'Opponent'}'s turn`
             }
           >
             {mp.isGameOver
