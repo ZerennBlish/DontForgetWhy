@@ -30,7 +30,7 @@ export type RootStackParamList = {
   DailyRiddle: undefined;
   About: undefined;
   Trivia: undefined;
-  Chess: undefined;
+  Chess: { multiplayerCode?: string } | undefined;
   Checkers: undefined;
   Notepad: { noteId?: string; newNote?: boolean } | undefined;
   Calendar: { initialDate?: string } | undefined;
