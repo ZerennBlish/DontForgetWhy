@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 32 (April 16, 2026)
+**Last updated:** Session 39 (April 20, 2026)
 
 ---
 
@@ -709,3 +709,102 @@ The checkers engine ships in two places: bundled in the React Native app and dep
 - **Engine sync rule:** `functions/src/checkersEngine.ts` is a **manually-maintained copy** of `src/services/checkersAI.ts` (minus client-only exports like `getAIMove` and `DIFFICULTY_LEVELS`). When the local engine's move generation, evaluation, or search code changes, the cloud copy MUST be updated in the same commit. There is no automated sync.
 - **Auth status:** public unauth endpoint. Anyone with a valid `{ board, turn }` payload gets a ranked-move response. Acceptable until Pro launches — at which point Firebase App Check becomes mandatory (see DFW-Decisions.md Session 32 decision "Cloud endpoint auth deferred to pre-Pro launch").
 - **Deploy workflow:** see DFW-Project-Setup.md for the `firebase deploy --only functions` workflow and `predeploy` build step.
+
+---
+
+## 15. Multiplayer Architecture (Session 39)
+
+Multiplayer ships for chess, checkers, and trivia — all three share the same Firestore collection (`games`) differentiated by a `type` discriminator. 2-player games (chess, checkers) share a single service; trivia's 2-4 player lobby has its own service with a richer document shape.
+
+### Service Layer
+
+| File | Role |
+|------|------|
+| `src/services/multiplayer.ts` | Shared 2-player Firestore plumbing. Exports `createGame`, `joinGame(code, expectedType)`, `makeMove`, `endGame`, `resign`, `offerDraw`, `respondToDraw`, `requestBreak`, `respondToBreak`, `listenToGame(code, cb, onError?)`, `getMyGames`, `cleanupFinishedGames`, `generateGameCode`, `getOpponentUid`, `isMyTurn`. Defines the `MultiplayerGame` type. |
+| `src/services/multiplayerTrivia.ts` | Trivia-specific 2-4 player lobby service. Exports `createTriviaGame`, `joinTriviaGame`, `startTriviaGame` (host-only), `submitAnswer`, `advanceToNextQuestion` (host-only), `leaveTriviaGame`, `getTriviaGames`. Re-exports `listenToGame` + `generateGameCode` from `multiplayer.ts`. Defines the `TriviaMultiplayerGame` type. |
+
+Both services use the same `games` collection. `joinGame` in `multiplayer.ts` rejects any document whose `type` doesn't match the caller's `expectedType` (`'chess' | 'checkers'`), so a checkers code entered on the chess join screen fails fast instead of corrupting state. `joinTriviaGame` has its own `type !== 'trivia'` guard.
+
+### Firestore Document Shape
+
+- **`code`** (doc id too): 6-character alphanumeric code, unambiguous charset (`ABCDEFGHJKMNPQRSTUVWXYZ23456789` — no O/0/I/1/L). Generated client-side with up to 5 retries for collision.
+- **`type`**: `'chess' | 'checkers' | 'trivia'`. The type discriminator that lets all three game kinds share the same collection.
+- **`host`**: `{ uid, displayName }` — the creator. For trivia, the first remaining player is promoted to host if the original host leaves (so `advanceToNextQuestion`, a host-only operation, can keep running).
+- **`players`**: flat `string[]` of UIDs. The canonical membership list. Firestore rules and `getMyGames` queries key off this field (`array-contains`). Chess/checkers have exactly 2 entries when active; trivia has 2-4.
+- **`status`**: `'waiting' | 'active' | 'finished'`. Waiting = created but no opponent/enough players yet. Active = all players joined (or trivia host pressed start). Finished = terminal.
+- **Chess/checkers** add `guest`, `hostColor: 'w'|'b'`, `gameState` (FEN for chess, 33-char serialized board for checkers), `turn` (UID of whose turn it is), `moves: string[]`, `result`, `winner`, `drawOffer`, `pauseRequest`.
+- **Trivia** adds `triviaPlayers: { uid, displayName, score }[]` (rich player data with scores), `phase: 'lobby'|'question'|'result'|'final'`, `category`, `subcategory`, `questions: TriviaQuestion[]` (locked in at start), `currentQuestionIndex`, `activePlayerIndex`, `attemptsThisQuestion: string[]`, `rotationStartIndex`, `lastAnswer`.
+- Every doc has `createdAt` + `lastMoveAt` for ordering in the active-games list.
+
+See DFW-Data-Models.md §15 for the full field-by-field schemas.
+
+### Firestore Rules
+
+```
+match /games/{gameCode} {
+  allow read: if request.auth != null;
+  allow create: if request.auth != null
+    && request.resource.data.host.uid == request.auth.uid;
+  allow update: if request.auth != null
+    && (
+      request.auth.uid in resource.data.players
+      || (resource.data.status == 'waiting'
+          && request.auth.uid in request.resource.data.players)
+    );
+  allow delete: if false;
+}
+```
+
+Non-participants can only update a waiting game if they add themselves to `players` in the same write — this preserves the legitimate join flow while preventing random authed users from clobbering host/gameState fields on open games. Deletes are rules-blocked; cleanup of finished games runs via a (planned) Cloud Function.
+
+### Composite Indexes
+
+`firestore.indexes.json` declares composite indexes for the `(players array-contains + status + lastMoveAt desc)` query used by `getMyGames` / `getTriviaGames`. Also declares `playerUids + type + status + lastActionAt desc` as forward-looking coverage (current code uses `players` + `lastMoveAt`, but the index covers the planned alternate shape).
+
+### Hook Layer
+
+Separate from the CPU hooks — `useMultiplayerChess` is distinct from `useChess`, and same for checkers / trivia. CPU hooks are proven and stable; adding multiplayer conditionals risks breaking the single-player path that's been shipping since v1.13.0.
+
+| Hook | Responsibility |
+|------|----------------|
+| `useMultiplayerChess` | Owns a `chess.js` instance (`chessRef`), subscribes to `listenToGame` for snapshot updates, replays `game.moves` to derive `playerColor` / `isPlayerTurn` / `isInCheck` / `moveHistory`. Handles own-move optimistic update + server send via `mpMakeMove`. Exposes review mode (`fenHistoryRef` + navigation callbacks). Sounds + haptics match the CPU hook's pattern. |
+| `useMultiplayerCheckers` | Owns a `Board` + `turn` ref, deserializes 33-char board strings on snapshot, calls `applyMove` locally for own moves, ends game via `mpEndGame(code, 'complete', myUid)` when opponent has no legal moves. |
+| `useMultiplayerTrivia` | Reads `trivia.host.uid` from live snapshot → derives `isHost` (so host promotion propagates immediately). Runs the per-question 15s countdown timer. Runs the host-only 3-second auto-advance after the result phase. Fires sound + haptic when `lastAnswer` changes (haptic gated on `lastAnswer.uid === myUid` so opponents only get sound). |
+
+All three hooks pass an `onError` callback to `listenToGame` that sets `isConnected: false` on snapshot stream failures. `endedRef` prevents `onGameEnd` from firing twice.
+
+### Real-Time Sync
+
+`listenToGame` wraps Firestore's `onSnapshot`. Signature:
+
+```ts
+export function listenToGame(
+  code: string,
+  callback: (game: MultiplayerGame | null) => void,
+  onError?: (error: Error) => void,
+): () => void
+```
+
+Each snapshot fires the callback with the current doc data (or `null` if the doc doesn't exist). Firestore's built-in local-cache pending-writes mechanism means optimistic updates are reflected in the client before the server ack arrives.
+
+### Inner-Component Pattern
+
+Each game screen (`ChessScreen`, `CheckersScreen`, `TriviaScreen`) owns a `mode` state (`'cpu' | 'multiplayer' | null`). When `mode === 'multiplayer' && mpPhase === 'playing' && multiplayerCode`, the screen renders `<MultiplayerChessGame code={...} onExit={...}>` (or the checkers/trivia equivalent). The CPU path is completely untouched — no conditional hook calls, no conditional gameplay, no shared state between the two modes. A user playing the CPU while a multiplayer game is waiting in Firestore sees no interference.
+
+The inner component owns its own `useMultiplayerChess` (etc.) instance, so mounting + unmounting the MP game is a clean lifecycle boundary: subscribe on mount, unsubscribe on unmount, cleanup fires if the user backs out of a waiting game (calls `endGame` so the doc doesn't linger as `active`).
+
+### Exit Guard Pattern
+
+Each multiplayer component registers a `beforeRemove` navigation listener while the game is in the `active` state. On hardware back, the guard shows an `Alert.alert` with a random DFW-personality title + message pair, three buttons:
+
+1. **Keep Playing** (cancel) — dismisses the Alert, stays on screen.
+2. **Ask for Break** (chess/checkers only) — calls `mpRequestBreak(code)`, shows a toast, returns to the game.
+3. **I Quit** (destructive) — awaits `mpResign(code)` / `leaveTriviaGame(code)`. On success, `bypassExitRef.current = true` + `navigation.dispatch(e.data.action)`. On failure, shows a toast (Android) / Alert (iOS) and leaves the user on-screen so they can retry.
+
+`bypassExitRef` is set to `true` after a successful resign so the guard doesn't re-fire during the dispatch. The guard is scoped to the active state only (chess/checkers: `isConnected && opponentUid && !isGameOver`; trivia: `status === 'active'`). Waiting-state and lobby-state exits are handled by a separate `useEffect` cleanup that fires `endGame` / `leaveTriviaGame` on unmount — hardware back from the waiting screen no longer orphans the game document.
+
+### Pro Gating + Active-Game Limit
+
+- `createGame` + `joinGame` + `createTriviaGame` + `joinTriviaGame` all check `isProUser()` and throw "Pro required to [create/join] multiplayer games" if false. Multiplayer requires Pro for **both** / all players. Free-tier users can't even see the multiplayer menu card (the Games screen's "vs Player" card is ProGate-protected before the screen-level auth check runs).
+- `assertBelowActiveGameLimit(uid)` caps each user at 5 concurrent `waiting`/`active` games (across all three types). Prevents one user from holding a pool of open codes that never resolve.
+- Finished games don't count against the limit but stick around for 30 days as a retention window, then a planned cleanup Cloud Function purges them. Client-side deletes are rules-blocked.

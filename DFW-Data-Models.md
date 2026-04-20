@@ -1,6 +1,6 @@
 # DFW Data Models
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 32 (April 16, 2026)
+**Last updated:** Session 39 (April 20, 2026)
 
 ---
 
@@ -814,3 +814,151 @@ Online rounds don't write to `seenQuestionIds`, so they don't affect the offline
 `TriviaStats.categoryStats` is keyed by `TriviaParentCategory` — no per-subcategory stats tracking. Subcategory granularity lives only in the seen-question cycling; aggregate stats ("best round", "total correct per category") are parent-level.
 
 Migration is silent: old stats entries for deleted categories (food, kids) drop on first load — `validateStats` rebuilds `categoryStats` keyed by the current `ALL_CATEGORIES` list in `triviaStorage.ts`.
+
+---
+
+## 15. Multiplayer — Firestore `games` collection (Session 39)
+
+All three multiplayer game types (chess, checkers, trivia) share a single Firestore collection (`games`) keyed by a 6-character game code. The `type` field discriminates between chess/checkers docs (which share the `MultiplayerGame` shape) and trivia docs (which use the richer `TriviaMultiplayerGame` shape).
+
+### Collection key
+
+- **Doc ID:** the game code itself (e.g. `ABC234`). 6 uppercase alphanumeric characters drawn from `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (no ambiguous O/0/I/1/L). Generated client-side via `generateGameCode()` with up to 5 retries on collision. The doc's `code` field mirrors the doc ID so reads don't have to split the path.
+
+### `MultiplayerGame` (chess + checkers)
+
+```typescript
+// src/services/multiplayer.ts
+export type GameType = 'chess' | 'checkers' | 'trivia';
+export type ChessColor = 'w' | 'b';
+export type GameStatus = 'waiting' | 'active' | 'finished';
+export type GameResult =
+  | 'checkmate'
+  | 'stalemate'
+  | 'resigned'
+  | 'draw'
+  | 'complete';
+
+export interface MultiplayerPlayer {
+  uid: string;
+  displayName: string;
+}
+
+export interface MultiplayerGame {
+  code: string;                             // 6-char game code (mirrors doc ID)
+  type: GameType;                           // 'chess' | 'checkers' (trivia uses its own shape)
+  host: MultiplayerPlayer;                  // creator
+  guest: MultiplayerPlayer | null;          // joiner — null until `joinGame` runs
+  hostColor: ChessColor;                    // 'w'|'b' shared across game types; 'w' = first mover
+  players: string[];                        // flat uid list — canonical membership, queried by array-contains
+  status: GameStatus;                       // 'waiting' | 'active' | 'finished'
+  gameState: string;                        // FEN (chess) or 33-char serialized board (checkers)
+  moves: string[];                          // SAN (chess) or encoded move (checkers), appended on every makeMove
+  turn: string;                             // uid of whose turn it is; '' during waiting
+  result: GameResult | null;                // set when status === 'finished'
+  winner: string | null;                    // uid of winner (null for draw/stalemate/complete)
+  drawOffer: string | null;                 // uid of whoever offered; null when no pending offer
+  pauseRequest: string | null;              // uid of whoever requested; null when no pending request
+  createdAt: string;                        // ISO timestamp
+  lastMoveAt: string;                       // ISO timestamp, bumped on any mutation (ordering key for getMyGames)
+}
+```
+
+- **Chess** uses FEN for `gameState` (reconstructed via `chess.js` replay of `moves` on the client for take-back / history access).
+- **Checkers** uses a 33-character string in `gameState` — 32 chars for the 32 dark squares (row-major, `-` empty / `r|R` red piece/king / `b|B` black piece/king) + 1 char for turn (`r` or `b`).
+- **`hostColor`** is shared across both game types. Chess: `'w'` = white, `'b'` = black. Checkers: `'w'` = red (moves first), `'b'` = black. The checkers hook adapts via `hostColorToPc`.
+- **`players`** is a flat uid array so Firestore rules + queries (`where('players', 'array-contains', uid)`) work without joining against `host` / `guest` objects.
+- **`turn`** is a uid string (not color) so client code doesn't need to know `hostColor` to check `isMyTurn` — compare `game.turn === user.uid` directly.
+
+### `TriviaMultiplayerGame` (trivia)
+
+```typescript
+// src/services/multiplayerTrivia.ts
+export interface TriviaPlayer {
+  uid: string;
+  displayName: string;
+  score: number;                            // running point total, incremented on correct answer
+}
+
+export interface TriviaLastAnswer {
+  uid: string;                              // answerer
+  answer: string;                           // what they picked
+  correct: boolean;
+  correctAnswer: string;                    // the actual correct answer (always included for result display)
+}
+
+export type TriviaStatus = 'waiting' | 'active' | 'finished';
+export type TriviaPhase = 'lobby' | 'question' | 'result' | 'final';
+
+export interface TriviaMultiplayerGame {
+  code: string;
+  type: 'trivia';
+  host: { uid: string; displayName: string };   // reassigned if host leaves mid-game
+  players: string[];                             // flat uid array (shared with chess/checkers shape for Firestore rules)
+  triviaPlayers: TriviaPlayer[];                 // rich player data (scores, names) — lives alongside the flat uid list
+  status: TriviaStatus;
+  phase: TriviaPhase;                            // 'lobby' | 'question' | 'result' | 'final'
+
+  category: TriviaParentCategory;
+  subcategory: TriviaSubcategory | null;         // null = "all {parent}"
+  questionCount: number;                         // 10 | 15 | 20, locked in at creation
+  questions: TriviaQuestion[];                   // selected pool, written by host on `startTriviaGame`
+
+  currentQuestionIndex: number;                  // 0-based, advances on `advanceToNextQuestion`
+  activePlayerIndex: number;                     // index into triviaPlayers — whose turn to answer
+  attemptsThisQuestion: string[];                // uids who've attempted the current question (for steal logic)
+  rotationStartIndex: number;                    // which player index opens each new question
+
+  lastAnswer: TriviaLastAnswer | null;           // cleared when phase transitions back to 'question'
+  winner: string | null;                         // uid of single winner; null on tie
+
+  createdAt: string;
+  lastMoveAt: string;
+}
+```
+
+- **Dual player lists.** `players` is a flat uid array shared across all game types so the Firestore rules and `getMyGames` queries work uniformly. `triviaPlayers` carries the rich per-player data (display names + running scores) that trivia needs. Both arrays are kept in sync by `joinTriviaGame` / `leaveTriviaGame`.
+- **`host` is reassignable.** When the host leaves an active game with 2+ remaining players, `leaveTriviaGame` promotes `remaining[0]` by rewriting the `host` field. Every client's `isHost` check derives from the live snapshot, so the promotion propagates immediately. Prevents deadlock on `advanceToNextQuestion` (host-only).
+- **`questions` is write-once.** Set by `startTriviaGame`; never mutated after. All clients see the same question pool in the same order.
+- **Phase transitions.** `lobby` → (host starts) → `question` → (answer submitted) → `result` → (host advances after 3s) → `question` (next Q) or `final` (out of questions). `leaveTriviaGame` can short-circuit to `final` when only 1 player remains.
+- **Rotation vs steal.** `rotationStartIndex` advances once per question (the player who *opens* question N+1). `activePlayerIndex` advances within a question on every wrong answer to the next player in `attemptsThisQuestion`-order who hasn't tried yet.
+
+### Firestore Rules
+
+```
+match /games/{gameCode} {
+  allow read: if request.auth != null;
+  allow create: if request.auth != null
+    && request.resource.data.host.uid == request.auth.uid;
+  allow update: if request.auth != null
+    && (
+      request.auth.uid in resource.data.players
+      || (resource.data.status == 'waiting'
+          && request.auth.uid in request.resource.data.players)
+    );
+  allow delete: if false;
+}
+```
+
+- **Read:** any authed user (required for `joinGame` to inspect a code before committing, and for `getMyGames` queries).
+- **Create:** host UID must match the requesting user (prevents impersonation).
+- **Update:** existing participant, OR a non-participant joining a waiting game — verified by checking that their UID appears in the *new* `players` array. This narrow "you must add yourself" escape hatch preserves the join flow while preventing random authed users from clobbering other fields on open games.
+- **Delete:** rules-blocked; cleanup is a planned Cloud Function. `cleanupFinishedGames` in `multiplayer.ts` attempts deletes client-side but swallows the rules-denied errors.
+
+### Composite indexes
+
+`firestore.indexes.json` declares:
+1. `players ARRAY_CONTAINS + status ASC + lastMoveAt DESC` — covers `getMyGames` and `getTriviaGames`.
+2. `playerUids ARRAY_CONTAINS + type ASC + status ASC + lastActionAt DESC` — forward-looking coverage for a planned alternate shape.
+3. `playerUids ARRAY_CONTAINS + status ASC + lastActionAt DESC` — forward-looking.
+
+### Constants
+
+| Constant | Value | Where |
+|----------|-------|-------|
+| `MAX_ACTIVE_GAMES` | 5 | Per-user cap on concurrent waiting + active games across all types. Enforced client-side by `assertBelowActiveGameLimit`. |
+| `MIN_PLAYERS` (trivia) | 2 | Host can't start with fewer. |
+| `MAX_PLAYERS` (trivia) | 4 | Join rejected after 4. |
+| `CODE_LENGTH` | 6 | 31^6 ≈ 887M possible codes. |
+| `UNIQUE_RETRIES` | 5 | Code-generation collision retries. |
+| `CLEANUP_MAX_AGE_MS` | 30 days | Finished games older than this are eligible for cleanup. |
