@@ -1,6 +1,6 @@
 import { ImageSourcePropType } from 'react-native';
 
-export interface MemoryCard {
+interface MemoryCard {
   key: string;
   source: ImageSourcePropType;
 }

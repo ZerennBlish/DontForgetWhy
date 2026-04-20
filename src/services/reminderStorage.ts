@@ -117,17 +117,6 @@ export function getReminderById(id: string): Reminder | null {
   return row ? rowToReminder(row) : null;
 }
 
-/** Compatibility shim — replaces all reminders in the table. */
-async function saveReminders(reminders: Reminder[]): Promise<void> {
-  const db = getDb();
-  db.withTransactionSync(() => {
-    db.runSync('DELETE FROM reminders');
-    for (const r of reminders) {
-      db.runSync(REMINDER_INSERT, reminderToParams(r));
-    }
-  });
-}
-
 export async function addReminder(reminder: Reminder): Promise<void> {
   return withLock(`reminder-${reminder.id}`, async () => {
     try {

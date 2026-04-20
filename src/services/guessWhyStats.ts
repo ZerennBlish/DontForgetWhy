@@ -79,9 +79,3 @@ export async function recordSkip(): Promise<GuessWhyStats> {
     return stats;
   });
 }
-
-async function resetStats(): Promise<GuessWhyStats> {
-  const stats = { ...defaultStats };
-  await saveStats(stats);
-  return stats;
-}

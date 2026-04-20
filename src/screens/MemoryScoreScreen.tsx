@@ -5,7 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { loadStats, GuessWhyStats } from '../services/guessWhyStats';
 import { getRankFromScore } from '../data/memoryRanks';
-import { RIDDLES } from '../data/riddles';
+import { YEARLY_RIDDLES } from '../data/dfw_yearly_riddles';
 import { TRIVIA_CATEGORIES } from '../data/triviaBank';
 import { getTriviaStats } from '../services/triviaStorage';
 import {
@@ -464,7 +464,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Riddles Seen</Text>
               <Text style={styles.statValue}>
-                {riddleStats.seenRiddleIds.length} / {RIDDLES.length}
+                {riddleStats.seenRiddleIds.length} / {YEARLY_RIDDLES.length}
               </Text>
             </View>
           </>

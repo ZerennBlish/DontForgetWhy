@@ -27,8 +27,6 @@ export interface Alarm {
   deletedAt?: string | null;
   /** @deprecated kept for backward compatibility with old alarms */
   notificationId?: string;
-  /** @deprecated kept for backward compatibility */
-  recurring?: boolean;
 }
 
 export type AlarmCategory = 'meds' | 'appointment' | 'event' | 'task' | 'self-care' | 'general';

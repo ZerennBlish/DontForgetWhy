@@ -107,12 +107,6 @@ export async function addActiveTimer(timer: ActiveTimer): Promise<ActiveTimer[]>
   return loadActiveTimers();
 }
 
-async function removeActiveTimer(id: string): Promise<ActiveTimer[]> {
-  const db = getDb();
-  db.runSync('DELETE FROM active_timers WHERE id=?', [id]);
-  return loadActiveTimers();
-}
-
 // ---------------------------------------------------------------------------
 // Recent Presets → kv_store
 // ---------------------------------------------------------------------------

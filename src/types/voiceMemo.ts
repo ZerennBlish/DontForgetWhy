@@ -1,5 +1,3 @@
-import type { VoiceClip } from './voiceClip';
-
 export interface VoiceMemo {
   id: string;
   uri: string;
@@ -11,7 +9,6 @@ export interface VoiceMemo {
   deletedAt?: string | null;
   noteId?: string | null;
   images?: string[];
-  clips?: VoiceClip[];
   clipCount?: number;
   totalDuration?: number;
 }

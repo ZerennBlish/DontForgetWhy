@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 36 (April 18, 2026) — **v1.23.0 (versionCode 42) live on Play Store**. v1.24.0 (versionCode 43) production build pending upload.
+**Last updated:** Session 37 (April 19, 2026) — **v1.24.0 (versionCode 43) live on Play Store**.
 
 ---
 
@@ -526,3 +526,26 @@ Lightweight dependency drift check run weekly. Keeps `dev` from accumulating sma
 - **Narrow-bump if drifted** — patch/minor bumps only for what the check flags. Nothing speculative, nothing outside the Expo matrix.
 - **Close branch if nothing changed** — clean check → delete the branch. No empty commits, no drift-session churn.
 - **Dedicated dep-alignment sessions scheduled separately for larger work** — SDK upgrades, worklets/Skia/reanimated family bumps, or anything that needs its own EAS build + audit land in their own sessions. The weekly check is a drift guard, not a vehicle for major version jumps.
+
+---
+
+## 9. Audit Workflow (Session 37)
+
+### Audit Confidence Tiers
+
+Audit prompts must use these three tiers — the previous `safe-delete` tier is retired (it assumed certainty that wasn't earned; initial Pass 1 used it and produced 70%+ false positives).
+
+- **`verified-dead`** — Auditor shows specific grep commands + results with zero matches across production code AND tests. Exhaustive verification. Safe to delete without further review.
+- **`likely-dead-low-confidence`** — Appears unused but the auditor couldn't fully verify (dynamic references, string-keyed lookups, external consumers that couldn't be enumerated). Flag for human review; don't delete automatically.
+- **`pending-verification`** — Suspicious but not investigated. Next-session candidate for a deeper sweep.
+
+Auditors report findings with the tier inline. Fix prompts act on `verified-dead` only; `likely-dead-low-confidence` flows to human triage.
+
+### Claude Code Tool-Use Watches
+
+Standing rules for reviewing Claude Code's actions before approving permissions or accepting changes:
+
+- **Watch for `/tmp` writes** — Deny if Claude Code (or any sub-auditor) asks to write scripts to `/tmp/` or any path outside the project tree. All bash in audit + fix prompts must be inline. Scripts hide logic from the user reviewing the tool-use stream.
+- **Watch for files outside the prompt's explicit file list in `git status`** — Deny extra changes. A prompt scoped to `@fileA @fileB` should only modify `fileA` and `fileB`; anything else is out-of-scope drift.
+- **Rely on PowerShell `git status` for verification, not Claude Code's own summary** — Tool-use summaries can omit edits (especially subtle whitespace changes or unrelated file touches). PowerShell is the ground truth.
+- **Verify branch with `git branch --show-current` before every prompt** — Session 37 discovered work had been landing on `main` instead of `dev` due to an unfinished merge. If not on `dev`, switch first.

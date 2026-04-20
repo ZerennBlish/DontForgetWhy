@@ -1,8 +1,24 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 36 (April 18, 2026)
+**Last updated:** Session 37 (April 19, 2026)
 
 **For Sessions 1-28 decision history, see DFW-Decisions-Archive.md.**
+
+### Session 37 Additions
+
+- **Partial cleanup for blunderCount (SQLite column retained)** — Removed `blunderCountRef` tracking in `useChess`, `blunderCount` field from `SavedChessGame` interface, and blunderCount read/write in `chessStorage`. SQLite column `blunderCount INTEGER NOT NULL DEFAULT 0` retained — avoids schema migration risk. Column is dead weight (never read), harmless. Original scoring decision (removing chess blunder penalty, Session 18) made the counter dead downstream; Session 37 cleaned up the lingering plumbing.
+
+- **aiTimeBudget/aiThinkStart removed from useChess** — Infrastructure for a chess AI progress bar that was never wired to `ChessScreen`. Hook actively maintained both state variables with 5 reset sites and an explanatory comment. Zerenn confirmed intent to remove — the feature never worked. `ChessScreen` uses `isAIThinking` boolean only.
+
+- **User timer edit/delete cascade removed from useTimerScreen** — `handleUserTimerLongPress` (45-line Alert handler), `handleSaveEditTimer`, `handleSaveEditTimerOnly`, `editingUserTimer` state, two conditional branches in save handlers, and orphan `updateUserTimer`/`deleteUserTimer` storage exports — all unreachable from the UI (long-press goes to `handlePinToggle`). User-facing behavior unchanged. If edit/delete wanted later, it's a fresh feature build.
+
+- **Verified-dead confidence tier replaces safe-delete** — Audit prompts now require auditors to show specific grep commands and results before flagging. Three tiers: `verified-dead` (exhaustive grep, zero matches), `likely-dead-low-confidence` (appears unused, couldn't fully verify), `pending-verification` (suspicious, needs human review). Auditors must NOT use "safe-delete" — that term assumed certainty that wasn't earned. Initial Pass 1 run used safe-delete and produced 70%+ false positives; the rerun with verified-dead caught this.
+
+- **Audit prompts prohibit /tmp scripts** — All bash commands in audit and fix prompts must be inline. No writing shell scripts to `/tmp/` or any other path. Codex audit wrote `/tmp/check_exports.sh` and `/tmp/final_check.sh` during a read-only audit — benign scripts (grep verification) but violated the read-only contract. Fix is structural: every prompt now mandates inline-only bash.
+
+- **Form hook return API hierarchy** — Raw state setters (`setHourText`, `setMode`, `setSelectedDays`, etc.) are internal-only; high-level handlers (`handleHourChange`, `switchMode`, `applySystemSound`, `handleToggleDay`) are the public API exposed in the hook return type. Applied to `useAlarmForm` + `useReminderForm`. Pattern prevents consumers from bypassing handler logic (e.g., `switchMode` clears `selectedDays` on mode flip; calling `setMode` directly would skip that).
+
+- **Branch policy reinforced: verify branch before every Claude Code prompt** — Session 37 discovered work had been applied to `main` instead of `dev` due to an unfinished merge from a prior session. Standing rule now explicit: run `git branch --show-current` before feeding any prompt to Claude Code. If not on `dev`, switch first.
 
 ### Session 35/36 Additions
 

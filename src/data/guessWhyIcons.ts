@@ -1,4 +1,4 @@
-export interface GuessIcon {
+interface GuessIcon {
   id: string;
   emoji: string;
 }

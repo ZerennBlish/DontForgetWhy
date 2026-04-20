@@ -2,7 +2,6 @@ export interface ThemeColors {
   mode: 'dark' | 'light';
   background: string;
   card: string;
-  cardElevated: string;
   accent: string;
   textPrimary: string;
   textSecondary: string;
@@ -34,7 +33,6 @@ const dark: ThemeColors = {
   mode: 'dark',
   background: '#0A0A12',
   card: '#1A1A28',
-  cardElevated: '#242438',
   accent: '#5B9EE6',
   textPrimary: '#ECEDF0',
   textSecondary: '#9498AC',
@@ -65,7 +63,6 @@ const light: ThemeColors = {
   mode: 'light',
   background: '#EFF4FB',
   card: '#FFFFFF',
-  cardElevated: '#FFFFFF',
   accent: '#2563EB',
   textPrimary: '#0F172A',
   textSecondary: '#475569',
@@ -96,7 +93,6 @@ const highContrast: ThemeColors = {
   mode: 'dark',
   background: '#000000',
   card: '#1A1A1A',
-  cardElevated: '#2A2A2A',
   accent: '#00D4FF',
   textPrimary: '#FFFFFF',
   textSecondary: '#E0E0E0',
@@ -127,7 +123,6 @@ const vivid: ThemeColors = {
   mode: 'dark',
   background: '#080D08',
   card: '#0E1A0E',
-  cardElevated: '#142014',
   accent: '#00FF88',
   textPrimary: '#D0FFD8',
   textSecondary: '#80B888',
@@ -158,7 +153,6 @@ const sunset: ThemeColors = {
   mode: 'light',
   background: '#FFF8F0',
   card: '#FFFFFF',
-  cardElevated: '#FFFFFF',
   accent: '#E8690A',
   textPrimary: '#2D1B06',
   textSecondary: '#6B5440',
@@ -189,7 +183,6 @@ const ruby: ThemeColors = {
   mode: 'light',
   background: '#FDF2F4',
   card: '#FFFFFF',
-  cardElevated: '#FFFFFF',
   accent: '#E11D48',
   textPrimary: '#1C1017',
   textSecondary: '#6B4C55',

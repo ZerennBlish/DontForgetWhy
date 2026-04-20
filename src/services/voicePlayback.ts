@@ -22,10 +22,6 @@ const INTRO_PLAYED_KEY = 'voiceIntroPlayed';
 let _playing = false;
 let _playId = 0;
 
-function isVoicePlaying(): boolean {
-  return _playing;
-}
-
 export async function stopVoice(): Promise<void> {
   _playId++;
   _playing = false;

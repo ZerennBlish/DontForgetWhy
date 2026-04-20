@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 36 (April 18, 2026)
+**Last updated:** Session 37 (April 19, 2026)
 
 **For Sessions 1-28 bug history, see DFW-Bug-History-Archive.md.**
 
@@ -187,3 +187,17 @@ Triple audit (Codex + Claude + Gemini) on the Session 34 voice memo changes in `
 - Symptom: `gameWin` sound did not play in chess/checkers (but worked in Memory Match via `memoryWin`)
 - Cause: `Chess&Checkers-Win-Round.wav` had an ampersand in the filename. Metro's `require()` resolver failed silently on the require call
 - Fix: Renamed to `Chess-Checkers-Win-Round.wav`. Also fixed typo `Loseing` → `Losing` in the loss sound filename. Updated `require()` paths in `gameSounds.ts`
+
+### Session 37 — Branch Reconciliation + Audit Process Findings
+
+**Bug: main/dev branch divergence + misplaced v1.24.0 tag (process, Session 37)**
+- Found: Session 37 — user noticed `git branch --show-current` returned `main` during audit work
+- Cause: At some prior session (likely 35 or 36), a merge attempt or Play Store upload was done from main without completing the merge cleanly. Tag `v1.24.0` was applied to `4d72c0c` (versionCode 42, pre-ship commit) rather than `0ee7100` (versionCode 43, the actual Play Store upload). Dev accumulated 18 commits main never saw. The merge commit `88995c9` on main carried a misleading message ("fix: catch ExpoKeepAwake promise rejection") but was actually a 24-file merge from dev into main that included unrelated work.
+- Fix: `git reset --hard dev` on main, `git push origin main --force-with-lease`, tag deleted and recreated on correct commit (`git tag -d v1.24.0`, `git push origin :refs/tags/v1.24.0`, `git tag v1.24.0 0ee7100`, `git push origin v1.24.0`). Main and dev now point at the same commit.
+- Process lesson: verify branch with `git branch --show-current` before every prompt. Verify tag placement with `git show <tag>:app.json | Select-String "versionCode"` against Play Console before shipping.
+
+**Incident: Audit tooling wrote scripts to /tmp/ during read-only audit (process, Session 37)**
+- Found: Session 37 — user noticed `.claude/settings.local.json` had new permission entries for `Bash(bash /tmp/check_exports.sh)` and `Bash(bash /tmp/final_check.sh)`
+- Cause: Codex audit (Pass 2 chunk 1) generated two shell scripts in `/tmp/` for export verification. Scripts themselves were benign grep aggregators. However, writing ANY file during a "read-only" audit violates the contract. The scripts were opaque to the user — tool-use output showed the command name but not the script contents.
+- Fix: Every audit prompt now explicitly prohibits `/tmp` writes and mandates inline bash commands. Standing rule for all future audits and fix prompts.
+- No data loss or code corruption resulted from this incident.

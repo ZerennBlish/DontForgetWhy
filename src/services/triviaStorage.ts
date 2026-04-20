@@ -174,12 +174,6 @@ export async function addSeenQuestionIds(category: string, ids: string[]): Promi
   });
 }
 
-async function resetSeenQuestions(): Promise<void> {
-  try {
-    await kvRemove(SEEN_KEY);
-  } catch {}
-}
-
 export async function resetSeenQuestionsForCategory(category: string): Promise<void> {
   return withLock('trivia-seen', async () => {
     try {

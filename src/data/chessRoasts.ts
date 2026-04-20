@@ -1,7 +1,7 @@
 // DFW Alarm Guy voice: tired, sarcastic, unimpressed, occasionally genuine.
 // Keep it clean (E rating). No profanity.
 
-export interface RoastPool {
+interface RoastPool {
   good: string[];        // rare compliments (backhanded)
   inaccuracy: string[];  // light jabs
   mistake: string[];     // medium roasts

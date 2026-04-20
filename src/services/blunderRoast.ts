@@ -1,7 +1,7 @@
 import type { BlunderResult } from './chessAI';
 import { chessRoasts } from '../data/chessRoasts';
 
-export interface RoastResult {
+interface RoastResult {
   severity: BlunderResult['severity'];
   roastText: string;
   centipawnLoss: number;

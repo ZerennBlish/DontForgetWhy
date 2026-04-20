@@ -116,10 +116,6 @@ export default function NoteEditorTopBar({
     homeBtn: {
       marginLeft: 4,
     },
-    icon: {
-      width: 18,
-      height: 18,
-    },
   }), [colors, insets.top]);
 
   return (

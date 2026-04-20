@@ -107,23 +107,6 @@ export async function loadAlarms(includeDeleted = false): Promise<Alarm[]> {
   return db.getAllSync<AlarmRow>(sql).map(rowToAlarm);
 }
 
-export function getAlarmById(id: string): Alarm | null {
-  const db = getDb();
-  const row = db.getFirstSync<AlarmRow>('SELECT * FROM alarms WHERE id = ?', [id]);
-  return row ? rowToAlarm(row) : null;
-}
-
-/** Compatibility shim — replaces all alarms in the table. */
-async function saveAlarms(alarms: Alarm[]): Promise<void> {
-  const db = getDb();
-  db.withTransactionSync(() => {
-    db.runSync('DELETE FROM alarms');
-    for (const a of alarms) {
-      db.runSync(ALARM_INSERT, alarmToParams(a));
-    }
-  });
-}
-
 export async function addAlarm(alarm: Alarm): Promise<Alarm[]> {
   const db = getDb();
   db.runSync(ALARM_INSERT, alarmToParams(alarm));
@@ -284,21 +267,4 @@ export async function toggleAlarm(id: string): Promise<Alarm[]> {
     db.runSync(ALARM_INSERT, alarmToParams(toggled));
     return loadAlarms();
   });
-}
-
-async function disableAlarm(id: string): Promise<void> {
-  const db = getDb();
-  const row = db.getFirstSync<AlarmRow>('SELECT * FROM alarms WHERE id=?', [id]);
-  if (row) {
-    const ids = safeParseArray<string>(row.notificationIds);
-    if (ids.length) {
-      try { await cancelAlarmNotifications(ids); } catch (e) {
-        console.error('[disableAlarm] cancelAlarmNotifications failed:', e);
-      }
-    }
-  }
-  db.runSync(
-    'UPDATE alarms SET enabled=0, notificationIds=? WHERE id=?',
-    ['[]', id],
-  );
 }

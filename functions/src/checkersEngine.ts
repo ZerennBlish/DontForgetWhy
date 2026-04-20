@@ -12,14 +12,14 @@ export interface Piece {
 
 export type Board = (Piece | null)[][];
 
-export interface CheckersMove {
+interface CheckersMove {
   from: [number, number];
   to: [number, number];
   captured: [number, number][];
   crowned: boolean;
 }
 
-export interface RankedMove {
+interface RankedMove {
   move: CheckersMove;
   score: number;
 }

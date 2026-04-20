@@ -106,10 +106,6 @@ export async function deleteAllNoteImages(imageUris: string[]): Promise<void> {
   await Promise.allSettled(imageUris.map((uri) => deleteNoteImage(uri)));
 }
 
-function getDrawingJsonUri(imageUri: string): string {
-  return imageUri.replace(/\.png$/i, '.json');
-}
-
 export async function loadDrawingData(
   imageUri: string,
 ): Promise<{ strokes: StrokeData[]; bgColor: string; sourceImageUri?: string | null } | null> {

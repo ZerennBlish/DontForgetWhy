@@ -1,4 +1,4 @@
-export type RiddleDifficulty = 'easy' | 'medium' | 'hard';
+type RiddleDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface DailyRiddleEntry {
   id: number;

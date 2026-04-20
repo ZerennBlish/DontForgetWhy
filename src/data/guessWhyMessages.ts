@@ -1,11 +1,3 @@
-const promptMessages = [
-  'You set this alarm. Can you remember why? Let\'s find out.',
-  "Time to prove you're smarter than a goldfish.",
-  "Your past self left you a challenge. Don't embarrass us.",
-  "Think hard. I know that's a lot to ask.",
-  'Somewhere in that brain is the answer. Probably.',
-];
-
 const winMessages = [
   'Your memory is like an elephant with a vendetta.',
   'I almost forgot I wanted to tell you something... Good job remembering to remember.',
@@ -46,10 +38,6 @@ const skipMessages = [
   "Your brain said 'nah' and honestly, same.",
   'Giving up already? Your alarms expected more.',
 ];
-
-function getRandomPromptMessage(): string {
-  return promptMessages[Math.floor(Math.random() * promptMessages.length)];
-}
 
 export function getRandomWinMessage(): string {
   return winMessages[Math.floor(Math.random() * winMessages.length)];

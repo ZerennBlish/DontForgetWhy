@@ -453,12 +453,6 @@ export async function dismissAlarmNotification(notificationId: string): Promise<
   await notifee.cancelNotification(notificationId);
 }
 
-async function cancelAlarm(identifier: string): Promise<void> {
-  // Cancel both the scheduled trigger and any displayed notification
-  await notifee.cancelTriggerNotification(identifier);
-  await notifee.cancelNotification(identifier);
-}
-
 export async function cancelAlarmNotifications(ids: string[]): Promise<void> {
   for (const id of ids) {
     await notifee.cancelTriggerNotification(id);

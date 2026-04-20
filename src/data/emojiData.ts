@@ -3,7 +3,7 @@ export interface EmojiItem {
   label: string;
 }
 
-export interface EmojiCategory {
+interface EmojiCategory {
   label: string;
   icon: string;
   items: EmojiItem[];

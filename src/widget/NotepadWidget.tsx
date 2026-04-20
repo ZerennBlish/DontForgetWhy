@@ -29,7 +29,7 @@ export interface WidgetTheme {
   red: string;
 }
 
-export interface WidgetVoiceMemo {
+interface WidgetVoiceMemo {
   id: string;
   title: string;
   duration: number;

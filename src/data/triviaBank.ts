@@ -43,6 +43,3 @@ export const TRIVIA_CATEGORIES: { id: TriviaParentCategory; label: string }[] = 
   { id: 'mythFiction', label: 'Myth & Fiction' },
 ];
 
-// Re-export for convenience
-export { ALL_QUESTIONS };
-export type { TriviaQuestion };

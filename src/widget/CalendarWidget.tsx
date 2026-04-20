@@ -13,7 +13,7 @@ export interface CalendarDayData {
   hasNote: boolean;
 }
 
-export interface CalendarWidgetProps {
+interface CalendarWidgetProps {
   monthLabel: string;
   weeks: CalendarDayData[][];
   theme: WidgetTheme;

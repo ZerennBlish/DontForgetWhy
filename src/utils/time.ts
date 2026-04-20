@@ -36,11 +36,6 @@ export function formatTime(time: string, format: '12h' | '24h' = '12h'): string 
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
-function getCurrentTime(): string {
-  const now = new Date();
-  return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-}
-
 export function getRelativeTime(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
   const mins = Math.floor(diff / 60000);

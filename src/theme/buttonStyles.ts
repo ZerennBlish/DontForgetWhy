@@ -36,38 +36,6 @@ export function getButtonStyles(colors: ThemeColors) {
       color: colors.accent,
     },
 
-    // Transparent + red border — Clear, Forever, Discard
-    destructive: {
-      backgroundColor: 'transparent',
-      borderRadius: 16,
-      paddingVertical: 14,
-      paddingHorizontal: 24,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: colors.red,
-    },
-    destructiveText: {
-      fontSize: 15,
-      fontFamily: FONTS.semiBold,
-      color: colors.red,
-    },
-
-    // No background, no border — Restore, low-emphasis
-    ghost: {
-      backgroundColor: 'transparent',
-      borderRadius: 16,
-      paddingVertical: 14,
-      paddingHorizontal: 24,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    ghostText: {
-      fontSize: 15,
-      fontFamily: FONTS.semiBold,
-      color: colors.accent,
-    },
-
     // Small variant — for inline/card contexts where full-size buttons are too big
     primarySmall: {
       backgroundColor: colors.accent,
