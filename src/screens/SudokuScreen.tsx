@@ -19,8 +19,8 @@ import { playGameSound } from '../utils/gameSounds';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
-import APP_ICONS from '../data/appIconAssets';
 import { GameNavButtons } from '../components/GameNavButtons';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { Difficulty } from '../utils/sudoku';
 import { useSudoku, DIFFICULTY_CONFIG, formatTime, getStars, MAX_HINTS } from '../hooks/useSudoku';
 
@@ -131,6 +131,16 @@ export default function SudokuScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
+  const sudokuIcon = useAppIcon('card.sudoku');
+  const partyIcon = useAppIcon('status.party');
+  const starIcon = useAppIcon('status.star');
+  const lossIcon = useAppIcon('status.loss');
+  const hourglassIcon = useAppIcon('status.hourglass');
+  const refreshIcon = useAppIcon('ui.refresh');
+  const pencilIcon = useAppIcon('edit');
+  const eraseIcon = useAppIcon('ui.erase');
+  const lightbulbIcon = useAppIcon('trivia.lightbulb');
+
   const {
     gamePhase, setGamePhase,
     difficulty, bestScores, hasSavedGame,
@@ -191,7 +201,7 @@ export default function SudokuScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <GameNavButtons topOffset={insets.top + 10} />
       <View style={styles.header}>
-        <Image source={require('../../assets/icons/icon-sudoku.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        <Image source={sudokuIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
       <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Sudoku</Text>
       <ScrollView style={styles.container} contentContainerStyle={styles.selectContent}>
@@ -298,11 +308,11 @@ export default function SudokuScreen({ navigation }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' }}>
       <GameNavButtons topOffset={insets.top + 10} />
       <View style={styles.winHeader}>
-        <Image source={require('../../assets/icons/icon-sudoku.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        <Image source={sudokuIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
       <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Sudoku</Text>
       <ScrollView style={styles.container} contentContainerStyle={styles.winContent}>
-        <Image source={require('../../assets/icons/icon-party.webp')} style={{ width: 48, height: 48, marginBottom: 8 }} resizeMode="contain" />
+        <Image source={partyIcon} style={{ width: 48, height: 48, marginBottom: 8 }} resizeMode="contain" />
         <Text style={styles.winTitle}>Puzzle Complete!</Text>
 
         {isHard && (
@@ -311,7 +321,7 @@ export default function SudokuScreen({ navigation }: Props) {
 
         <View style={{ flexDirection: 'row', gap: 4, marginBottom: 20 }}>
           {Array.from({ length: stars }, (_, i) => (
-            <Image key={i} source={APP_ICONS.star} style={{ width: 36, height: 36 }} resizeMode="contain" />
+            <Image key={i} source={starIcon} style={{ width: 36, height: 36 }} resizeMode="contain" />
           ))}
         </View>
 
@@ -390,7 +400,7 @@ export default function SudokuScreen({ navigation }: Props) {
         <View style={styles.statsRow} accessibilityLiveRegion="polite">
           {showMistakesDuringPlay ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Image source={APP_ICONS.loss} style={{ width: 14, height: 14 }} resizeMode="contain" />
+              <Image source={lossIcon} style={{ width: 14, height: 14 }} resizeMode="contain" />
               <Text style={styles.statText}>{mistakes}</Text>
             </View>
           ) : (
@@ -398,13 +408,13 @@ export default function SudokuScreen({ navigation }: Props) {
           )}
           <TouchableOpacity onPress={() => { hapticLight(); playGameSound('tap'); handlePause(); }} activeOpacity={0.7}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Image source={APP_ICONS.hourglass} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <Image source={hourglassIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
               <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { hapticLight(); playGameSound('tap'); handleNewGameConfirm(); }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Start new game">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Image source={require('../../assets/icons/icon-refresh.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+              <Image source={refreshIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
               <Text style={[styles.statText, { color: colors.accent }]}>New</Text>
             </View>
           </TouchableOpacity>
@@ -481,7 +491,7 @@ export default function SudokuScreen({ navigation }: Props) {
             accessibilityState={{ selected: notesMode }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Image source={APP_ICONS.pencil} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Image source={pencilIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
               <Text style={[styles.toolBtnText, notesMode && { color: colors.overlayText }]}>
                 Notes {notesMode ? 'ON' : 'OFF'}
               </Text>
@@ -489,7 +499,7 @@ export default function SudokuScreen({ navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolBtn} onPress={() => { hapticLight(); playGameSound('tap'); handleErase(); }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Erase cell">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Image source={APP_ICONS.erase} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Image source={eraseIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
               <Text style={styles.toolBtnText}>Erase</Text>
             </View>
           </TouchableOpacity>
@@ -503,7 +513,7 @@ export default function SudokuScreen({ navigation }: Props) {
               <Text style={[styles.toolBtnText, { color: colors.textTertiary }]}>No hints left</Text>
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                <Image source={lightbulbIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
                 <Text style={[styles.toolBtnText, hintDisabled && { color: colors.textTertiary }]}>Hint ({MAX_HINTS - hintsUsed})</Text>
               </View>
             )}

@@ -23,6 +23,7 @@ import { GameNavButtons } from '../components/GameNavButtons';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import { CARD_POOL, CARD_BACK } from '../data/memoryMatchAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MemoryMatch'>;
 
@@ -197,6 +198,10 @@ const CardComponent = React.memo(function CardComponent({
 export default function MemoryMatchScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const winIcon = useAppIcon('status.win');
+  const partyIcon = useAppIcon('status.party');
+  const starIcon = useAppIcon('status.star');
 
   // Game state
   const [gamePhase, setGamePhase] = useState<GamePhase>('select');
@@ -650,7 +655,7 @@ export default function MemoryMatchScreen({ navigation }: Props) {
                   </Text>
                   {best ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
-                      <Image source={require('../../assets/icons/icon-win.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                      <Image source={winIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
                       <Text style={[styles.bestScoreText, { marginTop: 0 }]}>
                         Best: {best.bestMoves} moves ({formatTime(best.bestTime)})
                       </Text>
@@ -687,11 +692,11 @@ export default function MemoryMatchScreen({ navigation }: Props) {
             style={styles.container}
             contentContainerStyle={styles.winContent}
           >
-            <Image source={require('../../assets/icons/icon-party.webp')} style={{ width: 48, height: 48, marginBottom: 8 }} resizeMode="contain" />
+            <Image source={partyIcon} style={{ width: 48, height: 48, marginBottom: 8 }} resizeMode="contain" />
             <Text style={styles.winTitle}>Congratulations!</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
               {Array.from({ length: stars }).map((_, i) => (
-                <Image key={i} source={require('../../assets/icons/icon-star.webp')} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                <Image key={i} source={starIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
               ))}
             </View>
 

@@ -19,22 +19,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import { GameNavButtons } from '../components/GameNavButtons';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import type { TriviaStats, TriviaCategory } from '../types/trivia';
 
 const SECTION_ICONS: Record<string, ImageSourcePropType> = {
-  chart: require('../../assets/icons/icon-chart.webp'),
   guessWhy: require('../../assets/icons/guess-why.webp'),
-  dailyRiddle: require('../../assets/icons/icon-lightbulb.webp'),
   chess: require('../../assets/icons/icon-chess.webp'),
   checkers: require('../../assets/icons/icon-checkers.webp'),
-  win: require('../../assets/icons/icon-win.webp'),
-  loss: require('../../assets/icons/icon-loss.webp'),
-  skip: require('../../assets/icons/icon-skip.webp'),
-  star: require('../../assets/icons/icon-star.webp'),
   trivia: require('../../assets/trivia/trivia-general.webp'),
-  sudoku: require('../../assets/icons/icon-sudoku.webp'),
   memoryMatch: require('../../assets/memory-match/card-back.webp'),
 };
 
@@ -113,6 +107,14 @@ const defaultTriviaStats: TriviaStats = {
 export default function MemoryScoreScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const chartIcon = useAppIcon('card.chart');
+  const dailyRiddleIcon = useAppIcon('trivia.lightbulb');
+  const winIcon = useAppIcon('status.win');
+  const lossIcon = useAppIcon('status.loss');
+  const skipIcon = useAppIcon('ui.skip');
+  const starIcon = useAppIcon('status.star');
+  const sudokuIcon = useAppIcon('card.sudoku');
 
   const [guessWhyStats, setGuessWhyStats] = useState<GuessWhyStats>({
     wins: 0, losses: 0, skips: 0, streak: 0, bestStreak: 0,
@@ -265,7 +267,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
     <GameNavButtons topOffset={insets.top + 10} />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Image source={require('../../assets/icons/icon-chart.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        <Image source={chartIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
       <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Memory Score</Text>
 
@@ -283,7 +285,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
       {/* Score Breakdown */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionTitleRow}>
-          <Image source={SECTION_ICONS.chart} style={styles.sectionIcon} resizeMode="contain" />
+          <Image source={chartIcon} style={styles.sectionIcon} resizeMode="contain" />
           <Text style={styles.sectionTitle}>Score Breakdown</Text>
         </View>
 
@@ -300,7 +302,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
         <View style={styles.breakdownRow}>
           <View style={styles.breakdownLabelRow}>
-            <Image source={SECTION_ICONS.dailyRiddle} style={styles.breakdownIcon} resizeMode="contain" />
+            <Image source={dailyRiddleIcon} style={styles.breakdownIcon} resizeMode="contain" />
             <Text style={styles.statLabel}>Daily Riddle</Text>
           </View>
           <Text style={styles.statValue}>{breakdown.dailyRiddle} / 20</Text>
@@ -344,7 +346,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
         <View style={styles.breakdownRow}>
           <View style={styles.breakdownLabelRow}>
-            <Image source={SECTION_ICONS.sudoku} style={styles.breakdownIcon} resizeMode="contain" />
+            <Image source={sudokuIcon} style={styles.breakdownIcon} resizeMode="contain" />
             <Text style={styles.statLabel}>Sudoku</Text>
           </View>
           <Text style={styles.statValue}>{breakdown.sudoku} / 20</Text>
@@ -383,21 +385,21 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
         <View style={styles.statRow}>
           <View style={styles.statLabelRow}>
-            <Image source={SECTION_ICONS.win} style={styles.statIcon} resizeMode="contain" />
+            <Image source={winIcon} style={styles.statIcon} resizeMode="contain" />
             <Text style={styles.statLabel}>Wins</Text>
           </View>
           <Text style={styles.statValue}>{guessWhyStats.wins}</Text>
         </View>
         <View style={styles.statRow}>
           <View style={styles.statLabelRow}>
-            <Image source={SECTION_ICONS.loss} style={styles.statIcon} resizeMode="contain" />
+            <Image source={lossIcon} style={styles.statIcon} resizeMode="contain" />
             <Text style={styles.statLabel}>Losses</Text>
           </View>
           <Text style={styles.statValue}>{guessWhyStats.losses}</Text>
         </View>
         <View style={styles.statRow}>
           <View style={styles.statLabelRow}>
-            <Image source={SECTION_ICONS.skip} style={styles.statIcon} resizeMode="contain" />
+            <Image source={skipIcon} style={styles.statIcon} resizeMode="contain" />
             <Text style={styles.statLabel}>Skips</Text>
           </View>
           <Text style={styles.statValue}>{guessWhyStats.skips}</Text>
@@ -423,7 +425,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
       {/* Section: Daily Riddle */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionTitleRow}>
-          <Image source={SECTION_ICONS.dailyRiddle} style={styles.sectionIcon} resizeMode="contain" />
+          <Image source={dailyRiddleIcon} style={styles.sectionIcon} resizeMode="contain" />
           <Text style={styles.sectionTitle}>Daily Riddle</Text>
         </View>
 
@@ -493,14 +495,14 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
             <View style={styles.statRow}>
               <View style={styles.statLabelRow}>
-                <Image source={SECTION_ICONS.win} style={styles.statIcon} resizeMode="contain" />
+                <Image source={winIcon} style={styles.statIcon} resizeMode="contain" />
                 <Text style={styles.statLabel}>Wins</Text>
               </View>
               <Text style={styles.statValue}>{chessStats.wins}</Text>
             </View>
             <View style={styles.statRow}>
               <View style={styles.statLabelRow}>
-                <Image source={SECTION_ICONS.loss} style={styles.statIcon} resizeMode="contain" />
+                <Image source={lossIcon} style={styles.statIcon} resizeMode="contain" />
                 <Text style={styles.statLabel}>Losses</Text>
               </View>
               <Text style={styles.statValue}>{chessStats.losses}</Text>
@@ -539,14 +541,14 @@ export default function MemoryScoreScreen({ navigation }: Props) {
 
             <View style={styles.statRow}>
               <View style={styles.statLabelRow}>
-                <Image source={SECTION_ICONS.win} style={styles.statIcon} resizeMode="contain" />
+                <Image source={winIcon} style={styles.statIcon} resizeMode="contain" />
                 <Text style={styles.statLabel}>Wins</Text>
               </View>
               <Text style={styles.statValue}>{checkersStats.wins}</Text>
             </View>
             <View style={styles.statRow}>
               <View style={styles.statLabelRow}>
-                <Image source={SECTION_ICONS.loss} style={styles.statIcon} resizeMode="contain" />
+                <Image source={lossIcon} style={styles.statIcon} resizeMode="contain" />
                 <Text style={styles.statLabel}>Losses</Text>
               </View>
               <Text style={styles.statValue}>{checkersStats.losses}</Text>
@@ -634,7 +636,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
       {/* Section: Sudoku */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionTitleRow}>
-          <Image source={SECTION_ICONS.sudoku} style={styles.sectionIcon} resizeMode="contain" />
+          <Image source={sudokuIcon} style={styles.sectionIcon} resizeMode="contain" />
           <Text style={styles.sectionTitle}>Sudoku</Text>
         </View>
 
@@ -657,7 +659,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
                     <Text style={styles.statLabel}>Rating</Text>
                     <View style={styles.starRow}>
                       {Array.from({ length: sudokuStars(best.bestMistakes) }).map((_, i) => (
-                        <Image key={i} source={SECTION_ICONS.star} style={styles.starIcon} resizeMode="contain" />
+                        <Image key={i} source={starIcon} style={styles.starIcon} resizeMode="contain" />
                       ))}
                     </View>
                   </View>
@@ -697,7 +699,7 @@ export default function MemoryScoreScreen({ navigation }: Props) {
                     <Text style={styles.statLabel}>Rating</Text>
                     <View style={styles.starRow}>
                       {Array.from({ length: mmStars(best.bestMoves, diff) }).map((_, i) => (
-                        <Image key={i} source={SECTION_ICONS.star} style={styles.starIcon} resizeMode="contain" />
+                        <Image key={i} source={starIcon} style={styles.starIcon} resizeMode="contain" />
                       ))}
                     </View>
                   </View>

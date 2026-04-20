@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import { GameNavButtons } from '../components/GameNavButtons';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { RootStackParamList } from '../navigation/types';
 import { YEARLY_RIDDLES } from '../data/riddles';
 import { useDailyRiddle, getFormattedDate, difficultyColor } from '../hooks/useDailyRiddle';
@@ -30,6 +30,14 @@ type Props = NativeStackScreenProps<RootStackParamList, 'DailyRiddle'>;
 export default function DailyRiddleScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const winIcon = useAppIcon('status.win');
+  const lossIcon = useAppIcon('status.loss');
+  const globeIcon = useAppIcon('card.globe');
+  const lightbulbIcon = useAppIcon('trivia.lightbulb');
+  const fireIcon = useAppIcon('flame');
+  const starIcon = useAppIcon('status.star');
+  const booksIcon = useAppIcon('trivia.books');
 
   const {
     mode, setMode,
@@ -438,7 +446,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                       accessibilityLabel="I got it"
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Image source={APP_ICONS.win} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                        <Image source={winIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
                         <Text style={styles.gotItBtnText}>Got it!</Text>
                       </View>
                     </TouchableOpacity>
@@ -450,7 +458,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                       accessibilityLabel="I didn't get it"
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Image source={APP_ICONS.loss} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                        <Image source={lossIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
                         <Text style={styles.nopeBtnText}>Nope</Text>
                       </View>
                     </TouchableOpacity>
@@ -464,7 +472,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                     </Text>
                   ) : (
                     <View style={[styles.alreadyPlayed, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-                      <Image source={require('../../assets/icons/icon-win.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                      <Image source={winIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
                       <Text style={styles.alreadyPlayedText}>
                         You already played today!
                       </Text>
@@ -540,7 +548,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
                 accessibilityLabel={`Online riddle: ${riddle.question}`}
               >
                 <View style={[styles.onlineBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-                  <Image source={require('../../assets/icons/icon-globe.webp')} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                  <Image source={globeIcon} style={{ width: 14, height: 14 }} resizeMode="contain" />
                   <Text style={styles.onlineBadgeText}>Online</Text>
                 </View>
                 <Text style={styles.onlineQuestion}>
@@ -592,14 +600,14 @@ export default function DailyRiddleScreen({ navigation }: Props) {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.header}>
-        <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        <Image source={lightbulbIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </View>
       <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Daily Riddle</Text>
       <Text style={[styles.dateText, { paddingHorizontal: 20 }]}>{getFormattedDate()}</Text>
 
       {stats.streak > 0 && (
         <View style={[styles.streakRow, { paddingHorizontal: 20 }]} accessibilityLiveRegion="polite">
-          <Image source={require('../../assets/icons/icon-fire.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+          <Image source={fireIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
           <Text style={styles.streakText}>{stats.streak} day streak</Text>
         </View>
       )}
@@ -629,7 +637,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           accessibilityState={{ selected: mode === 'daily' }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Image source={require('../../assets/icons/icon-star.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+            <Image source={starIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
             <Text
               style={[
                 styles.modeBtnText,
@@ -649,7 +657,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
           accessibilityState={{ selected: mode === 'browse' }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Image source={require('../../assets/icons/icon-books.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+            <Image source={booksIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
             <Text
               style={[
                 styles.modeBtnText,

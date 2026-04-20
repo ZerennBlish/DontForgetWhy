@@ -25,6 +25,7 @@ import {
 import { isProUser } from '../services/proStatus';
 import { getMyGames as mpGetMyGames } from '../services/multiplayer';
 import { getCurrentUser } from '../services/firebaseAuth';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Games'>;
@@ -34,6 +35,14 @@ const GATED_GAMES: TrialGame[] = ['chess', 'checkers', 'trivia', 'sudoku', 'memo
 export default function GamesScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const lightbulbIcon = useAppIcon('trivia.lightbulb');
+  const fireIcon = useAppIcon('flame');
+  const globeIcon = useAppIcon('card.globe');
+  const offlineGlobeIcon = useAppIcon('card.offlineGlobe');
+  const sudokuIcon = useAppIcon('card.sudoku');
+  const chartIcon = useAppIcon('card.chart');
+
   const [riddleStreak, setRiddleStreak] = useState(0);
   const tutorial = useTutorial('games');
   const entitlement = useEntitlement();
@@ -281,7 +290,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={require('../../assets/icons/icon-lightbulb.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={lightbulbIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Daily Riddle</Text>
@@ -290,7 +299,7 @@ export default function GamesScreen({ navigation }: Props) {
           </Text>
           {riddleStreak > 0 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, justifyContent: 'center' }}>
-              <Image source={require('../../assets/icons/icon-fire.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <Image source={fireIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
               <Text style={styles.streakText}>{riddleStreak} day streak</Text>
             </View>
           )}
@@ -302,7 +311,7 @@ export default function GamesScreen({ navigation }: Props) {
           style={styles.globeBadge}
         >
           <Image
-            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            source={isOnline ? globeIcon : offlineGlobeIcon}
             style={styles.globeImage}
             resizeMode="contain"
           />
@@ -337,7 +346,7 @@ export default function GamesScreen({ navigation }: Props) {
           style={styles.globeBadge}
         >
           <Image
-            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            source={isOnline ? globeIcon : offlineGlobeIcon}
             style={styles.globeImage}
             resizeMode="contain"
           />
@@ -372,7 +381,7 @@ export default function GamesScreen({ navigation }: Props) {
           style={styles.globeBadge}
         >
           <Image
-            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            source={isOnline ? globeIcon : offlineGlobeIcon}
             style={styles.globeImage}
             resizeMode="contain"
           />
@@ -409,7 +418,7 @@ export default function GamesScreen({ navigation }: Props) {
           style={styles.globeBadge}
         >
           <Image
-            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            source={isOnline ? globeIcon : offlineGlobeIcon}
             style={styles.globeImage}
             resizeMode="contain"
           />
@@ -425,7 +434,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={require('../../assets/icons/icon-sudoku.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={sudokuIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Sudoku</Text>
@@ -439,7 +448,7 @@ export default function GamesScreen({ navigation }: Props) {
           style={styles.globeBadge}
         >
           <Image
-            source={require('../../assets/icons/offline_globe.webp')}
+            source={offlineGlobeIcon}
             style={styles.globeImage}
             resizeMode="contain"
           />
@@ -469,7 +478,7 @@ export default function GamesScreen({ navigation }: Props) {
           style={styles.globeBadge}
         >
           <Image
-            source={require('../../assets/icons/offline_globe.webp')}
+            source={offlineGlobeIcon}
             style={styles.globeImage}
             resizeMode="contain"
           />
@@ -485,7 +494,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={require('../../assets/icons/icon-chart.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={chartIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trophies</Text>
