@@ -48,6 +48,7 @@ export default function GamesScreen({ navigation }: Props) {
   });
   const [isOnline, setIsOnline] = useState(false);
   const [mpChessCount, setMpChessCount] = useState(0);
+  const [mpCheckersCount, setMpCheckersCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -83,12 +84,17 @@ export default function GamesScreen({ navigation }: Props) {
           .then((games) => {
             if (!mounted) return;
             setMpChessCount(games.filter((g) => g.type === 'chess').length);
+            setMpCheckersCount(games.filter((g) => g.type === 'checkers').length);
           })
           .catch(() => {
-            if (mounted) setMpChessCount(0);
+            if (mounted) {
+              setMpChessCount(0);
+              setMpCheckersCount(0);
+            }
           });
       } else {
         setMpChessCount(0);
+        setMpCheckersCount(0);
       }
 
       return () => {
@@ -347,7 +353,12 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Checkers</Text>
-          <Text style={styles.gameDesc}>vs CPU • 5 difficulties</Text>
+          <Text style={styles.gameDesc}>vs CPU or a friend online</Text>
+          {mpCheckersCount > 0 && (
+            <Text style={[styles.streakText, { marginTop: 4 }]}>
+              {mpCheckersCount} active multiplayer game{mpCheckersCount === 1 ? '' : 's'}
+            </Text>
+          )}
           {renderTrialIndicator('checkers')}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
