@@ -99,52 +99,58 @@ export function useMultiplayerTrivia({
 
   // ── Firestore subscription ───────────────────────────────────────
   useEffect(() => {
-    const unsub = listenToGame(gameCode, (game: MultiplayerGame | null) => {
-      if (!game) {
-        setIsConnected(false);
-        return;
-      }
-      const trivia = game as unknown as TriviaMultiplayerGame;
-      if (trivia.type !== 'trivia') {
-        setIsConnected(false);
-        return;
-      }
-      setIsConnected(true);
-
-      setHostUid(trivia.host?.uid ?? '');
-      setPlayers(trivia.triviaPlayers ?? []);
-      setStatus(trivia.status);
-      setPhase(trivia.phase);
-      setCategory(trivia.category ?? '');
-      setQuestions(trivia.questions ?? []);
-      setCurrentQuestionIndex(trivia.currentQuestionIndex ?? 0);
-      setActivePlayerIndex(trivia.activePlayerIndex ?? 0);
-      setAttemptsThisQuestion(trivia.attemptsThisQuestion ?? []);
-      setLastAnswer(trivia.lastAnswer ?? null);
-      setWinner(trivia.winner ?? null);
-
-      // Sound on new answer event
-      if (trivia.lastAnswer) {
-        const key = `${trivia.lastAnswer.uid}|${trivia.lastAnswer.answer}|${trivia.currentQuestionIndex}`;
-        if (key !== prevAnswerKeyRef.current) {
-          prevAnswerKeyRef.current = key;
-          playGameSound(
-            trivia.lastAnswer.correct ? 'triviaCorrect' : 'triviaWrong',
-          );
+    const unsub = listenToGame(
+      gameCode,
+      (game: MultiplayerGame | null) => {
+        if (!game) {
+          setIsConnected(false);
+          return;
         }
-      } else {
-        // lastAnswer was cleared — allow the next answer key to re-fire.
-        prevAnswerKeyRef.current = '';
-      }
+        const trivia = game as unknown as TriviaMultiplayerGame;
+        if (trivia.type !== 'trivia') {
+          setIsConnected(false);
+          return;
+        }
+        setIsConnected(true);
 
-      // Final phase
-      if (trivia.phase === 'final' && !endedRef.current) {
-        endedRef.current = true;
-        const iWon = !!trivia.winner && trivia.winner === myUid;
-        playGameSound(iWon ? 'gameWin' : 'gameLoss');
-        onGameEndRef.current?.();
-      }
-    });
+        setHostUid(trivia.host?.uid ?? '');
+        setPlayers(trivia.triviaPlayers ?? []);
+        setStatus(trivia.status);
+        setPhase(trivia.phase);
+        setCategory(trivia.category ?? '');
+        setQuestions(trivia.questions ?? []);
+        setCurrentQuestionIndex(trivia.currentQuestionIndex ?? 0);
+        setActivePlayerIndex(trivia.activePlayerIndex ?? 0);
+        setAttemptsThisQuestion(trivia.attemptsThisQuestion ?? []);
+        setLastAnswer(trivia.lastAnswer ?? null);
+        setWinner(trivia.winner ?? null);
+
+        // Sound on new answer event
+        if (trivia.lastAnswer) {
+          const key = `${trivia.lastAnswer.uid}|${trivia.lastAnswer.answer}|${trivia.currentQuestionIndex}`;
+          if (key !== prevAnswerKeyRef.current) {
+            prevAnswerKeyRef.current = key;
+            playGameSound(
+              trivia.lastAnswer.correct ? 'triviaCorrect' : 'triviaWrong',
+            );
+          }
+        } else {
+          // lastAnswer was cleared — allow the next answer key to re-fire.
+          prevAnswerKeyRef.current = '';
+        }
+
+        // Final phase
+        if (trivia.phase === 'final' && !endedRef.current) {
+          endedRef.current = true;
+          const iWon = !!trivia.winner && trivia.winner === myUid;
+          playGameSound(iWon ? 'gameWin' : 'gameLoss');
+          onGameEndRef.current?.();
+        }
+      },
+      () => {
+        setIsConnected(false);
+      },
+    );
     return () => unsub();
   }, [gameCode, myUid]);
 

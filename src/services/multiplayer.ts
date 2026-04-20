@@ -147,7 +147,10 @@ export async function createGame(
   return { code, gameId: code };
 }
 
-export async function joinGame(code: string): Promise<MultiplayerGame> {
+export async function joinGame(
+  code: string,
+  expectedType: 'chess' | 'checkers',
+): Promise<MultiplayerGame> {
   const me = requireAuthedPlayer();
   if (!isProUser()) throw new Error('Pro required to join multiplayer games');
   await assertBelowActiveGameLimit(me.uid);
@@ -159,12 +162,14 @@ export async function joinGame(code: string): Promise<MultiplayerGame> {
 
   const game = snap.data() as MultiplayerGame | undefined;
   if (!game) throw new Error('Game not found');
+  if (game.type !== expectedType) {
+    throw new Error(`This is a ${game.type} game, not ${expectedType}`);
+  }
   if (game.status !== 'waiting') throw new Error('Game already started');
   if (game.host.uid === me.uid) throw new Error('Cannot join your own game');
 
   const now = new Date().toISOString();
-  const whiteUid = game.hostColor === 'w' ? game.host.uid : me.uid;
-  const turn = game.type === 'trivia' ? game.host.uid : whiteUid;
+  const turn = game.hostColor === 'w' ? game.host.uid : me.uid;
 
   await ref.update({
     guest: me,
@@ -268,16 +273,25 @@ export async function respondToBreak(
 export function listenToGame(
   code: string,
   callback: (game: MultiplayerGame | null) => void,
+  onError?: (error: Error) => void,
 ): () => void {
   return gamesCollection()
     .doc(code)
-    .onSnapshot((snapshot) => {
-      if (snapshot && snapshot.exists()) {
-        callback(snapshot.data() as MultiplayerGame);
-      } else {
-        callback(null);
-      }
-    });
+    .onSnapshot(
+      (snapshot) => {
+        if (snapshot && snapshot.exists()) {
+          callback(snapshot.data() as MultiplayerGame);
+        } else {
+          callback(null);
+        }
+      },
+      (error) => {
+        console.warn('[listenToGame] onSnapshot error:', error);
+        if (onError) {
+          onError(error instanceof Error ? error : new Error(String(error)));
+        }
+      },
+    );
 }
 
 export async function getMyGames(uid: string): Promise<MultiplayerGame[]> {

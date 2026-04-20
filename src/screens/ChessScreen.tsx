@@ -428,7 +428,7 @@ export default function ChessScreen({ navigation, route }: Props) {
     setJoinError(null);
     setJoiningGame(true);
     try {
-      await mpJoinGame(normalized);
+      await mpJoinGame(normalized, 'chess');
       setMultiplayerCode(normalized);
       setMpPhase('playing');
     } catch (e) {

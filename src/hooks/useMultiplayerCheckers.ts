@@ -270,7 +270,9 @@ export function useMultiplayerCheckers({
       bump();
     };
 
-    const unsub = listenToGame(gameCode, handleSnapshot);
+    const unsub = listenToGame(gameCode, handleSnapshot, () => {
+      setIsConnected(false);
+    });
     return () => {
       unsub();
     };

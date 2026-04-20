@@ -420,11 +420,28 @@ export async function leaveTriviaGame(code: string): Promise<void> {
     // Remove from rotation and adjust indexes.
     const myIdx = game.triviaPlayers.findIndex((p) => p.uid === me.uid);
     const newPlayers = game.players.filter((uid) => uid !== me.uid);
+    const newAttempts = game.attemptsThisQuestion.filter(
+      (u) => u !== me.uid,
+    );
 
     let newActiveIdx = game.activePlayerIndex;
-    if (myIdx < game.activePlayerIndex) newActiveIdx -= 1;
-    else if (myIdx === game.activePlayerIndex) {
-      newActiveIdx = game.activePlayerIndex % remaining.length;
+    if (myIdx < game.activePlayerIndex) {
+      newActiveIdx -= 1;
+    } else if (myIdx === game.activePlayerIndex) {
+      // Leaver was the active player — advance to the next player in
+      // rotation who hasn't attempted this question yet. If all remaining
+      // players have already tried, fall back to the natural wrap position
+      // (the question will resolve once the next host call to advance runs).
+      const attemptSet = new Set(newAttempts);
+      let found = -1;
+      for (let i = 0; i < remaining.length; i++) {
+        const candidateIdx = (myIdx + i) % remaining.length;
+        if (!attemptSet.has(remaining[candidateIdx].uid)) {
+          found = candidateIdx;
+          break;
+        }
+      }
+      newActiveIdx = found >= 0 ? found : myIdx % remaining.length;
     }
     if (newActiveIdx >= remaining.length) newActiveIdx = 0;
 
@@ -435,16 +452,26 @@ export async function leaveTriviaGame(code: string): Promise<void> {
     }
     if (newRotationIdx >= remaining.length) newRotationIdx = 0;
 
-    await ref.update({
+    const updates: Record<string, unknown> = {
       triviaPlayers: remaining,
       players: newPlayers,
       activePlayerIndex: newActiveIdx,
       rotationStartIndex: newRotationIdx,
-      attemptsThisQuestion: game.attemptsThisQuestion.filter(
-        (u) => u !== me.uid,
-      ),
+      attemptsThisQuestion: newAttempts,
       lastMoveAt: now,
-    });
+    };
+
+    // If the leaver was the host, promote the first remaining player so
+    // advanceToNextQuestion (host-only) can still run and the game doesn't
+    // deadlock on the result phase.
+    if (game.host.uid === me.uid) {
+      updates.host = {
+        uid: remaining[0].uid,
+        displayName: remaining[0].displayName,
+      };
+    }
+
+    await ref.update(updates);
   }
 }
 

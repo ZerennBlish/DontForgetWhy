@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,12 @@ import {
   Image,
   ScrollView,
   Alert,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
@@ -19,6 +22,25 @@ import {
   leaveTriviaGame,
   type TriviaMultiplayerGame,
 } from '../services/multiplayerTrivia';
+
+const EXIT_TITLES = [
+  'Walking Out?',
+  'Rage Quitting?',
+  'Leaving the Quiz?',
+  'Too Hard?',
+  'Giving Up?',
+];
+const EXIT_MESSAGES = [
+  'Everyone else is still playing, you know.',
+  'Your team is about to be very disappointed.',
+  "The questions don't get easier if you leave.",
+  "Quitters never win. Winners never quit. You're about to quit.",
+  'Your score stays at whatever it is right now. Which is… not great.',
+];
+
+function pickRandom(arr: string[]): string {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 import type { TriviaParentCategory } from '../types/trivia';
 
 const CATEGORY_LABELS: Record<TriviaParentCategory, string> = {
@@ -53,6 +75,72 @@ export default function MultiplayerTriviaGame({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const mp = useMultiplayerTrivia({ gameCode: code });
+  const navigation = useNavigation();
+
+  const [exitTitle] = useState(() => pickRandom(EXIT_TITLES));
+  const [exitMessage] = useState(() => pickRandom(EXIT_MESSAGES));
+
+  const bypassExitRef = useRef(false);
+
+  const isMpActive = mp.status === 'active';
+
+  // Lobby = connected, still in lobby phase. Tracked in a ref so the
+  // unmount cleanup can read the latest value.
+  const isLobbyRef = useRef(false);
+  const hasExitedRef = useRef(false);
+  useEffect(() => {
+    isLobbyRef.current = mp.isConnected && mp.phase === 'lobby';
+  });
+
+  useEffect(() => {
+    if (!isMpActive) return;
+    const unsub = navigation.addListener('beforeRemove', (e) => {
+      if (bypassExitRef.current) return;
+      if (mp.phase === 'final') return;
+      e.preventDefault();
+      Alert.alert(exitTitle, exitMessage, [
+        { text: 'Keep Playing', style: 'cancel' },
+        {
+          text: 'I Quit',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await leaveTriviaGame(code);
+            } catch {
+              if (Platform.OS === 'android') {
+                ToastAndroid.show(
+                  'Failed to leave — check your connection',
+                  ToastAndroid.SHORT,
+                );
+              } else {
+                Alert.alert(
+                  'Failed to leave',
+                  'Check your connection and try again.',
+                );
+              }
+              return;
+            }
+            bypassExitRef.current = true;
+            hasExitedRef.current = true;
+            navigation.dispatch(e.data.action);
+          },
+        },
+      ]);
+    });
+    return unsub;
+  }, [isMpActive, mp.phase, exitTitle, exitMessage, code, navigation]);
+
+  // On unmount, if the player navigated away from the lobby (hardware back
+  // without pressing the in-UI leave button), call leaveTriviaGame so the
+  // game is either aborted (host) or the player is removed from the roster.
+  useEffect(() => {
+    return () => {
+      if (isLobbyRef.current && !hasExitedRef.current) {
+        hasExitedRef.current = true;
+        leaveTriviaGame(code).catch(() => {});
+      }
+    };
+  }, [code]);
 
   const styles = useMemo(
     () =>
@@ -424,6 +512,11 @@ export default function MultiplayerTriviaGame({
         text: 'Leave',
         style: 'destructive',
         onPress: () => {
+          if (hasExitedRef.current) {
+            onExit();
+            return;
+          }
+          hasExitedRef.current = true;
           leaveTriviaGame(code).catch(() => {});
           onExit();
         },

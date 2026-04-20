@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,40 @@ import {
   Image,
   Dimensions,
   ScrollView,
+  Alert,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import { useMultiplayerChess } from '../hooks/useMultiplayerChess';
-import { endGame } from '../services/multiplayer';
+import { endGame, resign as mpResign } from '../services/multiplayer';
 import { getPieceImage } from '../data/chessAssets';
 import APP_ICONS from '../data/appIconAssets';
+
+const EXIT_TITLES = [
+  'Running Away?',
+  'Abandoning Ship?',
+  'Cold Feet?',
+  'Quitting Already?',
+  'Tactical Retreat?',
+];
+const EXIT_MESSAGES = [
+  'Your opponent is literally waiting for you right now.',
+  'Real brave. Leaving mid-game.',
+  'The board remembers. So will your opponent.',
+  'You sure? This is a bad look.',
+  'Your pieces are judging you.',
+];
+
+function pickRandom(arr: string[]): string {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BOARD_H_PADDING = 16;
@@ -53,6 +76,94 @@ export default function MultiplayerChessGame({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const mp = useMultiplayerChess({ gameCode: code });
+  const navigation = useNavigation();
+
+  // DFW-personality exit dialog — one title/message picked per mount.
+  const [exitTitle] = useState(() => pickRandom(EXIT_TITLES));
+  const [exitMessage] = useState(() => pickRandom(EXIT_MESSAGES));
+
+  // Refs for the beforeRemove listener's closure. We want the listener to
+  // read the latest mp state without re-subscribing on every render.
+  const bypassExitRef = useRef(false);
+  const mpRef = useRef(mp);
+  useEffect(() => {
+    mpRef.current = mp;
+  });
+
+  // Only block exit during the active game — waiting/finished states are free to leave.
+  const isMpActive =
+    mp.isConnected && !!mp.opponentUid && !mp.isGameOver;
+
+  // Waiting = connected, created, but no opponent yet. Tracked in a ref
+  // so the unmount cleanup can read the latest value.
+  const isWaitingRef = useRef(false);
+  const hasExitedRef = useRef(false);
+  useEffect(() => {
+    isWaitingRef.current =
+      mp.isConnected && !mp.opponentUid && !mp.isGameOver;
+  });
+
+  useEffect(() => {
+    if (!isMpActive) return;
+    const unsub = navigation.addListener('beforeRemove', (e) => {
+      if (bypassExitRef.current) return;
+      if (mpRef.current.isGameOver) return;
+      e.preventDefault();
+      Alert.alert(exitTitle, exitMessage, [
+        { text: 'Keep Playing', style: 'cancel' },
+        {
+          text: 'Ask for Break',
+          onPress: () => {
+            mpRef.current.handleRequestBreak();
+            if (Platform.OS === 'android') {
+              ToastAndroid.show(
+                'Break request sent. Waiting for response…',
+                ToastAndroid.SHORT,
+              );
+            }
+          },
+        },
+        {
+          text: 'I Quit',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await mpResign(code);
+            } catch {
+              if (Platform.OS === 'android') {
+                ToastAndroid.show(
+                  'Failed to resign — check your connection',
+                  ToastAndroid.SHORT,
+                );
+              } else {
+                Alert.alert(
+                  'Failed to resign',
+                  'Check your connection and try again.',
+                );
+              }
+              return;
+            }
+            bypassExitRef.current = true;
+            hasExitedRef.current = true;
+            navigation.dispatch(e.data.action);
+          },
+        },
+      ]);
+    });
+    return unsub;
+  }, [isMpActive, exitTitle, exitMessage, code, navigation]);
+
+  // On unmount, if the player navigated away from a still-waiting game
+  // (without pressing "Cancel Game"), mark the game finished so it doesn't
+  // linger in their active list and block new game creation.
+  useEffect(() => {
+    return () => {
+      if (isWaitingRef.current && !hasExitedRef.current) {
+        hasExitedRef.current = true;
+        endGame(code, 'complete', null).catch(() => {});
+      }
+    };
+  }, [code]);
 
   const styles = useMemo(
     () =>
@@ -400,6 +511,8 @@ export default function MultiplayerChessGame({
   }, [code]);
 
   const handleCancelWaiting = useCallback(() => {
+    if (hasExitedRef.current) return;
+    hasExitedRef.current = true;
     hapticLight();
     // Abort before an opponent joins — mark finished so it doesn't linger as active.
     endGame(code, 'complete', null)

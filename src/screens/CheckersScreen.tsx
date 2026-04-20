@@ -327,7 +327,7 @@ export default function CheckersScreen({ navigation, route }: Props) {
     setJoinError(null);
     setJoiningGame(true);
     try {
-      await mpJoinGame(normalized);
+      await mpJoinGame(normalized, 'checkers');
       setMultiplayerCode(normalized);
       setMpPhase('playing');
     } catch (e) {

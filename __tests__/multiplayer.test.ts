@@ -390,14 +390,14 @@ describe('joinGame', () => {
   it('throws for invalid code', async () => {
     currentUser = guest;
     proStatus = true;
-    await expect(joinGame('NOPEXX')).rejects.toThrow(/game not found/i);
+    await expect(joinGame('NOPEXX', 'chess')).rejects.toThrow(/game not found/i);
   });
 
   it('throws if game already started', async () => {
     currentUser = guest;
     proStatus = true;
     seedGame('ABC234', { status: 'active' });
-    await expect(joinGame('ABC234')).rejects.toThrow(/already started/i);
+    await expect(joinGame('ABC234', 'chess')).rejects.toThrow(/already started/i);
   });
 
   it('throws if not Pro', async () => {
@@ -408,7 +408,7 @@ describe('joinGame', () => {
       guest: null,
       players: [host.uid],
     });
-    await expect(joinGame('ABC234')).rejects.toThrow(/pro required/i);
+    await expect(joinGame('ABC234', 'chess')).rejects.toThrow(/pro required/i);
   });
 
   it('throws if not signed in', async () => {
@@ -419,7 +419,7 @@ describe('joinGame', () => {
       guest: null,
       players: [host.uid],
     });
-    await expect(joinGame('ABC234')).rejects.toThrow(/not signed in/i);
+    await expect(joinGame('ABC234', 'chess')).rejects.toThrow(/not signed in/i);
   });
 
   it('throws if joining own game', async () => {
@@ -430,7 +430,21 @@ describe('joinGame', () => {
       guest: null,
       players: [host.uid],
     });
-    await expect(joinGame('ABC234')).rejects.toThrow(/cannot join your own/i);
+    await expect(joinGame('ABC234', 'chess')).rejects.toThrow(/cannot join your own/i);
+  });
+
+  it('throws if game type does not match expected type', async () => {
+    currentUser = guest;
+    proStatus = true;
+    seedGame('ABC234', {
+      type: 'checkers',
+      status: 'waiting',
+      guest: null,
+      players: [host.uid],
+    });
+    await expect(joinGame('ABC234', 'chess')).rejects.toThrow(
+      /checkers game, not chess/i,
+    );
   });
 
   it('updates guest, players, status, and turn (host=white)', async () => {
@@ -444,7 +458,7 @@ describe('joinGame', () => {
       turn: host.uid,
     });
 
-    const updated = await joinGame('ABC234');
+    const updated = await joinGame('ABC234', 'chess');
     expect(updated.status).toBe('active');
     expect(updated.guest).toEqual({
       uid: guest.uid,
@@ -464,7 +478,7 @@ describe('joinGame', () => {
       hostColor: 'b',
       turn: '',
     });
-    const updated = await joinGame('ABC234');
+    const updated = await joinGame('ABC234', 'chess');
     expect(updated.turn).toBe(guest.uid);
   });
 
@@ -476,7 +490,7 @@ describe('joinGame', () => {
       guest: null,
       players: [host.uid],
     });
-    await expect(joinGame('  abc234 ')).resolves.toBeDefined();
+    await expect(joinGame('  abc234 ', 'chess')).resolves.toBeDefined();
   });
 
   it('throws if joiner already has 5 active games', async () => {
@@ -495,7 +509,7 @@ describe('joinGame', () => {
       guest: null,
       players: [host.uid],
     });
-    await expect(joinGame('ABC234')).rejects.toThrow(/maximum 5/i);
+    await expect(joinGame('ABC234', 'chess')).rejects.toThrow(/maximum 5/i);
   });
 });
 
