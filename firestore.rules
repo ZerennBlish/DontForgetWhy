@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User profiles — existing rule from Session 30
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Multiplayer games
+    match /games/{gameCode} {
+      // Anyone authenticated can read games (needed for join flow)
+      allow read: if request.auth != null;
+
+      // Anyone authenticated can create a game
+      allow create: if request.auth != null
+        && request.resource.data.host.uid == request.auth.uid
+        && request.resource.data.status == 'waiting';
+
+      // Only participants can update
+      allow update: if request.auth != null
+        && (request.auth.uid in resource.data.players);
+
+      // No client-side deletes (cleanup via Cloud Function or client query)
+      allow delete: if false;
+    }
+  }
+}

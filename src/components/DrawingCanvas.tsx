@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect, useReducer } from 'react';
 import {
   View,
   Text,
@@ -114,6 +114,12 @@ export default function DrawingCanvas({
   const insets = useSafeAreaInsets();
   const canvasRef = useCanvasRef();
 
+  // Mode-aware surface colors — deduplicated from inline styles
+  const isDark = colors.mode === 'dark';
+  const chromeBtnBg = isDark ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.08)';
+  const chromeBtnBorder = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)';
+  const panelBg = isDark ? 'rgba(18, 18, 32, 0.95)' : 'rgba(240, 240, 248, 0.97)';
+
   // Strokes stored as plain serializable data (SVG path strings)
   const [strokes, setStrokes] = useState<StrokeData[]>([]);
   const [activeColor, setActiveColor] = useState('#1A1A2E');
@@ -129,8 +135,8 @@ export default function DrawingCanvas({
 
   const canvasReady = canvasSize.width > 1 && canvasSize.height > 1 && (!backgroundImageUri || bgImage !== null);
 
-  // Render-tick forces Canvas to re-draw the in-progress stroke
-  const [, setRenderTick] = useState(0);
+  // Force-render triggers Canvas to re-draw the in-progress stroke
+  const [, forceRender] = useReducer((x: number) => x + 1, 0);
 
   // Throttle the move-time renderTick to ~60fps. Pan events arrive faster
   // than the screen can repaint; without this, every event triggers a
@@ -205,7 +211,7 @@ export default function DrawingCanvas({
           currentColorRef.current =
             tool === 'eraser' ? canvasBgColorRef.current : activeColorRef.current;
           lastTickAtRef.current = Date.now();
-          setRenderTick((t) => t + 1);
+          forceRender();
         },
 
         onPanResponderMove: (evt: GestureResponderEvent) => {
@@ -220,7 +226,7 @@ export default function DrawingCanvas({
           const now = Date.now();
           if (now - lastTickAtRef.current >= 16) {
             lastTickAtRef.current = now;
-            setRenderTick((t) => t + 1);
+            forceRender();
           }
         },
 
@@ -434,15 +440,15 @@ export default function DrawingCanvas({
           paddingTop: insets.top + 8,
           paddingHorizontal: 16,
           paddingBottom: 10,
-          backgroundColor: colors.mode === 'dark' ? 'rgba(18, 18, 32, 0.95)' : 'rgba(240, 240, 248, 0.97)',
+          backgroundColor: panelBg,
         },
         topBtn: {
           paddingHorizontal: 18,
           paddingVertical: 8,
           borderRadius: 20,
-          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: chromeBtnBg,
           borderWidth: 1,
-          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+          borderColor: chromeBtnBorder,
         },
         topBtnText: {
           fontSize: 13,
@@ -453,7 +459,7 @@ export default function DrawingCanvas({
           flex: 1,
         },
         toolbar: {
-          backgroundColor: colors.mode === 'dark' ? 'rgba(18, 18, 32, 0.95)' : 'rgba(240, 240, 248, 0.97)',
+          backgroundColor: panelBg,
           paddingHorizontal: 16,
           paddingTop: 12,
           paddingBottom: 12 + insets.bottom,
@@ -468,9 +474,9 @@ export default function DrawingCanvas({
           paddingHorizontal: 16,
           paddingVertical: 8,
           borderRadius: 20,
-          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: chromeBtnBg,
           borderWidth: 1,
-          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+          borderColor: chromeBtnBorder,
         },
         toolBtnActive: {
           borderColor: colors.accent,
@@ -484,7 +490,7 @@ export default function DrawingCanvas({
         separator: {
           width: 1,
           height: 24,
-          backgroundColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+          backgroundColor: chromeBtnBorder,
           marginHorizontal: 4,
         },
         colorRow: {
@@ -507,9 +513,9 @@ export default function DrawingCanvas({
           paddingHorizontal: 12,
           paddingVertical: 6,
           borderRadius: 20,
-          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: chromeBtnBg,
           borderWidth: 1,
-          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+          borderColor: chromeBtnBorder,
           alignItems: 'center',
         },
         widthBtnActive: {
@@ -750,9 +756,9 @@ export default function DrawingCanvas({
                 width: 28,
                 height: 28,
                 borderRadius: 14,
-                backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.08)',
+                backgroundColor: chromeBtnBg,
                 borderWidth: 1,
-                borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                borderColor: chromeBtnBorder,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}

@@ -7,12 +7,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ToastAndroid,
-  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Reminder } from '../types/reminder';
-import type { CompletionEntry } from '../types/reminder';
 import {
   getReminders,
   deleteReminder,
@@ -36,17 +34,16 @@ import {
 import { refreshWidgets } from '../widget/updateWidget';
 import { loadSettings } from '../services/settings';
 import APP_ICONS from '../data/appIconAssets';
-import { formatTime } from '../utils/time';
 import { getRandomReminderQuote } from '../data/reminderQuotes';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
-import { getButtonStyles } from '../theme/buttonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import UndoToast from '../components/UndoToast';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
-import SwipeableRow from '../components/SwipeableRow';
+import ReminderCard from '../components/ReminderCard';
+import DeletedReminderCard from '../components/DeletedReminderCard';
 import TutorialOverlay from '../components/TutorialOverlay';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { useTutorial } from '../hooks/useTutorial';
@@ -110,23 +107,10 @@ function isDoneEnabled(reminder: Reminder): boolean {
 }
 
 
-function formatCompletionDates(history: CompletionEntry[]): string {
-  if (!history || history.length === 0) return '';
-  return history
-    .map((entry) => {
-      const d = new Date(entry.completedAt);
-      const month = d.toLocaleDateString('en-US', { month: 'short' });
-      const day = d.getDate();
-      return `${month} ${day}`;
-    })
-    .join(', ');
-}
-
 export default function ReminderScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const tutorial = useTutorial('reminders');
   const insets = useSafeAreaInsets();
-  const btn = getButtonStyles(colors);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
@@ -412,129 +396,6 @@ export default function ReminderScreen({ navigation }: Props) {
       marginBottom: 4,
       fontFamily: FONTS.regular,
     },
-    card: {
-      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.sectionReminder + '15',
-      borderRadius: 12,
-      padding: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.sectionReminder,
-      borderLeftWidth: 3,
-      borderLeftColor: colors.sectionReminder,
-      marginBottom: 8,
-      elevation: 2,
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.15,
-      shadowRadius: 3,
-    },
-    deletedCard: {
-      backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : colors.card,
-      borderRadius: 12,
-      padding: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.sectionReminder + '66',
-      borderLeftWidth: 3,
-      borderLeftColor: colors.sectionReminder + '66',
-      marginBottom: 8,
-      opacity: 0.7,
-      elevation: 1,
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-    },
-    cardCompleted: {
-      opacity: 0.45,
-    },
-    checkbox: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      borderWidth: 2,
-      borderColor: colors.textTertiary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12,
-    },
-    checkboxDone: {
-      backgroundColor: colors.sectionReminder,
-      borderColor: colors.sectionReminder,
-    },
-    middle: {
-      flex: 1,
-      marginRight: 12,
-    },
-    reminderText: {
-      fontSize: 15,
-      fontFamily: FONTS.semiBold,
-      color: colors.textPrimary,
-    },
-    reminderTextDone: {
-      textDecorationLine: 'line-through',
-      color: colors.textTertiary,
-    },
-    privateText: {
-      fontSize: 15,
-      fontFamily: FONTS.semiBold,
-      color: colors.textTertiary,
-      fontStyle: 'italic',
-    },
-    reminderSecondaryText: {
-      fontSize: 12,
-      fontFamily: FONTS.regular,
-      color: colors.textTertiary,
-      marginTop: 2,
-    },
-    dueRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 4,
-      gap: 6,
-    },
-    dueText: {
-      fontSize: 12,
-      color: colors.textTertiary,
-      fontFamily: FONTS.regular,
-    },
-    dueOverdue: {
-      color: colors.red,
-      fontFamily: FONTS.semiBold,
-    },
-    pinDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: colors.accent,
-      marginLeft: 6,
-    },
-    right: {
-      alignItems: 'center',
-      gap: 6,
-    },
-    btnRow: {
-      flexDirection: 'row',
-      gap: 6,
-    },
-    pinBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
-      borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    pinBtnActive: {
-      borderColor: colors.accent,
-    },
-    pinBtnText: {
-      fontSize: 11,
-      fontFamily: FONTS.semiBold,
-      color: colors.textTertiary,
-    },
     fab: {
       position: 'absolute',
       bottom: 36 + insets.bottom,
@@ -607,32 +468,6 @@ export default function ReminderScreen({ navigation }: Props) {
       borderRadius: 3,
       backgroundColor: colors.accent,
     },
-    deletedAgo: {
-      fontSize: 12,
-      color: colors.textTertiary,
-      marginTop: 4,
-      fontStyle: 'italic',
-      fontFamily: FONTS.regular,
-    },
-    clearBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.15)',
-      borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    },
-    clearHistoryText: {
-      fontSize: 12,
-      fontFamily: FONTS.semiBold,
-      color: colors.red,
-    },
-    historyText: {
-      fontSize: 12,
-      color: colors.textTertiary,
-      marginTop: 4,
-      fontFamily: FONTS.regular,
-    },
   }), [colors, insets.bottom]);
 
   const isOverdue = useCallback((dateStr: string): boolean => {
@@ -646,172 +481,31 @@ export default function ReminderScreen({ navigation }: Props) {
 
   const renderItem = useCallback(({ item }: { item: Reminder }) => {
     if (item.deletedAt) {
-      const deletedPrimary = item.private
-        ? (item.nickname || 'Private')
-        : item.nickname
-          ? `${item.icon} ${item.nickname}`
-          : item.text ? `${item.icon} ${item.text}` : item.icon;
-      const deletedSecondary = !item.private && item.nickname && item.text
-        ? item.text
-        : null;
       return (
-        <View style={styles.deletedCard}>
-          <View style={styles.middle}>
-            <Text style={[styles.reminderText, { color: colors.textTertiary }]} numberOfLines={2}>
-              {deletedPrimary}
-            </Text>
-            {deletedSecondary && (
-              <Text style={[styles.reminderSecondaryText, { color: colors.textTertiary }]} numberOfLines={2}>
-                {deletedSecondary}
-              </Text>
-            )}
-            <Text style={styles.deletedAgo}>
-              {formatDeletedAgo(item.deletedAt)}
-            </Text>
-          </View>
-          <View style={styles.right}>
-            <View style={styles.btnRow}>
-              <TouchableOpacity onPress={() => handleRestore(item.id)} style={btn.ghostSmall} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Restore reminder">
-                <Text style={btn.ghostSmallText}>Restore</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handlePermanentDelete(item.id)} style={btn.destructiveSmall} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Permanently delete reminder">
-                <Text style={btn.destructiveSmallText}>Forever</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        <DeletedReminderCard
+          reminder={item}
+          onRestore={handleRestore}
+          onPermanentDelete={handlePermanentDelete}
+          formatDeletedAgo={formatDeletedAgo}
+        />
       );
     }
-
-    const pinned = isReminderPinned(item.id, pinnedIds);
-    const displayPrimary = item.private
-      ? (item.nickname || 'Private')
-      : item.nickname
-        ? `${item.icon} ${item.nickname}`
-        : item.text ? `${item.icon} ${item.text}` : item.icon;
-
-    const displaySecondary = !item.private && item.nickname && item.text
-      ? item.text
-      : null;
-
-    // In Completed filter, recurring reminders show differently
-    const isRecurringInCompleted = reminderFilter === 'completed' && item.recurring && !item.completed;
-
-    const handleDeletePress = () => {
-      if (isRecurringInCompleted) {
-        // Recurring in Completed filter: clear history only, keep reminder active
-        Alert.alert('Clear completion history?', 'The reminder stays active.', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Clear', style: 'destructive', onPress: () => handleClearHistory(item.id) },
-        ]);
-      } else {
-        Alert.alert('Delete this reminder?', '', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item.id) },
-        ]);
-      }
-    };
-
     return (
-        <SwipeableRow onDelete={() => handleDelete(item.id)} enabled={!item.deletedAt && !isRecurringInCompleted}>
-        <View style={[styles.card, item.completed && styles.cardCompleted]}>
-          <TouchableOpacity
-            style={[styles.checkbox, (item.completed || (item.recurring && hasCompletedToday(item))) && styles.checkboxDone]}
-            onPress={() => handleToggleComplete(item.id)}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={(item.completed || (item.recurring && hasCompletedToday(item))) ? 'Mark incomplete' : 'Mark complete'}
-          >
-            {(item.completed || (item.recurring && hasCompletedToday(item))) && (
-              <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.middle}
-            onPress={() => { hapticLight(); navigation.navigate('CreateReminder', { reminderId: item.id }); }}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={displayPrimary}
-            accessibilityHint="Tap to edit"
-          >
-            <Text
-              style={[
-                item.private ? styles.privateText : styles.reminderText,
-                item.completed && styles.reminderTextDone,
-              ]}
-              numberOfLines={2}
-            >
-              {displayPrimary}
-            </Text>
-            {displaySecondary && !item.completed && (
-              <Text style={styles.reminderSecondaryText} numberOfLines={2}>
-                {displaySecondary}
-              </Text>
-            )}
-            {!item.completed && (item.dueDate || item.dueTime) && (
-              <View style={styles.dueRow}>
-                <Text style={[
-                  styles.dueText,
-                  item.dueDate && isOverdue(item.dueDate) && styles.dueOverdue,
-                ]}>
-                  {item.dueDate && isOverdue(item.dueDate) ? 'Overdue \u2022 ' : ''}
-                  {item.dueDate ? formatDueDate(item.dueDate) : ''}
-                  {item.dueDate && item.dueTime ? ' at ' : ''}
-                  {item.dueTime ? formatTime(item.dueTime, timeFormat) : ''}
-                  {item.recurring ? (
-                    item.days && item.days.length > 0 && item.days.length < 7
-                      ? ` \u2022 Weekly`
-                      : item.days && item.days.length === 7
-                        ? ` \u2022 Daily`
-                        : ` \u2022 Yearly`
-                  ) : ''}
-                </Text>
-                {pinned && <View style={styles.pinDot} />}
-              </View>
-            )}
-            {isRecurringInCompleted && item.completionHistory && item.completionHistory.length > 0 && (
-              <Text style={styles.historyText} numberOfLines={2}>
-                {formatCompletionDates(item.completionHistory)}
-              </Text>
-            )}
-            {(item.completed || (!item.dueDate && !item.dueTime && !isRecurringInCompleted)) && pinned && (
-              <View style={styles.dueRow}>
-                <View style={styles.pinDot} />
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.right}>
-            <View style={styles.btnRow}>
-              <TouchableOpacity
-                onPress={() => handleTogglePin(item.id)}
-                style={[styles.pinBtn, pinned && styles.pinBtnActive]}
-                activeOpacity={0.6}
-                accessibilityRole="button"
-                accessibilityLabel={pinned ? 'Unpin from widget' : 'Pin to widget'}
-              >
-                <Text style={[styles.pinBtnText, pinned && { color: colors.accent }]}>
-                  {pinned ? 'Pinned' : 'Pin'}
-                </Text>
-              </TouchableOpacity>
-              {isRecurringInCompleted && (
-                <TouchableOpacity
-                  onPress={handleDeletePress}
-                  style={styles.clearBtn}
-                  activeOpacity={0.6}
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear completion history"
-                >
-                  <Text style={styles.clearHistoryText}>Clear</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-        </SwipeableRow>
+      <ReminderCard
+        reminder={item}
+        pinned={isReminderPinned(item.id, pinnedIds)}
+        timeFormat={timeFormat}
+        reminderFilter={reminderFilter}
+        onToggleComplete={handleToggleComplete}
+        onTogglePin={handleTogglePin}
+        onDelete={handleDelete}
+        onClearHistory={handleClearHistory}
+        onPress={(id) => navigation.navigate('CreateReminder', { reminderId: id })}
+        isOverdue={isOverdue}
+        formatDueDate={formatDueDate}
+      />
     );
-  }, [styles, colors, btn, pinnedIds, reminderFilter, timeFormat, navigation, isOverdue, handleRestore, handlePermanentDelete, handleDelete, handleClearHistory, handleToggleComplete, handleTogglePin]);
+  }, [pinnedIds, reminderFilter, timeFormat, handleRestore, handlePermanentDelete, handleDelete, handleClearHistory, handleToggleComplete, handleTogglePin, isOverdue, navigation]);
 
   const nonDeletedReminderCount = reminders.filter(r => !r.deletedAt).length;
 

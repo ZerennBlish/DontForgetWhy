@@ -345,6 +345,7 @@ export default function TimerScreen({ navigation }: Props) {
         style={styles.presetCard}
         onPress={() => openModal ? handleLongPress(preset) : handleStartTimer(preset)}
         onLongPress={() => { hapticLight(); handlePinToggle(preset); }}
+        delayPressIn={150}
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`Start ${preset.label} timer, ${preset.id === 'custom' ? 'Custom' : openModal ? 'Set' : formatDuration(preset.customSeconds || preset.seconds)}`}
@@ -482,6 +483,7 @@ export default function TimerScreen({ navigation }: Props) {
                 style={styles.presetCard}
                 onPress={() => handleStartUserTimer(ut)}
                 onLongPress={() => { hapticLight(); handlePinToggle({ id: ut.id, icon: ut.icon, label: ut.label, seconds: ut.seconds }); }}
+                delayPressIn={150}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={`Start ${ut.label} timer, ${formatDuration(ut.seconds)}`}
@@ -511,6 +513,7 @@ export default function TimerScreen({ navigation }: Props) {
                 style={styles.presetCard}
                 onPress={() => handleStartTimer(p)}
                 onLongPress={() => { hapticLight(); handlePinToggle(p); }}
+                delayPressIn={150}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={`Start ${p.label} timer, ${formatDuration(p.customSeconds || p.seconds)}`}

@@ -10,23 +10,25 @@
 | **Current Version** | **v1.24.0 (versionCode 43)** — LIVE on Play Store. `dev` is ahead of v1.24.0 with significant cleanup work (full Pass 1 + Pass 2 dead-code sweep landed). |
 | **Branch** | `dev` — `main` reset to match `dev` in Session 37. `v1.24.0` tag on `0ee7100`. |
 | **Production Status** | v1.24.0 (versionCode 43) live on Play Store. |
-| **Current Focus** | Dead-code audit COMPLETE — Pass 1 (cross-file) + Pass 2 (all 6 chunks) finished. Full codebase sweep done. Parallel: asset creation for chrome game art (user-driven, offline). |
+| **Current Focus** | v2.0.0 launch sequence — backlog cleanup phase, then chrome icons, multiplayer, App Check, paywall. |
 | **Blocked By** | Nothing |
-| **Next Action** | Asset wire-up when chrome game assets are ready, OR settings redesign, OR P7 Pro Tier activation at v2.0.0, OR production build to verify bundler health. |
+| **Next Action** | Backlog cleanup (deferred items that should've shipped already), then chrome icon wire-up. |
 | **EAS Credits** | ~19 remaining (1 dev build + 1 production build this session). Reset May 12. |
 | **Firebase Credits** | **$300 activated — expires July 14, 2026.** Auth + Firestore + Google Calendar API all active. OAuth consent screen unverified (shows warning on write scope). |
 | **ElevenLabs** | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
 
 ---
 
-## NEXT SESSION CANDIDATES
+## v2.0.0 LAUNCH SEQUENCE
 
-Picking the next body of work. Each candidate is scoped big enough for a full session but loose enough to reshape on the way in.
+The path to v2.0.0 — Pro paywall goes live when this sequence is complete.
 
-- **Asset wire-up** — When the user's 30+ chrome game assets are ready, drop them into `assets/` + `src/data/` registries and wire into screens.
-- **Settings screen redesign** — Group settings into logical sections (Account, Appearance, Sound & Haptics, Data & Backup, About), compact theme picker, cleaner layout. Worth a pass before P7 adds more surfaces.
-- **P7 Pro Tier activation at v2.0.0** — The actual paywall. All P5.5 plumbing is production-dormant. Place `ProGate` wrappers on gated surfaces, ship at v2.0.0.
-- **Production build to verify bundler health** — Standing rule: run early in a version's lifecycle so bundler regressions surface before a ship deadline. Pass 1 + Pass 2 touched a lot of files; worth a smoke build.
+1. **Backlog cleanup** — Clear deferred items that aren't post-launch. Fix what should've been done already.
+2. **Chrome icon wire-up** — Remaining chrome game assets for a fresh visual pass before launch.
+3. **Multiplayer (P8)** — Chess, checkers, trivia. The flagship v2.0.0 feature and the reason Pro is worth $1.99.
+4. **App Check** — Lock down cloud endpoints before billing surfaces go live.
+5. **P7 Pro Tier activation** — Paywall goes live for new users. Founding users stay Pro forever.
+6. **Ship v2.0.0**
 
 ---
 
@@ -49,9 +51,9 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 | 6 | Chess + Checkers + Blunder Roast | ✅ Done | Prod only |
 | 6.5 | Voice Content Expansion | 🟡 Partial | Prod only |
 | 7 | Pro Tier + Billing | 🟡 Core Done | Dev (v1.23.0 awaiting ship) |
-| 8 | Firebase Online + Social | ✅ Foundation + Cloud Checkers Done | Dev (v2.0.0 pending) |
+| 8 | Firebase Online + Multiplayer | 🟡 Foundation + Cloud Games Done | Dev (v2.0.0 — multiplayer is flagship) |
 
-> **Note:** P8 was pulled forward and its Auth + Firestore foundation landed in Session 30 alongside P5, because P5 required Firebase Auth to sign the user in for Google Calendar access. Session 32 added **Cloud Checkers AI** as the first Cloud Functions deployment (public unauth endpoint — App Check deferred to pre-Pro launch). P8's remaining work (online riddles, global leaderboards, multiplayer chess/checkers/trivia) is still waiting.
+> **Note:** P8 was pulled forward and its Auth + Firestore foundation landed in Session 30 alongside P5, because P5 required Firebase Auth to sign the user in for Google Calendar access. Session 32 added **Cloud Checkers AI** as the first Cloud Functions deployment (public unauth endpoint — App Check deferred to pre-Pro launch). **Multiplayer chess, checkers, and trivia are the flagship v2.0.0 feature** — active pre-launch work, the major addition that justifies the version jump and gives Pro something worth paying for. Online riddles also remain pre-launch. Global leaderboards stay post-2.0.
 
 ---
 
@@ -370,12 +372,12 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 
 ### Stranded Work (reverted, not yet deleted)
 - [ ] **Prompt 4 deferred (Session 27)** — VoiceMemoDetailScreen layout reorder (clips-first), bottom toolbar (Attached/Camera/Gallery), share button + per-clip share, photos in attachments panel. Prompt file written and ready.
-- [ ] **GameNavButtons component** — file at `src/components/GameNavButtons.tsx` exists but `APP_ICONS.gameBack`/`gameHome` were not added to `appIconAssets.ts`. TypeScript errors. Not imported anywhere. Either wire it or delete it.
-- [ ] **Game icon exports** — 8 character icons on disk in `assets/icons/` (icon-hourglass, icon-pencil, icon-erase, icon-chevron-left, icon-chevron-right, icon-game-back, icon-game-home, icon-smiley) but none exported from `appIconAssets.ts`
-- [ ] **Chrome icon exports** — `lock.webp` + `checkmark.webp` in `assets/app-icons/` but not in `appIconAssets.ts`
-- [ ] **Trivia + Sudoku game sounds** — 5 wav files on disk (`pencil.wav`, `Eraser.wav`, `Triva-tap.wav`, `right-answer-Triva.wav`, `wrong-answer-trivia.wav`) but `gameSounds.ts` SOUNDS registry has no entries for them, and no call sites in `useSudoku` or trivia
-- [ ] **audioCompat.ts adoption** — `src/utils/audioCompat.ts` exports `PlayerWithEvents` intersection type to patch expo-audio 55.x type drift, but `gameSounds.ts` and `soundFeedback.ts` still use raw `AudioPlayer` and throw TS errors on `addListener` + `release`. Need to cast via `PlayerWithEvents` and use `.remove()` instead of `.release()`
-- [ ] **VoiceMemoListScreen audio TS errors** — same expo-audio type drift at lines 118, 147
+- [x] **GameNavButtons component** — ✅ Resolved (Session 25). Wired, exported from `appIconAssets.ts`, used by `DailyRiddleScreen`.
+- [x] **Game icon exports** — ✅ Resolved (Session 25). All 8 character icons exported in `appIconAssets.ts` (hourglass, pencil, erase, chevronLeft, chevronRight, gameBack, gameHome, smiley).
+- [x] **Chrome icon exports** — ✅ Partially resolved (Session 25). `checkmark.webp` exported. `lock.webp` intentionally held back — ships when PIN system ships (see DFW-Decisions.md).
+- [x] **Trivia + Sudoku game sounds** — ✅ Resolved (Session 25). All 5 sounds registered in `gameSounds.ts` with volumes: `sudokuPencil`, `sudokuErase`, `triviaTap`, `triviaCorrect`, `triviaWrong`.
+- [x] **audioCompat.ts adoption** — ✅ Resolved (Session 25). `PlayerWithEvents` imported and used in `gameSounds.ts`, `soundFeedback.ts`, `VoiceMemoListScreen.tsx`, `HomeScreen.tsx`, `TutorialOverlay.tsx`. No `as any` casts remain.
+- [x] **VoiceMemoListScreen audio TS errors** — ✅ Resolved (Session 25). Uses `PlayerWithEvents` properly.
 
 ### Audit Gate
 - [x] Dead code categorical pass
@@ -385,10 +387,10 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 - [x] Data safety pass
 - [x] Navigation guards pass
 - [x] Type safety pass
-- [~] UI patterns pass (partially reverted)
-- [ ] `npx tsc --noEmit` — **10 errors** in stranded files (`GameNavButtons.tsx` missing icon refs, `gameSounds.ts` + `soundFeedback.ts` + `VoiceMemoListScreen.tsx` audio types). Pre-existing on this branch, introduced when wiring was reverted but orphan files kept.
-- [ ] `npx jest` — not re-run since the revert
-- [ ] Version bump — deferred until stranded work is resolved
+- [x] UI patterns pass — GameNavButtons wired (Session 25), stranded icon/sound exports resolved (Session 25)
+- [x] `npx tsc --noEmit` — 0 errors (resolved by Session 25 wiring + audioCompat adoption)
+- [x] `npx jest` — 520 tests passing as of Session 38
+- [x] Version bump — resolved; shipped as part of v1.18.0 (Session 25)
 
 ---
 
@@ -454,7 +456,8 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 - [x] Online trivia via OpenTDB (Session 31) — all 8 parent categories mapped to category IDs (Session 32 expansion), free for everyone, offline bank fallback
 - [ ] Online riddles (unlimited for Pro) — Bonus Riddles tab Pro-gated
 - [ ] Global leaderboards (anonymous)
-- [ ] Multiplayer chess/checkers/trivia — scope TBD, post-2.0
+- [ ] **Multiplayer chess + checkers** — async + realtime. Flagship v2.0.0 feature.
+- [ ] **Multiplayer trivia** — async + realtime. Flagship v2.0.0 feature.
 - [x] Cloud Stockfish AI for chess (Session 31) — Lichess cloud eval API, **free for everyone** (not a Pro upgrade)
 - [ ] Cloud endpoint auth (Firebase App Check) — before Pro launch. Checkers Cloud Function is currently public/unauth.
 
@@ -462,45 +465,71 @@ Picking the next body of work. Each candidate is scoped big enough for a full se
 
 ## BACKLOG (Not Scheduled)
 
-### Deferred from Session 32
-- **Cloud endpoint auth (Firebase App Check)** — before Pro launch. Checkers Cloud Function at `checkersai-kte3lby5vq-uc.a.run.app` is currently public/unauth. Trivia Cloud Function TBD.
-- **OAuth consent screen verification** — before Pro launch (if/when Google Sign-In moves past `calendar.readonly` + `calendar` write scope combo).
-- **Online Checkers difficulty tuning** — cloudPickRange bands for Beginner/Casual/Intermediate/Advanced/Expert were calibrated from chess values; retest after a few weeks of Cloud Checkers play and adjust.
-- **Multiplayer trivia** — async + realtime. Post-2.0.
-- **Multiplayer chess + checkers** — async + realtime. Post-2.0.
+Grouped by functional area so related work ships together. Within each group, items are ranked by value — highest first.
+
+### Pre-Launch Blockers (required before Pro goes live at v2.0.0)
+
+- **Cloud endpoint auth (Firebase App Check)** — Checkers Cloud Function at `checkersai-kte3lby5vq-uc.a.run.app` is currently public/unauth. Must be locked down before Pro launch exposes billing surfaces.
+- **OAuth consent screen verification** — Required if/when Google Sign-In moves past `calendar.readonly` + `calendar` write scope combo. Currently unverified (shows warning).
+
+### Games (Chess, Checkers, Sudoku, Trivia, Memory Match, Daily Riddle, Guess Why)
+
+- **Online Checkers difficulty tuning** — cloudPickRange bands calibrated from chess values; retest after play data accumulates and adjust.
+- **Board memoization** — Sudoku 81-cell rebuild on every render, Chess/Checkers 64-cell rebuild. Prompts written, not applied (scope + risk of breaking stable game UX).
+- **DailyRiddleScreen emoji → custom art pass** — category emoji, button label emoji.
+- **SudokuScreen emoji → custom art pass** — win emoji, hint button, new game button.
 - **That One Dice Game** — different name, same mechanic. Post-2.0.
+- **Global leaderboards (anonymous)** — post-2.0.
+- **Guess Why Personal Edition** — concept only.
 
-### Deferred from Session 24
-- **Board memoization** — Sudoku 81-cell rebuild on every render, Chess/Checkers 64-cell rebuild. Audited, prompts written, not applied (scope + risk of breaking stable game UX).
-- **DrawingCanvas render-tick refactor** — audited, prompt written, not applied
-- **ReminderCard extraction** — inline cards in ReminderScreen should move to a component (noted by auditors)
-- **Widget emoji cleanup** — needs a new ImageWidget wrapper before emoji can be fully swept from widget layouts
-- **Timer preset emoji → icon conversion** — design decision pending (what icon language for presets?)
-- **PIN system** — for private alarms/reminders. Once shipped, wire the `lock.webp` chrome icon (currently on disk but unexported)
-- **Dual brand identity** — Personality Mode / Clean Mode — concept only
+### Alarms, Reminders & Timer
 
-### Features
-- Memory Match custom card art — replace emoji with custom-designed images (ChatGPT-generated, DFW-themed). ~20-22 unique cards + custom card back. Polish pass for free tier storefront quality.
-- DailyRiddleScreen emoji → custom art pass (category emoji, button label emoji)
-- SudokuScreen emoji → custom art pass (win emoji, hint button, new game button)
-- Timer notification buttons: "Go Away" + "Start me?"
-- Add holidays to calendar
-- Theme-responsive icon colors
-- Expanded alarm icon picker
-- Guess Why Personal Edition
-- Trivia/riddle wake-up mode
-- Pin toggle inside edit/detail screens
-- iOS port (P9+)
-- Optional AES-256 backup encryption
-- DrawingCanvas dark rgba values
+- **Timer notification buttons** — "Go Away" + "Start me?" actions on timer notifications.
+- **Trivia/riddle wake-up mode** — alarm fires a trivia question or riddle to dismiss.
+- **Expanded alarm icon picker** — more icon options beyond the current emoji set.
+- **PIN system** — for private alarms/reminders. Ships with `lock.webp` chrome icon (on disk, intentionally unexported until PIN is real).
+- **Pin toggle inside edit/detail screens** — widget pin management from within the item editor.
 
-### Store / Marketing
-- Widget preview screenshots
-- App size audit
+### Voice & Audio
+
+- **Voice memos attachable to alarms** (P6.5.2) — hear your own voice when alarm fires.
+- **More in-app roast moments** (P6.5.3) — navigation, idle, trivia/riddle voice clips.
+- **Female voice character design pass** (P6.5.4) — concept only, not shipping yet.
+- **VoiceMemoDetailScreen layout rewrite** (Prompt 4, Session 24) — clips-first layout, bottom toolbar (Attached/Camera/Gallery), share button + per-clip share, photos in attachments panel. Prompt file written and ready.
+
+### Visual & Theme
+
+- **Theme-responsive icon colors** — icons adapt tint to active theme.
+- **Timer preset emoji → icon conversion** — design decision pending (what icon language for presets?).
+- **DrawingCanvas dark rgba values** — hardcoded rgba values in drawing tool.
+
+### Widgets
+
+- **Widget emoji cleanup** — needs a new ImageWidget wrapper before emoji can be fully swept from widget layouts.
+
+### Architecture & Refactoring
+
+- **ReminderCard extraction** — inline cards in ReminderScreen should move to a component (noted by auditors).
+- **DrawingCanvas render-tick refactor** — audited, prompt written, not applied.
+
+### Personality & Brand
+
+- **Dual brand identity** — Personality Mode / Clean Mode — concept only.
+
+### Calendar
+
+- **Add holidays to calendar** — holiday data for CalendarScreen.
+
+### Platform & Store
+
+- **iOS port (P9+)** — future platform expansion.
+- **Optional AES-256 backup encryption** — passphrase-protected .dfw files.
+- **App size audit** — measure and optimize bundle size.
+- **Widget preview screenshots** — Play Store marketing assets.
 
 ### Recurring
-- Home screen title centering — verify applied
-- Daily Riddle scoring design review
+
+- **Daily Riddle scoring design review** — periodic review of scoring balance.
 
 ---
 

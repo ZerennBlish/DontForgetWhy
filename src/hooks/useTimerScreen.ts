@@ -98,7 +98,7 @@ interface UseTimerScreenResult {
   // Callbacks
   handleStartTimer: (preset: TimerPreset, timerSoundId?: string) => Promise<void>;
   handleLongPress: (preset: TimerPreset) => void;
-  handleRemoveTimer: (id: string) => Promise<void>;
+  handleRemoveTimer: (id: string) => void;
   handleTogglePause: (id: string) => Promise<void>;
   handlePinToggle: (preset: TimerPreset) => Promise<void>;
   handleStartUserTimer: (ut: UserTimer) => Promise<void>;
@@ -232,19 +232,34 @@ export function useTimerScreen(): UseTimerScreenResult {
     });
   };
 
-  const handleRemoveTimer = async (id: string) => {
+  const handleRemoveTimer = (id: string) => {
     const timer = activeTimers.find((t) => t.id === id);
-    if (timer?.notificationId) {
-      await cancelTimerNotification(timer.notificationId);
-    }
-    cancelTimerCountdownNotification(id).catch(
-      (e) => console.error('[handleRemoveTimer] cancelTimerCountdownNotification failed:', e),
+    if (!timer) return;
+
+    Alert.alert(
+      'Dismiss this timer?',
+      `${timer.icon} ${timer.label}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Dismiss',
+          style: 'destructive',
+          onPress: async () => {
+            if (timer.notificationId) {
+              await cancelTimerNotification(timer.notificationId);
+            }
+            cancelTimerCountdownNotification(id).catch(
+              (e) => console.error('[handleRemoveTimer] cancelTimerCountdownNotification failed:', e),
+            );
+            setActiveTimers((prev) => {
+              const updated = prev.filter((t) => t.id !== id);
+              saveActiveTimers(updated);
+              return updated;
+            });
+          },
+        },
+      ],
     );
-    setActiveTimers((prev) => {
-      const updated = prev.filter((t) => t.id !== id);
-      saveActiveTimers(updated);
-      return updated;
-    });
   };
 
   const handleTogglePause = async (id: string) => {
