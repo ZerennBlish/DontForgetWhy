@@ -10,8 +10,10 @@ import {
   ImageBackground,
   Image,
   ImageSourcePropType,
+  TextInput,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import type { ThemeColors } from '../theme/colors';
@@ -32,11 +34,24 @@ import type { TriviaQuestion, TriviaParentCategory, TriviaSubcategory } from '..
 import { PARENT_TO_SUBS, SUBCATEGORY_LABELS } from '../types/trivia';
 import { GameNavButtons } from '../components/GameNavButtons';
 import SubcategoryPickerModal from '../components/SubcategoryPickerModal';
+import MultiplayerTriviaGame from '../components/MultiplayerTriviaGame';
+import {
+  createTriviaGame,
+  joinTriviaGame,
+  getTriviaGames,
+  type TriviaMultiplayerGame,
+} from '../services/multiplayerTrivia';
+import { getCurrentUser } from '../services/firebaseAuth';
+import { isProUser } from '../services/proStatus';
+import ProGate from '../components/ProGate';
+import useEntitlement from '../hooks/useEntitlement';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trivia'>;
 
 type Phase = 'category' | 'playing' | 'results';
+type TriviaMode = 'cpu' | 'multiplayer' | null;
+type MpPhase = 'menu' | 'create' | 'join' | 'playing';
 
 const QUESTIONS_PER_ROUND = 10;
 
@@ -66,6 +81,8 @@ const TRIVIA_CATEGORIES: { id: TriviaParentCategory; label: string }[] = [
   { id: 'mythFiction', label: 'Myth & Fiction' },
 ];
 
+const MP_QUESTION_COUNTS = [10, 15, 20];
+
 function shuffle<T>(arr: T[]): T[] {
   const result = [...arr];
   for (let i = result.length - 1; i > 0; i--) {
@@ -77,27 +94,20 @@ function shuffle<T>(arr: T[]): T[] {
 
 function selectFromPool(source: TriviaQuestion[], count: number, difficulty: DifficultyFilter): TriviaQuestion[] {
   if (difficulty !== 'all') {
-    // Single difficulty — just shuffle and pick
     return shuffle(source.filter((q) => q.difficulty === difficulty)).slice(0, count);
   }
-
-  // Mix of difficulties: ~4 easy, ~3 medium, ~3 hard
   const easy = shuffle(source.filter((q) => q.difficulty === 'easy'));
   const medium = shuffle(source.filter((q) => q.difficulty === 'medium'));
   const hard = shuffle(source.filter((q) => q.difficulty === 'hard'));
-
   const selected: TriviaQuestion[] = [];
   selected.push(...easy.slice(0, 4));
   selected.push(...medium.slice(0, 3));
   selected.push(...hard.slice(0, 3));
-
-  // Fill remaining if we don't have enough of any difficulty
   if (selected.length < count) {
     const usedIds = new Set(selected.map((q) => q.id));
     const remaining = shuffle(source.filter((q) => !usedIds.has(q.id)));
     selected.push(...remaining.slice(0, count - selected.length));
   }
-
   return shuffle(selected.slice(0, count));
 }
 
@@ -111,31 +121,21 @@ function selectQuestions(
   if (subcategory !== 'all') {
     pool = getQuestionsForSubcategory(subcategory);
   } else if (category === 'general') {
-    // General Knowledge is the grab-bag: pulls from ALL categories
     pool = getAllQuestions();
   } else {
     pool = getQuestionsForCategory(category);
   }
-
-  // Apply difficulty filter to pool
   if (difficulty !== 'all') {
     pool = pool.filter((q) => q.difficulty === difficulty);
   }
-
   const seenSet = new Set(seenIds);
   const unseen = pool.filter((q) => !seenSet.has(q.id));
-
-  // All questions seen — signal reset
   if (unseen.length === 0) {
     return { questions: selectFromPool(pool, QUESTIONS_PER_ROUND, difficulty), allSeen: true };
   }
-
-  // Enough unseen — pick from unseen only
   if (unseen.length >= QUESTIONS_PER_ROUND) {
     return { questions: selectFromPool(unseen, QUESTIONS_PER_ROUND, difficulty), allSeen: false };
   }
-
-  // Some unseen remain but fewer than a full round — use all unseen, pad with seen
   const seen = shuffle(pool.filter((q) => seenSet.has(q.id)));
   const padded = [...unseen, ...seen.slice(0, QUESTIONS_PER_ROUND - unseen.length)];
   return { questions: shuffle(padded), allSeen: false };
@@ -148,11 +148,25 @@ function getShuffledAnswers(question: TriviaQuestion): string[] {
   return shuffle([question.correctAnswer, ...question.incorrectAnswers]);
 }
 
-export default function TriviaScreen({ navigation }: Props) {
+function relativeTime(iso: string): string {
+  const then = Date.parse(iso);
+  if (!Number.isFinite(then)) return '';
+  const diffMs = Date.now() - then;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+export default function TriviaScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const entitlement = useEntitlement();
 
-  // Phase state
+  // Phase state (CPU)
   const [phase, setPhase] = useState<Phase>('category');
   const [onlineMode, setOnlineMode] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
@@ -160,7 +174,7 @@ export default function TriviaScreen({ navigation }: Props) {
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('all');
   const [speedOption, setSpeedOption] = useState<SpeedOption>('normal');
 
-  // Game state
+  // Game state (CPU)
   const [selectedCategory, setSelectedCategory] = useState<TriviaParentCategory>('general');
   const [selectedSubcategory, setSelectedSubcategory] = useState<TriviaSubcategory | 'all'>('all');
   const [subPickerVisible, setSubPickerVisible] = useState(false);
@@ -180,6 +194,28 @@ export default function TriviaScreen({ navigation }: Props) {
   const timerWidth = useRef(new Animated.Value(1)).current;
   const answerLocked = useRef(false);
   const roundTimePerQuestion = useRef(SPEED_SECONDS.normal);
+
+  // ── Multiplayer state ────────────────────────────────────────
+  const initialMpCode = route.params?.multiplayerCode ?? null;
+  const [triviaMode, setTriviaMode] = useState<TriviaMode>(
+    initialMpCode ? 'multiplayer' : null,
+  );
+  const [mpPhase, setMpPhase] = useState<MpPhase>(
+    initialMpCode ? 'playing' : 'menu',
+  );
+  const [multiplayerCode, setMultiplayerCode] = useState<string | null>(
+    initialMpCode,
+  );
+  const [mpCategory, setMpCategory] = useState<TriviaParentCategory>('general');
+  const [mpSubcategory, setMpSubcategory] = useState<TriviaSubcategory | 'all'>('all');
+  const [mpSubPickerVisible, setMpSubPickerVisible] = useState(false);
+  const [mpQuestionCount, setMpQuestionCount] = useState(10);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [activeMpGames, setActiveMpGames] = useState<TriviaMultiplayerGame[]>([]);
+  const [proGateVisible, setProGateVisible] = useState(false);
+  const [creatingGame, setCreatingGame] = useState(false);
+  const [joiningGame, setJoiningGame] = useState(false);
 
   // Online by default — auto-disable if the OpenTDB API is unreachable.
   useEffect(() => {
@@ -205,14 +241,13 @@ export default function TriviaScreen({ navigation }: Props) {
     };
   }, []);
 
-  // Timer logic
+  // Timer logic (CPU gameplay)
   useEffect(() => {
     if (phase !== 'playing' || selectedAnswer !== null) return;
 
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          // Time's up
           if (timerRef.current) clearInterval(timerRef.current);
           handleTimeout();
           return 0;
@@ -221,7 +256,6 @@ export default function TriviaScreen({ navigation }: Props) {
       });
     }, 1000);
 
-    // Animated bar
     Animated.timing(timerWidth, {
       toValue: 0,
       duration: timeLeft * 1000,
@@ -269,7 +303,6 @@ export default function TriviaScreen({ navigation }: Props) {
     setPhase('results');
     hapticMedium();
 
-    // Record the round if using offline questions
     if (!isOnlineRound) {
       const seenKey = selectedSubcategory !== 'all' ? `${selectedCategory}_${selectedSubcategory}` : selectedCategory;
       const ids = questions.map((q) => q.id);
@@ -301,7 +334,6 @@ export default function TriviaScreen({ navigation }: Props) {
     let roundQuestions: TriviaQuestion[] | null = null;
     let usingOnline = false;
 
-    // Try online first if enabled
     if (onlineMode) {
       const onlineQs = await fetchOnlineQuestions(category, QUESTIONS_PER_ROUND, difficultyFilter);
       if (onlineQs && onlineQs.length >= QUESTIONS_PER_ROUND) {
@@ -310,7 +342,6 @@ export default function TriviaScreen({ navigation }: Props) {
       }
     }
 
-    // Fall back to offline bank
     if (!roundQuestions) {
       const seenKey = selectedSubcategory !== 'all' ? `${category}_${selectedSubcategory}` : category;
       const seenIds = await getSeenQuestionIds(seenKey);
@@ -407,10 +438,9 @@ export default function TriviaScreen({ navigation }: Props) {
     setSubPickerVisible(false);
   }, []);
 
-  // Intercept hardware back during active gameplay. Home nav's popToTop
-  // dispatches POP_TO_TOP/RESET — let those through so Home actually
-  // navigates away. Plain POP stays in-game (return to category).
+  // Intercept hardware back during CPU active gameplay only.
   useEffect(() => {
+    if (triviaMode !== 'cpu') return;
     if (phase !== 'playing') return;
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       const actionType = e.data.action.type;
@@ -421,8 +451,137 @@ export default function TriviaScreen({ navigation }: Props) {
       handleBackFromGame();
     });
     return unsubscribe;
-  }, [navigation, phase, handleBackFromGame]);
+  }, [navigation, phase, handleBackFromGame, triviaMode]);
 
+  // ── Multiplayer handlers ─────────────────────────────────────
+  const refreshActiveGames = useCallback(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      setActiveMpGames([]);
+      return;
+    }
+    getTriviaGames(user.uid)
+      .then((games) => setActiveMpGames(games))
+      .catch(() => setActiveMpGames([]));
+  }, []);
+
+  useEffect(() => {
+    if (triviaMode === 'multiplayer' && mpPhase === 'menu') {
+      refreshActiveGames();
+    }
+  }, [triviaMode, mpPhase, refreshActiveGames]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (triviaMode === 'multiplayer' && mpPhase === 'menu') {
+        refreshActiveGames();
+      }
+    }, [triviaMode, mpPhase, refreshActiveGames]),
+  );
+
+  const handlePickCpuMode = useCallback(() => {
+    hapticLight();
+    playGameSound('tap');
+    setTriviaMode('cpu');
+  }, []);
+
+  const handlePickMpMode = useCallback(() => {
+    if (!isProUser()) {
+      setProGateVisible(true);
+      return;
+    }
+    if (!getCurrentUser()) {
+      Alert.alert(
+        'Sign in required',
+        'Sign in with Google to play multiplayer trivia.',
+      );
+      return;
+    }
+    hapticLight();
+    playGameSound('tap');
+    setTriviaMode('multiplayer');
+    setMpPhase('menu');
+  }, []);
+
+  const handleBackToMenu = useCallback(() => {
+    setMultiplayerCode(null);
+    setMpPhase('menu');
+    setJoinCode('');
+    setJoinError(null);
+    refreshActiveGames();
+  }, [refreshActiveGames]);
+
+  const handleBackToModeSelect = useCallback(() => {
+    hapticLight();
+    playGameSound('tap');
+    setTriviaMode(null);
+    setMpPhase('menu');
+    setMultiplayerCode(null);
+    setJoinCode('');
+    setJoinError(null);
+  }, []);
+
+  const handleMpCategoryTap = useCallback((catId: TriviaParentCategory) => {
+    hapticLight();
+    playGameSound('triviaTap');
+    setMpCategory(catId);
+    setMpSubcategory('all');
+    const subs = PARENT_TO_SUBS[catId];
+    if (subs.length > 1) {
+      setMpSubPickerVisible(true);
+    }
+  }, []);
+
+  const handleMpSubcategorySelect = useCallback((sub: TriviaSubcategory | 'all') => {
+    setMpSubcategory(sub);
+    setMpSubPickerVisible(false);
+  }, []);
+
+  const handleCreateMpGame = useCallback(async () => {
+    if (creatingGame) return;
+    setCreatingGame(true);
+    try {
+      const subcat = mpSubcategory === 'all' ? null : mpSubcategory;
+      const { code } = await createTriviaGame(mpCategory, subcat, mpQuestionCount);
+      setMultiplayerCode(code);
+      setMpPhase('playing');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to create game';
+      Alert.alert('Could not create game', msg);
+    } finally {
+      setCreatingGame(false);
+    }
+  }, [mpCategory, mpSubcategory, mpQuestionCount, creatingGame]);
+
+  const handleJoinMpGame = useCallback(async () => {
+    if (joiningGame) return;
+    const normalized = joinCode.trim().toUpperCase();
+    if (normalized.length !== 6) {
+      setJoinError('Enter the full 6-character code.');
+      return;
+    }
+    setJoinError(null);
+    setJoiningGame(true);
+    try {
+      await joinTriviaGame(normalized);
+      setMultiplayerCode(normalized);
+      setMpPhase('playing');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to join';
+      setJoinError(msg);
+    } finally {
+      setJoiningGame(false);
+    }
+  }, [joinCode, joiningGame]);
+
+  const handleSelectActiveGame = useCallback((g: TriviaMultiplayerGame) => {
+    hapticLight();
+    playGameSound('tap');
+    setMultiplayerCode(g.code);
+    setMpPhase('playing');
+  }, []);
+
+  // ── Results / styling ────────────────────────────────────────
   const getStarRating = (s: number): number => {
     if (s >= 9) return 3;
     if (s >= 6) return 2;
@@ -440,7 +599,321 @@ export default function TriviaScreen({ navigation }: Props) {
 
   const styles = useMemo(() => makeStyles(colors, insets), [colors, insets]);
 
-  // ─── Category Select ───
+  // ────────────────────────────────────────────────────────────
+  // Chrome wrapper: shared background + nav buttons for all phases.
+  // ────────────────────────────────────────────────────────────
+  const renderChrome = (body: React.ReactNode, title = 'Trivia Time') => (
+    <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+        <GameNavButtons topOffset={insets.top + 10} />
+        <View style={styles.globeBadge}>
+          <Image
+            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            style={styles.globeImage}
+            resizeMode="contain"
+            accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
+          />
+        </View>
+        <View style={styles.header} />
+        <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>{title}</Text>
+        {body}
+        {proGateVisible && (
+          <ProGate
+            visible={proGateVisible}
+            onClose={() => setProGateVisible(false)}
+            game="trivia"
+            isPro={entitlement.isPro}
+            loading={entitlement.loading}
+            error={entitlement.error}
+            productPrice={entitlement.productPrice}
+            onPurchase={entitlement.purchase}
+            onRestore={entitlement.restore}
+          />
+        )}
+      </View>
+    </ImageBackground>
+  );
+
+  // ─── Mode select ────────────────────────────────────────────
+  if (triviaMode === null) {
+    return renderChrome(
+      <View style={styles.modeBody}>
+        <TouchableOpacity
+          style={styles.modeCard}
+          onPress={handlePickCpuMode}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Play solo trivia"
+        >
+          <Image
+            source={require('../../assets/trivia/trivia-general.webp')}
+            style={styles.modeCardIcon}
+            resizeMode="contain"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.modeCardTitle}>vs CPU</Text>
+            <Text style={styles.modeCardSubtitle}>Solo trivia rounds — offline or online</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.modeCard}
+          onPress={handlePickMpMode}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Play trivia with friends"
+        >
+          <Image
+            source={require('../../assets/trivia/d20_die.webp')}
+            style={styles.modeCardIcon}
+            resizeMode="contain"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.modeCardTitle}>vs Players</Text>
+            <Text style={styles.modeCardSubtitle}>2-4 players take turns — steal on wrong answers</Text>
+          </View>
+        </TouchableOpacity>
+      </View>,
+    );
+  }
+
+  // ─── Multiplayer playing ─────────────────────────────────────
+  if (triviaMode === 'multiplayer' && mpPhase === 'playing' && multiplayerCode) {
+    return renderChrome(
+      <MultiplayerTriviaGame
+        code={multiplayerCode}
+        onExit={handleBackToMenu}
+      />,
+    );
+  }
+
+  // ─── Multiplayer menu ────────────────────────────────────────
+  if (triviaMode === 'multiplayer' && mpPhase === 'menu') {
+    return renderChrome(
+      <ScrollView style={styles.mpBody} contentContainerStyle={{ paddingBottom: 60 }}>
+        <TouchableOpacity
+          style={[styles.mpPrimaryButton, { marginTop: 12 }]}
+          onPress={() => {
+            hapticLight();
+            playGameSound('tap');
+            setMpPhase('create');
+          }}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Create a new game"
+        >
+          <Text style={styles.mpPrimaryButtonText}>Create Game</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.mpSecondaryButton}
+          onPress={() => {
+            hapticLight();
+            playGameSound('tap');
+            setJoinCode('');
+            setJoinError(null);
+            setMpPhase('join');
+          }}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Join a game by code"
+        >
+          <Text style={styles.mpSecondaryButtonText}>Join with Code</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.activeGamesHeader}>ACTIVE GAMES</Text>
+        {activeMpGames.length === 0 ? (
+          <Text style={styles.emptyText}>No active games.</Text>
+        ) : (
+          activeMpGames.map((g) => {
+            const myUid = getCurrentUser()?.uid ?? '';
+            const myTurn = g.players[0] === myUid; // placeholder — real turn check uses triviaPlayers[activePlayerIndex]
+            const activeName =
+              g.triviaPlayers?.[g.activePlayerIndex]?.displayName ?? 'Someone';
+            const isMyTurn =
+              g.triviaPlayers?.[g.activePlayerIndex]?.uid === myUid;
+            const status =
+              g.status === 'waiting'
+                ? 'In Lobby'
+                : g.phase === 'final'
+                  ? 'Finished'
+                  : isMyTurn
+                    ? 'Your turn'
+                    : `${activeName}'s turn`;
+            const catLabel =
+              TRIVIA_CATEGORIES.find((c) => c.id === g.category)?.label ?? g.category;
+            const playerCount = g.triviaPlayers?.length ?? g.players.length;
+            return (
+              <TouchableOpacity
+                key={g.code}
+                style={styles.activeGameRow}
+                onPress={() => handleSelectActiveGame(g)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={`Resume game ${g.code}`}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.activeGameTitle}>
+                    {catLabel} · {playerCount}/4
+                  </Text>
+                  <Text style={styles.activeGameMeta}>
+                    {status} · {relativeTime(g.lastMoveAt)}
+                  </Text>
+                </View>
+                <Text style={styles.activeGameArrow}>›</Text>
+              </TouchableOpacity>
+            );
+          })
+        )}
+
+        <TouchableOpacity
+          style={styles.backPill}
+          onPress={handleBackToModeSelect}
+          accessibilityRole="button"
+          accessibilityLabel="Back to mode select"
+        >
+          <Text style={styles.backPillText}>← Back</Text>
+        </TouchableOpacity>
+      </ScrollView>,
+    );
+  }
+
+  // ─── Multiplayer create ──────────────────────────────────────
+  if (triviaMode === 'multiplayer' && mpPhase === 'create') {
+    const subLabel =
+      mpSubcategory !== 'all' ? SUBCATEGORY_LABELS[mpSubcategory] : null;
+    return renderChrome(
+      <ScrollView style={styles.mpBody} contentContainerStyle={{ paddingBottom: 60 }}>
+        <View style={styles.mpCard}>
+          <Text style={styles.mpCardTitle}>Create Trivia Game</Text>
+
+          <Text style={styles.sectionLabel}>Category</Text>
+          <View style={styles.mpCategoryGrid}>
+            {TRIVIA_CATEGORIES.map((cat) => {
+              const active = mpCategory === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.mpCategoryCard, active && styles.mpCategoryCardActive]}
+                  onPress={() => handleMpCategoryTap(cat.id)}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={cat.label}
+                  accessibilityState={{ selected: active }}
+                >
+                  <Image source={CATEGORY_IMAGES[cat.id]} style={styles.mpCategoryIcon} resizeMode="contain" />
+                  <Text
+                    style={[styles.mpCategoryLabel, active && styles.mpCategoryLabelActive]}
+                    numberOfLines={2}
+                  >
+                    {cat.label}
+                  </Text>
+                  {active && subLabel && (
+                    <Text style={styles.mpCategorySubLabel}>{subLabel}</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Questions</Text>
+          <View style={styles.countRow}>
+            {MP_QUESTION_COUNTS.map((n) => {
+              const active = mpQuestionCount === n;
+              return (
+                <TouchableOpacity
+                  key={n}
+                  style={[styles.countPill, active && styles.countPillActive]}
+                  onPress={() => { hapticLight(); playGameSound('triviaTap'); setMpQuestionCount(n); }}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${n} questions`}
+                >
+                  <Text style={[styles.countPillText, active && styles.countPillTextActive]}>
+                    {n}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.mpPrimaryButton, { marginTop: 16 }, creatingGame && { opacity: 0.5 }]}
+            onPress={handleCreateMpGame}
+            disabled={creatingGame}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Create game"
+          >
+            <Text style={styles.mpPrimaryButtonText}>
+              {creatingGame ? 'Creating…' : 'Create Game'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={styles.backPill}
+          onPress={() => { hapticLight(); playGameSound('tap'); setMpPhase('menu'); }}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Text style={styles.backPillText}>← Back</Text>
+        </TouchableOpacity>
+        <SubcategoryPickerModal
+          visible={mpSubPickerVisible}
+          category={mpCategory}
+          onSelect={handleMpSubcategorySelect}
+          onClose={() => setMpSubPickerVisible(false)}
+        />
+      </ScrollView>,
+    );
+  }
+
+  // ─── Multiplayer join ────────────────────────────────────────
+  if (triviaMode === 'multiplayer' && mpPhase === 'join') {
+    return renderChrome(
+      <View style={styles.mpBody}>
+        <View style={styles.mpCard}>
+          <Text style={styles.mpCardTitle}>Join Trivia Game</Text>
+          <Text style={styles.joinHint}>Enter the 6-character code</Text>
+          <TextInput
+            value={joinCode}
+            onChangeText={(t) => {
+              setJoinError(null);
+              setJoinCode(t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
+            }}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={6}
+            placeholder="______"
+            placeholderTextColor={colors.textTertiary}
+            style={[styles.joinInput, joinError ? styles.joinInputError : null]}
+            accessibilityLabel="Game code"
+          />
+          {joinError && <Text style={styles.joinErrorText}>{joinError}</Text>}
+          <TouchableOpacity
+            style={[styles.mpPrimaryButton, { marginTop: 20 }, joiningGame && { opacity: 0.5 }]}
+            onPress={handleJoinMpGame}
+            disabled={joiningGame}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Join game"
+          >
+            <Text style={styles.mpPrimaryButtonText}>
+              {joiningGame ? 'Joining…' : 'Join Game'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={styles.backPill}
+          onPress={() => { hapticLight(); playGameSound('tap'); setMpPhase('menu'); }}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Text style={styles.backPillText}>← Back</Text>
+        </TouchableOpacity>
+      </View>,
+    );
+  }
+
+  // ─── CPU Category Select ─────────────────────────────────────
   if (phase === 'category') {
     return (
       <ImageBackground source={require('../../assets/trivia-bg.webp')} style={{ flex: 1 }} resizeMode="cover">
@@ -535,6 +1008,14 @@ export default function TriviaScreen({ navigation }: Props) {
             <Text style={styles.startBtnText}>Start Round</Text>
           </View>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.backPill, { marginTop: 10 }]}
+          onPress={handleBackToModeSelect}
+          accessibilityRole="button"
+          accessibilityLabel="Change mode"
+        >
+          <Text style={styles.backPillText}>← Change Mode</Text>
+        </TouchableOpacity>
       </View>
       <SubcategoryPickerModal
         visible={subPickerVisible}
@@ -547,7 +1028,7 @@ export default function TriviaScreen({ navigation }: Props) {
     );
   }
 
-  // ─── Results ───
+  // ─── CPU Results ─────────────────────────────────────────────
   if (phase === 'results') {
     const catInfo = TRIVIA_CATEGORIES.find((c) => c.id === selectedCategory);
     return (
@@ -628,7 +1109,7 @@ export default function TriviaScreen({ navigation }: Props) {
     );
   }
 
-  // ─── Gameplay ───
+  // ─── CPU Gameplay ────────────────────────────────────────────
   if (!currentQuestion) return null;
 
   const timerColor = timeLeft <= 5 ? colors.red : colors.accent;
@@ -646,7 +1127,6 @@ export default function TriviaScreen({ navigation }: Props) {
       />
     </View>
     <View style={styles.container}>
-      {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.topBarLeft} />
         <View style={styles.topBarRight}>
@@ -660,7 +1140,6 @@ export default function TriviaScreen({ navigation }: Props) {
         </View>
       </View>
 
-      {/* Progress bar */}
       <View style={styles.progressBar}>
         <View
           style={[
@@ -670,7 +1149,6 @@ export default function TriviaScreen({ navigation }: Props) {
         />
       </View>
 
-      {/* Timer bar */}
       <View style={styles.timerBarContainer}>
         <Animated.View
           style={[
@@ -687,12 +1165,10 @@ export default function TriviaScreen({ navigation }: Props) {
       </View>
       <Text style={[styles.timerText, { color: timerColor }]} accessibilityLiveRegion="polite">{timeLeft}s</Text>
 
-      {/* Question */}
       <View style={styles.questionContainer}>
         <Text style={styles.questionText}>{currentQuestion.question}</Text>
       </View>
 
-      {/* Answers */}
       <View style={currentQuestion.type === 'boolean' ? styles.booleanGrid : styles.answerGrid}>
         {shuffledAnswers.map((answer, idx) => {
           let btnStyle = styles.answerBtn;
@@ -779,7 +1255,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       height: 40,
     },
 
-    // Category grid
+    // Category grid (CPU)
     categoryGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -822,7 +1298,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       marginTop: 2,
       textAlign: 'center',
     },
-    // Fixed bottom panel
     bottomPanel: {
       paddingHorizontal: 16,
       paddingTop: 12,
@@ -881,7 +1356,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       fontFamily: FONTS.bold,
       color: colors.textPrimary,
     },
-    // Top bar
     topBar: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -911,7 +1385,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       color: colors.orange,
     },
 
-    // Progress bar
     progressBar: {
       height: 4,
       backgroundColor: colors.border,
@@ -925,7 +1398,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       borderRadius: 2,
     },
 
-    // Timer
     timerBarContainer: {
       height: 6,
       backgroundColor: colors.border,
@@ -948,7 +1420,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       textShadowRadius: 3,
     },
 
-    // Question
     questionContainer: {
       flex: 1,
       justifyContent: 'center',
@@ -966,7 +1437,6 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       textShadowRadius: 3,
     },
 
-    // Answer grids
     answerGrid: {
       paddingHorizontal: 16,
       paddingBottom: insets.bottom + 24,
@@ -1119,6 +1589,235 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       fontSize: 15,
       fontFamily: FONTS.semiBold,
       color: colors.textSecondary,
+    },
+
+    // Mode select
+    modeBody: {
+      flex: 1,
+      paddingHorizontal: 16,
+      gap: 12,
+    },
+    modeCard: {
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      borderRadius: 16,
+      padding: 20,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.25)',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+    },
+    modeCardIcon: {
+      width: 48,
+      height: 48,
+    },
+    modeCardTitle: {
+      fontSize: 18,
+      fontFamily: FONTS.gameHeader,
+      color: colors.overlayText,
+    },
+    modeCardSubtitle: {
+      fontSize: 13,
+      fontFamily: FONTS.regular,
+      color: colors.overlayText + 'CC',
+      marginTop: 4,
+    },
+
+    // Multiplayer shared
+    mpBody: {
+      flex: 1,
+      paddingHorizontal: 16,
+    },
+    mpCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      marginTop: 12,
+    },
+    mpCardTitle: {
+      fontSize: 20,
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 18,
+      fontFamily: FONTS.gameHeader,
+    },
+    sectionLabel: {
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
+      color: colors.textSecondary,
+      marginBottom: 10,
+      opacity: 0.8,
+    },
+    mpPrimaryButton: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    mpPrimaryButtonText: {
+      color: '#FFFFFF',
+      fontFamily: FONTS.bold,
+      fontSize: 15,
+    },
+    mpSecondaryButton: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    mpSecondaryButtonText: {
+      color: colors.textPrimary,
+      fontFamily: FONTS.bold,
+      fontSize: 15,
+    },
+
+    // MP category grid
+    mpCategoryGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    mpCategoryCard: {
+      width: '48%',
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: 10,
+      alignItems: 'center',
+      gap: 4,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+    },
+    mpCategoryCardActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.accent + '20',
+    },
+    mpCategoryIcon: { width: 40, height: 40 },
+    mpCategoryLabel: {
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
+      color: colors.textPrimary,
+      textAlign: 'center',
+    },
+    mpCategoryLabelActive: { color: colors.accent },
+    mpCategorySubLabel: {
+      fontSize: 10,
+      fontFamily: FONTS.regular,
+      color: colors.accent,
+      textAlign: 'center',
+    },
+
+    // MP question count
+    countRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    countPill: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+    },
+    countPillActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.accent + '20',
+    },
+    countPillText: {
+      color: colors.textSecondary,
+      fontSize: 15,
+      fontFamily: FONTS.bold,
+    },
+    countPillTextActive: { color: colors.accent },
+
+    // Active games list
+    activeGamesHeader: {
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
+      color: colors.overlayText + 'CC',
+      marginTop: 20,
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    },
+    emptyText: {
+      fontSize: 13,
+      fontFamily: FONTS.regular,
+      color: colors.overlayText + '99',
+      textAlign: 'center',
+      marginVertical: 12,
+      fontStyle: 'italic',
+    },
+    activeGameRow: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    activeGameTitle: {
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
+      color: colors.textPrimary,
+    },
+    activeGameMeta: {
+      fontSize: 12,
+      fontFamily: FONTS.regular,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    activeGameArrow: {
+      fontSize: 18,
+      color: colors.textSecondary,
+    },
+
+    // Join input
+    joinHint: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
+      textAlign: 'center',
+      marginBottom: 10,
+    },
+    joinInput: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      fontSize: 24,
+      fontFamily: FONTS.extraBold,
+      letterSpacing: 4,
+      textAlign: 'center',
+      color: colors.textPrimary,
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    joinInputError: { borderColor: colors.red },
+    joinErrorText: {
+      color: colors.red,
+      fontSize: 12,
+      fontFamily: FONTS.semiBold,
+      textAlign: 'center',
+      marginTop: 8,
+    },
+    backPill: {
+      alignSelf: 'center',
+      marginTop: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 16,
+      backgroundColor: colors.background,
+    },
+    backPillText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontFamily: FONTS.semiBold,
     },
   });
 }

@@ -49,6 +49,7 @@ export default function GamesScreen({ navigation }: Props) {
   const [isOnline, setIsOnline] = useState(false);
   const [mpChessCount, setMpChessCount] = useState(0);
   const [mpCheckersCount, setMpCheckersCount] = useState(0);
+  const [mpTriviaCount, setMpTriviaCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -85,16 +86,19 @@ export default function GamesScreen({ navigation }: Props) {
             if (!mounted) return;
             setMpChessCount(games.filter((g) => g.type === 'chess').length);
             setMpCheckersCount(games.filter((g) => g.type === 'checkers').length);
+            setMpTriviaCount(games.filter((g) => g.type === 'trivia').length);
           })
           .catch(() => {
             if (mounted) {
               setMpChessCount(0);
               setMpCheckersCount(0);
+              setMpTriviaCount(0);
             }
           });
       } else {
         setMpChessCount(0);
         setMpCheckersCount(0);
+        setMpTriviaCount(0);
       }
 
       return () => {
@@ -389,8 +393,13 @@ export default function GamesScreen({ navigation }: Props) {
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trivia</Text>
           <Text style={styles.gameDesc}>
-            8 categories. 1,600+ questions offline.
+            Solo or 2-4 player steal mode.
           </Text>
+          {mpTriviaCount > 0 && (
+            <Text style={[styles.streakText, { marginTop: 4 }]}>
+              {mpTriviaCount} active multiplayer game{mpTriviaCount === 1 ? '' : 's'}
+            </Text>
+          )}
           {renderTrialIndicator('trivia')}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
