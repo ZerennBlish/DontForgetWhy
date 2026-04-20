@@ -9,22 +9,39 @@ import {
   Dimensions,
   Alert,
   Animated,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import type { Chess } from 'chess.js';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import { GameNavButtons } from '../components/GameNavButtons';
 import { useChess } from '../hooks/useChess';
+import MultiplayerChessGame from '../components/MultiplayerChessGame';
 import { getPieceImage } from '../data/chessAssets';
 import APP_ICONS from '../data/appIconAssets';
 import { DIFFICULTY_LEVELS } from '../services/chessAI';
+import {
+  createGame as mpCreateGame,
+  joinGame as mpJoinGame,
+  getMyGames as mpGetMyGames,
+  type MultiplayerGame,
+} from '../services/multiplayer';
+import { getCurrentUser } from '../services/firebaseAuth';
+import { isProUser } from '../services/proStatus';
+import ProGate from '../components/ProGate';
+import useEntitlement from '../hooks/useEntitlement';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chess'>;
+
+type ChessMode = 'cpu' | 'multiplayer' | null;
+type MpPhase = 'menu' | 'create' | 'join' | 'playing';
 
 const DIFFICULTY_LABELS = ['Easy', 'Intermediate', 'Hard', 'Expert', 'Master'];
 const PIECE_NAMES: Record<string, string> = {
@@ -70,6 +87,19 @@ function getCapturedPieces(game: Chess, color: 'w' | 'b'): string[] {
     }
   }
   return captured;
+}
+
+function relativeTime(iso: string): string {
+  const then = Date.parse(iso);
+  if (!Number.isFinite(then)) return '';
+  const diffMs = Date.now() - then;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -173,14 +203,36 @@ const ChessSquare = React.memo(function ChessSquare({
   );
 });
 
-export default function ChessScreen({ navigation }: Props) {
+export default function ChessScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const chess = useChess();
+  const entitlement = useEntitlement();
 
   const [selectedColor, setSelectedColor] = useState<'w' | 'b'>('w');
   const [selectedDifficulty, setSelectedDifficulty] = useState(2);
   const [teachingEnabled, setTeachingEnabled] = useState(true);
+
+  // ── Multiplayer phase/state ────────────────────────────────────
+  const initialMpCode = route.params?.multiplayerCode ?? null;
+  const [chessMode, setChessMode] = useState<ChessMode>(
+    initialMpCode ? 'multiplayer' : null,
+  );
+  const [mpPhase, setMpPhase] = useState<MpPhase>(
+    initialMpCode ? 'playing' : 'menu',
+  );
+  const [multiplayerCode, setMultiplayerCode] = useState<string | null>(
+    initialMpCode,
+  );
+  const [createColor, setCreateColor] = useState<'w' | 'b'>('w');
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [activeMpGames, setActiveMpGames] = useState<MultiplayerGame[]>([]);
+  const [proGateVisible, setProGateVisible] = useState(false);
+  const [creatingGame, setCreatingGame] = useState(false);
+  const [joiningGame, setJoiningGame] = useState(false);
+
+  const autoSwitchedRef = useRef(false);
 
   const roastFade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -216,8 +268,10 @@ export default function ChessScreen({ navigation }: Props) {
     }
   }, [chess.isPlayerTurn, turnPulse]);
 
-  // Intercept hardware back during active game
+  // Intercept hardware back during CPU active game only. Multiplayer games
+  // persist in Firestore so closing the screen is safe.
   useEffect(() => {
+    if (chessMode !== 'cpu') return;
     if (!chess.game || chess.isGameOver) return;
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       e.preventDefault();
@@ -231,7 +285,47 @@ export default function ChessScreen({ navigation }: Props) {
       );
     });
     return unsubscribe;
-  }, [navigation, chess.game, chess.isGameOver]);
+  }, [navigation, chess.game, chess.isGameOver, chessMode]);
+
+  // Auto-switch to CPU mode once on first load if there's a saved CPU game.
+  useEffect(() => {
+    if (autoSwitchedRef.current) return;
+    if (chess.isLoading) return;
+    if (chessMode !== null) {
+      autoSwitchedRef.current = true;
+      return;
+    }
+    autoSwitchedRef.current = true;
+    if (chess.game) setChessMode('cpu');
+  }, [chess.isLoading, chess.game, chessMode]);
+
+  // Refresh active multiplayer chess games when entering the mp menu.
+  const refreshActiveGames = useCallback(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      setActiveMpGames([]);
+      return;
+    }
+    mpGetMyGames(user.uid)
+      .then((games) => {
+        setActiveMpGames(games.filter((g) => g.type === 'chess'));
+      })
+      .catch(() => setActiveMpGames([]));
+  }, []);
+
+  useEffect(() => {
+    if (chessMode === 'multiplayer' && mpPhase === 'menu') {
+      refreshActiveGames();
+    }
+  }, [chessMode, mpPhase, refreshActiveGames]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (chessMode === 'multiplayer' && mpPhase === 'menu') {
+        refreshActiveGames();
+      }
+    }, [chessMode, mpPhase, refreshActiveGames]),
+  );
 
   const severityBg: Record<string, string> = useMemo(
     () => ({
@@ -265,6 +359,92 @@ export default function ChessScreen({ navigation }: Props) {
       },
     ]);
   };
+
+  // ── Multiplayer handlers ───────────────────────────────────────
+  const handlePickMpMode = useCallback(() => {
+    if (!isProUser()) {
+      setProGateVisible(true);
+      return;
+    }
+    if (!getCurrentUser()) {
+      Alert.alert(
+        'Sign in required',
+        'Sign in with Google to play multiplayer chess.',
+      );
+      return;
+    }
+    hapticLight();
+    playGameSound('tap');
+    setChessMode('multiplayer');
+    setMpPhase('menu');
+  }, []);
+
+  const handlePickCpuMode = useCallback(() => {
+    hapticLight();
+    playGameSound('tap');
+    setChessMode('cpu');
+  }, []);
+
+  const handleBackToMenu = useCallback(() => {
+    setMultiplayerCode(null);
+    setMpPhase('menu');
+    setJoinCode('');
+    setJoinError(null);
+    refreshActiveGames();
+  }, [refreshActiveGames]);
+
+  const handleBackToModeSelect = useCallback(() => {
+    hapticLight();
+    playGameSound('tap');
+    setChessMode(null);
+    setMpPhase('menu');
+    setMultiplayerCode(null);
+    setJoinCode('');
+    setJoinError(null);
+  }, []);
+
+  const handleCreateMpGame = useCallback(async () => {
+    if (creatingGame) return;
+    setCreatingGame(true);
+    try {
+      const { code } = await mpCreateGame('chess', createColor);
+      setMultiplayerCode(code);
+      setMpPhase('playing');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to create game';
+      Alert.alert('Could not create game', msg);
+    } finally {
+      setCreatingGame(false);
+    }
+  }, [createColor, creatingGame]);
+
+  const handleJoinMpGame = useCallback(async () => {
+    if (joiningGame) return;
+    const normalized = joinCode.trim().toUpperCase();
+    if (normalized.length !== 6) {
+      setJoinError('Enter the full 6-character code.');
+      return;
+    }
+    setJoinError(null);
+    setJoiningGame(true);
+    try {
+      await mpJoinGame(normalized);
+      setMultiplayerCode(normalized);
+      setMpPhase('playing');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to join';
+      setJoinError(msg);
+    } finally {
+      setJoiningGame(false);
+    }
+  }, [joinCode, joiningGame]);
+
+  const handleSelectActiveGame = useCallback((g: MultiplayerGame) => {
+    hapticLight();
+    playGameSound('tap');
+    setMultiplayerCode(g.code);
+    setMpPhase('playing');
+  }, []);
 
   const gameOverTitle = (): string => {
     switch (chess.gameResult) {
@@ -515,11 +695,425 @@ export default function ChessScreen({ navigation }: Props) {
           minWidth: 100,
           textAlign: 'center',
         },
+
+        // Mode select
+        modeCard: {
+          backgroundColor: colors.card,
+          borderRadius: 16,
+          padding: 20,
+          marginTop: 16,
+          borderLeftWidth: 3,
+          borderLeftColor: colors.sectionGames,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 16,
+        },
+        modeCardIcon: {
+          width: 40,
+          height: 40,
+        },
+        modeCardBody: { flex: 1 },
+        modeCardTitle: {
+          fontSize: 18,
+          fontFamily: FONTS.gameHeader,
+          color: colors.textPrimary,
+        },
+        modeCardSubtitle: {
+          fontSize: 13,
+          fontFamily: FONTS.regular,
+          color: colors.textSecondary,
+          marginTop: 4,
+        },
+        modeCardBadge: {
+          marginTop: 6,
+          fontSize: 11,
+          fontFamily: FONTS.bold,
+          color: colors.accent,
+        },
+
+        // Multiplayer menu
+        mpMenuButton: {
+          backgroundColor: colors.accent,
+          borderRadius: 12,
+          paddingVertical: 14,
+          alignItems: 'center',
+          marginBottom: 12,
+        },
+        mpMenuButtonSecondary: {
+          backgroundColor: colors.card,
+          borderRadius: 12,
+          paddingVertical: 14,
+          alignItems: 'center',
+          marginBottom: 12,
+          borderWidth: 1,
+          borderColor: colors.border,
+        },
+        mpMenuButtonText: {
+          color: '#FFFFFF',
+          fontFamily: FONTS.bold,
+          fontSize: 15,
+        },
+        mpMenuButtonSecondaryText: {
+          color: colors.textPrimary,
+          fontFamily: FONTS.bold,
+          fontSize: 15,
+        },
+        activeGamesHeader: {
+          fontSize: 12,
+          fontFamily: FONTS.semiBold,
+          color: colors.overlayText + 'CC',
+          marginTop: 20,
+          marginBottom: 8,
+          letterSpacing: 0.5,
+        },
+        activeGameRow: {
+          backgroundColor: colors.card,
+          borderRadius: 12,
+          padding: 12,
+          marginBottom: 8,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+        },
+        activeGameOpponent: {
+          fontSize: 14,
+          fontFamily: FONTS.semiBold,
+          color: colors.textPrimary,
+        },
+        activeGameMeta: {
+          fontSize: 12,
+          fontFamily: FONTS.regular,
+          color: colors.textSecondary,
+          marginTop: 2,
+        },
+        colorDot: {
+          width: 16,
+          height: 16,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: colors.border,
+        },
+        emptyText: {
+          fontSize: 13,
+          fontFamily: FONTS.regular,
+          color: colors.textTertiary,
+          textAlign: 'center',
+          marginVertical: 12,
+          fontStyle: 'italic',
+        },
+
+        // Create game
+        createCodeLabel: {
+          color: colors.textSecondary,
+          fontSize: 13,
+          fontFamily: FONTS.semiBold,
+          textAlign: 'center',
+          marginBottom: 10,
+        },
+
+        // Join game
+        joinInput: {
+          backgroundColor: colors.background,
+          borderRadius: 12,
+          paddingVertical: 14,
+          paddingHorizontal: 16,
+          fontSize: 24,
+          fontFamily: FONTS.extraBold,
+          letterSpacing: 4,
+          textAlign: 'center',
+          color: colors.textPrimary,
+          borderWidth: 2,
+          borderColor: colors.border,
+        },
+        joinInputError: { borderColor: colors.red },
+        joinErrorText: {
+          color: colors.red,
+          fontSize: 12,
+          fontFamily: FONTS.semiBold,
+          textAlign: 'center',
+          marginTop: 8,
+        },
+        backPill: {
+          alignSelf: 'center',
+          marginTop: 16,
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          borderRadius: 16,
+          backgroundColor: colors.background,
+        },
+        backPillText: {
+          color: colors.textPrimary,
+          fontSize: 13,
+          fontFamily: FONTS.semiBold,
+        },
       }),
     [colors, insets.top],
   );
 
-  // ── Pre-game modal ─────────────────────────────────────────────
+  // ── Mode select ───────────────────────────────────────────────
+  const renderModeSelect = () => {
+    const mpGameCount = activeMpGames.length;
+    return (
+      <View style={styles.body}>
+        <TouchableOpacity
+          style={styles.modeCard}
+          onPress={handlePickCpuMode}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Play against CPU"
+        >
+          <Image
+            source={require('../../assets/icons/icon-chess.webp')}
+            style={styles.modeCardIcon}
+            resizeMode="contain"
+          />
+          <View style={styles.modeCardBody}>
+            <Text style={styles.modeCardTitle}>vs CPU</Text>
+            <Text style={styles.modeCardSubtitle}>Play against AI — 5 difficulties</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.modeCard}
+          onPress={handlePickMpMode}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Play against another player"
+        >
+          <Image
+            source={getPieceImage({ type: 'q', color: 'w' })}
+            style={styles.modeCardIcon}
+            resizeMode="contain"
+          />
+          <View style={styles.modeCardBody}>
+            <Text style={styles.modeCardTitle}>vs Player</Text>
+            <Text style={styles.modeCardSubtitle}>Play a friend with a shared code</Text>
+            {mpGameCount > 0 && (
+              <Text style={styles.modeCardBadge}>
+                {mpGameCount} active game{mpGameCount === 1 ? '' : 's'}
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // ── Multiplayer menu ──────────────────────────────────────────
+  const renderMultiplayerMenu = () => {
+    return (
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={{ paddingBottom: 60 }}
+      >
+        <TouchableOpacity
+          style={[styles.mpMenuButton, { marginTop: 16 }]}
+          onPress={() => {
+            hapticLight();
+            playGameSound('tap');
+            setMpPhase('create');
+          }}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Create a new game"
+        >
+          <Text style={styles.mpMenuButtonText}>Create Game</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.mpMenuButtonSecondary}
+          onPress={() => {
+            hapticLight();
+            playGameSound('tap');
+            setJoinCode('');
+            setJoinError(null);
+            setMpPhase('join');
+          }}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Join a game by code"
+        >
+          <Text style={styles.mpMenuButtonSecondaryText}>Join with Code</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.activeGamesHeader}>ACTIVE GAMES</Text>
+        {activeMpGames.length === 0 ? (
+          <Text style={styles.emptyText}>No active games.</Text>
+        ) : (
+          activeMpGames.map((g) => {
+            const myUid = getCurrentUser()?.uid ?? '';
+            const amHost = g.host.uid === myUid;
+            const myColor: 'w' | 'b' = amHost
+              ? g.hostColor
+              : g.hostColor === 'w' ? 'b' : 'w';
+            const opponent = amHost ? g.guest : g.host;
+            const opponentName = opponent?.displayName ?? null;
+            const waiting = g.status === 'waiting';
+            const myTurn = g.turn === myUid;
+            const status = waiting
+              ? 'Waiting for opponent'
+              : myTurn
+                ? 'Your turn'
+                : `${opponentName ?? 'Opponent'}'s turn`;
+            return (
+              <TouchableOpacity
+                key={g.code}
+                style={styles.activeGameRow}
+                onPress={() => handleSelectActiveGame(g)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={`Resume game ${g.code}`}
+              >
+                <View
+                  style={[
+                    styles.colorDot,
+                    { backgroundColor: myColor === 'w' ? '#FFFFFF' : '#222222' },
+                  ]}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.activeGameOpponent}>
+                    {waiting ? 'Code ' + g.code : (opponentName ?? 'Opponent')}
+                  </Text>
+                  <Text style={styles.activeGameMeta}>
+                    {status} · {relativeTime(g.lastMoveAt)}
+                  </Text>
+                </View>
+                <Image
+                  source={APP_ICONS.chevronRight}
+                  style={{ width: 18, height: 18 }}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            );
+          })
+        )}
+
+        <TouchableOpacity
+          style={styles.backPill}
+          onPress={handleBackToModeSelect}
+          accessibilityRole="button"
+          accessibilityLabel="Back to mode select"
+        >
+          <Text style={styles.backPillText}>← Back</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  };
+
+  // ── Create game screen ────────────────────────────────────────
+  const renderCreateGame = () => {
+    return (
+      <View style={styles.body}>
+        <View style={styles.preGameCard}>
+          <Text style={styles.preGameTitle}>Create Game</Text>
+          <Text style={styles.sectionLabel}>Your Color</Text>
+          <View style={styles.colorRow}>
+            <TouchableOpacity
+              style={[
+                styles.colorButton,
+                createColor === 'w' && styles.colorButtonSelected,
+              ]}
+              onPress={() => { hapticLight(); playGameSound('tap'); setCreateColor('w'); }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Play as white"
+            >
+              <Image
+                source={getPieceImage({ type: 'k', color: 'w' })}
+                style={styles.colorPieceImg}
+                resizeMode="contain"
+              />
+              <Text style={styles.colorLabel}>White</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.colorButton,
+                createColor === 'b' && styles.colorButtonSelected,
+              ]}
+              onPress={() => { hapticLight(); playGameSound('tap'); setCreateColor('b'); }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Play as black"
+            >
+              <Image
+                source={getPieceImage({ type: 'k', color: 'b' })}
+                style={styles.colorPieceImg}
+                resizeMode="contain"
+              />
+              <Text style={styles.colorLabel}>Black</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[styles.playButton, creatingGame && { opacity: 0.5 }]}
+            onPress={handleCreateMpGame}
+            disabled={creatingGame}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Create game"
+          >
+            <Text style={styles.playButtonText}>
+              {creatingGame ? 'Creating…' : 'Create Game'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={styles.backPill}
+          onPress={() => { hapticLight(); playGameSound('tap'); setMpPhase('menu'); }}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Text style={styles.backPillText}>← Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // ── Join game screen ──────────────────────────────────────────
+  const renderJoinGame = () => {
+    return (
+      <View style={styles.body}>
+        <View style={styles.preGameCard}>
+          <Text style={styles.preGameTitle}>Join Game</Text>
+          <Text style={styles.createCodeLabel}>Enter the 6-character code</Text>
+          <TextInput
+            value={joinCode}
+            onChangeText={(t) => {
+              setJoinError(null);
+              setJoinCode(t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
+            }}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={6}
+            placeholder="______"
+            placeholderTextColor={colors.textTertiary}
+            style={[styles.joinInput, joinError ? styles.joinInputError : null]}
+            accessibilityLabel="Game code"
+          />
+          {joinError && <Text style={styles.joinErrorText}>{joinError}</Text>}
+          <TouchableOpacity
+            style={[styles.playButton, { marginTop: 20 }, joiningGame && { opacity: 0.5 }]}
+            onPress={handleJoinMpGame}
+            disabled={joiningGame}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Join game"
+          >
+            <Text style={styles.playButtonText}>
+              {joiningGame ? 'Joining…' : 'Join Game'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={styles.backPill}
+          onPress={() => { hapticLight(); playGameSound('tap'); setMpPhase('menu'); }}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Text style={styles.backPillText}>← Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // ── Pre-game modal (CPU) ───────────────────────────────────────
   const renderPreGame = () => (
     <View style={styles.body}>
       <View style={styles.preGameCard}>
@@ -655,11 +1249,20 @@ export default function ChessScreen({ navigation }: Props) {
         >
           <Text style={styles.playButtonText}>Play</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.backPill, { marginTop: 14 }]}
+          onPress={handleBackToModeSelect}
+          accessibilityRole="button"
+          accessibilityLabel="Change mode"
+        >
+          <Text style={styles.backPillText}>← Change Mode</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
-  // ── Board renderer (interactive, active game) ─────────────────
+  // ── Board renderer (interactive, active CPU game) ──────────────
   const renderBoard = () => {
     const { board, selectedSquare, validMoves, playerColor } = chess;
     return (
@@ -805,7 +1408,7 @@ export default function ChessScreen({ navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chess.game, chess.moveHistory.length, chess.playerColor]);
 
-  // ── Active game ────────────────────────────────────────────────
+  // ── Active game (CPU) ──────────────────────────────────────────
   const renderActiveGame = () => {
     const opponentColor: 'w' | 'b' = chess.playerColor === 'w' ? 'b' : 'w';
     const moveNum = Math.max(1, Math.ceil(chess.moveHistory.length / 2));
@@ -965,7 +1568,7 @@ export default function ChessScreen({ navigation }: Props) {
     );
   };
 
-  // ── Review mode ────────────────────────────────────────────────
+  // ── Review mode (CPU) ──────────────────────────────────────────
   const renderReviewMode = () => {
     const total = chess.fenHistoryLength - 1;
     const atStart = chess.reviewIndex === 0;
@@ -1050,6 +1653,33 @@ export default function ChessScreen({ navigation }: Props) {
     );
   };
 
+  // ── Body dispatch ──────────────────────────────────────────────
+  const renderBody = () => {
+    if (chess.isLoading && !multiplayerCode) {
+      return (
+        <View style={styles.centerContent}>
+          <Text style={styles.loadingText}>Loading…</Text>
+        </View>
+      );
+    }
+    if (chessMode === 'multiplayer' && mpPhase === 'playing' && multiplayerCode) {
+      return (
+        <MultiplayerChessGame
+          code={multiplayerCode}
+          onExit={handleBackToMenu}
+        />
+      );
+    }
+    if (chessMode === 'multiplayer' && mpPhase === 'menu') return renderMultiplayerMenu();
+    if (chessMode === 'multiplayer' && mpPhase === 'create') return renderCreateGame();
+    if (chessMode === 'multiplayer' && mpPhase === 'join') return renderJoinGame();
+    if (chessMode === null) return renderModeSelect();
+    // chessMode === 'cpu'
+    if (!chess.game) return renderPreGame();
+    if (chess.isReviewing) return renderReviewMode();
+    return renderActiveGame();
+  };
+
   return (
     <ImageBackground
       source={require('../../assets/chess/chessbg.webp')}
@@ -1062,18 +1692,21 @@ export default function ChessScreen({ navigation }: Props) {
           <Image source={require('../../assets/icons/icon-chess.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </View>
         <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Chess</Text>
-        {chess.isLoading ? (
-          <View style={styles.centerContent}>
-            <Text style={styles.loadingText}>Loading…</Text>
-          </View>
-        ) : !chess.game ? (
-          renderPreGame()
-        ) : chess.isReviewing ? (
-          renderReviewMode()
-        ) : (
-          renderActiveGame()
-        )}
+        {renderBody()}
       </View>
+      {proGateVisible && (
+        <ProGate
+          visible={proGateVisible}
+          onClose={() => setProGateVisible(false)}
+          game="chess"
+          isPro={entitlement.isPro}
+          loading={entitlement.loading}
+          error={entitlement.error}
+          productPrice={entitlement.productPrice}
+          onPurchase={entitlement.purchase}
+          onRestore={entitlement.restore}
+        />
+      )}
     </ImageBackground>
   );
 }

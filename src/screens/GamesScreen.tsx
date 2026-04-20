@@ -23,6 +23,8 @@ import {
   type TrialGame,
 } from '../services/gameTrialStorage';
 import { isProUser } from '../services/proStatus';
+import { getMyGames as mpGetMyGames } from '../services/multiplayer';
+import { getCurrentUser } from '../services/firebaseAuth';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Games'>;
@@ -45,6 +47,7 @@ export default function GamesScreen({ navigation }: Props) {
     return counts;
   });
   const [isOnline, setIsOnline] = useState(false);
+  const [mpChessCount, setMpChessCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -73,6 +76,21 @@ export default function GamesScreen({ navigation }: Props) {
           if (mounted) setIsOnline(online);
         });
       }, 30000);
+
+      const user = getCurrentUser();
+      if (user && isProUser()) {
+        mpGetMyGames(user.uid)
+          .then((games) => {
+            if (!mounted) return;
+            setMpChessCount(games.filter((g) => g.type === 'chess').length);
+          })
+          .catch(() => {
+            if (mounted) setMpChessCount(0);
+          });
+      } else {
+        setMpChessCount(0);
+      }
+
       return () => {
         mounted = false;
         clearInterval(interval);
@@ -294,7 +312,12 @@ export default function GamesScreen({ navigation }: Props) {
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Chess</Text>
-          <Text style={styles.gameDesc}>vs CPU • 5 difficulties</Text>
+          <Text style={styles.gameDesc}>vs CPU or a friend online</Text>
+          {mpChessCount > 0 && (
+            <Text style={[styles.streakText, { marginTop: 4 }]}>
+              {mpChessCount} active multiplayer game{mpChessCount === 1 ? '' : 's'}
+            </Text>
+          )}
           {renderTrialIndicator('chess')}
         </View>
         <View style={{ width: 56, alignItems: 'center' }}>
