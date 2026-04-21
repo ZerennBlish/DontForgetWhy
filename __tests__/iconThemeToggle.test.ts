@@ -13,6 +13,14 @@ jest.mock('../src/services/database', () => ({
   }),
 }));
 
+// Mock Pro status — these tests validate the non-Pro-gated service
+// behavior (persistence, cycling, display names). Pro enforcement is
+// covered in __tests__/iconTheme.test.ts.
+jest.mock('../src/services/proStatus', () => ({
+  __esModule: true,
+  isProUser: jest.fn(() => true),
+}));
+
 import {
   getIconTheme,
   setIconTheme,

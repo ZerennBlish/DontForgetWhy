@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 39 (April 20, 2026)
+### Source of Truth · Updated: Session 40 (April 21, 2026)
 
 ---
 
@@ -10,9 +10,9 @@
 | **Current Version** | **v1.24.0 (versionCode 43)** — LIVE on Play Store. `dev` is ahead of v1.24.0 with significant cleanup work (full Pass 1 + Pass 2 dead-code sweep landed). |
 | **Branch** | `dev` — `main` reset to match `dev` in Session 37. `v1.24.0` tag on `0ee7100`. |
 | **Production Status** | v1.24.0 (versionCode 43) live on Play Store. |
-| **Current Focus** | Multiplayer shipped (chess, checkers, trivia). Icon wire-up next. v2.0.0 launch sequence active. |
+| **Current Focus** | Multiplayer + dual-theme icon system shipped. App Check + Pro activation remaining before v2.0.0. |
 | **Blocked By** | Nothing |
-| **Next Action** | Dual-theme icon system (Phases 0-4), then App Check, then Pro activation + ship. |
+| **Next Action** | App Check (lock down cloud endpoints), then Pro activation + ship. |
 | **EAS Credits** | ~19 remaining (1 dev build + 1 production build this session). Reset May 12. |
 | **Firebase Credits** | **$300 activated — expires July 14, 2026.** Auth + Firestore + Google Calendar API all active. OAuth consent screen unverified (shows warning on write scope). |
 | **ElevenLabs** | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
@@ -22,11 +22,16 @@
 ## v2.0.0 LAUNCH SEQUENCE
 
 1. ~~Backlog cleanup~~ ✅ Session 39
-2. **Icon wire-up** — Dual-theme system (Phases 0-4). Design doc ready.
+2. ~~Icon wire-up~~ ✅ Session 40 — Dual-theme system (Phases 0-4). 65+ assets placed, resolver + hooks + Pro-gated Settings toggle. Triple audited + fixed.
 3. ~~Multiplayer~~ ✅ Session 39 (chess, checkers, trivia)
 4. **App Check** — Lock down cloud endpoints before billing
 5. **P7 Pro Tier activation** — Paywall live for new users
 6. **Ship v2.0.0**
+
+### Known limitations (v2.0.0)
+
+- **Dual-theme icon system — trivia chrome set incomplete** — 5 of 8+ trivia categories have dedicated chrome art; the rest fall back to anthropomorphic (and `trivia.phone` / `trivia.puzzle` share the lightbulb glyph in mixed/toon modes). Tracked in the Visual & Theme backlog.
+- **Dual-theme icon system — art refinement ongoing** — visual consistency across the three themes is still being iterated; minor divergence between mixed/chrome/anthropomorphic stroke weight + palette expected until the next art pass.
 
 ---
 
@@ -49,7 +54,7 @@
 | 6 | Chess + Checkers + Blunder Roast | ✅ Done | Prod only |
 | 6.5 | Voice Content Expansion | 🟡 Partial | Prod only |
 | 7 | Pro Tier + Billing | 🟡 Core Done | Dev (v1.23.0 awaiting ship) |
-| 8 | Firebase Online + Multiplayer | ✅ Multiplayer Done | Dev (v2.0.0 — icons + App Check remaining) |
+| 8 | Firebase Online + Multiplayer | ✅ Multiplayer + Icons Done | Dev (v2.0.0 — App Check remaining) |
 
 > **Note:** P8 was pulled forward and its Auth + Firestore foundation landed in Session 30 alongside P5, because P5 required Firebase Auth to sign the user in for Google Calendar access. Session 32 added **Cloud Checkers AI** as the first Cloud Functions deployment (public unauth endpoint — App Check deferred to pre-Pro launch). **Multiplayer chess, checkers, and trivia are the flagship v2.0.0 feature** — active pre-launch work, the major addition that justifies the version jump and gives Pro something worth paying for. Online riddles also remain pre-launch. Global leaderboards stay post-2.0.
 
@@ -501,6 +506,8 @@ Grouped by functional area so related work ships together. Within each group, it
 - **Theme-responsive icon colors** — icons adapt tint to active theme.
 - **Timer preset emoji → icon conversion** — design decision pending (what icon language for presets?).
 - **DrawingCanvas dark rgba values** — hardcoded rgba values in drawing tool.
+- **Trivia chrome art completion** — 5 of 8+ parent categories have dedicated chrome assets in `assets/chrome-game/trivia/`; remaining categories fall back to anthropomorphic art under chrome mode. `trivia.phone` and `trivia.puzzle` reuse `icon-lightbulb` under mixed/toon until bespoke art is produced.
+- **Dual-theme art refinement pass** — mixed/chrome/anthropomorphic assets are visually consistent enough to ship dormant, but a follow-up pass is planned to align stroke weight, palette, and glyph scale across the three registries.
 
 ### Widgets
 

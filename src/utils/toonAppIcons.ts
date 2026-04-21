@@ -5,9 +5,8 @@ import { ImageSourcePropType } from 'react-native';
  * glyphs (alarm, bell, stopwatch, etc). Used under the anthropomorphic
  * branch of the three-state icon theme.
  *
- * All assets live under `assets/toon-app-icons/`.
- *
- * Orphan until Phase 2 wires these into the screens.
+ * All assets live under `assets/toon-app-icons/`. Consumed by
+ * `iconResolver.ts` when `iconTheme === 'anthropomorphic'`.
  */
 const TOON_APP_ICONS = {
   alarm: require('../../assets/toon-app-icons/icon-alarm.webp') as ImageSourcePropType,

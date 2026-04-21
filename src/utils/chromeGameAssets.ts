@@ -4,9 +4,8 @@ import { ImageSourcePropType } from 'react-native';
  * Chrome game-surface icon registry. Silver/metallic art used on game
  * screens (boards, scoreboards, nav overlays). Mirror of the tiered
  * approach in `src/data/appIconAssets.ts` — all assets live under
- * `assets/chrome-game/<subfolder>/`.
- *
- * Orphan until Phase 2 wires these into the screens.
+ * `assets/chrome-game/<subfolder>/`. Consumed by `iconResolver.ts`
+ * when `iconTheme === 'chrome'`.
  */
 const CHROME_GAME_ICONS = {
   // Chess pieces

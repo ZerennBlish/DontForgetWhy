@@ -10,6 +10,16 @@ jest.mock('../src/services/database', () => ({
   }),
 }));
 
+// ── Mock Pro status ────────────────────────────────────────────────
+// Default: user IS Pro (existing tests don't care about gating). Tests
+// that exercise the Pro gate override this via `mockReturnValueOnce` or
+// by flipping `proUserMock` below.
+let proUserMock = true;
+jest.mock('../src/services/proStatus', () => ({
+  __esModule: true,
+  isProUser: jest.fn(() => proUserMock),
+}));
+
 // ── Mock the three icon registries ──────────────────────────────────
 // Each key resolves to a distinct marker string so branch assertions
 // can verify the correct registry was consulted. (fileMock.js collapses
@@ -132,12 +142,14 @@ jest.mock('../src/utils/toonAppIcons', () => ({
 import {
   getIconTheme,
   setIconTheme,
+  subscribeIconTheme,
   refreshIconThemeCache,
 } from '../src/services/iconTheme';
-import { resolveIconWithTheme } from '../src/utils/iconResolver';
+import { resolveIconWithTheme, type IconKey } from '../src/utils/iconResolver';
 
 beforeEach(() => {
   kvStore = {};
+  proUserMock = true;
   refreshIconThemeCache();
 });
 
@@ -333,4 +345,124 @@ describe('resolveIconWithTheme — cards / status / ui / trivia', () => {
     expect(resolveIconWithTheme('trivia.lightbulb', 'mixed')).toBe('test-file-stub');
     expect(resolveIconWithTheme('trivia.phone', 'mixed')).toBe('test-file-stub');
   });
+
+  it('status.quick at anthropomorphic uses TOON_APP_ICONS.stopwatch (P2 fix)', () => {
+    // Previously fell through to mixed and returned APP_ICONS.stopwatch,
+    // which is inconsistent with the rest of toon utility mapping.
+    expect(resolveIconWithTheme('status.quick', 'anthropomorphic')).toBe('TOON.stopwatch');
+  });
+});
+
+// ── Pro-gate enforcement ────────────────────────────────────────────
+
+describe('getIconTheme — Pro gate', () => {
+  it('returns "mixed" for non-Pro users even if cached is "chrome"', () => {
+    setIconTheme('chrome');
+    expect(getIconTheme()).toBe('chrome');
+    proUserMock = false;
+    expect(getIconTheme()).toBe('mixed');
+  });
+
+  it('returns "mixed" for non-Pro users even if kv has "anthropomorphic"', () => {
+    kvStore.iconTheme = 'anthropomorphic';
+    proUserMock = false;
+    expect(getIconTheme()).toBe('mixed');
+  });
+
+  it('preserves the user preference when Pro status is restored', () => {
+    kvStore.iconTheme = 'chrome';
+    proUserMock = false;
+    expect(getIconTheme()).toBe('mixed');
+    proUserMock = true;
+    expect(getIconTheme()).toBe('chrome');
+  });
+
+  it('does not gate "mixed" itself', () => {
+    setIconTheme('mixed');
+    proUserMock = false;
+    expect(getIconTheme()).toBe('mixed');
+  });
+});
+
+// ── subscribeIconTheme — listener plumbing ─────────────────────────
+
+describe('subscribeIconTheme', () => {
+  it('notifies subscribers on setIconTheme', () => {
+    const listener = jest.fn();
+    subscribeIconTheme(listener);
+    setIconTheme('chrome');
+    expect(listener).toHaveBeenCalledWith('chrome');
+    setIconTheme('anthropomorphic');
+    expect(listener).toHaveBeenCalledWith('anthropomorphic');
+  });
+
+  it('notifies multiple subscribers', () => {
+    const a = jest.fn();
+    const b = jest.fn();
+    subscribeIconTheme(a);
+    subscribeIconTheme(b);
+    setIconTheme('chrome');
+    expect(a).toHaveBeenCalledWith('chrome');
+    expect(b).toHaveBeenCalledWith('chrome');
+  });
+
+  it('unsubscribe stops further notifications', () => {
+    const listener = jest.fn();
+    const unsubscribe = subscribeIconTheme(listener);
+    setIconTheme('chrome');
+    unsubscribe();
+    setIconTheme('anthropomorphic');
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith('chrome');
+  });
+});
+
+// ── Exhaustive: every IconKey resolves at every theme ──────────────
+// Single source of truth for the key list. If a new IconKey is added to
+// iconResolver without being added here, TypeScript will flag the union
+// mismatch (the `satisfies` keeps this list aligned with IconKey).
+const ALL_ICON_KEYS = [
+  // Utility glyphs
+  'alarm', 'bell', 'stopwatch', 'notepad', 'microphone', 'calendar',
+  'gamepad', 'gear', 'trash', 'camera', 'image', 'paintbrush',
+  'palette', 'share', 'flame', 'warning', 'plus', 'printer', 'pdf',
+  'vibrate', 'silent', 'paperclip', 'save', 'edit', 'search',
+  // Abstract / structural
+  'closeX', 'checkmark', 'backArrow', 'home',
+  // Decorative
+  'hammock', 'house', 'couch', 'beach-chair',
+  // Chess pieces
+  'chess.king.light', 'chess.king.dark',
+  'chess.queen.light', 'chess.queen.dark',
+  'chess.rook.light', 'chess.rook.dark',
+  'chess.bishop.light', 'chess.bishop.dark',
+  'chess.knight.light', 'chess.knight.dark',
+  'chess.pawn.light', 'chess.pawn.dark',
+  // Checker pieces
+  'checker.regular.light', 'checker.king.light',
+  'checker.regular.dark', 'checker.king.dark',
+  // Game cards
+  'card.sudoku', 'card.chart', 'card.globe', 'card.offlineGlobe',
+  // Status
+  'status.star', 'status.win', 'status.loss', 'status.hourglass',
+  'status.smiley', 'status.party', 'status.quick',
+  // UI controls
+  'ui.chevronLeft', 'ui.chevronRight', 'ui.erase', 'ui.refresh',
+  'ui.skip', 'ui.forwardSkip', 'ui.backSkip',
+  // Trivia
+  'trivia.books', 'trivia.lightbulb', 'trivia.phone',
+  'trivia.puzzle', 'trivia.wordplay',
+] as const satisfies readonly IconKey[];
+
+describe('resolveIconWithTheme — exhaustive smoke', () => {
+  const THEMES = ['mixed', 'chrome', 'anthropomorphic'] as const;
+
+  for (const theme of THEMES) {
+    it(`every IconKey resolves to a truthy value at theme=${theme}`, () => {
+      for (const key of ALL_ICON_KEYS) {
+        expect(() => resolveIconWithTheme(key, theme)).not.toThrow();
+        expect(resolveIconWithTheme(key, theme)).toBeTruthy();
+      }
+    });
+  }
 });

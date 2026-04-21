@@ -808,3 +808,108 @@ Each multiplayer component registers a `beforeRemove` navigation listener while 
 - `createGame` + `joinGame` + `createTriviaGame` + `joinTriviaGame` all check `isProUser()` and throw "Pro required to [create/join] multiplayer games" if false. Multiplayer requires Pro for **both** / all players. Free-tier users can't even see the multiplayer menu card (the Games screen's "vs Player" card is ProGate-protected before the screen-level auth check runs).
 - `assertBelowActiveGameLimit(uid)` caps each user at 5 concurrent `waiting`/`active` games (across all three types). Prevents one user from holding a pool of open codes that never resolve.
 - Finished games don't count against the limit but stick around for 30 days as a retention window, then a planned cleanup Cloud Function purges them. Client-side deletes are rules-blocked.
+
+---
+
+## 16. Dual-Theme Icon System (Session 40)
+
+Extends the static two-tier split described in §5 ("Two-Tier Icon System") with a user-facing, Pro-gated theme toggle. The app still ships "dormant" for non-Pro users — the default `'mixed'` mode reproduces the pre-Session-40 visuals pixel-for-pixel. See also `DFW-Features.md` for the product-side description.
+
+### Three-State Model
+
+`IconTheme = 'mixed' | 'chrome' | 'anthropomorphic'`
+
+- **`'mixed'`** (default) — chrome utility icons + anthropomorphic game art. Reproduces the current-app look.
+- **`'chrome'`** — unified silver/metallic across utility **and** game surfaces (pieces, cards, status glyphs, UI controls).
+- **`'anthropomorphic'`** (labelled "Toon" in UI) — unified character art across utility icons; game surfaces keep their existing anthropomorphic assets.
+
+### Asset Folders
+
+- `assets/app-icons/` — chrome utility WebP (existing, ~30 files).
+- `assets/icons/` — anthropomorphic game-art WebP (existing).
+- `assets/chess/`, `assets/checkers/` — anthropomorphic piece art (existing).
+- `assets/chrome-game/` — **new.** Silver game-surface art split into `chess/`, `checkers/`, `cards/`, `status/`, `ui/`, `trivia/` (38 files total).
+- `assets/toon-app-icons/` — **new.** Character-art versions of the utility glyphs (24 files).
+
+### Service Layer — `src/services/iconTheme.ts`
+
+- Persists selection via `kvGet`/`kvSet` under key `iconTheme`. Invalid kv values fall back to `'mixed'`.
+- Module-level `cached: IconTheme | null` avoids re-parsing kv on every read. `refreshIconThemeCache()` is exposed for cache invalidation (used by tests + simulated relaunches).
+- **Listener pattern** — `subscribeIconTheme(listener)` returns an unsubscribe fn. `setIconTheme(theme)` updates cache + kv **and** notifies every listener synchronously, so every consumer hook re-renders in the same React tick.
+- **Pro enforcement on read** — `getIconTheme()` returns `'mixed'` whenever `!isProUser()`, regardless of the cached or persisted value. User preference is preserved (cache/kv aren't rewritten), so restoring Pro restores the previous choice. Defense-in-depth behind the Settings UI gate.
+
+### Resolver — `src/utils/iconResolver.ts`
+
+Single source of truth. Exports:
+
+- `IconKey` — union of 72 string literals covering utility glyphs, abstract/structural keys (`closeX`, `checkmark`, `backArrow`, `home`), decorative keys (`hammock`, `house`, `couch`, `beach-chair`), chess pieces (12), checker pieces (4), game cards (4), status glyphs (7), UI controls (7), and trivia categories (5).
+- `resolveIcon(key): ImageSourcePropType` — reads the current theme via `getIconTheme()`. For use in non-hook utility modules.
+- `resolveIconWithTheme(key, theme): ImageSourcePropType` — pure function. Used by the hooks + all tests.
+
+Layered switch: (1) decorative keys are theme-independent; (2) anthropomorphic overrides utility + abstract + `status.quick`; game keys fall through to (4); (3) chrome overrides game surfaces + some utility; utility/abstract fall through; (4) default (mixed) covers every remaining key. Terminates with an exhaustiveness check (`const _exhaustive: never = key`) so adding a new key without a handler is a compile-time error.
+
+### Registries
+
+Flat maps from semantic name → `require()`'d `ImageSourcePropType`:
+
+- `src/data/appIconAssets.ts` — chrome utility + a few character-art aliases (`save`, `edit`, `star`, `win`, etc.). Historical layout predates the dual-theme split.
+- `src/utils/chromeGameAssets.ts` — 39 keys across chess pieces, checkers pieces, cards, status, UI, trivia. Consumed only when `iconTheme === 'chrome'`.
+- `src/utils/toonAppIcons.ts` — 24 keys for toon utility glyphs. Consumed only when `iconTheme === 'anthropomorphic'`.
+
+Mixed-mode game art and anthropomorphic overrides for abstract keys (`closeX` → `icon-loss`, `checkmark` → `icon-win`, `backArrow` → `icon-game-back`, `home` → `icon-game-home`) are inlined as `require()`s in the resolver rather than placed in a registry — a deliberate trade-off. Future cleanup is tracked under audit finding P2-2.
+
+### Hooks
+
+- **`useIconTheme()` (`src/hooks/useIconTheme.ts`)** — returns `{ theme, setTheme }`. On mount, reads the current service value and subscribes via `subscribeIconTheme`. The subscription drives `setThemeState`, so every `useIconTheme` instance across the tree re-renders on change. `setTheme` is a thin wrapper over the service's `setIconTheme`.
+- **`useAppIcon(key) (src/hooks/useAppIcon.ts)`** — composes `useIconTheme()` with `useMemo([key, theme], () => resolveIconWithTheme(key, theme))`. Per-icon reactive resolution with zero per-render recomputation when the theme is stable. Always called at the top of a component — never inside loops, conditionals, or callbacks.
+
+### Reactivity Model
+
+```
+setIconTheme('chrome')
+    ↓ update `cached` + kvSet('iconTheme', 'chrome')
+    ↓ listeners.forEach(fn => fn('chrome'))
+    ↓ every mounted useIconTheme instance: setThemeState('chrome')
+    ↓ every useAppIcon re-memoizes via its [key, theme] deps
+    ↓ every <Image source={...}> re-renders with new asset
+```
+
+The upshot: theme changes propagate to **all** mounted screens in one React batch. No unmount/remount required. Piece-rendering screens (`ChessScreen`, `CheckersScreen`, `MultiplayerChessGame`, `MultiplayerCheckersGame`) call `useIconTheme()` with no return-value use solely to sign up for re-renders; the actual icon fetches happen later in the render via `getPieceImage` / `getCheckerImage` → `resolveIcon` (which reads the updated cache).
+
+### Piece Rendering
+
+- `src/data/chessAssets.ts` — `getPieceImage({ type, color })` maps chess.js piece objects to `IconKey` (`chess.king.light` etc.) and returns `resolveIcon(iconKey)`.
+- `src/data/checkersAssets.ts` — `getCheckerImage({ color, king })` maps to `checker.regular.light` / `checker.king.dark` etc.
+
+Both are **utility functions**, not components, so they use `resolveIcon` (not the hook). They trust the surrounding component to subscribe to the theme store for re-renders.
+
+### Utility Functions
+
+- `src/utils/soundModeUtils.ts` — `getSoundModeIcon(mode)` returns `resolveIcon('bell'|'vibrate'|'silent')`. Callers (`TimerScreen`, `CreateAlarmScreen`) also use `useAppIcon` for their other icons, so the enclosing component is already subscribed.
+
+### Settings Integration
+
+- **UI** — `SettingsScreen.tsx` renders a Pro-gated segmented control in the Appearance card labelled `Mixed / Chrome / Toon`. When `!isPro`, the control is dimmed to opacity 0.5, labelled with a `PRO` badge, and tapping any segment pops `ProGate` instead of applying the change.
+- **Routing** — `useSettings` exposes `iconTheme` + `handleIconThemeChange` via an internal `useIconTheme()` call (no duplicate state, no direct service calls). Adds `hapticLight()` on change.
+- **Default** — `DEFAULT: IconTheme = 'mixed'` hardcoded in the service. New installs, invalid kv values, and non-Pro users all resolve to `'mixed'`.
+
+### Exclusions (all themes)
+
+The following assets are intentionally **not** routed through the resolver — they stay on direct `require()`:
+
+- Memory Match card faces (`guess-why*.webp`, `guess-right.webp`, `guess-wrong.webp`, guess-why category cards).
+- Calendar empty-state decorative illustrations (routed under the decorative `IconKey`s — theme-independent).
+- Media controls (`play`, `pause`, `stop`, `repeat`, `play-all`, `play-stop`, `skip-back`, `skip-forward`) via `src/assets/mediaIcons.tsx`.
+- Screen backgrounds (`chessbg.webp`, `checkers-bg.webp`, user-supplied photo backgrounds).
+- Trivia category icons used in specific screen layouts (MemoryScoreScreen rank badges, etc.).
+- Game-header chrome (`icon-chess.webp`, `icon-checkers.webp`, `icon-magnify.webp`) — used as brand glyphs, not as theme-aware surfaces.
+
+### Known Limitations
+
+- **Trivia chrome set incomplete** — 5 of 8+ parent trivia categories have dedicated chrome art; the rest fall back to anthropomorphic under chrome mode.
+- **Trivia phone/puzzle fallback** — in mixed and toon modes, `trivia.phone` and `trivia.puzzle` reuse `icon-lightbulb.webp` because no bespoke phone/puzzle character art exists yet. Documented in the resolver.
+- **Art refinement pending** — stroke weight, palette, and glyph scale still diverge slightly across the three registries. Not a blocker for dormant v2.0.0 ship; a follow-up art pass is tracked in the ROADMAP Visual & Theme backlog.
+
+### Testing
+
+`__tests__/iconTheme.test.ts` covers: service cache semantics, Pro gate (cached + kv + restoration), listener subscribe/unsubscribe, decorative/utility/abstract/game-piece/card/status/UI/trivia resolution per theme, and an **exhaustive smoke test** that iterates every `IconKey` × every theme and asserts a truthy non-throwing result. A second suite `__tests__/iconThemeToggle.test.ts` validates end-to-end kv persistence, cycle-through, and display-name mapping.

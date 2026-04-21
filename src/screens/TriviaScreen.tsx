@@ -1013,14 +1013,6 @@ export default function TriviaScreen({ navigation, route }: Props) {
             <Text style={styles.startBtnText}>Start Round</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.backPill, { marginTop: 10 }]}
-          onPress={handleBackToModeSelect}
-          accessibilityRole="button"
-          accessibilityLabel="Change mode"
-        >
-          <Text style={styles.backPillText}>← Change Mode</Text>
-        </TouchableOpacity>
       </View>
       <SubcategoryPickerModal
         visible={subPickerVisible}

@@ -7,8 +7,8 @@ import TOON_APP_ICONS from './toonAppIcons';
 /**
  * Every icon the app can render goes through this resolver so a single
  * user-facing setting (`iconTheme`) can flip entire classes of icons in
- * one place. Orphan until Phase 3 starts migrating screens to
- * `useAppIcon(key)` / `resolveIcon(key)`.
+ * one place. Consumed by screens via `useAppIcon(key)` (hook) or by
+ * utility modules via `resolveIcon(key)` (non-hook).
  */
 
 export type IconKey =
@@ -128,6 +128,10 @@ export function resolveIconWithTheme(
         return require('../../assets/icons/icon-game-back.webp');
       case 'home':
         return require('../../assets/icons/icon-game-home.webp');
+      // `status.quick` reuses the stopwatch under mixed (chrome). Under
+      // anthropomorphic, use the toon stopwatch to stay on-theme.
+      case 'status.quick':
+        return TOON_APP_ICONS.stopwatch;
     }
     // Game keys fall through to mixed handling below.
   }

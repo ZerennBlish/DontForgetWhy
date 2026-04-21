@@ -21,6 +21,7 @@ import { playGameSound } from '../utils/gameSounds';
 import { useMultiplayerCheckers } from '../hooks/useMultiplayerCheckers';
 import { endGame, resign as mpResign } from '../services/multiplayer';
 import { getCheckerImage } from '../data/checkersAssets';
+import { useIconTheme } from '../hooks/useIconTheme';
 import type { PieceColor } from '../services/checkersAI';
 
 const EXIT_TITLES = [
@@ -77,6 +78,10 @@ export default function MultiplayerCheckersGame({
   const insets = useSafeAreaInsets();
   const mp = useMultiplayerCheckers({ gameCode: code });
   const navigation = useNavigation();
+
+  // Subscribe to icon-theme changes so getCheckerImage (which calls
+  // resolveIcon at render time) reflects the current theme on re-render.
+  useIconTheme();
 
   const [exitTitle] = useState(() => pickRandom(EXIT_TITLES));
   const [exitMessage] = useState(() => pickRandom(EXIT_MESSAGES));
