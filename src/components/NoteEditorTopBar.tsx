@@ -4,7 +4,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import BackButton from './BackButton';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 interface NoteEditorTopBarProps {
   isViewMode: boolean;
@@ -31,6 +31,11 @@ export default function NoteEditorTopBar({
 }: NoteEditorTopBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const houseIcon = useAppIcon('home');
+  const editIcon = useAppIcon('edit');
+  const shareIcon = useAppIcon('share');
+  const trashIcon = useAppIcon('trash');
+  const saveIcon = useAppIcon('save');
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -131,7 +136,7 @@ export default function NoteEditorTopBar({
               accessibilityRole="button"
               accessibilityLabel="Go to home screen"
             >
-              <Image source={APP_ICONS.house} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Image source={houseIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
           <View style={styles.center} />
@@ -143,7 +148,7 @@ export default function NoteEditorTopBar({
               accessibilityRole="button"
               accessibilityLabel="Edit note"
             >
-              <Image source={APP_ICONS.edit} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Image source={editIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.smallBtn}
@@ -152,7 +157,7 @@ export default function NoteEditorTopBar({
               accessibilityRole="button"
               accessibilityLabel="Share note"
             >
-              <Image source={APP_ICONS.share} style={{ width: 22, height: 22 }} resizeMode="contain" />
+              <Image source={shareIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
             </TouchableOpacity>
             {hasNote && (
               <TouchableOpacity
@@ -162,7 +167,7 @@ export default function NoteEditorTopBar({
                 accessibilityRole="button"
                 accessibilityLabel="Delete note"
               >
-                <Image source={APP_ICONS.trash} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                <Image source={trashIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
               </TouchableOpacity>
             )}
           </View>
@@ -178,7 +183,7 @@ export default function NoteEditorTopBar({
               accessibilityRole="button"
               accessibilityLabel="Go to home screen"
             >
-              <Image source={APP_ICONS.house} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Image source={houseIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
           <View style={styles.center} />
@@ -191,7 +196,7 @@ export default function NoteEditorTopBar({
                 accessibilityRole="button"
                 accessibilityLabel="Save note"
               >
-                <Image source={APP_ICONS.save} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                <Image source={saveIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
               </TouchableOpacity>
             )}
             {hasNote && (
@@ -202,7 +207,7 @@ export default function NoteEditorTopBar({
                 accessibilityRole="button"
                 accessibilityLabel="Delete note"
               >
-                <Image source={APP_ICONS.trash} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                <Image source={trashIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
               </TouchableOpacity>
             )}
           </View>

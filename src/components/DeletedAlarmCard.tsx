@@ -4,7 +4,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { formatTime, formatDeletedAgo } from '../utils/time';
 import { hapticLight, hapticHeavy } from '../utils/haptics';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { Alarm } from '../types/alarm';
 
 interface DeletedAlarmCardProps {
@@ -16,6 +16,7 @@ interface DeletedAlarmCardProps {
 
 function DeletedAlarmCard({ alarm, timeFormat, onRestore, onPermanentDelete }: DeletedAlarmCardProps) {
   const { colors } = useTheme();
+  const bellIcon = useAppIcon('bell');
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
@@ -88,7 +89,7 @@ function DeletedAlarmCard({ alarm, timeFormat, onRestore, onPermanentDelete }: D
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             {!alarm.icon && (
-              <Image source={APP_ICONS.bell} style={{ width: 14, height: 14, marginRight: 4 }} resizeMode="contain" />
+              <Image source={bellIcon} style={{ width: 14, height: 14, marginRight: 4 }} resizeMode="contain" />
             )}
             <Text style={[styles.detail, { marginTop: 0, flex: 1 }]} numberOfLines={1}>
               {alarm.icon ? `${alarm.icon} ` : ''}{alarm.nickname || alarm.note || 'Alarm'}

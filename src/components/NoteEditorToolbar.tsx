@@ -4,7 +4,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 interface NoteEditorToolbarProps {
   onToggleAttachments: () => void;
@@ -29,6 +29,11 @@ export default function NoteEditorToolbar({
 }: NoteEditorToolbarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const paperclipIcon = useAppIcon('paperclip');
+  const cameraIcon = useAppIcon('camera');
+  const imageIcon = useAppIcon('image');
+  const paintbrushIcon = useAppIcon('paintbrush');
+  const paletteIcon = useAppIcon('palette');
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -94,7 +99,7 @@ export default function NoteEditorToolbar({
         accessibilityLabel="Toggle attachments"
       >
         <View style={[styles.circle, attachmentsActive && styles.circleActive]}>
-          <Image source={APP_ICONS.paperclip} style={{ width: 34, height: 34 }} resizeMode="contain" />
+          <Image source={paperclipIcon} style={{ width: 34, height: 34 }} resizeMode="contain" />
           {attachmentCount > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{attachmentCount}</Text>
@@ -112,7 +117,7 @@ export default function NoteEditorToolbar({
         accessibilityLabel="Take photo"
       >
         <View style={styles.circle}>
-          <Image source={APP_ICONS.camera} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          <Image source={cameraIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
         </View>
         <Text style={styles.label}>Camera</Text>
       </TouchableOpacity>
@@ -125,7 +130,7 @@ export default function NoteEditorToolbar({
         accessibilityLabel="Add photo from gallery"
       >
         <View style={styles.circle}>
-          <Image source={APP_ICONS.image} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          <Image source={imageIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
         </View>
         <Text style={styles.label}>Gallery</Text>
       </TouchableOpacity>
@@ -138,7 +143,7 @@ export default function NoteEditorToolbar({
         accessibilityLabel="Add drawing"
       >
         <View style={styles.circle}>
-          <Image source={APP_ICONS.paintbrush} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          <Image source={paintbrushIcon} style={{ width: 28, height: 28 }} resizeMode="contain" />
         </View>
         <Text style={styles.label}>Draw</Text>
       </TouchableOpacity>
@@ -151,7 +156,7 @@ export default function NoteEditorToolbar({
         accessibilityLabel="Note colors"
       >
         <View style={[styles.circle, colorsActive && styles.circleActive]}>
-          <Image source={APP_ICONS.palette} style={{ width: 38, height: 38 }} resizeMode="contain" />
+          <Image source={paletteIcon} style={{ width: 38, height: 38 }} resizeMode="contain" />
         </View>
         <Text style={styles.label}>Colors</Text>
       </TouchableOpacity>

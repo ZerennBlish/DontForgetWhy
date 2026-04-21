@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { emojiCategories, EmojiItem } from '../data/emojiData';
@@ -24,6 +24,7 @@ interface EmojiPickerModalProps {
 
 export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPickerModalProps) {
   const { colors } = useTheme();
+  const closeXIcon = useAppIcon('closeX');
   const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState(0);
 
@@ -163,7 +164,7 @@ export default function EmojiPickerModal({ visible, onSelect, onClose }: EmojiPi
               accessibilityRole="button"
               accessibilityLabel="Close picker"
             >
-              <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
           <ScrollView

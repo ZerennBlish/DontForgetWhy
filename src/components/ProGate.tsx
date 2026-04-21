@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import type { TrialGame } from '../services/gameTrialStorage';
@@ -59,6 +59,7 @@ export default function ProGate({
   onRestore,
 }: ProGateProps) {
   const { colors } = useTheme();
+  const closeXIcon = useAppIcon('closeX');
 
   const [headerText] = useState(() => {
     const pool = game ? GAME_HEADERS : GENERIC_HEADERS;
@@ -226,7 +227,7 @@ export default function ProGate({
                 accessibilityLabel="Close paywall"
               >
                 <Image
-                  source={APP_ICONS.closeX}
+                  source={closeXIcon}
                   style={{ width: 16, height: 16 }}
                   resizeMode="contain"
                 />

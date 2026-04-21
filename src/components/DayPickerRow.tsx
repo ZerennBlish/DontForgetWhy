@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import type { AlarmDay } from '../types/alarm';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 const HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 } as const;
 
@@ -54,6 +54,7 @@ export default function DayPickerRow({
   isCalendarOpen,
   colors,
 }: DayPickerRowProps) {
+  const calendarIcon = useAppIcon('calendar');
   const cardBg = colors.card + 'BF';
 
   return (
@@ -140,7 +141,7 @@ export default function DayPickerRow({
               accessibilityRole="button"
               accessibilityLabel="Open date picker"
             >
-              <Image source={APP_ICONS.calendar} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={calendarIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
             </TouchableOpacity>
           )}
         </View>

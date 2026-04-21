@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import type { TriviaParentCategory, TriviaSubcategory } from '../types/trivia';
@@ -89,6 +89,7 @@ export default function SubcategoryPickerModal({
   onClose,
 }: SubcategoryPickerModalProps) {
   const { colors } = useTheme();
+  const closeXIcon = useAppIcon('closeX');
 
   const { totalCount, subs } = useMemo(() => {
     const total = getQuestionsForCategory(category).length;
@@ -251,7 +252,7 @@ export default function SubcategoryPickerModal({
                 accessibilityLabel="Close subcategory picker"
               >
                 <Image
-                  source={APP_ICONS.closeX}
+                  source={closeXIcon}
                   style={{ width: 16, height: 16 }}
                   resizeMode="contain"
                 />

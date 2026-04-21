@@ -4,7 +4,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { loadDrawingData } from '../services/noteImageStorage';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { StrokeData } from './DrawingCanvas';
 
 interface NoteImageStripProps {
@@ -25,6 +25,7 @@ export default function NoteImageStrip({
   onDrawOnPhoto,
 }: NoteImageStripProps) {
   const { colors } = useTheme();
+  const closeXIcon = useAppIcon('closeX');
   return (
     <View>
     <Text style={{
@@ -97,7 +98,7 @@ export default function NoteImageStrip({
               accessibilityRole="button"
               accessibilityLabel="Remove image"
             >
-              <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
+              <Image source={closeXIcon} style={{ width: 10, height: 10 }} resizeMode="contain" />
             </TouchableOpacity>
           )}
         </View>

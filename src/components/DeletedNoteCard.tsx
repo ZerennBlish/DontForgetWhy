@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { formatDeletedAgo } from '../utils/time';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { Note } from '../types/note';
 
 interface DeletedNoteCardProps {
@@ -16,6 +16,7 @@ interface DeletedNoteCardProps {
 
 function DeletedNoteCard({ note, onRestore, onPermanentDelete }: DeletedNoteCardProps) {
   const { colors } = useTheme();
+  const notepadIcon = useAppIcon('notepad');
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
@@ -102,7 +103,7 @@ function DeletedNoteCard({ note, onRestore, onPermanentDelete }: DeletedNoteCard
         {note.icon ? (
           <Text style={styles.iconCircleText}>{note.icon}</Text>
         ) : (
-          <Image source={APP_ICONS.notepad} style={{ width: 22, height: 22 }} resizeMode="contain" accessible={false} />
+          <Image source={notepadIcon} style={{ width: 22, height: 22 }} resizeMode="contain" accessible={false} />
         )}
       </View>
       <View style={styles.cardCenter}>

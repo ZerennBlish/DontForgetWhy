@@ -6,7 +6,7 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 interface ImageLightboxProps {
   visible: boolean;
@@ -16,6 +16,7 @@ interface ImageLightboxProps {
 
 export default function ImageLightbox({ visible, imageUri, onClose }: ImageLightboxProps) {
   const insets = useSafeAreaInsets();
+  const closeXIcon = useAppIcon('closeX');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -30,7 +31,7 @@ export default function ImageLightbox({ visible, imageUri, onClose }: ImageLight
           accessibilityRole="button"
           accessibilityLabel="Close image viewer"
         >
-          <Image source={APP_ICONS.closeX} style={{ width: 18, height: 18 }} resizeMode="contain" />
+          <Image source={closeXIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
         </TouchableOpacity>
       </TouchableOpacity>
     </Modal>

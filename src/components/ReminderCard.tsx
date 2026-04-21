@@ -5,7 +5,7 @@ import { hasCompletedToday } from '../services/reminderStorage';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import SwipeableRow from './SwipeableRow';
 import { formatTime } from '../utils/time';
 
@@ -49,6 +49,7 @@ function ReminderCard({
   formatDueDate,
 }: ReminderCardProps) {
   const { colors } = useTheme();
+  const checkmarkIcon = useAppIcon('checkmark');
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
@@ -214,7 +215,7 @@ function ReminderCard({
           accessibilityLabel={(reminder.completed || (reminder.recurring && hasCompletedToday(reminder))) ? 'Mark incomplete' : 'Mark complete'}
         >
           {(reminder.completed || (reminder.recurring && hasCompletedToday(reminder))) && (
-            <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />
+            <Image source={checkmarkIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
           )}
         </TouchableOpacity>
 

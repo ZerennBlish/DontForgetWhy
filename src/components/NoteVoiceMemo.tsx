@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, GestureResponderEvent 
 import { FONTS } from '../theme/fonts';
 import { useTheme } from '../theme/ThemeContext';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -79,6 +79,7 @@ interface MemoCardProps {
 
 export function MemoCard({ isActive, isPlaying, currentTime, duration, accentColor, isViewMode, onPlay, onSeek, onDelete, onProgressLayout }: MemoCardProps) {
   const { colors } = useTheme();
+  const closeXIcon = useAppIcon('closeX');
   const progress = duration > 0 ? currentTime / duration : 0;
   return (
     <View style={voiceMemoStyles.memoCard}>
@@ -117,7 +118,7 @@ export function MemoCard({ isActive, isPlaying, currentTime, duration, accentCol
           accessibilityRole="button"
           accessibilityLabel="Remove voice memo from note"
         >
-          <Image source={APP_ICONS.closeX} style={{ width: 12, height: 12 }} resizeMode="contain" />
+          <Image source={closeXIcon} style={{ width: 12, height: 12 }} resizeMode="contain" />
         </TouchableOpacity>
       )}
     </View>

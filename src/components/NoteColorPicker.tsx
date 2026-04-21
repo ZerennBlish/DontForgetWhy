@@ -5,7 +5,7 @@ import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
 import { getTextColor } from '../utils/noteColors';
 import { NOTE_COLORS, NOTE_FONT_COLORS } from '../types/note';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 interface NoteColorPickerProps {
   editorColor: string;
@@ -37,6 +37,7 @@ export default function NoteColorPicker({
   resolvedFontColor,
 }: NoteColorPickerProps) {
   const { colors } = useTheme();
+  const plusIcon = useAppIcon('plus');
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -170,7 +171,7 @@ export default function NoteColorPicker({
           accessibilityRole="button"
           accessibilityLabel="Add custom background color"
         >
-          <Image source={APP_ICONS.plus} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          <Image source={plusIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
         </TouchableOpacity>
       </View>
 
@@ -237,7 +238,7 @@ export default function NoteColorPicker({
           accessibilityRole="button"
           accessibilityLabel="Add custom text color"
         >
-          <Image source={APP_ICONS.plus} style={{ width: 20, height: 20 }} resizeMode="contain" />
+          <Image source={plusIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
         </TouchableOpacity>
       </View>
     </View>

@@ -14,7 +14,7 @@ import {
   NativeModules,
 } from 'react-native';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { previewSystemSound, cancelSoundPreview } from '../services/notifications';
 import { useTheme } from '../theme/ThemeContext';
 import type { ThemeColors } from '../theme/colors';
@@ -69,6 +69,7 @@ const SoundRow = React.memo(function SoundRow({
   playBtnIdleStyle,
   playBtnActiveStyle,
 }: SoundRowProps) {
+  const checkmarkIcon = useAppIcon('checkmark');
   const handleSelect = useCallback(() => onSelect(sound), [onSelect, sound]);
   const handlePlay = useCallback(() => onPlay(sound), [onPlay, sound]);
   return (
@@ -87,7 +88,7 @@ const SoundRow = React.memo(function SoundRow({
           {sound.title}
         </Text>
       </View>
-      {isSelected && <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />}
+      {isSelected && <Image source={checkmarkIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />}
       <TouchableOpacity
         style={[playBtnStyle, isPlaying ? playBtnActiveStyle : playBtnIdleStyle]}
         onPress={handlePlay}
@@ -112,6 +113,9 @@ export default function SoundPickerModal({
   currentSoundID,
 }: Props) {
   const { colors } = useTheme();
+  const checkmarkIcon = useAppIcon('checkmark');
+  const closeXIcon = useAppIcon('closeX');
+  const bellIcon = useAppIcon('bell');
   const [sounds, setSounds] = useState<SystemSound[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -350,7 +354,7 @@ export default function SoundPickerModal({
                   accessibilityRole="button"
                   accessibilityLabel="Close sound picker"
                 >
-                  <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                  <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
 
@@ -371,7 +375,7 @@ export default function SoundPickerModal({
                 accessibilityRole="button"
                 accessibilityLabel="Select default alarm sound"
               >
-                <Image source={APP_ICONS.bell} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                <Image source={bellIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
                 <View style={styles.rowInfo}>
                   <Text
                     style={[
@@ -383,7 +387,7 @@ export default function SoundPickerModal({
                   </Text>
                 </View>
                 {currentSoundID === null && (
-                  <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                  <Image source={checkmarkIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 )}
               </TouchableOpacity>
 

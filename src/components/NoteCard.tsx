@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight, hapticMedium } from '../utils/haptics';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { getRelativeTime } from '../utils/time';
 import SwipeableRow from './SwipeableRow';
 import type { Note } from '../types/note';
@@ -22,6 +22,8 @@ interface NoteCardProps {
 
 function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardProps) {
   const { colors } = useTheme();
+  const notepadIcon = useAppIcon('notepad');
+  const cameraIcon = useAppIcon('camera');
 
   const firstLine = note.text.split('\n')[0];
   const truncated = firstLine.length > 50 ? firstLine.slice(0, 50) + '\u2026' : firstLine;
@@ -120,7 +122,7 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
           {note.icon ? (
             <Text style={styles.iconCircleText}>{note.icon}</Text>
           ) : (
-            <Image source={APP_ICONS.notepad} style={{ width: 22, height: 22 }} resizeMode="contain" accessible={false} />
+            <Image source={notepadIcon} style={{ width: 22, height: 22 }} resizeMode="contain" accessible={false} />
           )}
         </View>
         <TouchableOpacity
@@ -157,7 +159,7 @@ function NoteCard({ note, isPinned, onPress, onDelete, onTogglePin }: NoteCardPr
             {(note.images?.length ?? 0) > 0 && (
               <>
                 <Text style={styles.cardSubtitle}> · </Text>
-                <Image source={APP_ICONS.camera} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                <Image source={cameraIcon} style={{ width: 12, height: 12 }} resizeMode="contain" />
                 <Text style={styles.cardSubtitle}> {note.images!.length}</Text>
               </>
             )}

@@ -10,7 +10,7 @@ import {
   Share,
 } from 'react-native';
 import * as Print from 'expo-print';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { hapticLight } from '../utils/haptics';
@@ -109,6 +109,11 @@ export default function ShareNoteModal({
   noteIcon,
   noteImages,
 }: ShareNoteModalProps) {
+  const notepadIcon = useAppIcon('notepad');
+  const cameraIcon = useAppIcon('camera');
+  const pdfIcon = useAppIcon('pdf');
+  const printerIcon = useAppIcon('printer');
+
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close share menu">
@@ -126,7 +131,7 @@ export default function ShareNoteModal({
             if (!content.trim()) { ToastAndroid.show('Nothing to share', ToastAndroid.SHORT); return; }
             Share.share({ message: content });
           }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Share note as text">
-            <Image source={APP_ICONS.notepad} style={{ width: 28, height: 28, marginRight: 14 }} resizeMode="contain" />
+            <Image source={notepadIcon} style={{ width: 28, height: 28, marginRight: 14 }} resizeMode="contain" />
             <Text style={styles.optionText}>Share Text</Text>
           </TouchableOpacity>
 
@@ -145,7 +150,7 @@ export default function ShareNoteModal({
                 ToastAndroid.show("Couldn't share photos.", ToastAndroid.SHORT);
               }
             }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Share photos">
-              <Image source={APP_ICONS.camera} style={{ width: 28, height: 28, marginRight: 14 }} resizeMode="contain" />
+              <Image source={cameraIcon} style={{ width: 28, height: 28, marginRight: 14 }} resizeMode="contain" />
               <Text style={styles.optionText}>{noteImages.length === 1 ? 'Share Photo' : 'Share Photos'}</Text>
             </TouchableOpacity>
           )}
@@ -162,7 +167,7 @@ export default function ShareNoteModal({
                 ToastAndroid.show("Couldn't share PDF.", ToastAndroid.SHORT);
               }
             }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Share as PDF">
-              <Image source={APP_ICONS.pdf} style={{ width: 38, height: 38, marginRight: 14, marginLeft: -5 }} resizeMode="contain" />
+              <Image source={pdfIcon} style={{ width: 38, height: 38, marginRight: 14, marginLeft: -5 }} resizeMode="contain" />
               <Text style={styles.optionText}>Share as PDF</Text>
             </TouchableOpacity>
           )}
@@ -185,7 +190,7 @@ export default function ShareNoteModal({
               ToastAndroid.show("Couldn't print.", ToastAndroid.SHORT);
             }
           }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Print note">
-            <Image source={APP_ICONS.printer} style={{ width: 28, height: 28, marginRight: 14 }} resizeMode="contain" />
+            <Image source={printerIcon} style={{ width: 28, height: 28, marginRight: 14 }} resizeMode="contain" />
             <Text style={styles.optionText}>Print</Text>
           </TouchableOpacity>
 

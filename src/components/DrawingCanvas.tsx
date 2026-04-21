@@ -28,7 +28,7 @@ import { hapticLight, hapticMedium } from '../utils/haptics';
 import { Image } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import DrawingPickerModal from './DrawingPickerModal';
 
 // ---------------------------------------------------------------------------
@@ -111,6 +111,7 @@ export default function DrawingCanvas({
   initialBackgroundImageUri = null,
 }: DrawingCanvasProps) {
   const { colors } = useTheme();
+  const plusIcon = useAppIcon('plus');
   const insets = useSafeAreaInsets();
   const canvasRef = useCanvasRef();
 
@@ -770,7 +771,7 @@ export default function DrawingCanvas({
               accessibilityRole="button"
               accessibilityLabel="Choose custom color"
             >
-              <Image source={APP_ICONS.plus} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={plusIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
 
