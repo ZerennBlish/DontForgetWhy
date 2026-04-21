@@ -1,5 +1,5 @@
 import { ImageSourcePropType } from 'react-native';
-import APP_ICONS from '../data/appIconAssets';
+import { resolveIcon } from './iconResolver';
 
 export type SoundMode = 'sound' | 'vibrate' | 'silent';
 
@@ -22,9 +22,9 @@ export function soundIdToSoundMode(soundId: string | undefined): SoundMode {
 }
 
 export function getSoundModeIcon(mode: SoundMode): ImageSourcePropType {
-  if (mode === 'sound') return APP_ICONS.bell;
-  if (mode === 'vibrate') return APP_ICONS.vibrate;
-  return APP_ICONS.silent;
+  if (mode === 'sound') return resolveIcon('bell');
+  if (mode === 'vibrate') return resolveIcon('vibrate');
+  return resolveIcon('silent');
 }
 
 export function getSoundModeLabel(mode: SoundMode): string {

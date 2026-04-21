@@ -25,7 +25,7 @@ import TimePicker from '../components/TimePicker';
 import DayPickerRow from '../components/DayPickerRow';
 import { useReminderForm } from '../hooks/useReminderForm';
 import EmojiPickerModal from '../components/EmojiPickerModal';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { RootStackParamList } from '../navigation/types';
 
 function formatDateDisplay(dateStr: string): string {
@@ -40,6 +40,11 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const btn = getButtonStyles(colors);
+
+  const saveIcon = useAppIcon('save');
+  const calendarIcon = useAppIcon('calendar');
+  const closeXIcon = useAppIcon('closeX');
+  const plusIcon = useAppIcon('plus');
 
   const form = useReminderForm({
     editId: route.params?.reminderId,
@@ -501,7 +506,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={form.existing ? 'Update reminder' : 'Save reminder'}
           >
-            <Image source={APP_ICONS.save} style={{ width: 24, height: 24 }} resizeMode="contain" />
+            <Image source={saveIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -685,7 +690,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               {form.selectedDate && (
                 <View style={styles.setDateRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
+                    <Image source={calendarIcon} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
                     <Text style={styles.setDateText}>{formatDateDisplay(form.selectedDate)}</Text>
                   </View>
                   <TouchableOpacity
@@ -694,7 +699,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel="Clear selected date"
                   >
-                    <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                    <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -711,7 +716,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 accessibilityLabel={form.selectedDate ? `Selected date: ${formatDateDisplay(form.selectedDate)}` : 'Set date'}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
+                  <Image source={calendarIcon} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
                   <Text style={styles.setDateText}>{form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}</Text>
                 </View>
               </TouchableOpacity>
@@ -722,7 +727,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel="Clear selected date"
                 >
-                  <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                  <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 </TouchableOpacity>
               ) : (
                 <Text style={styles.setDateChevron}>{form.showCalendar ? '\u25B4' : '\u25BE'}</Text>
@@ -807,7 +812,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             {form.selectedIcon && form.selectedIcon !== '\u{1F4DD}' ? (
               <Text style={styles.emojiCircleText}>{form.selectedIcon}</Text>
             ) : (
-              <Image source={APP_ICONS.plus} style={{ width: 22, height: 22 }} resizeMode="contain" />
+              <Image source={plusIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
             )}
           </TouchableOpacity>
         </View>
@@ -833,7 +838,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Clear reminder icon"
               >
-                <Image source={APP_ICONS.closeX} style={{ width: 13, height: 13 }} resizeMode="contain" />
+                <Image source={closeXIcon} style={{ width: 13, height: 13 }} resizeMode="contain" />
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
@@ -842,7 +847,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel="More icons"
             >
-              <Image source={APP_ICONS.plus} style={{ width: 22, height: 22 }} resizeMode="contain" />
+              <Image source={plusIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         )}

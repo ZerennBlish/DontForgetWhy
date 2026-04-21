@@ -23,7 +23,7 @@ import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import TutorialOverlay from '../components/TutorialOverlay';
 import { useTutorial } from '../hooks/useTutorial';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import TIMER_PRESET_IMAGES from '../data/timerPresetAssets';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import TimePicker from '../components/TimePicker';
@@ -37,6 +37,12 @@ export default function TimerScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const tutorial = useTutorial('timers');
+
+  const stopwatchIcon = useAppIcon('stopwatch');
+  const closeXIcon = useAppIcon('closeX');
+  const plusIcon = useAppIcon('plus');
+  const smileyIcon = useAppIcon('status.smiley');
+  const saveIcon = useAppIcon('save');
   const { width: screenWidth } = useWindowDimensions();
   const presetCardWidth = (screenWidth - 32 - 16) / 3;
 
@@ -398,7 +404,7 @@ export default function TimerScreen({ navigation }: Props) {
           <HomeButton forceDark={!!bgUri} />
         </View>
         <View style={{ alignItems: 'center' }}>
-          <Image source={APP_ICONS.stopwatch} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+          <Image source={stopwatchIcon} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
           <Text style={{ fontSize: 20, color: bgUri ? colors.overlayText : colors.textPrimary, textAlign: 'center', marginBottom: 8, fontFamily: FONTS.extraBold }}>Timers</Text>
         </View>
       </View>
@@ -463,7 +469,7 @@ export default function TimerScreen({ navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel="Cancel timer"
                   >
-                    <GlowIcon source={APP_ICONS.closeX} size={20} glowColor={colors.red} />
+                    <GlowIcon source={closeXIcon} size={20} glowColor={colors.red} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -594,7 +600,7 @@ export default function TimerScreen({ navigation }: Props) {
                     accessibilityLabel="Choose emoji"
                   >
                     {newTimerIcon === '\u{1F60A}' ? (
-                      <Image source={APP_ICONS.plus} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                      <Image source={plusIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
                     ) : (
                       <Text style={styles.emojiCircleText}>{newTimerIcon}</Text>
                     )}
@@ -627,9 +633,9 @@ export default function TimerScreen({ navigation }: Props) {
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={styles.emojiHintSmall}>Tap </Text>
-                  <Image source={APP_ICONS.plus} style={{ width: 16, height: 16, marginTop: -4 }} resizeMode="contain" />
+                  <Image source={plusIcon} style={{ width: 16, height: 16, marginTop: -4 }} resizeMode="contain" />
                   <Text style={styles.emojiHintSmall}> to set </Text>
-                  <Image source={APP_ICONS.smiley} style={{ width: 20, height: 20, marginTop: -4 }} resizeMode="contain" />
+                  <Image source={smileyIcon} style={{ width: 20, height: 20, marginTop: -4 }} resizeMode="contain" />
                 </View>
                 <TextInput
                   ref={iconInputRef}
@@ -744,7 +750,7 @@ export default function TimerScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
-                <Image source={APP_ICONS.closeX} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                <Image source={closeXIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleModalSaveOnly}
@@ -762,7 +768,7 @@ export default function TimerScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Save timer"
               >
-                <Image source={APP_ICONS.save} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                <Image source={saveIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleModalSave}

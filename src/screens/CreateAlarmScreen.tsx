@@ -30,7 +30,7 @@ import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import TimePicker from '../components/TimePicker';
 import EmojiPickerModal from '../components/EmojiPickerModal';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { RootStackParamList } from '../navigation/types';
 
 function formatDateDisplay(dateStr: string): string {
@@ -45,6 +45,12 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const btn = getButtonStyles(colors);
+
+  const saveIcon = useAppIcon('save');
+  const calendarIcon = useAppIcon('calendar');
+  const closeXIcon = useAppIcon('closeX');
+  const plusIcon = useAppIcon('plus');
+  const cameraIcon = useAppIcon('camera');
 
   const form = useAlarmForm({
     existingAlarm: route.params?.alarm,
@@ -519,7 +525,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={form.isEditing ? 'Update alarm' : 'Save alarm'}
           >
-            <Image source={APP_ICONS.save} style={{ width: 24, height: 24 }} resizeMode="contain" />
+            <Image source={saveIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -703,7 +709,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               {form.selectedDate && (
                 <View style={styles.setDateRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
+                    <Image source={calendarIcon} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
                     <Text style={styles.setDateText}>{formatDateDisplay(form.selectedDate)}</Text>
                   </View>
                   <TouchableOpacity
@@ -712,7 +718,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel="Clear selected date"
                   >
-                    <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                    <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -727,7 +733,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 activeOpacity={0.6}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Image source={APP_ICONS.calendar} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
+                  <Image source={calendarIcon} style={{ width: 16, height: 16, marginRight: 8 }} resizeMode="contain" />
                   <Text style={styles.setDateText}>{form.selectedDate ? formatDateDisplay(form.selectedDate) : 'Set date'}</Text>
                 </View>
               </TouchableOpacity>
@@ -738,7 +744,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel="Clear selected date"
                 >
-                  <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                  <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
                 </TouchableOpacity>
               ) : (
                 <Text style={styles.setDateChevron}>{form.showCalendar ? '\u25B4' : '\u25BE'}</Text>
@@ -820,7 +826,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Choose alarm icon"
           >
-            {form.selectedIcon ? <Text style={styles.emojiCircleText}>{form.selectedIcon}</Text> : <Image source={APP_ICONS.plus} style={{ width: 22, height: 22 }} resizeMode="contain" />}
+            {form.selectedIcon ? <Text style={styles.emojiCircleText}>{form.selectedIcon}</Text> : <Image source={plusIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />}
           </TouchableOpacity>
         </View>
         {emojiPickerOpen && (
@@ -844,7 +850,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Clear alarm icon"
               >
-                <Image source={APP_ICONS.closeX} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                <Image source={closeXIcon} style={{ width: 14, height: 14 }} resizeMode="contain" />
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -853,7 +859,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel="More icons"
             >
-              <Image source={APP_ICONS.plus} style={{ width: 22, height: 22 }} resizeMode="contain" />
+              <Image source={plusIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         )}
@@ -894,7 +900,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Remove wake-up photo"
             >
-              <Image source={APP_ICONS.closeX} style={{ width: 14, height: 14 }} resizeMode="contain" />
+              <Image source={closeXIcon} style={{ width: 14, height: 14 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -905,7 +911,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Add wake-up photo"
           >
-            <Image source={APP_ICONS.camera} style={{ width: 28, height: 28, marginBottom: 4 }} />
+            <Image source={cameraIcon} style={{ width: 28, height: 28, marginBottom: 4 }} />
             <Text style={{ fontSize: 13, fontFamily: FONTS.regular, color: colors.textTertiary }}>Tap to add photo</Text>
           </TouchableOpacity>
         )}

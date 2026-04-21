@@ -1,3 +1,7 @@
+jest.mock('../src/services/iconTheme', () => ({
+  getIconTheme: () => 'mixed',
+}));
+
 import {
   cycleSoundMode,
   soundModeToSoundId,
