@@ -22,7 +22,8 @@ import { GameNavButtons } from '../components/GameNavButtons';
 import { useCheckers } from '../hooks/useCheckers';
 import MultiplayerCheckersGame from '../components/MultiplayerCheckersGame';
 import { getCheckerImage } from '../data/checkersAssets';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
+import { useIconTheme } from '../hooks/useIconTheme';
 import { DIFFICULTY_LEVELS, PieceColor } from '../services/checkersAI';
 import {
   createGame as mpCreateGame,
@@ -155,6 +156,11 @@ export default function CheckersScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const game = useCheckers();
   const entitlement = useEntitlement();
+
+  // Subscribe to icon-theme changes so getCheckerImage (which calls
+  // resolveIcon at render time) reflects the current theme on re-render.
+  useIconTheme();
+  const chevronRightIcon = useAppIcon('ui.chevronRight');
 
   const [selectedColor, setSelectedColor] = useState<PieceColor>('r');
   const [selectedDifficulty, setSelectedDifficulty] = useState(2);
@@ -810,7 +816,7 @@ export default function CheckersScreen({ navigation, route }: Props) {
                   </Text>
                 </View>
                 <Image
-                  source={APP_ICONS.chevronRight}
+                  source={chevronRightIcon}
                   style={{ width: 18, height: 18 }}
                   resizeMode="contain"
                 />

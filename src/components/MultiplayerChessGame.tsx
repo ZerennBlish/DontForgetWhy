@@ -21,7 +21,8 @@ import { playGameSound } from '../utils/gameSounds';
 import { useMultiplayerChess } from '../hooks/useMultiplayerChess';
 import { endGame, resign as mpResign } from '../services/multiplayer';
 import { getPieceImage } from '../data/chessAssets';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
+import { useIconTheme } from '../hooks/useIconTheme';
 
 const EXIT_TITLES = [
   'Running Away?',
@@ -86,6 +87,12 @@ export default function MultiplayerChessGame({
   const insets = useSafeAreaInsets();
   const mp = useMultiplayerChess({ gameCode: code });
   const navigation = useNavigation();
+
+  // Subscribe to icon-theme changes so getPieceImage (which calls resolveIcon
+  // at render time) reflects the current theme on re-render.
+  useIconTheme();
+  const chevronLeftIcon = useAppIcon('ui.chevronLeft');
+  const chevronRightIcon = useAppIcon('ui.chevronRight');
 
   // DFW-personality exit dialog — one title/message picked per mount.
   const [exitTitle] = useState(() => pickRandom(EXIT_TITLES));
@@ -708,8 +715,8 @@ export default function MultiplayerChessGame({
             accessibilityLabel="Go to start"
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Image source={APP_ICONS.chevronLeft} style={{ width: 20, height: 20 }} resizeMode="contain" />
-              <Image source={APP_ICONS.chevronLeft} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
+              <Image source={chevronLeftIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={chevronLeftIcon} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
             </View>
           </TouchableOpacity>
           <TouchableOpacity
@@ -719,7 +726,7 @@ export default function MultiplayerChessGame({
             accessibilityRole="button"
             accessibilityLabel="Step back"
           >
-            <Image source={APP_ICONS.chevronLeft} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <Image source={chevronLeftIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
           </TouchableOpacity>
           <Text style={styles.reviewCounter}>
             {mp.reviewIndex === 0 ? 'Start' : `Move ${mp.reviewIndex}`} of {total}
@@ -731,7 +738,7 @@ export default function MultiplayerChessGame({
             accessibilityRole="button"
             accessibilityLabel="Step forward"
           >
-            <Image source={APP_ICONS.chevronRight} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <Image source={chevronRightIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.reviewBtn, atEnd && { opacity: 0.3 }]}
@@ -741,8 +748,8 @@ export default function MultiplayerChessGame({
             accessibilityLabel="Go to end"
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Image source={APP_ICONS.chevronRight} style={{ width: 20, height: 20 }} resizeMode="contain" />
-              <Image source={APP_ICONS.chevronRight} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
+              <Image source={chevronRightIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={chevronRightIcon} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
             </View>
           </TouchableOpacity>
         </View>

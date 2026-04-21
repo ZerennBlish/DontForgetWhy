@@ -24,7 +24,8 @@ import { GameNavButtons } from '../components/GameNavButtons';
 import { useChess } from '../hooks/useChess';
 import MultiplayerChessGame from '../components/MultiplayerChessGame';
 import { getPieceImage } from '../data/chessAssets';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
+import { useIconTheme } from '../hooks/useIconTheme';
 import { DIFFICULTY_LEVELS } from '../services/chessAI';
 import {
   createGame as mpCreateGame,
@@ -208,6 +209,12 @@ export default function ChessScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const chess = useChess();
   const entitlement = useEntitlement();
+
+  // Subscribe to icon-theme changes so getPieceImage (which calls resolveIcon
+  // at render time) reflects the current theme on re-render.
+  useIconTheme();
+  const chevronLeftIcon = useAppIcon('ui.chevronLeft');
+  const chevronRightIcon = useAppIcon('ui.chevronRight');
 
   const [selectedColor, setSelectedColor] = useState<'w' | 'b'>('w');
   const [selectedDifficulty, setSelectedDifficulty] = useState(2);
@@ -977,7 +984,7 @@ export default function ChessScreen({ navigation, route }: Props) {
                   </Text>
                 </View>
                 <Image
-                  source={APP_ICONS.chevronRight}
+                  source={chevronRightIcon}
                   style={{ width: 18, height: 18 }}
                   resizeMode="contain"
                 />
@@ -1589,8 +1596,8 @@ export default function ChessScreen({ navigation, route }: Props) {
             accessibilityState={{ disabled: atStart }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Image source={APP_ICONS.chevronLeft} style={{ width: 20, height: 20 }} resizeMode="contain" />
-              <Image source={APP_ICONS.chevronLeft} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
+              <Image source={chevronLeftIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={chevronLeftIcon} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
             </View>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1602,7 +1609,7 @@ export default function ChessScreen({ navigation, route }: Props) {
             accessibilityLabel="Step back"
             accessibilityState={{ disabled: atStart }}
           >
-            <Image source={APP_ICONS.chevronLeft} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <Image source={chevronLeftIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
           </TouchableOpacity>
 
           <Text style={styles.reviewCounter}>
@@ -1618,7 +1625,7 @@ export default function ChessScreen({ navigation, route }: Props) {
             accessibilityLabel="Step forward"
             accessibilityState={{ disabled: atEnd }}
           >
-            <Image source={APP_ICONS.chevronRight} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <Image source={chevronRightIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.reviewBtn, atEnd && { opacity: 0.3 }]}
@@ -1630,8 +1637,8 @@ export default function ChessScreen({ navigation, route }: Props) {
             accessibilityState={{ disabled: atEnd }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Image source={APP_ICONS.chevronRight} style={{ width: 20, height: 20 }} resizeMode="contain" />
-              <Image source={APP_ICONS.chevronRight} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
+              <Image source={chevronRightIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={chevronRightIcon} style={{ width: 20, height: 20, marginLeft: -8 }} resizeMode="contain" />
             </View>
           </TouchableOpacity>
         </View>

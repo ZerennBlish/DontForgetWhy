@@ -1,3 +1,7 @@
+jest.mock('../src/services/iconTheme', () => ({
+  getIconTheme: () => 'mixed',
+}));
+
 import { Chess } from 'chess.js';
 import {
   evaluateBoard,
