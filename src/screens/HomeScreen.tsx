@@ -34,7 +34,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { shouldAutoBackup, autoExportBackup } from '../services/backupRestore';
 import type { Alarm, AlarmDay } from '../types/alarm';
 import type { Reminder } from '../types/reminder';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { fetchCalendarEvents, getEventsForDate, type GoogleCalendarEvent } from '../services/googleCalendar';
 import { getCurrentUser, onAuthStateChanged } from '../services/firebaseAuth';
 
@@ -141,18 +141,6 @@ function getTodayEvents(
   return events;
 }
 
-const SECTION_ICON_SOURCES: Record<string, ImageSourcePropType> = {
-  alarms: APP_ICONS.alarm,
-  timers: APP_ICONS.stopwatch,
-  reminders: APP_ICONS.bell,
-  notepad: APP_ICONS.notepad,
-  voice: APP_ICONS.microphone,
-  calendar: APP_ICONS.calendar,
-  games: APP_ICONS.gamepad,
-  forgetlog: APP_ICONS.notepad,  // reuse notepad icon for forget log
-  settings: APP_ICONS.gear,
-};
-
 // ── Section definitions ─────────────────────────────────────────
 
 interface Section {
@@ -185,6 +173,27 @@ function hexToRgba(hex: string, alpha: number): string {
 export default function HomeScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const alarmIcon = useAppIcon('alarm');
+  const stopwatchIcon = useAppIcon('stopwatch');
+  const bellIcon = useAppIcon('bell');
+  const notepadIcon = useAppIcon('notepad');
+  const microphoneIcon = useAppIcon('microphone');
+  const calendarIcon = useAppIcon('calendar');
+  const gamepadIcon = useAppIcon('gamepad');
+  const gearIcon = useAppIcon('gear');
+
+  const sectionIconSources: Record<string, ImageSourcePropType> = useMemo(() => ({
+    alarms: alarmIcon,
+    timers: stopwatchIcon,
+    reminders: bellIcon,
+    notepad: notepadIcon,
+    voice: microphoneIcon,
+    calendar: calendarIcon,
+    games: gamepadIcon,
+    forgetlog: notepadIcon,
+    settings: gearIcon,
+  }), [alarmIcon, stopwatchIcon, bellIcon, notepadIcon, microphoneIcon, calendarIcon, gamepadIcon, gearIcon]);
 
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -583,7 +592,7 @@ export default function HomeScreen({ navigation }: Props) {
             accessibilityRole="button"
           >
             <View style={styles.gearCircle}>
-              <Image source={APP_ICONS.gear} style={{ width: 26, height: 26 }} resizeMode="contain" />
+              <Image source={gearIcon} style={{ width: 26, height: 26 }} resizeMode="contain" />
             </View>
           </TouchableOpacity>
         </View>
@@ -638,7 +647,7 @@ export default function HomeScreen({ navigation }: Props) {
         {/* D. Section grid */}
         <View style={styles.grid}>
           {sections.map((section) => {
-            const iconSource = SECTION_ICON_SOURCES[section.key];
+            const iconSource = sectionIconSources[section.key];
             const subtitle = section.getSubtitle(counts);
             return (
               <TouchableOpacity

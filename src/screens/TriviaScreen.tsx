@@ -45,6 +45,7 @@ import { getCurrentUser } from '../services/firebaseAuth';
 import { isProUser } from '../services/proStatus';
 import ProGate from '../components/ProGate';
 import useEntitlement from '../hooks/useEntitlement';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trivia'>;
@@ -165,6 +166,11 @@ export default function TriviaScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const entitlement = useEntitlement();
+
+  const globeIcon = useAppIcon('card.globe');
+  const offlineGlobeIcon = useAppIcon('card.offlineGlobe');
+  const starIcon = useAppIcon('status.star');
+  const fireIcon = useAppIcon('flame');
 
   // Phase state (CPU)
   const [phase, setPhase] = useState<Phase>('category');
@@ -608,7 +614,7 @@ export default function TriviaScreen({ navigation, route }: Props) {
         <GameNavButtons topOffset={insets.top + 10} />
         <View style={styles.globeBadge}>
           <Image
-            source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+            source={isOnline ? globeIcon : offlineGlobeIcon}
             style={styles.globeImage}
             resizeMode="contain"
             accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
@@ -920,7 +926,7 @@ export default function TriviaScreen({ navigation, route }: Props) {
       <GameNavButtons topOffset={insets.top + 10} />
       <View style={styles.globeBadge}>
         <Image
-          source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+          source={isOnline ? globeIcon : offlineGlobeIcon}
           style={styles.globeImage}
           resizeMode="contain"
           accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
@@ -1036,7 +1042,7 @@ export default function TriviaScreen({ navigation, route }: Props) {
       <GameNavButtons topOffset={insets.top + 10} />
       <View style={styles.globeBadge}>
         <Image
-          source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+          source={isOnline ? globeIcon : offlineGlobeIcon}
           style={styles.globeImage}
           resizeMode="contain"
           accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
@@ -1051,7 +1057,7 @@ export default function TriviaScreen({ navigation, route }: Props) {
           <Text style={styles.resultsScore}>{score}/{questions.length}</Text>
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginVertical: 8 }}>
             {stars > 0 ? Array.from({ length: stars }).map((_, i) => (
-              <Image key={i} source={require('../../assets/icons/icon-star.webp')} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Image key={i} source={starIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
             )) : <Text style={styles.resultsStars}>{'\u2014'}</Text>}
           </View>
 
@@ -1119,7 +1125,7 @@ export default function TriviaScreen({ navigation, route }: Props) {
     <GameNavButtons topOffset={insets.top + 10} onBack={handleBackFromGame} />
     <View style={styles.globeBadge}>
       <Image
-        source={isOnline ? require('../../assets/icons/icon-globe.webp') : require('../../assets/icons/offline_globe.webp')}
+        source={isOnline ? globeIcon : offlineGlobeIcon}
         style={styles.globeImage}
         resizeMode="contain"
         accessibilityLabel={isOnline ? 'Cloud features active' : 'Offline mode'}
@@ -1132,7 +1138,7 @@ export default function TriviaScreen({ navigation, route }: Props) {
           <Text style={styles.topBarCounter} accessibilityLiveRegion="polite">{currentIndex + 1}/{questions.length}</Text>
           {currentStreak > 1 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <Image source={require('../../assets/icons/icon-fire.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <Image source={fireIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
               <Text style={styles.topBarStreak}>{currentStreak} streak</Text>
             </View>
           )}
