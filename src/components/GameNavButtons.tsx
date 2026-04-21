@@ -3,7 +3,7 @@ import { TouchableOpacity, Image, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 interface GameNavButtonsProps {
   /**
@@ -32,6 +32,8 @@ interface GameNavButtonsProps {
  */
 export function GameNavButtons({ onBack, topOffset = 12 }: GameNavButtonsProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const backArrowIcon = useAppIcon('backArrow');
+  const homeIcon = useAppIcon('home');
 
   const handleBack = useCallback(() => {
     if (onBack) {
@@ -65,7 +67,7 @@ export function GameNavButtons({ onBack, topOffset = 12 }: GameNavButtonsProps) 
         accessibilityLabel="Go back"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Image source={APP_ICONS.gameBack} style={styles.icon} resizeMode="contain" accessible={false} />
+        <Image source={backArrowIcon} style={styles.icon} resizeMode="contain" accessible={false} />
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -76,7 +78,7 @@ export function GameNavButtons({ onBack, topOffset = 12 }: GameNavButtonsProps) 
         accessibilityLabel="Go to home screen"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Image source={APP_ICONS.gameHome} style={styles.icon} resizeMode="contain" accessible={false} />
+        <Image source={homeIcon} style={styles.icon} resizeMode="contain" accessible={false} />
       </TouchableOpacity>
     </View>
   );

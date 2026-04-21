@@ -25,6 +25,7 @@ import ProGate from '../components/ProGate';
 import useEntitlement from '../hooks/useEntitlement';
 import { getProDetails, isProUser, type ProDetails } from '../services/proStatus';
 import { useAppIcon } from '../hooks/useAppIcon';
+import { iconThemeDisplayName, type IconTheme } from '../services/iconTheme';
 import TimePicker from '../components/TimePicker';
 import { getButtonStyles } from '../theme/buttonStyles';
 import type { RootStackParamList } from '../navigation/types';
@@ -81,6 +82,7 @@ export default function SettingsScreen({ navigation }: Props) {
     handleTimeFormatToggle, handleTimeInputModeChange,
     handleHapticsToggle, gameSoundsEnabled, handleGameSoundsToggle,
     handleVoiceToggle,
+    iconTheme, handleIconThemeChange,
     handleSilenceToggle, handleSilencePickerCancel,
     handleSilencePickerSet, handleSilencePickerIndefinite,
     handlePickBackground, handleClearBackground, handleSetOverlayOpacity,
@@ -567,6 +569,64 @@ export default function SettingsScreen({ navigation }: Props) {
           <ChevronRightIcon color={colors.textTertiary} size={16} />
         </View>
       </TouchableOpacity>
+
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <Text style={styles.label}>Icon Style</Text>
+          {!isPro && (
+            <View style={[styles.proBadge, { marginTop: 0 }]}>
+              <Text style={styles.proBadgeText}>PRO</Text>
+            </View>
+          )}
+        </View>
+        <View style={{
+          flexDirection: 'row',
+          backgroundColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+          borderRadius: 12,
+          padding: 2,
+          opacity: isPro ? 1 : 0.5,
+        }}>
+          {(['mixed', 'chrome', 'anthropomorphic'] as IconTheme[]).map((value) => {
+            const label = iconThemeDisplayName(value);
+            const selected = iconTheme === value;
+            return (
+              <TouchableOpacity
+                key={value}
+                style={{
+                  flex: 1,
+                  borderRadius: 10,
+                  paddingVertical: 10,
+                  alignItems: 'center',
+                  backgroundColor: selected ? colors.accent : 'transparent',
+                }}
+                onPress={() => {
+                  hapticLight();
+                  if (!isPro) {
+                    setProGateVisible(true);
+                    return;
+                  }
+                  handleIconThemeChange(value);
+                }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${label} icon style${!isPro ? ' (Pro)' : ''}`}
+                accessibilityState={{ selected }}
+              >
+                <Text style={{
+                  fontSize: 13,
+                  fontFamily: FONTS.semiBold,
+                  color: selected ? colors.textPrimary : colors.textTertiary,
+                }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.description}>
+          Mixed blends abstract icons with characters. Chrome is unified metallic. Toon is all character art.
+        </Text>
+      </View>
 
       <View style={[styles.card, { marginTop: 16 }]}>
         <Text style={styles.sectionLabel}>Screen Background</Text>

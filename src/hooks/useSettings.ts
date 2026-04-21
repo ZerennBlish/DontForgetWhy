@@ -15,6 +15,7 @@ import notifee from '@notifee/react-native';
 import { loadSettings, saveSettings, getSilenceAll, setSilenceAll, getSilenceExpiry } from '../services/settings';
 import { isProUser, getProDetails, type ProDetails } from '../services/proStatus';
 import { isFoundingUser } from '../services/foundingStatus';
+import { getIconTheme, setIconTheme, type IconTheme } from '../services/iconTheme';
 import {
   isSyncEnabled,
   setSyncEnabled,
@@ -58,6 +59,7 @@ interface UseSettingsResult {
   hapticsEnabled: boolean;
   gameSoundsEnabled: boolean;
   voiceRoasts: boolean;
+  iconTheme: IconTheme;
 
   // Pro
   isPro: boolean;
@@ -104,6 +106,7 @@ interface UseSettingsResult {
   handleHapticsToggle: (value: boolean) => Promise<void>;
   handleGameSoundsToggle: (value: boolean) => Promise<void>;
   handleVoiceToggle: (val: boolean) => Promise<void>;
+  handleIconThemeChange: (theme: IconTheme) => void;
   handleSilenceToggle: (value: boolean) => Promise<void>;
   handleSilencePickerCancel: () => void;
   handleSilencePickerSet: () => Promise<void>;
@@ -141,6 +144,7 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [gameSoundsEnabled, setGameSoundsEnabled] = useState(true);
   const [voiceRoasts, setVoiceRoastsState] = useState(true);
+  const [iconTheme, setIconThemeState] = useState<IconTheme>(() => getIconTheme());
   const [hasPermissionIssues, setHasPermissionIssues] = useState(false);
   const [silenceAll, setSilenceAllState] = useState(false);
   const [silenceRemaining, setSilenceRemaining] = useState<string | null>(null);
@@ -353,6 +357,12 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     setVoiceRoastsState(val);
     await setVoiceEnabled(val);
   };
+
+  const handleIconThemeChange = useCallback((theme: IconTheme) => {
+    hapticLight();
+    setIconTheme(theme);
+    setIconThemeState(theme);
+  }, []);
 
   const daysSinceBackup = lastBackup
     ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24))
@@ -632,6 +642,7 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     hapticsEnabled,
     gameSoundsEnabled,
     voiceRoasts,
+    iconTheme,
 
     // Pro
     isPro,
@@ -678,6 +689,7 @@ export function useSettings(navigation: SettingsNavigation): UseSettingsResult {
     handleHapticsToggle,
     handleGameSoundsToggle,
     handleVoiceToggle,
+    handleIconThemeChange,
     handleSilenceToggle,
     handleSilencePickerCancel,
     handleSilencePickerSet,

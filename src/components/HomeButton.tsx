@@ -5,11 +5,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../theme/ThemeContext';
 import { hapticLight } from '../utils/haptics';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 export default function HomeButton({ forceDark }: { forceDark?: boolean }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
+  const homeIcon = useAppIcon('home');
   return (
     <TouchableOpacity
       style={[styles.circle, {
@@ -28,7 +29,7 @@ export default function HomeButton({ forceDark }: { forceDark?: boolean }) {
       accessibilityLabel="Go home"
       accessibilityRole="button"
     >
-      <Image source={APP_ICONS.house} style={{ width: 24, height: 24 }} resizeMode="contain" />
+      <Image source={homeIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
     </TouchableOpacity>
   );
 }

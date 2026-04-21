@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { hapticLight } from '../utils/haptics';
 import { useTheme } from '../theme/ThemeContext';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 
 interface BackButtonProps {
   onPress: () => void;
@@ -11,6 +11,7 @@ interface BackButtonProps {
 
 export default function BackButton({ onPress, forceDark }: BackButtonProps) {
   const { colors } = useTheme();
+  const backArrowIcon = useAppIcon('backArrow');
 
   const styles = useMemo(() => StyleSheet.create({
     circle: {
@@ -33,7 +34,7 @@ export default function BackButton({ onPress, forceDark }: BackButtonProps) {
       accessibilityLabel="Go back"
       accessibilityRole="button"
     >
-      <Image source={APP_ICONS.backArrow} style={{ width: 22, height: 22 }} resizeMode="contain" />
+      <Image source={backArrowIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
     </TouchableOpacity>
   );
 }

@@ -34,3 +34,9 @@ export function setIconTheme(theme: IconTheme): void {
 export function refreshIconThemeCache(): void {
   cached = null;
 }
+
+export function iconThemeDisplayName(theme: IconTheme): string {
+  if (theme === 'chrome') return 'Chrome';
+  if (theme === 'anthropomorphic') return 'Toon';
+  return 'Mixed';
+}
