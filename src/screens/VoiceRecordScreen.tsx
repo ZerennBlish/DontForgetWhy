@@ -26,7 +26,7 @@ import { deleteVoiceMemoFile, saveVoiceClipFile } from '../services/voiceMemoFil
 import { addClip, getNextClipPosition } from '../services/voiceClipStorage';
 import { addVoiceMemo, updateVoiceMemo, getVoiceMemoById, permanentlyDeleteVoiceMemo } from '../services/voiceMemoStorage';
 import { saveVoiceMemoImage } from '../services/voiceMemoImageStorage';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
 import BackButton from '../components/BackButton';
@@ -55,6 +55,10 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const addToMemoId = route.params?.addToMemoId ?? null;
   const isAddClipMode = !!addToMemoId;
+
+  const microphoneIcon = useAppIcon('microphone');
+  const closeXIcon = useAppIcon('closeX');
+  const cameraIcon = useAppIcon('camera');
 
   const [idleHint] = useState(() => IDLE_HINTS[Math.floor(Math.random() * IDLE_HINTS.length)]);
   const [isRecording, setIsRecording] = useState(false);
@@ -583,7 +587,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
               accessibilityLabel="Start recording"
               style={{ marginBottom: 48 }}
             >
-              <GlowIcon source={APP_ICONS.microphone} size={56} glowColor={colors.red} />
+              <GlowIcon source={microphoneIcon} size={56} glowColor={colors.red} />
             </TouchableOpacity>
 
             <Text style={styles.hint}>{idleHint}</Text>
@@ -621,7 +625,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel="Remove photo"
                 >
-                  <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
+                  <Image source={closeXIcon} style={{ width: 10, height: 10 }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -649,7 +653,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
         accessibilityRole="button"
         accessibilityLabel="Take a photo"
       >
-        <Image source={APP_ICONS.camera} style={{ width: 26, height: 26 }} resizeMode="contain" />
+        <Image source={cameraIcon} style={{ width: 26, height: 26 }} resizeMode="contain" />
       </TouchableOpacity>
     </View>
   );

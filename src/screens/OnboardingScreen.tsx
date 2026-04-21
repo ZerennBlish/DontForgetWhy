@@ -27,7 +27,7 @@ import { setOnboardingComplete } from '../services/settings';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticLight } from '../utils/haptics';
 import { canUseFullScreenIntent, openFullScreenIntentSettings } from '../utils/fullScreenPermission';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
@@ -461,19 +461,29 @@ export default function OnboardingScreen({ navigation, route }: Props) {
   const shouldCycleThemes = startSlide === 0;
   const displayColors = shouldCycleThemes ? themes[previewTheme] : colors;
 
+  const gamepadIcon = useAppIcon('gamepad');
+  const houseIcon = useAppIcon('house');
+  const bellIcon = useAppIcon('bell');
+  const alarmIcon = useAppIcon('alarm');
+  const warningIcon = useAppIcon('warning');
+  const flameIcon = useAppIcon('flame');
+  const gearIcon = useAppIcon('gear');
+  const microphoneIcon = useAppIcon('microphone');
+  const cameraIcon = useAppIcon('camera');
+
   const renderIcon = (slideId: string) => {
     const iconMap: Record<string, ImageSourcePropType> = {
-      'welcome': APP_ICONS.gamepad,
-      'whats-inside': APP_ICONS.house,
-      'notifications': APP_ICONS.bell,
-      'exact-alarms': APP_ICONS.alarm,
-      'battery': APP_ICONS.warning,
-      'full-screen': APP_ICONS.flame,
-      'samsung-dnd': APP_ICONS.gear,
-      'overlay': APP_ICONS.alarm,
-      'microphone': APP_ICONS.microphone,
-      'camera-photos': APP_ICONS.camera,
-      'done': APP_ICONS.house,
+      'welcome': gamepadIcon,
+      'whats-inside': houseIcon,
+      'notifications': bellIcon,
+      'exact-alarms': alarmIcon,
+      'battery': warningIcon,
+      'full-screen': flameIcon,
+      'samsung-dnd': gearIcon,
+      'overlay': alarmIcon,
+      'microphone': microphoneIcon,
+      'camera-photos': cameraIcon,
+      'done': houseIcon,
     };
     const source = iconMap[slideId];
     if (!source) return null;

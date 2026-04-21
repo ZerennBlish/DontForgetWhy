@@ -24,7 +24,7 @@ import { ChevronRightIcon, LockIcon } from '../components/Icons';
 import ProGate from '../components/ProGate';
 import useEntitlement from '../hooks/useEntitlement';
 import { getProDetails, isProUser, type ProDetails } from '../services/proStatus';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import TimePicker from '../components/TimePicker';
 import { getButtonStyles } from '../theme/buttonStyles';
 import type { RootStackParamList } from '../navigation/types';
@@ -60,6 +60,12 @@ export default function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [proGateVisible, setProGateVisible] = useState(false);
+
+  const gearIcon = useAppIcon('gear');
+  const warningIcon = useAppIcon('warning');
+  const cameraIcon = useAppIcon('camera');
+  const closeXIcon = useAppIcon('closeX');
+  const checkmarkIcon = useAppIcon('checkmark');
 
   const {
     timeFormat, timeInputMode, hapticsEnabled, voiceRoasts,
@@ -380,7 +386,7 @@ export default function SettingsScreen({ navigation }: Props) {
         <HomeButton forceDark />
       </View>
       <View style={{ alignItems: 'center' }}>
-        <Image source={APP_ICONS.gear} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+        <Image source={gearIcon} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
         <Text style={styles.title}>Settings</Text>
       </View>
     </View>
@@ -394,7 +400,7 @@ export default function SettingsScreen({ navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Fix notification permissions"
         >
-          <Image source={APP_ICONS.warning} style={{ width: 18, height: 18 }} resizeMode="contain" />
+          <Image source={warningIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
           <Text style={styles.permissionBannerText}>Some permissions need attention</Text>
           <ChevronRightIcon color={colors.textTertiary} size={16} />
         </TouchableOpacity>
@@ -576,7 +582,7 @@ export default function SettingsScreen({ navigation }: Props) {
               <Image source={{ uri: bgUri }} style={{ width: 80, height: 80, borderRadius: 8 }} resizeMode="cover" />
             ) : (
               <View style={{ width: 80, height: 80, borderRadius: 8, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' }}>
-                <Image source={APP_ICONS.camera} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                <Image source={cameraIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.mode === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)', marginTop: 4 }}>Tap to set</Text>
               </View>
             )}
@@ -1035,7 +1041,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Close silence picker"
               >
-                <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
               </TouchableOpacity>
             </View>
 
@@ -1123,7 +1129,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Close theme picker"
               >
-                <Image source={APP_ICONS.closeX} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
               </TouchableOpacity>
             </View>
 
@@ -1166,7 +1172,7 @@ export default function SettingsScreen({ navigation }: Props) {
                         {isLocked ? (
                           <LockIcon color={t.textPrimary} size={14} />
                         ) : (
-                          isActive && <Image source={APP_ICONS.checkmark} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                          isActive && <Image source={checkmarkIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
                         )}
                       </View>
                     </View>

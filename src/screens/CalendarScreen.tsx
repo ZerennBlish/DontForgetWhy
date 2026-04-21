@@ -30,7 +30,7 @@ import { formatTime } from '../utils/time';
 import { loadSettings } from '../services/settings';
 import { hapticLight } from '../utils/haptics';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { fetchCalendarEvents, getEventsForDate, type GoogleCalendarEvent } from '../services/googleCalendar';
 import { getCurrentUser, onAuthStateChanged } from '../services/firebaseAuth';
 
@@ -310,6 +310,14 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const tutorial = useTutorial('calendar');
   const insets = useSafeAreaInsets();
+
+  const bellIcon = useAppIcon('bell');
+  const calendarIcon = useAppIcon('calendar');
+  const microphoneIcon = useAppIcon('microphone');
+  const plusIcon = useAppIcon('plus');
+  const hammockIcon = useAppIcon('hammock');
+  const beachChairIcon = useAppIcon('beach-chair');
+  const couchIcon = useAppIcon('couch');
 
   const DOT_ALARM = colors.sectionAlarm;
   const DOT_REMINDER = colors.sectionReminder;
@@ -893,7 +901,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
             {a.icon ? (
               <Text style={styles.cardIcon}>{a.icon}</Text>
             ) : (
-              <Image source={APP_ICONS.bell} style={{ width: 20, height: 20 }} resizeMode="contain" />
+              <Image source={bellIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
             )}
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -964,7 +972,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
             accessibilityRole="text"
             accessibilityLabel={`Google Calendar event: ${e.summary}, ${timeLabel}${e.location ? `, ${e.location}` : ''}`}
           >
-            <Image source={APP_ICONS.calendar} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <Image source={calendarIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>{e.summary}</Text>
               <Text style={styles.cardSub} numberOfLines={1}>
@@ -989,7 +997,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         const dur = `${Math.floor(memo.duration / 60)}:${String(Math.floor(memo.duration % 60)).padStart(2, '0')}`;
         return (
           <TouchableOpacity activeOpacity={0.7} onPress={() => { hapticLight(); navigation.navigate('VoiceMemoDetail', { memoId: item.data.id }); }} style={[styles.card, { borderColor: DOT_VOICE, borderLeftColor: DOT_VOICE, backgroundColor: colors.mode === 'dark' ? colors.card + 'E6' : DOT_VOICE + '15' }]} accessibilityRole="button" accessibilityLabel={`Voice memo: ${memo.title || 'Voice Memo'}, ${dur}`}>
-            <Image source={APP_ICONS.microphone} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <Image source={microphoneIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle} numberOfLines={1}>
                 {memo.title || 'Voice Memo'}
@@ -1142,7 +1150,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
               accessibilityLabel="Create alarm for this date"
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Image source={APP_ICONS.plus} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                <Image source={plusIcon} style={{ width: 14, height: 14 }} resizeMode="contain" />
                 <Text style={styles.createBtnText}>Alarm</Text>
               </View>
             </TouchableOpacity>
@@ -1157,7 +1165,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
               accessibilityLabel="Create reminder for this date"
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Image source={APP_ICONS.plus} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                <Image source={plusIcon} style={{ width: 14, height: 14 }} resizeMode="contain" />
                 <Text style={styles.createBtnText}>Reminder</Text>
               </View>
             </TouchableOpacity>
@@ -1241,18 +1249,18 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const emptyData = useMemo(() => {
     if (viewMode === 'day') {
       return {
-        image: APP_ICONS.hammock,
+        image: hammockIcon,
         text: "Nothing here. Either you're free or you forgot to write it down.",
       };
     }
     if (viewMode === 'week') {
       return {
-        image: APP_ICONS['beach-chair'],
+        image: beachChairIcon,
         text: 'Nothing this week. Enjoy the silence.',
       };
     }
     return {
-      image: APP_ICONS.couch,
+      image: couchIcon,
       text: "A whole month of nothing? That's either zen or denial.",
     };
   }, [viewMode]);
@@ -1295,7 +1303,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
           <HomeButton forceDark={!!bgUri} />
         </View>
         <View style={{ alignItems: 'center' }}>
-          <Image source={APP_ICONS.calendar} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+          <Image source={calendarIcon} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
           <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Calendar</Text>
         </View>
       </View>

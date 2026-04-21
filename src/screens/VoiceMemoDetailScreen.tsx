@@ -39,7 +39,7 @@ import ImageLightbox from '../components/ImageLightbox';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
 import { refreshWidgets } from '../widget/updateWidget';
 import { kvGet, kvSet } from '../services/database';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
@@ -84,6 +84,16 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const memoId = (route.params as { memoId: string }).memoId;
+
+  const shareIcon = useAppIcon('share');
+  const editIcon = useAppIcon('edit');
+  const saveIcon = useAppIcon('save');
+  const trashIcon = useAppIcon('trash');
+  const closeXIcon = useAppIcon('closeX');
+  const plusIcon = useAppIcon('plus');
+  const paperclipIcon = useAppIcon('paperclip');
+  const cameraIcon = useAppIcon('camera');
+  const imageIcon = useAppIcon('image');
 
   const [memo, setMemo] = useState<VoiceMemo | null>(null);
   const [clips, setClips] = useState<VoiceClip[]>([]);
@@ -981,7 +991,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Share voice memo"
               >
-                <Image source={APP_ICONS.share} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                <Image source={shareIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={{
@@ -999,7 +1009,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Edit voice memo"
               >
-                <Image source={APP_ICONS.edit} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                <Image source={editIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
               </TouchableOpacity>
             </>
           ) : (
@@ -1019,7 +1029,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Save voice memo"
             >
-              <Image source={APP_ICONS.save} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Image source={saveIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -1029,7 +1039,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Delete voice memo"
           >
-            <Image source={APP_ICONS.trash} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <Image source={trashIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -1160,7 +1170,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                         accessibilityRole="button"
                         accessibilityLabel={`Share clip ${displayLabel}`}
                       >
-                        <Image source={APP_ICONS.share} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                        <Image source={shareIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
@@ -1171,7 +1181,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                         accessibilityLabel="Delete clip"
                       >
                         <Image
-                          source={APP_ICONS.closeX}
+                          source={closeXIcon}
                           style={{ width: 14, height: 14 }}
                           resizeMode="contain"
                         />
@@ -1207,7 +1217,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 accessibilityLabel="Add a new clip to this memo"
               >
                 <Image
-                  source={APP_ICONS.plus}
+                  source={plusIcon}
                   style={{ width: 20, height: 20, marginRight: 8 }}
                   resizeMode="contain"
                 />
@@ -1317,7 +1327,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel="Delete photo"
                 >
-                  <Image source={APP_ICONS.closeX} style={{ width: 10, height: 10 }} resizeMode="contain" />
+                  <Image source={closeXIcon} style={{ width: 10, height: 10 }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -1354,7 +1364,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
                 ? colors.sectionVoice
                 : (colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'),
             }}>
-              <Image source={APP_ICONS.paperclip} style={{ width: 34, height: 34 }} resizeMode="contain" />
+              <Image source={paperclipIcon} style={{ width: 34, height: 34 }} resizeMode="contain" />
               {(memo?.images ?? []).length > 0 && (
                 <View style={{
                   position: 'absolute', top: -2, right: -4,
@@ -1386,7 +1396,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               borderWidth: 1,
               borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
             }}>
-              <Image source={APP_ICONS.camera} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Image source={cameraIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </View>
             <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textSecondary, marginTop: 4 }}>Camera</Text>
           </TouchableOpacity>
@@ -1405,7 +1415,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
               borderWidth: 1,
               borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
             }}>
-              <Image source={APP_ICONS.image} style={{ width: 24, height: 24 }} resizeMode="contain" />
+              <Image source={imageIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
             </View>
             <Text style={{ fontSize: 10, fontFamily: FONTS.regular, color: colors.textSecondary, marginTop: 4 }}>Gallery</Text>
           </TouchableOpacity>
