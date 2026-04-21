@@ -33,7 +33,7 @@ import {
 } from '../services/widgetPins';
 import { refreshWidgets } from '../widget/updateWidget';
 import { loadSettings } from '../services/settings';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { getRandomReminderQuote } from '../data/reminderQuotes';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
@@ -111,6 +111,9 @@ export default function ReminderScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const tutorial = useTutorial('reminders');
   const insets = useSafeAreaInsets();
+
+  const bellIcon = useAppIcon('bell');
+  const plusIcon = useAppIcon('plus');
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
@@ -533,7 +536,7 @@ export default function ReminderScreen({ navigation }: Props) {
           <HomeButton forceDark={!!bgUri} />
         </View>
         <View style={{ alignItems: 'center' }}>
-          <Image source={APP_ICONS.bell} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+          <Image source={bellIcon} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
           <Text style={[styles.screenTitle, bgUri && { color: colors.overlayText }]}>Reminders</Text>
         </View>
       </View>
@@ -640,7 +643,7 @@ export default function ReminderScreen({ navigation }: Props) {
         accessibilityLabel="Create new reminder"
         accessibilityRole="button"
       >
-        <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        <Image source={plusIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </TouchableOpacity>
 
       <UndoToast

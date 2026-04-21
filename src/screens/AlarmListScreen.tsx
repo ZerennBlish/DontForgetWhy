@@ -16,7 +16,7 @@ import UndoToast from '../components/UndoToast';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
 import SwipeableRow from '../components/SwipeableRow';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { hapticLight } from '../utils/haptics';
@@ -33,6 +33,10 @@ export default function AlarmListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const al = useAlarmList();
   const tutorial = useTutorial('alarmList');
+
+  const alarmIcon = useAppIcon('alarm');
+  const flameIcon = useAppIcon('flame');
+  const plusIcon = useAppIcon('plus');
 
   const handleEdit = useCallback((alarm: Alarm) => {
     navigation.navigate('CreateAlarm', { alarm });
@@ -247,7 +251,7 @@ export default function AlarmListScreen({ navigation }: Props) {
           <HomeButton forceDark={!!al.bgUri} />
         </View>
         <View style={{ alignItems: 'center' }}>
-          <Image source={APP_ICONS.alarm} style={{ width: 48, height: 48, marginBottom: 2 }} resizeMode="contain" />
+          <Image source={alarmIcon} style={{ width: 48, height: 48, marginBottom: 2 }} resizeMode="contain" />
           <Text style={[styles.screenTitle, al.bgUri && { color: colors.overlayText }]}>Alarms</Text>
         </View>
       </View>
@@ -259,7 +263,7 @@ export default function AlarmListScreen({ navigation }: Props) {
 
         {al.hasPlayed && al.stats!.streak > 0 && (
           <View style={styles.streakRow}>
-            <Image source={APP_ICONS.flame} style={{ width: 14, height: 14 }} resizeMode="contain" />
+            <Image source={flameIcon} style={{ width: 14, height: 14 }} resizeMode="contain" />
             <Text style={[styles.streakText, { color: colors.accent }]}>
               {`${al.stats!.streak} in a row`}
             </Text>
@@ -367,7 +371,7 @@ export default function AlarmListScreen({ navigation }: Props) {
         accessibilityLabel="Create new alarm"
         accessibilityRole="button"
       >
-        <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        <Image source={plusIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
       </TouchableOpacity>
 
       <UndoToast

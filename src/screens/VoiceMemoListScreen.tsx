@@ -36,7 +36,7 @@ import { useTutorial } from '../hooks/useTutorial';
 import { createAudioPlayer } from 'expo-audio';
 import type { PlayerWithEvents } from '../utils/audioCompat';
 import type { VoiceMemo } from '../types/voiceMemo';
-import APP_ICONS from '../data/appIconAssets';
+import { useAppIcon } from '../hooks/useAppIcon';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VoiceMemoList'>;
@@ -71,6 +71,10 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const tutorial = useTutorial('voiceMemoList');
+
+  const microphoneIcon = useAppIcon('microphone');
+  const trashIcon = useAppIcon('trash');
+  const plusIcon = useAppIcon('plus');
 
   const [emptyMsg] = useState(() => EMPTY_MESSAGES[Math.floor(Math.random() * EMPTY_MESSAGES.length)]);
   const [voiceMemos, setVoiceMemos] = useState<VoiceMemo[]>([]);
@@ -453,7 +457,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
   const renderDeletedItem = useCallback((memo: VoiceMemo) => (
     <View style={styles.card}>
       <View style={styles.iconCircle}>
-        <Image source={APP_ICONS.microphone} style={{ width: 22, height: 22 }} resizeMode="contain" />
+        <Image source={microphoneIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
       </View>
       <View style={styles.cardCenter}>
         <Text style={styles.cardTitle} numberOfLines={2}>
@@ -504,14 +508,14 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
     if (filter === 'deleted') {
       return (
         <View style={styles.empty}>
-          <Image source={APP_ICONS.trash} style={{ width: 48, height: 48, marginBottom: 12 }} resizeMode="contain" />
+          <Image source={trashIcon} style={{ width: 48, height: 48, marginBottom: 12 }} resizeMode="contain" />
           <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>Nothing in the trash. How responsible of you.</Text>
         </View>
       );
     }
     return (
       <View style={styles.empty}>
-        <Image source={APP_ICONS.microphone} style={{ width: 48, height: 48, marginBottom: 12 }} resizeMode="contain" />
+        <Image source={microphoneIcon} style={{ width: 48, height: 48, marginBottom: 12 }} resizeMode="contain" />
         <Text style={[styles.emptyText, bgUri && { color: 'rgba(255,255,255,0.5)' }]}>{emptyMsg}</Text>
       </View>
     );
@@ -543,7 +547,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
             <HomeButton forceDark={!!bgUri} />
           </View>
           <View style={{ alignItems: 'center' }}>
-            <Image source={APP_ICONS.microphone} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
+            <Image source={microphoneIcon} style={{ width: 36, height: 36, marginBottom: 2 }} resizeMode="contain" />
             <Text style={[styles.title, bgUri && { color: colors.overlayText }]}>Voice Memos</Text>
           </View>
         </View>
@@ -613,7 +617,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Record new voice memo"
         >
-          <Image source={APP_ICONS.plus} style={{ width: 40, height: 40 }} resizeMode="contain" />
+          <Image source={plusIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </TouchableOpacity>
 
         <UndoToast
