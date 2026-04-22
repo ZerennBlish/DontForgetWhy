@@ -13,7 +13,6 @@ import {
   Platform,
   NativeModules,
 } from 'react-native';
-import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import { useAppIcon } from '../hooks/useAppIcon';
 import { previewSystemSound, cancelSoundPreview } from '../services/notifications';
 import { useTheme } from '../theme/ThemeContext';
@@ -70,6 +69,8 @@ const SoundRow = React.memo(function SoundRow({
   playBtnActiveStyle,
 }: SoundRowProps) {
   const checkmarkIcon = useAppIcon('checkmark');
+  const playIcon = useAppIcon('media.play');
+  const stopIcon = useAppIcon('media.stop');
   const handleSelect = useCallback(() => onSelect(sound), [onSelect, sound]);
   const handlePlay = useCallback(() => onPlay(sound), [onPlay, sound]);
   return (
@@ -96,10 +97,10 @@ const SoundRow = React.memo(function SoundRow({
         accessibilityRole="button"
         accessibilityLabel={isPlaying ? 'Stop preview' : 'Preview sound'}
       >
-        <GlowIcon
-          source={isPlaying ? MEDIA_ICONS.stop : MEDIA_ICONS.play}
-          size={20}
-          glowColor={isPlaying ? colors.red : colors.accent}
+        <Image
+          source={isPlaying ? stopIcon : playIcon}
+          style={{ width: 24, height: 24 }}
+          resizeMode="contain"
         />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -284,18 +285,11 @@ export default function SoundPickerModal({
     playBtn: {
       width: 36,
       height: 36,
-      borderRadius: 18,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
     },
-    playBtnIdle: {
-      backgroundColor: colors.card,
-    },
-    playBtnActive: {
-      backgroundColor: colors.accent,
-    },
+    playBtnIdle: {},
+    playBtnActive: {},
     centered: {
       paddingVertical: 40,
       alignItems: 'center',

@@ -43,8 +43,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
 
   const saveIcon = useAppIcon('save');
   const calendarIcon = useAppIcon('calendar');
-  const closeXIcon = useAppIcon('closeX');
   const plusIcon = useAppIcon('plus');
+  const closeXIcon = useAppIcon('closeX');
 
   const form = useReminderForm({
     editId: route.params?.reminderId,
@@ -492,12 +492,8 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             style={{
               width: 40,
               height: 40,
-              borderRadius: 20,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
-              borderWidth: 1.5,
-              borderColor: colors.accent,
               opacity: form.editReady ? 1 : 0.4,
             }}
             onPress={form.editReady ? handleSave : undefined}
@@ -506,7 +502,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={form.existing ? 'Update reminder' : 'Save reminder'}
           >
-            <Image source={saveIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+            <Image source={saveIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -699,7 +695,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel="Clear selected date"
                   >
-                    <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                    <Image source={closeXIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -727,7 +723,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel="Clear selected date"
                 >
-                  <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                  <Image source={closeXIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
                 </TouchableOpacity>
               ) : (
                 <Text style={styles.setDateChevron}>{form.showCalendar ? '\u25B4' : '\u25BE'}</Text>
@@ -838,7 +834,7 @@ export default function CreateReminderScreen({ route, navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Clear reminder icon"
               >
-                <Image source={closeXIcon} style={{ width: 13, height: 13 }} resizeMode="contain" />
+                <Image source={closeXIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity

@@ -80,14 +80,11 @@ export default function NoteImageStrip({
                 position: 'absolute',
                 top: 4,
                 right: 4,
-                width: 22,
-                height: 22,
-                borderRadius: 11,
-                backgroundColor: colors.red,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
                 justifyContent: 'center',
                 alignItems: 'center',
-                borderWidth: 1.5,
-                borderColor: 'rgba(255,255,255,0.6)',
               }}
               hitSlop={{ top: 16, right: 16, bottom: 16, left: 16 }}
               onPress={() => {
@@ -98,7 +95,7 @@ export default function NoteImageStrip({
               accessibilityRole="button"
               accessibilityLabel="Remove image"
             >
-              <Image source={closeXIcon} style={{ width: 10, height: 10 }} resizeMode="contain" />
+              <Image source={closeXIcon} style={{ width: 28, height: 28 }} resizeMode="contain" />
             </TouchableOpacity>
           )}
         </View>

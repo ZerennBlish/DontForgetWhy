@@ -60,6 +60,29 @@ const CHROME_GAME_ICONS = {
   phone: require('../../assets/chrome-game/trivia/phone.webp') as ImageSourcePropType,
   puzzle: require('../../assets/chrome-game/trivia/puzzle.webp') as ImageSourcePropType,
   wordplay: require('../../assets/chrome-game/trivia/wordplay.webp') as ImageSourcePropType,
+
+  // Trivia parent category icons
+  triviaPopcorn: require('../../assets/TriviaChrome/chrome-popcorn.webp') as ImageSourcePropType,
+  triviaRecliner: require('../../assets/TriviaChrome/chrome-recliner.webp') as ImageSourcePropType,
+  triviaD20: require('../../assets/TriviaChrome/chrome-d20.webp') as ImageSourcePropType,
+
+  // Trivia subcategory icons
+  triviaMovies: require('../../assets/TriviaChrome/chrome-movies.webp') as ImageSourcePropType,
+  triviaMusic: require('../../assets/TriviaChrome/chrome-music.webp') as ImageSourcePropType,
+  triviaTelevision: require('../../assets/TriviaChrome/chrome-television.webp') as ImageSourcePropType,
+  triviaCelebrities: require('../../assets/TriviaChrome/chrome-celebrities.webp') as ImageSourcePropType,
+  triviaScience: require('../../assets/TriviaChrome/chrome-science.webp') as ImageSourcePropType,
+  triviaComputers: require('../../assets/TriviaChrome/chrome-computers.webp') as ImageSourcePropType,
+  triviaMath: require('../../assets/TriviaChrome/chrome-math.webp') as ImageSourcePropType,
+  triviaHistory: require('../../assets/TriviaChrome/chrome-history.webp') as ImageSourcePropType,
+  triviaPolitics: require('../../assets/TriviaChrome/chrome-politics.webp') as ImageSourcePropType,
+  triviaArt: require('../../assets/TriviaChrome/chrome-art.webp') as ImageSourcePropType,
+  triviaGeography: require('../../assets/TriviaChrome/chrome-geography.webp') as ImageSourcePropType,
+  triviaSports: require('../../assets/TriviaChrome/chrome-sports.webp') as ImageSourcePropType,
+  triviaBoardgames: require('../../assets/TriviaChrome/chrome-boardgames.webp') as ImageSourcePropType,
+  triviaVehicles: require('../../assets/TriviaChrome/chrome-vehicles.webp') as ImageSourcePropType,
+  triviaVideogames: require('../../assets/TriviaChrome/chrome-videogames.webp') as ImageSourcePropType,
+  triviaComics: require('../../assets/TriviaChrome/chrome-comics.webp') as ImageSourcePropType,
 };
 
 export default CHROME_GAME_ICONS;

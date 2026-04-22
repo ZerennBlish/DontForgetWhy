@@ -303,6 +303,8 @@ The app has two distinct visual languages for icons:
 
 **Navigation mirror:** non-game screens use `BackButton`/`HomeButton` (chrome). Game screens were intended to use `GameNavButtons` (character art via `icon-game-back`/`icon-game-home`) to keep the game/app boundary visually clean — but the component is currently stranded.
 
+**Session 31 — toon migration in progress.** `mediaIcons.tsx` now points to toon assets in `assets/toon-app-icons/` (8 media icons swapped). Circle backgrounds stripped from icon buttons across voice memo screens, note editor toolbar, drawing canvas, and FABs. `GlowIcon` retired from VoiceMemoDetailScreen and VoiceRecordScreen (replaced with plain `Image`). `APP_ICONS.loss` (toon red X) replaces `APP_ICONS.closeX` at delete/dismiss buttons in migrated files. New assets: `icon-undo.webp` in `assets/icons/`, `icon-record.webp` in `assets/icons/`. BackButton/HomeButton still use chrome circles on 13 non-game screens (prompt written, not yet run). Phase 0-4 theme resolver infrastructure not yet built — current approach is direct icon swaps with theme system wrapping later.
+
 ### Data Layer Safety
 
 - **`safeParse<T>(json, fallback): T`** — wraps `JSON.parse` with try/catch; returns `fallback` on SyntaxError or null/undefined result.

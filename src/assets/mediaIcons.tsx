@@ -6,21 +6,21 @@ const MEDIA_ICONS = {
   /** Green character play — for game contexts (resume, continue, start) */
   gamePlay: require('../../assets/icons/game-play.webp') as ImageSourcePropType,
   /** Chrome play triangle — for app controls (voice playback, timer, sound preview) */
-  play: require('../../assets/icons/play-app.webp') as ImageSourcePropType,
+  play: require('../../assets/toon-app-icons/icon-play-app.webp') as ImageSourcePropType,
   /** Chrome pause bars — for all pause states */
-  pause: require('../../assets/icons/pause.webp') as ImageSourcePropType,
+  pause: require('../../assets/toon-app-icons/icon-pause.webp') as ImageSourcePropType,
   /** Chrome stop square — for stopping recording/playback */
-  stop: require('../../assets/icons/stop.webp') as ImageSourcePropType,
+  stop: require('../../assets/toon-app-icons/icon-stop.webp') as ImageSourcePropType,
   /** Chrome repeat loop — for voice clip repeat mode */
-  repeat: require('../../assets/icons/repeat.webp') as ImageSourcePropType,
+  repeat: require('../../assets/toon-app-icons/icon-repeat.webp') as ImageSourcePropType,
   /** Chrome play-all/fast-forward — for voice clip play-all mode */
-  playAll: require('../../assets/icons/play-all.webp') as ImageSourcePropType,
+  playAll: require('../../assets/toon-app-icons/icon-play-all.webp') as ImageSourcePropType,
   /** Chrome play-stop/skip-to-end — for voice clip stop-after-current mode */
-  playStop: require('../../assets/icons/play-stop.webp') as ImageSourcePropType,
+  playStop: require('../../assets/toon-app-icons/icon-play-stop.webp') as ImageSourcePropType,
   /** Chrome skip back arrow with 5 — rewind 5 seconds */
-  skipBack: require('../../assets/icons/skip-back.webp') as ImageSourcePropType,
+  skipBack: require('../../assets/toon-app-icons/icon-skip-back-5.webp') as ImageSourcePropType,
   /** Chrome skip forward arrow with 5 — forward 5 seconds */
-  skipForward: require('../../assets/icons/skip-forward.webp') as ImageSourcePropType,
+  skipForward: require('../../assets/toon-app-icons/icon-skip-forward-5.webp') as ImageSourcePropType,
 };
 
 export default MEDIA_ICONS;

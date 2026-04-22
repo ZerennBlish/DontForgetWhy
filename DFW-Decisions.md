@@ -4,6 +4,18 @@
 
 **For Sessions 1-28 decision history, see DFW-Decisions-Archive.md.**
 
+### Session 31 Additions (Apr 21)
+
+- **Toon icons wired before theme infrastructure (Session 31)** — Went straight to swapping icons and removing circles rather than building Phase 0-4 resolver infrastructure first. Visual progress now, theme system wraps it later. Direct `require()` swaps in `mediaIcons.tsx` and hardcoded `APP_ICONS.loss` references will be migrated to `useAppIcon()` during Phase 3.
+
+- **Circle backgrounds universally removed from toon icons (Session 31)** — Toon icons have thick outlines, character art, and vibrant colors — enough visual weight to stand alone without chrome circle containers. Applied consistently to nav buttons, action buttons, FABs, media controls, and toolbars. Hit targets preserved via container dimensions.
+
+- **GlowIcon retired from voice screens (Session 31)** — `GlowIcon` added a tinted semi-transparent circle behind icons, designed for chrome icons needing visual emphasis. Toon icons provide their own presence, making the glow redundant. Replaced with plain `<Image>`. GlowIcon still used on SudokuScreen and TimerScreen (pending next batch).
+
+- **APP_ICONS.closeX → APP_ICONS.loss for delete/dismiss (Session 31)** — Chrome close-x was dark/silver and invisible against colored backgrounds (red-on-red on photo delete). Toon `icon-loss.webp` (red frowning X) is universally visible and thematically consistent.
+
+- **Record button replaces microphone on VoiceRecordScreen (Session 31)** — Glossy red record button (matching media icon art style) is more intuitive as a "tap to record" affordance than the microphone character. Microphone remains available for other contexts.
+
 ### Session 39 Additions
 
 - **Client-side move validation over server-side** — Chess uses `chess.js` locally; checkers uses the bundled engine. Both validate moves in the client before sending the resulting `gameState` to Firestore. The server enforces only *turn ownership* (the writer's UID must equal `game.turn`) and *game active status* — it does not re-validate the move against the board. Rationale: this is a friends-with-invite-codes game, not a ranked ladder. Adding a Cloud Function to run chess.js or the checkers engine on the server would cost a round trip per move, roughly double the p95 move latency, and still wouldn't stop cheating by two users who agree to play a broken game between themselves. A malicious user who crafts an illegal `gameState` only hurts their own game with their own opponent. When public matchmaking ships (post-2.0), server-side validation becomes mandatory — but until then, the attack surface is so narrow that the latency + complexity cost isn't worth paying.

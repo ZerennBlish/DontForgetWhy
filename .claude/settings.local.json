@@ -95,7 +95,9 @@
       "Bash(npx patch-package *)",
       "WebFetch(domain:registry.npmjs.org)",
       "Bash([ ! -f \"/mnt/c/DontForgetWhy/$f\" ])",
-      "Bash(echo \"EXIT CODE: $?\")"
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(git check-attr *)"
     ]
   }
 }

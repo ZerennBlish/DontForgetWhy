@@ -47,6 +47,7 @@ const APP_ICONS = {
   hourglass: require('../../assets/icons/icon-hourglass.webp') as ImageSourcePropType,
   pencil: require('../../assets/icons/icon-pencil.webp') as ImageSourcePropType,
   erase: require('../../assets/icons/icon-erase.webp') as ImageSourcePropType,
+  undo: require('../../assets/icons/icon-undo.webp') as ImageSourcePropType,
   chevronLeft: require('../../assets/icons/icon-chevron-left.webp') as ImageSourcePropType,
   chevronRight: require('../../assets/icons/icon-chevron-right.webp') as ImageSourcePropType,
   gameBack: require('../../assets/icons/icon-game-back.webp') as ImageSourcePropType,

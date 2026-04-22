@@ -46,6 +46,8 @@ import { isProUser } from '../services/proStatus';
 import ProGate from '../components/ProGate';
 import useEntitlement from '../hooks/useEntitlement';
 import { useAppIcon } from '../hooks/useAppIcon';
+import { resolveIconWithTheme } from '../utils/iconResolver';
+import { useIconTheme } from '../hooks/useIconTheme';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trivia'>;
@@ -59,17 +61,6 @@ const QUESTIONS_PER_ROUND = 10;
 type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
 type SpeedOption = 'relaxed' | 'normal' | 'blitz';
 const SPEED_SECONDS: Record<SpeedOption, number> = { relaxed: 25, normal: 15, blitz: 8 };
-
-const CATEGORY_IMAGES: Record<TriviaParentCategory, ImageSourcePropType> = {
-  general: require('../../assets/trivia/trivia-general.webp'),
-  popCulture: require('../../assets/trivia/popcorn_bucket.webp'),
-  scienceTech: require('../../assets/trivia/trivia-science.webp'),
-  historyPolitics: require('../../assets/trivia/trivia-history.webp'),
-  geography: require('../../assets/trivia/trivia-geography.webp'),
-  sportsLeisure: require('../../assets/trivia/recliner_512.webp'),
-  gamingGeek: require('../../assets/trivia/d20_die.webp'),
-  mythFiction: require('../../assets/trivia/scroll_icon.webp'),
-};
 
 const TRIVIA_CATEGORIES: { id: TriviaParentCategory; label: string }[] = [
   { id: 'general', label: 'General Knowledge' },
@@ -171,6 +162,18 @@ export default function TriviaScreen({ navigation, route }: Props) {
   const offlineGlobeIcon = useAppIcon('card.offlineGlobe');
   const starIcon = useAppIcon('status.star');
   const fireIcon = useAppIcon('flame');
+  const { theme } = useIconTheme();
+
+  const CATEGORY_IMAGES = useMemo((): Record<TriviaParentCategory, ImageSourcePropType> => ({
+    general: require('../../assets/trivia/trivia-general.webp'),
+    popCulture: resolveIconWithTheme('trivia.popcorn', theme),
+    scienceTech: resolveIconWithTheme('trivia.science', theme),
+    historyPolitics: resolveIconWithTheme('trivia.history', theme),
+    geography: resolveIconWithTheme('trivia.geography', theme),
+    sportsLeisure: resolveIconWithTheme('trivia.recliner', theme),
+    gamingGeek: resolveIconWithTheme('trivia.d20', theme),
+    mythFiction: require('../../assets/trivia/scroll_icon.webp'),
+  }), [theme]);
 
   // Phase state (CPU)
   const [phase, setPhase] = useState<Phase>('category');
@@ -652,7 +655,7 @@ export default function TriviaScreen({ navigation, route }: Props) {
           accessibilityLabel="Play solo trivia"
         >
           <Image
-            source={require('../../assets/trivia/trivia-general.webp')}
+            source={CATEGORY_IMAGES.general}
             style={styles.modeCardIcon}
             resizeMode="contain"
           />
@@ -669,7 +672,7 @@ export default function TriviaScreen({ navigation, route }: Props) {
           accessibilityLabel="Play trivia with friends"
         >
           <Image
-            source={require('../../assets/trivia/d20_die.webp')}
+            source={CATEGORY_IMAGES.gamingGeek}
             style={styles.modeCardIcon}
             resizeMode="contain"
           />
@@ -1221,7 +1224,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingTop: insets.top + 60,
+      paddingTop: insets.top + 50,
       paddingHorizontal: 20,
       paddingBottom: 4,
     },
@@ -1265,11 +1268,11 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets) {
       width: '46%',
       backgroundColor: 'rgba(255,255,255,0.15)',
       borderRadius: 16,
-      padding: 20,
+      padding: 12,
       alignItems: 'center',
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.2)',
-      gap: 8,
+      gap: 6,
     },
     categoryImage: {
       width: 56,

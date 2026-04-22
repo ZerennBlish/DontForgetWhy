@@ -48,9 +48,9 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
 
   const saveIcon = useAppIcon('save');
   const calendarIcon = useAppIcon('calendar');
-  const closeXIcon = useAppIcon('closeX');
   const plusIcon = useAppIcon('plus');
   const cameraIcon = useAppIcon('camera');
+  const closeXIcon = useAppIcon('closeX');
 
   const form = useAlarmForm({
     existingAlarm: route.params?.alarm,
@@ -513,19 +513,15 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
             style={{
               width: 40,
               height: 40,
-              borderRadius: 20,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
-              borderWidth: 1.5,
-              borderColor: colors.accent,
             }}
             onPress={handleSave}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={form.isEditing ? 'Update alarm' : 'Save alarm'}
           >
-            <Image source={saveIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+            <Image source={saveIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -718,7 +714,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel="Clear selected date"
                   >
-                    <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                    <Image source={closeXIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -744,7 +740,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel="Clear selected date"
                 >
-                  <Image source={closeXIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                  <Image source={closeXIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
                 </TouchableOpacity>
               ) : (
                 <Text style={styles.setDateChevron}>{form.showCalendar ? '\u25B4' : '\u25BE'}</Text>
@@ -850,7 +846,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Clear alarm icon"
               >
-                <Image source={closeXIcon} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                <Image source={closeXIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -889,7 +885,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={{ position: 'absolute' as const, top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}
+              style={{ position: 'absolute' as const, top: 8, right: 8, width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}
               onPress={() => {
                 Alert.alert('Remove Photo', 'Remove the wake-up photo for this alarm?', [
                   { text: 'Cancel', style: 'cancel' },
@@ -900,7 +896,7 @@ export default function CreateAlarmScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Remove wake-up photo"
             >
-              <Image source={closeXIcon} style={{ width: 14, height: 14 }} resizeMode="contain" />
+              <Image source={closeXIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         ) : (

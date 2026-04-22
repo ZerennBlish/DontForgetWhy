@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, GestureResponderEvent } from 'react-native';
 import { FONTS } from '../theme/fonts';
 import { useTheme } from '../theme/ThemeContext';
-import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
+import { GlowIcon } from '../assets/mediaIcons';
 import { useAppIcon } from '../hooks/useAppIcon';
 
 function formatDuration(seconds: number): string {
@@ -29,7 +29,6 @@ const voiceMemoStyles = StyleSheet.create({
   memoPlayBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -55,8 +54,6 @@ const voiceMemoStyles = StyleSheet.create({
   memoDeleteBtn: {
     width: 24,
     height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -79,6 +76,8 @@ interface MemoCardProps {
 
 export function MemoCard({ isActive, isPlaying, currentTime, duration, accentColor, isViewMode, onPlay, onSeek, onDelete, onProgressLayout }: MemoCardProps) {
   const { colors } = useTheme();
+  const playIcon = useAppIcon('media.play');
+  const pauseIcon = useAppIcon('media.pause');
   const closeXIcon = useAppIcon('closeX');
   const progress = duration > 0 ? currentTime / duration : 0;
   return (
@@ -91,9 +90,9 @@ export function MemoCard({ isActive, isPlaying, currentTime, duration, accentCol
         accessibilityLabel={isPlaying ? "Pause voice memo" : "Play voice memo"}
       >
         {isPlaying ? (
-          <GlowIcon source={MEDIA_ICONS.pause} size={20} glowColor={colors.success} />
+          <GlowIcon source={pauseIcon} size={20} glowColor={colors.success} />
         ) : (
-          <GlowIcon source={MEDIA_ICONS.play} size={20} glowColor={accentColor} />
+          <GlowIcon source={playIcon} size={20} glowColor={accentColor} />
         )}
       </TouchableOpacity>
       <View style={voiceMemoStyles.memoProgress}>
@@ -118,7 +117,7 @@ export function MemoCard({ isActive, isPlaying, currentTime, duration, accentCol
           accessibilityRole="button"
           accessibilityLabel="Remove voice memo from note"
         >
-          <Image source={closeXIcon} style={{ width: 12, height: 12 }} resizeMode="contain" />
+          <Image source={closeXIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
         </TouchableOpacity>
       )}
     </View>

@@ -31,7 +31,6 @@ import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage
 import { refreshWidgets } from '../widget/updateWidget';
 import BackButton from '../components/BackButton';
 import HomeButton from '../components/HomeButton';
-import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VoiceRecord'>;
@@ -56,9 +55,12 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
   const addToMemoId = route.params?.addToMemoId ?? null;
   const isAddClipMode = !!addToMemoId;
 
-  const microphoneIcon = useAppIcon('microphone');
-  const closeXIcon = useAppIcon('closeX');
   const cameraIcon = useAppIcon('camera');
+  const playIcon = useAppIcon('media.play');
+  const pauseIcon = useAppIcon('media.pause');
+  const stopIcon = useAppIcon('media.stop');
+  const recordIcon = useAppIcon('media.record');
+  const closeXIcon = useAppIcon('closeX');
 
   const [idleHint] = useState(() => IDLE_HINTS[Math.floor(Math.random() * IDLE_HINTS.length)]);
   const [isRecording, setIsRecording] = useState(false);
@@ -459,7 +461,6 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
         pauseBtn: {
           width: 70,
           height: 70,
-          borderRadius: 35,
           backgroundColor: 'transparent',
           justifyContent: 'center',
           alignItems: 'center',
@@ -467,7 +468,6 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
         recordBtn: {
           width: 70,
           height: 70,
-          borderRadius: 35,
           justifyContent: 'center',
           alignItems: 'center',
         },
@@ -555,9 +555,9 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
                 accessibilityLabel={isPaused ? "Resume recording" : "Pause recording"}
               >
                 {isPaused ? (
-                  <GlowIcon source={MEDIA_ICONS.play} size={56} glowColor={colors.success} />
+                  <Image source={playIcon} style={{ width: 56, height: 56 }} resizeMode="contain" />
                 ) : (
-                  <GlowIcon source={MEDIA_ICONS.pause} size={56} glowColor={colors.success} />
+                  <Image source={pauseIcon} style={{ width: 56, height: 56 }} resizeMode="contain" />
                 )}
               </TouchableOpacity>
               <TouchableOpacity
@@ -567,7 +567,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Stop recording"
               >
-                <GlowIcon source={MEDIA_ICONS.stop} size={56} glowColor={colors.red} />
+                <Image source={stopIcon} style={{ width: 56, height: 56 }} resizeMode="contain" />
               </TouchableOpacity>
             </View>
             <View accessibilityLiveRegion="polite">
@@ -587,7 +587,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
               accessibilityLabel="Start recording"
               style={{ marginBottom: 48 }}
             >
-              <GlowIcon source={microphoneIcon} size={56} glowColor={colors.red} />
+              <Image source={recordIcon} style={{ width: 80, height: 80 }} resizeMode="contain" />
             </TouchableOpacity>
 
             <Text style={styles.hint}>{idleHint}</Text>
@@ -613,10 +613,8 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
                     position: 'absolute',
                     top: -6,
                     right: -6,
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    backgroundColor: colors.red,
+                    width: 28,
+                    height: 28,
                     justifyContent: 'center',
                     alignItems: 'center',
                   }}
@@ -625,7 +623,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel="Remove photo"
                 >
-                  <Image source={closeXIcon} style={{ width: 10, height: 10 }} resizeMode="contain" />
+                  <Image source={closeXIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -639,12 +637,8 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
           position: 'absolute',
           bottom: insets.bottom + 32,
           right: 32,
-          width: 52,
-          height: 52,
-          borderRadius: 26,
-          backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
-          borderWidth: 1,
-          borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+          width: 56,
+          height: 56,
           justifyContent: 'center',
           alignItems: 'center',
         }}
@@ -653,7 +647,7 @@ export default function VoiceRecordScreen({ navigation, route }: Props) {
         accessibilityRole="button"
         accessibilityLabel="Take a photo"
       >
-        <Image source={cameraIcon} style={{ width: 26, height: 26 }} resizeMode="contain" />
+        <Image source={cameraIcon} style={{ width: 48, height: 48 }} resizeMode="contain" />
       </TouchableOpacity>
     </View>
   );

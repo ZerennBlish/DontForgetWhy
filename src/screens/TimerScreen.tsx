@@ -25,7 +25,6 @@ import TutorialOverlay from '../components/TutorialOverlay';
 import { useTutorial } from '../hooks/useTutorial';
 import { useAppIcon } from '../hooks/useAppIcon';
 import TIMER_PRESET_IMAGES from '../data/timerPresetAssets';
-import MEDIA_ICONS, { GlowIcon } from '../assets/mediaIcons';
 import TimePicker from '../components/TimePicker';
 import SoundPickerModal from '../components/SoundPickerModal';
 import type { RootStackParamList } from '../navigation/types';
@@ -39,10 +38,12 @@ export default function TimerScreen({ navigation }: Props) {
   const tutorial = useTutorial('timers');
 
   const stopwatchIcon = useAppIcon('stopwatch');
-  const closeXIcon = useAppIcon('closeX');
   const plusIcon = useAppIcon('plus');
   const smileyIcon = useAppIcon('status.smiley');
   const saveIcon = useAppIcon('save');
+  const playIcon = useAppIcon('media.play');
+  const pauseIcon = useAppIcon('media.pause');
+  const closeXIcon = useAppIcon('closeX');
   const { width: screenWidth } = useWindowDimensions();
   const presetCardWidth = (screenWidth - 32 - 16) / 3;
 
@@ -241,10 +242,6 @@ export default function TimerScreen({ navigation }: Props) {
     soundModeIconBtn: {
       width: 48,
       height: 48,
-      borderRadius: 24,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
-      borderWidth: 1.5,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -299,9 +296,6 @@ export default function TimerScreen({ navigation }: Props) {
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
-      borderWidth: 1.5,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -321,10 +315,6 @@ export default function TimerScreen({ navigation }: Props) {
     headerSoundBtn: {
       width: 48,
       height: 48,
-      borderRadius: 24,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
-      borderWidth: 1.5,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -455,10 +445,10 @@ export default function TimerScreen({ navigation }: Props) {
                       accessibilityRole="button"
                       accessibilityLabel={timer.isRunning ? 'Pause timer' : 'Resume timer'}
                     >
-                      <GlowIcon
-                        source={timer.isRunning ? MEDIA_ICONS.pause : MEDIA_ICONS.play}
-                        size={20}
-                        glowColor={timer.isRunning ? colors.success : colors.accent}
+                      <Image
+                        source={timer.isRunning ? pauseIcon : playIcon}
+                        style={{ width: 24, height: 24 }}
+                        resizeMode="contain"
                       />
                     </TouchableOpacity>
                   )}
@@ -469,7 +459,7 @@ export default function TimerScreen({ navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel="Cancel timer"
                   >
-                    <GlowIcon source={closeXIcon} size={20} glowColor={colors.red} />
+                    <Image source={closeXIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -739,54 +729,42 @@ export default function TimerScreen({ navigation }: Props) {
                 style={{
                   width: 56,
                   height: 56,
-                  borderRadius: 28,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  backgroundColor: 'rgba(30, 30, 40, 0.7)',
-                  borderWidth: 1.5,
-                  borderColor: colors.red,
                 }}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
-                <Image source={closeXIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                <Image source={closeXIcon} style={{ width: 28, height: 28 }} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleModalSaveOnly}
                 style={{
                   width: 56,
                   height: 56,
-                  borderRadius: 28,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  backgroundColor: 'rgba(30, 30, 40, 0.7)',
-                  borderWidth: 1.5,
-                  borderColor: colors.accent,
                 }}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="Save timer"
               >
-                <Image source={saveIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                <Image source={saveIcon} style={{ width: 28, height: 28 }} resizeMode="contain" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleModalSave}
                 style={{
                   width: 56,
                   height: 56,
-                  borderRadius: 28,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  backgroundColor: 'rgba(30, 30, 40, 0.7)',
-                  borderWidth: 1.5,
-                  borderColor: colors.success,
                 }}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="Save and start timer"
               >
-                <Image source={MEDIA_ICONS.play} style={{ width: 26, height: 26 }} resizeMode="contain" />
+                <Image source={playIcon} style={{ width: 28, height: 28 }} resizeMode="contain" />
               </TouchableOpacity>
             </View>
           </View>

@@ -112,6 +112,10 @@ export default function DrawingCanvas({
 }: DrawingCanvasProps) {
   const { colors } = useTheme();
   const plusIcon = useAppIcon('plus');
+  const editIcon = useAppIcon('edit');
+  const eraseIcon = useAppIcon('ui.erase');
+  const undoIcon = useAppIcon('ui.undo');
+  const trashIcon = useAppIcon('trash');
   const insets = useSafeAreaInsets();
   const canvasRef = useCanvasRef();
 
@@ -469,10 +473,10 @@ export default function DrawingCanvas({
         toolRow: {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 10,
+          justifyContent: 'space-evenly',
         },
         toolBtn: {
-          paddingHorizontal: 16,
+          paddingHorizontal: 10,
           paddingVertical: 8,
           borderRadius: 20,
           backgroundColor: chromeBtnBg,
@@ -653,7 +657,7 @@ export default function DrawingCanvas({
               accessibilityLabel="Pen tool"
               accessibilityState={{ selected: activeTool === 'pen' }}
             >
-              <Text style={styles.toolBtnText}>{'\u270F\uFE0F'} Pen</Text>
+              <Image source={editIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -675,12 +679,8 @@ export default function DrawingCanvas({
               accessibilityLabel="Eraser tool"
               accessibilityState={{ selected: activeTool === 'eraser' }}
             >
-              <Text style={styles.toolBtnText}>
-                {'\u{1FA79}'} Eraser
-              </Text>
+              <Image source={eraseIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
             </TouchableOpacity>
-
-            <View style={styles.separator} />
 
             <TouchableOpacity
               style={styles.toolBtn}
@@ -689,7 +689,7 @@ export default function DrawingCanvas({
               accessibilityRole="button"
               accessibilityLabel="Undo"
             >
-              <Text style={styles.toolBtnText}>{'\u21A9\uFE0F'} Undo</Text>
+              <Image source={undoIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -699,7 +699,7 @@ export default function DrawingCanvas({
               accessibilityRole="button"
               accessibilityLabel="Clear canvas"
             >
-              <Text style={styles.toolBtnText}>{'\u{1F5D1}\uFE0F'} Clear</Text>
+              <Image source={trashIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
 

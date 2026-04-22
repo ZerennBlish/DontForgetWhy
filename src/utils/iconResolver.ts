@@ -39,9 +39,24 @@ export type IconKey =
   // UI controls
   | 'ui.chevronLeft' | 'ui.chevronRight' | 'ui.erase' | 'ui.refresh'
   | 'ui.skip' | 'ui.forwardSkip' | 'ui.backSkip'
+  // Media controls
+  | 'media.play' | 'media.pause' | 'media.stop'
+  | 'media.repeat' | 'media.playAll' | 'media.playStop'
+  | 'media.skipBack' | 'media.skipForward'
+  | 'media.record'
+  // Drawing tools (pencil already covered by 'edit', erase by 'ui.erase')
+  | 'ui.undo'
   // Trivia (chrome set only — mixed/anthropomorphic use best-match fallbacks)
   | 'trivia.books' | 'trivia.lightbulb' | 'trivia.phone'
-  | 'trivia.puzzle' | 'trivia.wordplay';
+  | 'trivia.puzzle' | 'trivia.wordplay'
+  // Trivia parent categories
+  | 'trivia.popcorn' | 'trivia.recliner' | 'trivia.d20'
+  // Trivia subcategories
+  | 'trivia.movies' | 'trivia.music' | 'trivia.television' | 'trivia.celebrities'
+  | 'trivia.science' | 'trivia.computers' | 'trivia.math'
+  | 'trivia.history' | 'trivia.politics' | 'trivia.art'
+  | 'trivia.geography' | 'trivia.sports' | 'trivia.boardgames'
+  | 'trivia.vehicles' | 'trivia.videogames' | 'trivia.comics';
 
 export function resolveIcon(key: IconKey): ImageSourcePropType {
   return resolveIconWithTheme(key, getIconTheme());
@@ -132,6 +147,66 @@ export function resolveIconWithTheme(
       // anthropomorphic, use the toon stopwatch to stay on-theme.
       case 'status.quick':
         return TOON_APP_ICONS.stopwatch;
+      // Media controls — toon variants
+      case 'media.play':
+        return require('../../assets/toon-app-icons/icon-play-app.webp');
+      case 'media.pause':
+        return require('../../assets/toon-app-icons/icon-pause.webp');
+      case 'media.stop':
+        return require('../../assets/toon-app-icons/icon-stop.webp');
+      case 'media.repeat':
+        return require('../../assets/toon-app-icons/icon-repeat.webp');
+      case 'media.playAll':
+        return require('../../assets/toon-app-icons/icon-play-all.webp');
+      case 'media.playStop':
+        return require('../../assets/toon-app-icons/icon-play-stop.webp');
+      case 'media.skipBack':
+        return require('../../assets/toon-app-icons/icon-skip-back-5.webp');
+      case 'media.skipForward':
+        return require('../../assets/toon-app-icons/icon-skip-forward-5.webp');
+      case 'media.record':
+        return require('../../assets/icons/icon-record.webp');
+      case 'ui.undo':
+        return require('../../assets/icons/icon-undo.webp');
+      // Trivia — same toon fallbacks as mixed mode
+      case 'trivia.popcorn':
+        return require('../../assets/trivia/popcorn_bucket.webp');
+      case 'trivia.recliner':
+        return require('../../assets/trivia/recliner_512.webp');
+      case 'trivia.d20':
+        return require('../../assets/trivia/d20_die.webp');
+      case 'trivia.movies':
+        return require('../../assets/trivia/trivia-movies.webp');
+      case 'trivia.music':
+        return require('../../assets/trivia/trivia-music.webp');
+      case 'trivia.television':
+        return require('../../assets/trivia/crt_tv_icon.webp');
+      case 'trivia.celebrities':
+        return require('../../assets/trivia/walk_of_fame_star.webp');
+      case 'trivia.science':
+        return require('../../assets/trivia/trivia-science.webp');
+      case 'trivia.computers':
+        return require('../../assets/trivia/trivia-technology.webp');
+      case 'trivia.math':
+        return require('../../assets/trivia/chalkboard_icon.webp');
+      case 'trivia.history':
+        return require('../../assets/trivia/trivia-history.webp');
+      case 'trivia.politics':
+        return require('../../assets/trivia/gavel_icon.webp');
+      case 'trivia.art':
+        return require('../../assets/trivia/paint_palette.webp');
+      case 'trivia.geography':
+        return require('../../assets/trivia/trivia-geography.webp');
+      case 'trivia.sports':
+        return require('../../assets/trivia/trivia-sports.webp');
+      case 'trivia.boardgames':
+        return require('../../assets/trivia/board_game_pawn_monocle.webp');
+      case 'trivia.vehicles':
+        return require('../../assets/trivia/beat_up_car.webp');
+      case 'trivia.videogames':
+        return require('../../assets/trivia/game_controller.webp');
+      case 'trivia.comics':
+        return require('../../assets/trivia/explosion_speech_bubble.webp');
     }
     // Game keys fall through to mixed handling below.
   }
@@ -218,6 +293,44 @@ export function resolveIconWithTheme(
         return CHROME_GAME_ICONS.puzzle;
       case 'trivia.wordplay':
         return CHROME_GAME_ICONS.wordplay;
+      case 'trivia.popcorn':
+        return CHROME_GAME_ICONS.triviaPopcorn;
+      case 'trivia.recliner':
+        return CHROME_GAME_ICONS.triviaRecliner;
+      case 'trivia.d20':
+        return CHROME_GAME_ICONS.triviaD20;
+      case 'trivia.movies':
+        return CHROME_GAME_ICONS.triviaMovies;
+      case 'trivia.music':
+        return CHROME_GAME_ICONS.triviaMusic;
+      case 'trivia.television':
+        return CHROME_GAME_ICONS.triviaTelevision;
+      case 'trivia.celebrities':
+        return CHROME_GAME_ICONS.triviaCelebrities;
+      case 'trivia.science':
+        return CHROME_GAME_ICONS.triviaScience;
+      case 'trivia.computers':
+        return CHROME_GAME_ICONS.triviaComputers;
+      case 'trivia.math':
+        return CHROME_GAME_ICONS.triviaMath;
+      case 'trivia.history':
+        return CHROME_GAME_ICONS.triviaHistory;
+      case 'trivia.politics':
+        return CHROME_GAME_ICONS.triviaPolitics;
+      case 'trivia.art':
+        return CHROME_GAME_ICONS.triviaArt;
+      case 'trivia.geography':
+        return CHROME_GAME_ICONS.triviaGeography;
+      case 'trivia.sports':
+        return CHROME_GAME_ICONS.triviaSports;
+      case 'trivia.boardgames':
+        return CHROME_GAME_ICONS.triviaBoardgames;
+      case 'trivia.vehicles':
+        return CHROME_GAME_ICONS.triviaVehicles;
+      case 'trivia.videogames':
+        return CHROME_GAME_ICONS.triviaVideogames;
+      case 'trivia.comics':
+        return CHROME_GAME_ICONS.triviaComics;
     }
     // Utility/abstract fall through to mixed handling below.
   }
@@ -367,6 +480,29 @@ export function resolveIconWithTheme(
     case 'ui.backSkip':
       return require('../../assets/icons/icon-back-skip.webp');
 
+    // Media controls — chrome variants (no icon- prefix, live in assets/icons/)
+    case 'media.play':
+      return require('../../assets/icons/play-app.webp');
+    case 'media.pause':
+      return require('../../assets/icons/pause.webp');
+    case 'media.stop':
+      return require('../../assets/icons/stop.webp');
+    case 'media.repeat':
+      return require('../../assets/icons/repeat.webp');
+    case 'media.playAll':
+      return require('../../assets/icons/play-all.webp');
+    case 'media.playStop':
+      return require('../../assets/icons/play-stop.webp');
+    case 'media.skipBack':
+      return require('../../assets/icons/skip-back.webp');
+    case 'media.skipForward':
+      return require('../../assets/icons/skip-forward.webp');
+    // Media record + undo — chrome variants in assets/TriviaChrome/
+    case 'media.record':
+      return require('../../assets/TriviaChrome/chrome-record.webp');
+    case 'ui.undo':
+      return require('../../assets/TriviaChrome/chrome-undo.webp');
+
     // Trivia — chrome has dedicated art; mixed/anthropomorphic use the
     // closest existing anthropomorphic icon or a universal lightbulb
     // fallback when no meaningful sibling exists.
@@ -380,6 +516,44 @@ export function resolveIconWithTheme(
       return require('../../assets/icons/icon-lightbulb.webp');
     case 'trivia.wordplay':
       return require('../../assets/icons/icon-books.webp');
+    case 'trivia.popcorn':
+      return require('../../assets/trivia/popcorn_bucket.webp');
+    case 'trivia.recliner':
+      return require('../../assets/trivia/recliner_512.webp');
+    case 'trivia.d20':
+      return require('../../assets/trivia/d20_die.webp');
+    case 'trivia.movies':
+      return require('../../assets/trivia/trivia-movies.webp');
+    case 'trivia.music':
+      return require('../../assets/trivia/trivia-music.webp');
+    case 'trivia.television':
+      return require('../../assets/trivia/crt_tv_icon.webp');
+    case 'trivia.celebrities':
+      return require('../../assets/trivia/walk_of_fame_star.webp');
+    case 'trivia.science':
+      return require('../../assets/trivia/trivia-science.webp');
+    case 'trivia.computers':
+      return require('../../assets/trivia/trivia-technology.webp');
+    case 'trivia.math':
+      return require('../../assets/trivia/chalkboard_icon.webp');
+    case 'trivia.history':
+      return require('../../assets/trivia/trivia-history.webp');
+    case 'trivia.politics':
+      return require('../../assets/trivia/gavel_icon.webp');
+    case 'trivia.art':
+      return require('../../assets/trivia/paint_palette.webp');
+    case 'trivia.geography':
+      return require('../../assets/trivia/trivia-geography.webp');
+    case 'trivia.sports':
+      return require('../../assets/trivia/trivia-sports.webp');
+    case 'trivia.boardgames':
+      return require('../../assets/trivia/board_game_pawn_monocle.webp');
+    case 'trivia.vehicles':
+      return require('../../assets/trivia/beat_up_car.webp');
+    case 'trivia.videogames':
+      return require('../../assets/trivia/game_controller.webp');
+    case 'trivia.comics':
+      return require('../../assets/trivia/explosion_speech_bubble.webp');
   }
 
   // Compile-time exhaustiveness check — TypeScript errors here if any

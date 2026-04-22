@@ -190,12 +190,8 @@ export default function AlarmListScreen({ navigation }: Props) {
       right: 24,
       width: 56,
       height: 56,
-      borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.8)' : 'rgba(0, 0, 0, 0.15)',
-      borderWidth: 1,
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
   }), [colors, insets.bottom, insets.top]);
 

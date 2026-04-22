@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import MEDIA_ICONS from '../assets/mediaIcons';
+import { useAppIcon } from '../hooks/useAppIcon';
 import { FONTS } from '../theme/fonts';
 import type { VoiceMemo } from '../types/voiceMemo';
 
@@ -55,6 +55,8 @@ function VoiceMemoCard({
   isPinned,
 }: VoiceMemoCardProps) {
   const { colors } = useTheme();
+  const playIcon = useAppIcon('media.play');
+  const pauseIcon = useAppIcon('media.pause');
 
   // Local progress state — only updated when this card is the playing
   // card. The interval polls the parent's ref so the parent never has
@@ -124,8 +126,6 @@ function VoiceMemoCard({
         playBtn: {
           width: 36,
           height: 36,
-          borderRadius: 18,
-          backgroundColor: colors.sectionVoice,
           justifyContent: 'center',
           alignItems: 'center',
         },
@@ -191,9 +191,9 @@ function VoiceMemoCard({
         accessibilityLabel={memo.uri ? (isPlaying ? 'Pause memo' : 'Play memo') : 'Open memo'}
       >
         {isPlaying ? (
-          <Image source={MEDIA_ICONS.pause} style={{ width: 18, height: 18 }} resizeMode="contain" />
+          <Image source={pauseIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
         ) : (
-          <Image source={MEDIA_ICONS.play} style={{ width: 18, height: 18 }} resizeMode="contain" />
+          <Image source={playIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
         )}
       </TouchableOpacity>
 

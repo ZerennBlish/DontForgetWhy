@@ -53,16 +53,11 @@ export default function NoteEditorToolbar({
     circle: {
       width: 44,
       height: 44,
-      borderRadius: 22,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.7)' : 'rgba(0, 0, 0, 0.06)',
-      borderColor: colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     },
     circleActive: {
-      borderColor: colors.accent,
-      backgroundColor: colors.mode === 'dark' ? 'rgba(30, 30, 40, 0.85)' : 'rgba(0, 0, 0, 0.10)',
+      // No circle — active state conveyed by the label color
     },
     label: {
       fontSize: 10,
@@ -99,14 +94,14 @@ export default function NoteEditorToolbar({
         accessibilityLabel="Toggle attachments"
       >
         <View style={[styles.circle, attachmentsActive && styles.circleActive]}>
-          <Image source={paperclipIcon} style={{ width: 34, height: 34 }} resizeMode="contain" />
+          <Image source={paperclipIcon} style={{ width: 38, height: 38 }} resizeMode="contain" />
           {attachmentCount > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{attachmentCount}</Text>
             </View>
           )}
         </View>
-        <Text style={styles.label}>Attached</Text>
+        <Text style={[styles.label, attachmentsActive && { color: colors.accent }]}>Attached</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -117,7 +112,7 @@ export default function NoteEditorToolbar({
         accessibilityLabel="Take photo"
       >
         <View style={styles.circle}>
-          <Image source={cameraIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          <Image source={cameraIcon} style={{ width: 34, height: 34 }} resizeMode="contain" />
         </View>
         <Text style={styles.label}>Camera</Text>
       </TouchableOpacity>
@@ -130,7 +125,7 @@ export default function NoteEditorToolbar({
         accessibilityLabel="Add photo from gallery"
       >
         <View style={styles.circle}>
-          <Image source={imageIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          <Image source={imageIcon} style={{ width: 34, height: 34 }} resizeMode="contain" />
         </View>
         <Text style={styles.label}>Gallery</Text>
       </TouchableOpacity>
@@ -143,7 +138,7 @@ export default function NoteEditorToolbar({
         accessibilityLabel="Add drawing"
       >
         <View style={styles.circle}>
-          <Image source={paintbrushIcon} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          <Image source={paintbrushIcon} style={{ width: 34, height: 34 }} resizeMode="contain" />
         </View>
         <Text style={styles.label}>Draw</Text>
       </TouchableOpacity>
@@ -158,7 +153,7 @@ export default function NoteEditorToolbar({
         <View style={[styles.circle, colorsActive && styles.circleActive]}>
           <Image source={paletteIcon} style={{ width: 38, height: 38 }} resizeMode="contain" />
         </View>
-        <Text style={styles.label}>Colors</Text>
+        <Text style={[styles.label, colorsActive && { color: colors.accent }]}>Colors</Text>
       </TouchableOpacity>
     </View>
   );

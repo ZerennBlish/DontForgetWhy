@@ -13,6 +13,8 @@ import {
 import { useTheme } from '../theme/ThemeContext';
 import { FONTS } from '../theme/fonts';
 import { useAppIcon } from '../hooks/useAppIcon';
+import { resolveIconWithTheme } from '../utils/iconResolver';
+import { useIconTheme } from '../hooks/useIconTheme';
 import { hapticLight } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import type { TriviaParentCategory, TriviaSubcategory } from '../types/trivia';
@@ -21,39 +23,6 @@ import {
   getQuestionsForCategory,
   getQuestionsForSubcategory,
 } from '../data/triviaBank';
-
-const PARENT_IMAGES: Record<TriviaParentCategory, ImageSourcePropType> = {
-  general: require('../../assets/trivia/trivia-general.webp'),
-  popCulture: require('../../assets/trivia/popcorn_bucket.webp'),
-  scienceTech: require('../../assets/trivia/trivia-science.webp'),
-  historyPolitics: require('../../assets/trivia/trivia-history.webp'),
-  geography: require('../../assets/trivia/trivia-geography.webp'),
-  sportsLeisure: require('../../assets/trivia/recliner_512.webp'),
-  gamingGeek: require('../../assets/trivia/d20_die.webp'),
-  mythFiction: require('../../assets/trivia/scroll_icon.webp'),
-};
-
-const SUBCATEGORY_IMAGES: Record<TriviaSubcategory, ImageSourcePropType> = {
-  generalKnowledge: require('../../assets/trivia/trivia-general.webp'),
-  film: require('../../assets/trivia/trivia-movies.webp'),
-  music: require('../../assets/trivia/trivia-music.webp'),
-  television: require('../../assets/trivia/crt_tv_icon.webp'),
-  celebrities: require('../../assets/trivia/walk_of_fame_star.webp'),
-  scienceNature: require('../../assets/trivia/trivia-science.webp'),
-  computers: require('../../assets/trivia/trivia-technology.webp'),
-  gadgets: require('../../assets/trivia/lightbulb_icon.webp'),
-  mathematics: require('../../assets/trivia/chalkboard_icon.webp'),
-  history: require('../../assets/trivia/trivia-history.webp'),
-  politics: require('../../assets/trivia/gavel_icon.webp'),
-  art: require('../../assets/trivia/paint_palette.webp'),
-  geography: require('../../assets/trivia/trivia-geography.webp'),
-  sports: require('../../assets/trivia/trivia-sports.webp'),
-  boardGames: require('../../assets/trivia/board_game_pawn_monocle.webp'),
-  vehicles: require('../../assets/trivia/beat_up_car.webp'),
-  videoGames: require('../../assets/trivia/game_controller.webp'),
-  comicsAnime: require('../../assets/trivia/explosion_speech_bubble.webp'),
-  mythologyBooks: require('../../assets/trivia/scroll_icon.webp'),
-};
 
 const PARENT_LABELS: Record<TriviaParentCategory, string> = {
   general: 'General Knowledge',
@@ -90,6 +59,40 @@ export default function SubcategoryPickerModal({
 }: SubcategoryPickerModalProps) {
   const { colors } = useTheme();
   const closeXIcon = useAppIcon('closeX');
+  const { theme } = useIconTheme();
+
+  const PARENT_IMAGES = useMemo((): Record<TriviaParentCategory, ImageSourcePropType> => ({
+    general: require('../../assets/trivia/trivia-general.webp'),
+    popCulture: resolveIconWithTheme('trivia.popcorn', theme),
+    scienceTech: resolveIconWithTheme('trivia.science', theme),
+    historyPolitics: resolveIconWithTheme('trivia.history', theme),
+    geography: resolveIconWithTheme('trivia.geography', theme),
+    sportsLeisure: resolveIconWithTheme('trivia.recliner', theme),
+    gamingGeek: resolveIconWithTheme('trivia.d20', theme),
+    mythFiction: require('../../assets/trivia/scroll_icon.webp'),
+  }), [theme]);
+
+  const SUBCATEGORY_IMAGES = useMemo((): Record<TriviaSubcategory, ImageSourcePropType> => ({
+    generalKnowledge: require('../../assets/trivia/trivia-general.webp'),
+    film: resolveIconWithTheme('trivia.movies', theme),
+    music: resolveIconWithTheme('trivia.music', theme),
+    television: resolveIconWithTheme('trivia.television', theme),
+    celebrities: resolveIconWithTheme('trivia.celebrities', theme),
+    scienceNature: resolveIconWithTheme('trivia.science', theme),
+    computers: resolveIconWithTheme('trivia.computers', theme),
+    gadgets: require('../../assets/trivia/lightbulb_icon.webp'),
+    mathematics: resolveIconWithTheme('trivia.math', theme),
+    history: resolveIconWithTheme('trivia.history', theme),
+    politics: resolveIconWithTheme('trivia.politics', theme),
+    art: resolveIconWithTheme('trivia.art', theme),
+    geography: resolveIconWithTheme('trivia.geography', theme),
+    sports: resolveIconWithTheme('trivia.sports', theme),
+    boardGames: resolveIconWithTheme('trivia.boardgames', theme),
+    vehicles: resolveIconWithTheme('trivia.vehicles', theme),
+    videoGames: resolveIconWithTheme('trivia.videogames', theme),
+    comicsAnime: resolveIconWithTheme('trivia.comics', theme),
+    mythologyBooks: require('../../assets/trivia/scroll_icon.webp'),
+  }), [theme]);
 
   const { totalCount, subs } = useMemo(() => {
     const total = getQuestionsForCategory(category).length;
