@@ -1,5 +1,12 @@
 import {onRequest} from "firebase-functions/v2/https";
+import {initializeApp} from "firebase-admin/app";
+import {getAppCheck} from "firebase-admin/app-check";
 import {getTopMoves, Board, Piece, PieceColor} from "./checkersEngine";
+
+// Initialize Firebase Admin once at module scope. Required for
+// getAppCheck().verifyToken() below. Cloud Functions auto-discovers
+// service-account credentials when deployed.
+initializeApp();
 
 function isValidPiece(p: unknown): p is Piece {
   if (typeof p !== "object" || p === null) return false;
@@ -36,6 +43,24 @@ export const checkersAI = onRequest(
   async (req, res) => {
     if (req.method !== "POST") {
       res.status(405).json({error: "Method not allowed"});
+      return;
+    }
+
+    // App Check verification — reject any caller without a valid token
+    // attached as the X-Firebase-AppCheck header. Blocks abuse from
+    // curl/Postman/scrapers; legit DFW builds attach the token via the
+    // @react-native-firebase/app-check SDK.
+    const appCheckToken = req.headers["x-firebase-appcheck"] as
+      | string
+      | undefined;
+    if (!appCheckToken) {
+      res.status(401).json({error: "Missing App Check token"});
+      return;
+    }
+    try {
+      await getAppCheck().verifyToken(appCheckToken);
+    } catch {
+      res.status(401).json({error: "Invalid App Check token"});
       return;
     }
 

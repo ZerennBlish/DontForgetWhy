@@ -1,3 +1,4 @@
+import appCheck from '@react-native-firebase/app-check';
 import { checkConnectivity } from '../utils/connectivity';
 import type { Board, PieceColor, CheckersMove } from './checkersAI';
 
@@ -52,6 +53,18 @@ export async function getCloudCheckersMove(
     const online = await checkConnectivity();
     if (!online) return null;
 
+    // Cloud Function is App Check-protected. Get a token if we can; if it
+    // fails, fall through with no header — the function will reject with
+    // 401 and the outer caller falls back to the local engine, which is
+    // the existing behavior for any cloud failure (so no new failure mode).
+    let appCheckToken = '';
+    try {
+      const { token } = await appCheck().getToken();
+      appCheckToken = token;
+    } catch {
+      // Token fetch failed — proceed without header.
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), CLOUD_TIMEOUT_MS);
 
@@ -59,7 +72,10 @@ export async function getCloudCheckersMove(
     try {
       response = await fetch(CLOUD_CHECKERS_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(appCheckToken ? { 'X-Firebase-AppCheck': appCheckToken } : {}),
+        },
         body: JSON.stringify({ board, turn }),
         signal: controller.signal,
       });
