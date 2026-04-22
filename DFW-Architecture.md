@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 39 (April 20, 2026)
+**Last updated:** Session 41 (April 22, 2026) — v2.0.0 ship (Pro tier + App Check)
 
 ---
 
@@ -269,6 +269,9 @@ Two-level taxonomy: 8 **parent categories** for the main tile grid, each contain
 
 ### Pro Tier — Architecture Notes
 
+- **v2.0.0: paywall live.** Founding gate is active — only pre-v2.0.0 installs qualify. `runFoundingMigration()` in `foundingStatus.ts` requires `kvGet('onboardingComplete') === 'true'` (set by pre-v2.0.0 installs) before granting. Fresh v2.0.0 installs write `founding_check_done='true'` without granting, so they hit the paywall and the migration is a no-op on every subsequent launch.
+- **Backup bypass sealed.** `importBackup` writes `kvSet('founding_check_done', 'true')` immediately after `reopenDb()` succeeds — pre-v1.23.0 backups carry `onboardingComplete='true'` but no founding flag, which would otherwise trigger a founding grant on the next cold start. Both legitimate and illicit restorations now route through the paywall.
+- **Restore flow processes purchases synchronously.** `useEntitlement.restore()` calls the hook's `restorePurchases()` (which returns `Promise<void>`), then calls the top-level `getAvailablePurchases()` (value-returning per expo-iap docs) to get the array, and runs `finishTransaction` + `setProStatus` + `setIsPro(true)` before the awaited promise resolves. Callers that read `isProUser()` immediately after `await restore()` see the updated state; no "No purchases found" flash while a separate effect settles.
 - **Single `useEntitlement()` instance per screen.** ProGate mounted conditionally (`{proGateVisible && <ProGate.../>}`) and accepts entitlement values as props. Parents (SettingsScreen, GamesScreen) call the hook once each. Prevents double `finishTransaction()`.
 - **Trial gate at the GamesScreen level.** `canPlayGame(game)` in `GamesScreen.handleGamePress` — one branch point for all five gated games. Increment gated on `!isPro`.
 - **Founding migration in its own try/catch in `App.tsx`.** Called on both success path and kv `_migrated` recovery path. Throw logs a warning, never trips "Something went wrong".
@@ -276,6 +279,17 @@ Two-level taxonomy: 8 **parent categories** for the main tile grid, each contain
 - **Stable recurring DTSTART from `alarm.createdAt`.** `stableFirstDate(days, createdAt)` — first matching weekday on or after creation. Deterministic; prevents Google Calendar from dropping past occurrences.
 - **Calendar write scope requested on enable, not on configure.** Least privilege. 403 branch in `authedFetch` re-requests write scope mid-flight and retries once.
 - **Manual "Sync Now" v1.** No auto-sync. User taps Sync Now in Settings, result renders inline.
+
+### App Check (v2.0.0)
+
+Firebase App Check attests that requests to cloud endpoints come from a legitimate DFW build, not a scraper/curl/Postman. Enforced at three surfaces: Cloud Function code, Firestore, and IAP-adjacent client work.
+
+- **Client init at module scope in `App.tsx`.** `@react-native-firebase/app-check` — `appCheck().newReactNativeFirebaseAppCheckProvider()` → `configure({ android: { provider: __DEV__ ? 'debug' : 'playIntegrity' } })` → `appCheck().initializeAppCheck({ provider, isTokenAutoRefreshEnabled: true })`. Runs before any Firebase service call and before `App` mounts. Play Integrity for production builds, debug provider for dev/emulator builds (debug tokens registered in Firebase Console).
+- **Cloud Function enforcement via `verifyToken`.** `functions/src/index.ts` reads the `x-firebase-appcheck` header from `req.headers`, rejects missing token with 401 `"Missing App Check token"`, then calls `getAppCheck().verifyToken(appCheckToken)` and rejects invalid tokens with 401 `"Invalid App Check token"`. Only after both checks pass does the function run `getTopMoves()`. Board/turn validation happens after auth to avoid leaking shape info to unauthenticated callers.
+- **Firestore enforcement enabled via Firebase Console.** No rules change required — App Check is a project-level toggle. All Firestore reads/writes from the client carry the token automatically because `@react-native-firebase/firestore` honors the App Check init.
+- **Client attaches token in `cloudCheckers.ts`.** Before fetching the Cloud Function, the service calls `appCheck().getToken()` and attaches the result as the `X-Firebase-AppCheck` header. Token fetch failure falls through with no header (function will return 401, caller falls back to the local engine — existing failure mode, no new branch).
+- **`cloudStockfish.ts` is intentionally unmodified.** Stockfish calls hit Lichess, not Firebase. No App Check token to attach.
+- **Cloud Run IAM set to "Allow public access"** — enforcement happens in function code, not at the infrastructure layer. Rationale: IAM-level auth would reject requests before they reach the function code, preventing meaningful 401 responses and preventing any custom validation logic. See Decisions doc.
 
 ### Online/Offline Globe Indicators
 

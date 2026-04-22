@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 37 (April 19, 2026) — **v1.24.0 (versionCode 43) live on Play Store**.
+**Last updated:** Session 41 (April 22, 2026) — **v2.0.0 (versionCode 44) uploaded to Play Store, awaiting review**. v1.24.0 (versionCode 43) remains the installed baseline until review clears.
 
 ---
 
@@ -267,6 +267,7 @@ DontForgetWhy/
 | Apr 1 | 1.9.0 | 24 | Home screen (icon grid, Quick Capture, personality banner, Today section), TimerScreen standalone, VoiceMemoListScreen standalone, AlarmListScreen 2-tab, HomeButton on all screens, widget rebranding (Memory's Timeline, Forget Me Notes, Misplaced Thoughts, Memory's Voice), Forget Log moved to Settings. Audit 47 complete. | Dev branch — build pending |
 | Apr 5 | 1.13.0 | 30 | Chess engine hardened (Session 17): opening book, transposition table, killer moves, null-move pruning, tapered eval, min-depth/max-time difficulty model. 2 audit rounds, 6 findings fixed. Benchmark test removed for production. | Production |
 | Apr 5 | 1.14.0 | 31 | Checkers (Session 18): pure JS engine, 5 difficulty levels, American rules, Memory Score integration. Scoring overhaul: max 140 (7 games × 20), chess blunder penalty removed, chess+checkers stat sections. UI: emoji removal from headers, GamesScreen reordered. 52 checkers tests. | Production |
+| Apr 22 | 2.0.0 | 44 | **v2.0.0 major release.** Pro tier activated (paywall live, founding gate reverted to `onboardingComplete`, ProGate benefits updated — Multiplayer Games + Icon Themes). App Check enforced — `@react-native-firebase/app-check` client with Play Integrity / debug provider + Cloud Function `verifyToken` + Firestore enforcement via Console. Multiplayer chess/checkers/trivia (Session 39). Dual-theme icon system complete (chrome/mixed/anthropomorphic via `iconResolver.ts`, Sessions 32 + 33 + 40). Pre-ship triple audit: P1 backup restore founding bypass fixed (`founding_check_done` written post-restore in `importBackup`); P2 restore race fixed (synchronous purchase processing in `useEntitlement.restore()` via top-level `getAvailablePurchases`). 28 suites / 614 tests passing. | Uploaded — awaiting Play Store review |
 
 ---
 
@@ -320,8 +321,8 @@ DontForgetWhy/
 
 | Item | Value |
 |------|-------|
-| Current version | v1.22.0 (versionCode 40) live on Play Store; Session 31 v1.23.0 / vCode 41 + Session 32 cloud/trivia work on `dev` unshipped |
-| Production status | v1.22.0 live on Google Play (Session 30 build); Session 31 Pro tier + Session 32 Cloud Checkers AI + trivia overhaul wait on `dev` for the v2.0.0 bundled ship |
+| Current version | **v2.0.0 (versionCode 44)** uploaded to Play Store — awaiting review. v1.24.0 (versionCode 43) is the installed baseline until review clears. |
+| Production status | v2.0.0 uploaded; awaiting review. Pro tier paywall live, App Check enforced, multiplayer + dual-theme icons shipped. |
 | Install count | 48+ |
 | Phase 1 housekeeping | COMPLETE |
 | Phase 2 | COMPLETE |
@@ -338,7 +339,7 @@ DontForgetWhy/
 | Voice clips | 84 total (68 original fire/snooze/timer/guess/dismiss/intro + 15 tutorial + Opening.mp3). ElevenLabs v3, same voice character throughout. `assets/voice/*.mp3` + `assets/voice/tutorial/*.mp3` |
 | EAS build credits | ~19 available |
 | ElevenLabs | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
-| Firebase | Project `dont-forget-why` on Blaze plan. **$300 credit activated April 14, 2026 — expires July 14, 2026.** Firestore rules published (`users/{uid}` self-only). Google Calendar API enabled in Google Cloud Console. `google-services.json` at project root, referenced via `android.googleServicesFile` in `app.json` for EAS prebuild. |
+| Firebase | Project `dont-forget-why` on Blaze plan. **$300 credit activated April 14, 2026 — expires July 14, 2026.** Firestore rules published (`users/{uid}` self-only). Google Calendar API enabled in Google Cloud Console. `google-services.json` at project root, referenced via `android.googleServicesFile` in `app.json` for EAS prebuild. **App Check enabled (v2.0.0)** — Play Integrity provider on the client, `verifyToken` enforcement on the Cloud Function, Firestore enforcement via Console. **Node 20 runtime deprecation:** `functions/package.json` engines still `"node": "20"`; deprecated April 30, 2026, decommissioned October 30, 2026 — upgrade to Node 22 required before then. |
 
 ### Packages Added (Session 12)
 - `expo-sqlite` — synchronous SQLite database (replaced AsyncStorage for all persistent storage)
@@ -405,6 +406,9 @@ The `blockList` entry for `/functions\/.*/` stops the Metro bundler from trying 
 - `explosion_speech_bubble.webp` — Comics & Anime subcategory
 
 (Some existing trivia assets retained: `trivia-general.webp`, `trivia-science.webp`, `trivia-history.webp`, `trivia-geography.webp`, `trivia-movies.webp`, `trivia-music.webp`, `trivia-sports.webp` still referenced for older subcategory slots.)
+
+### Packages Added (Session 41 — v2.0.0)
+- `@react-native-firebase/app-check` — Firebase App Check with Play Integrity attestation (production) / debug provider (dev). Native, requires a dev/production build. Registered in `app.json` `expo.plugins`. Initialized at module scope in `App.tsx` before any other Firebase service call. Provides the attestation token attached to `cloudCheckers.ts` fetches and every Firestore read/write. Debug tokens registered in the Firebase Console for local dev.
 
 ### Packages Added (Session 35/36)
 - `patch-package` — dev dependency, auto-applies patches via `postinstall` hook. Used for the `react-native-zip-archive` JDK 21 fix (casts `double` → `int` in `RNZipArchiveModule.java` switch selector). Patch file lives at `patches/react-native-zip-archive+7.1.0.patch`. `react-native-zip-archive` pinned exactly to `"7.1.0"` (no tilde) so a future 7.1.1 can't silently break the patch by filename mismatch.

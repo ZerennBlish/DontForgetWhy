@@ -1,5 +1,5 @@
 # Don't Forget Why — Living Roadmap
-### Source of Truth · Updated: Session 40 (April 21, 2026)
+### Source of Truth · Updated: Session 41 (April 22, 2026) — v2.0.0 ship
 
 ---
 
@@ -7,31 +7,57 @@
 
 | | |
 |---|---|
-| **Current Version** | **v1.24.0 (versionCode 43)** — LIVE on Play Store. `dev` is ahead of v1.24.0 with significant cleanup work (full Pass 1 + Pass 2 dead-code sweep landed). |
-| **Branch** | `dev` — `main` reset to match `dev` in Session 37. `v1.24.0` tag on `0ee7100`. |
-| **Production Status** | v1.24.0 (versionCode 43) live on Play Store. |
-| **Current Focus** | Multiplayer + dual-theme icon system shipped (chrome circle restoration + GamesScreen sizing pass landed Session 33). v2.0.0 (Pro tier launch) is the next ship target — App Check + Pro activation remaining before flip. |
+| **Current Version** | **v2.0.0 (versionCode 44)** — uploading to Play Store. Pro tier paywall live, App Check enforced on cloud endpoints + Firestore, multiplayer + dual-theme icons shipped. |
+| **Branch** | `dev` — `main` reset to match `dev` in Session 37. `v1.24.0` tag on `0ee7100`; `v2.0.0` tag pending once Play Store review completes. |
+| **Production Status** | v2.0.0 (versionCode 44) uploaded; awaiting Play Store review. v1.24.0 (versionCode 43) remains the installed baseline until review clears. |
+| **Current Focus** | v2.0.0 shipped. Post-launch monitoring + store refresh. |
 | **Blocked By** | Nothing |
-| **Next Action** | App Check (lock down cloud endpoints), then Pro activation + ship. |
-| **EAS Credits** | ~19 remaining (1 dev build + 1 production build this session). Reset May 12. |
+| **Next Action** | Store screenshot refresh, post-launch monitoring, Node.js 22 runtime upgrade for Cloud Functions (Node 20 deprecated April 30, decommissioned October 30, 2026). |
+| **EAS Credits** | ~17 remaining (2 production builds this session — pre-ship App Check/Pro + v2.0.0 final). Reset May 12. |
 | **Firebase Credits** | **$300 activated — expires July 14, 2026.** Auth + Firestore + Google Calendar API all active. OAuth consent screen unverified (shows warning on write scope). |
 | **ElevenLabs** | Subscription active — 84 clips shipped (68 original + 15 tutorial + Opening.mp3) |
 
 ---
 
-## v2.0.0 LAUNCH SEQUENCE
+## v2.0.0 LAUNCH SEQUENCE ✅ COMPLETE
 
 1. ~~Backlog cleanup~~ ✅ Session 39
-2. ~~Icon wire-up~~ ✅ Session 40 — Dual-theme system (Phases 0-4). 65+ assets placed, resolver + hooks + Pro-gated Settings toggle. Triple audited + fixed.
+2. ~~Icon wire-up~~ ✅ Session 40 + Session 32 — Dual-theme system (Phases 0-4), chrome trivia icons, resolver-driven migration across ~30 screens/components.
 3. ~~Multiplayer~~ ✅ Session 39 (chess, checkers, trivia)
-4. **App Check** — Lock down cloud endpoints before billing
-5. **P7 Pro Tier activation** — Paywall live for new users
-6. **Ship v2.0.0**
+4. ~~App Check~~ ✅ v2.0.0 ship — Play Integrity client (`@react-native-firebase/app-check`) + Cloud Function `verifyToken` enforcement + Firestore enforcement via Console.
+5. ~~P7 Pro Tier activation~~ ✅ v2.0.0 ship — founding gate reverted (`onboardingComplete` check), paywall live, benefits updated (Multiplayer Games + Icon Themes).
+6. ~~Ship v2.0.0~~ ✅ v2.0.0 (versionCode 44) uploaded to Play Store.
 
 ### Known limitations (v2.0.0)
 
 - **Dual-theme icon system — trivia chrome set incomplete** — 5 of 8+ trivia categories have dedicated chrome art; the rest fall back to anthropomorphic (and `trivia.phone` / `trivia.puzzle` share the lightbulb glyph in mixed/toon modes). Tracked in the Visual & Theme backlog.
 - **Dual-theme icon system — art refinement ongoing** — visual consistency across the three themes is still being iterated; minor divergence between mixed/chrome/anthropomorphic stroke weight + palette expected until the next art pass.
+
+### v2.0.0 Audit Gate
+
+- [x] Triple audit (Codex + Claude + Gemini) — pre-ship sweep focused on paywall activation, App Check enforcement, and backup/restore behavior for new vs existing users.
+- [x] **P1 — Backup restore founding bypass.** Fresh v2.0.0 install restoring a pre-v1.23.0 backup introduced `onboardingComplete='true'` without `founding_check_done`, which would have granted founding Pro on the next cold start. **Fixed by writing `kvSet('founding_check_done', 'true')` immediately after `reopenDb()` in `importBackup`.**
+- [x] **P2 — Restore flow race condition.** `useEntitlement.restore()` called the hook's `restorePurchases()` (returns `Promise<void>`) and let the `availablePurchases` effect persist Pro in a later render tick — callers reading `isProUser()` right after `await restore()` flashed "No purchases found". **Fixed by importing top-level `getAvailablePurchases` and processing the pro purchase synchronously inside `restore()` (finishTransaction + setProStatus before the await resolves).** The `availablePurchases` effect keeps its `!isProUser()` guard so there's no double-process.
+- [x] Gemini: clean pass, no findings.
+- [x] `npx tsc --noEmit` — 0 errors.
+- [x] `npx jest` — 28 suites / 614 tests passing.
+
+---
+
+## POST-v2.0.0 BACKLOG
+
+The active backlog now that v2.0.0 is out. Items pulled forward from the pre-v2.0.0 backlog.
+
+- **Node.js 20 → 22 runtime upgrade for Cloud Functions** — Node 20 deprecated April 30, 2026; decommissioned October 30, 2026. Bump `functions/package.json` engines to `"node": "22"` and re-deploy. Only affects the `checkersAI` function.
+- **Firebase namespaced API → modular v22 migration** — `firestore.ts` still uses the namespaced default export pattern (`import firestore from '@react-native-firebase/firestore'` → `firestore.Timestamp.now()`). Modular v22 requires `import { getFirestore, Timestamp } from '@react-native-firebase/firestore'`. Pair with the Firebase SDK major bump.
+- **Store screenshot refresh with v2.0.0 features** — current 8 screenshots predate the Pro paywall, multiplayer lobbies, icon theme toggle, and chrome trivia art. Full refresh required to match what users install.
+- **Feature graphic + icon refresh** — 1024×500 feature graphic and 512×512 app icon both predate the Pro tier + icon theme work.
+- **OAuth consent screen verification** — required once Google Sign-In moves past the testing-mode threshold or wants to stop showing the "unverified app" warning on the calendar write scope. ~3-5 business day Google review.
+- **Widget emoji cleanup (ImageWidget R&D)** — widgets still render emoji in several slots. Needs an `ImageWidget` wrapper before emoji can be fully swept from widget layouts.
+- **Add holidays to calendar** — holiday data source + overlay on `CalendarScreen`.
+- **Pin toggle + expanded alarm picker** — widget pin management from within the alarm/reminder editor; expanded icon set for the alarm picker beyond the current emoji set.
+- **NoteEditorModal redesign** — larger redesign pass on the note editor (toolbar layout, content-first hierarchy).
+- **`.claude/settings.local.json` gitignore fix** — local Claude Code settings file should be in `.gitignore`; currently committable.
 
 ---
 
@@ -53,8 +79,8 @@
 | 5.5 | Premium Foundation | ✅ Done | Dev + Prod |
 | 6 | Chess + Checkers + Blunder Roast | ✅ Done | Prod only |
 | 6.5 | Voice Content Expansion | 🟡 Partial | Prod only |
-| 7 | Pro Tier + Billing | 🟡 Core Done | Dev (v1.23.0 awaiting ship) |
-| 8 | Firebase Online + Multiplayer | ✅ Multiplayer + Icons Done | Dev (v2.0.0 — App Check remaining) |
+| 7 | Pro Tier + Billing | ✅ Done | Dev + Prod (v2.0.0) |
+| 8 | Firebase Online + Multiplayer | ✅ Done (App Check + Multiplayer + Icons) | Dev + Prod (v2.0.0) |
 
 > **Note:** P8 was pulled forward and its Auth + Firestore foundation landed in Session 30 alongside P5, because P5 required Firebase Auth to sign the user in for Google Calendar access. Session 32 added **Cloud Checkers AI** as the first Cloud Functions deployment (public unauth endpoint — App Check deferred to pre-Pro launch). **Multiplayer chess, checkers, and trivia are the flagship v2.0.0 feature** — active pre-launch work, the major addition that justifies the version jump and gives Pro something worth paying for. Online riddles also remain pre-launch. Global leaderboards stay post-2.0.
 
@@ -426,6 +452,7 @@
 - [x] **7.3 Founding user display** — `runFoundingMigration()` in `src/services/foundingStatus.ts` runs on first launch. Existing users (detected via `kvGet('onboardingComplete') === 'true'`) get auto-granted Pro with `productId: 'founding_user'` AND a `founding_status` kv entry. Settings shows a dedicated "Founding User" card with the founding badge for these users. Idempotent — `founding_check_done` flag prevents re-runs.
 - [x] **7.6 Game trial system** — `gameTrialStorage.ts` — 3 free rounds per game across Chess, Checkers, Trivia, Sudoku, Memory Match. Counter incremented on game launch (only for non-Pro users), trial-remaining badge rendered on each game card. Pro users see a "PRO" badge instead. Once trials are used up, tapping the game opens the ProGate paywall modal.
 - [x] **Google Calendar write-back (P5 extension)** — `calendarSync.ts` — Pro-gated manual sync that creates a dedicated "Don't Forget Why" calendar in the user's Google account, pushes active alarms + reminders as events with a stable `gcal_sync_map` (item id → event id) preventing duplicates on re-sync. Recurring alarms use `RRULE:FREQ=WEEKLY;BYDAY=...` with a stable DTSTART derived from `alarm.createdAt`. 401 → token refresh, 403 → re-request `calendar` write scope. Delete failures preserve the mapping so retries are idempotent. Sync map intentionally preserved on sign-out so re-signing the same account doesn't dupe events.
+- [x] **7.8 Pro activation** — v2.0.0. Founding gate reverted (`onboardingComplete` check), backup bypass sealed (`founding_check_done` written post-restore in `importBackup`), ProGate benefits updated (Multiplayer Games, Icon Themes), restore race condition fixed (purchases processed synchronously in `restore()` via top-level `getAvailablePurchases`).
 
 ### Remaining (Deferred)
 
@@ -463,7 +490,7 @@
 - [x] **Multiplayer checkers** (Session 39) — same architecture as chess, shares `multiplayer.ts` service.
 - [x] **Multiplayer trivia** (Session 39) — `multiplayerTrivia.ts` service + `useMultiplayerTrivia` hook + `MultiplayerTriviaGame` inner component. 2-4 players, lobby with host-controlled start, quiz-bowl rotation with steal mechanic, host advances questions, 15s per-question timer. Host promotion on leave so game never deadlocks.
 - [x] Cloud Stockfish AI for chess (Session 31) — Lichess cloud eval API, **free for everyone** (not a Pro upgrade)
-- [ ] Cloud endpoint auth (Firebase App Check) — before Pro launch. Checkers Cloud Function is currently public/unauth.
+- [x] **App Check** (v2.0.0) — Play Integrity attestation on client via `@react-native-firebase/app-check` (initialized at module scope in `App.tsx` with debug provider for dev, `playIntegrity` for production). Cloud Function `verifyToken` enforcement on `X-Firebase-AppCheck` header. Firestore enforcement enabled via Firebase Console (no rules change). Cloud Run IAM set to "Allow public access" — App Check handles auth at the application layer so the Cloud Function can return meaningful 401 responses instead of IAM rejecting before code runs. Debug tokens registered in Firebase Console for dev builds.
 
 ---
 
@@ -473,8 +500,7 @@ Grouped by functional area so related work ships together. Within each group, it
 
 ### Pre-Launch Blockers (required before Pro goes live at v2.0.0)
 
-- **Cloud endpoint auth (Firebase App Check)** — Checkers Cloud Function at `checkersai-kte3lby5vq-uc.a.run.app` is currently public/unauth. Must be locked down before Pro launch exposes billing surfaces.
-- **OAuth consent screen verification** — Required if/when Google Sign-In moves past `calendar.readonly` + `calendar` write scope combo. Currently unverified (shows warning).
+- ✅ All pre-launch blockers resolved in v2.0.0 ship (App Check enforced, Pro activation live). OAuth consent screen verification moved to Post-v2.0.0 Backlog.
 
 ### Games (Chess, Checkers, Sudoku, Trivia, Memory Match, Daily Riddle, Guess Why)
 
@@ -613,3 +639,4 @@ See `DFW-Features.md` §Pro Tier for the canonical tier breakdown (what's Pro-ga
 | Apr 22 | Session 33: **Nav button chrome circle restoration + GamesScreen sizing pass.** Restored the chrome circle background on `BackButton`, `HomeButton`, and `GameNavButtons` for the chrome and mixed icon themes — the Session 32 resolver rewire had stripped the circles and kept toon-scale 40×40 sizing, leaving the chrome glyphs floating bare on every screen. `isChrome = iconTheme !== 'anthropomorphic'` discriminator now drives a branch: chrome path wraps the icon in a 36×36 circle with a mode-aware bg (`rgba(30,30,40,0.8)` when `forceDark || colors.mode === 'dark'`, `rgba(0,0,0,0.15)` on light themes) + 22×22 glyph; anthropomorphic path keeps the bare 40×40 character art. Outer `TouchableOpacity` always exposes a 44×44 min touch target. `forceDark` is now functional on `BackButton`/`HomeButton` (declared but unused in Session 32). `GameNavButtons` hardcodes the dark bg variant (game screens always sit on the dark photo overlay). **Spacing alignment:** `GameNavButtons` container changed from `left: 16` + `gap: 8` to `left: 20` with no gap, matching the productivity-screen `headerBack left: 20 / headerHome left: 64` pattern exactly. **GamesScreen sizing pass:** all 7 card glyphs (lightbulb, chess, checkers, trivia, sudoku, memory, chart) bumped 32×32 → 48×48; streak fire icon 16×16 → 20×20; corner globe `globeImage` 24×24 → 28×28 (`globeBadge` container kept at 24×24 for absolute positioning). Chrome trivia art now reads as deliberate brand glyphs in the card rows instead of small placeholders. **Obsolete:** the queued Session 31 `batch-nav-buttons.md` prompt is now fully covered by Sessions 32 + 33; no longer needed. **28 test suites / 615 tests passing**, `npx tsc --noEmit` clean. Manual verification on a device required for the three icon-theme modes + light/dark theme bg variants. |
 | Apr 22 | Session 32: **Icon Resolver Fix + Chrome Trivia Icons.** Fixed Session 31 resolver bypass — 20+ screens rewired from hardcoded toon paths to `useAppIcon()` / `resolveIconWithTheme()`. Generated and processed 28 chrome trivia/utility icons (512×512 WebP, transparent bg, in `assets/TriviaChrome/`). Expanded `iconResolver.ts` with ~30 new IconKeys spanning media controls, trivia categories, and game-card visuals. **Game screens migrated:** GamesScreen, MemoryScoreScreen, ChessScreen, CheckersScreen, DailyRiddleScreen — card/header icons now flow through the resolver. **Trivia screens migrated:** TriviaScreen + SubcategoryPickerModal moved from static maps to theme-reactive `useMemo` maps keyed on `useIconTheme()`. **Nav buttons:** BackButton/HomeButton route through the resolver — chrome arrow/house in mixed, toon game icons in anthropomorphic. **Media flows:** every `mediaIcons.tsx` consumer (VoiceMemoDetailScreen, VoiceRecordScreen, VoiceMemoCard, NoteVoiceMemo, TimerScreen, SoundPickerModal) now resolves through `useAppIcon('media.*')`. **closeX sweep:** `APP_ICONS.loss` → `useAppIcon('closeX')` across CreateAlarmScreen, CreateReminderScreen, NoteImageStrip, TimerScreen, VoiceMemoDetailScreen, VoiceRecordScreen, NoteVoiceMemo. **DrawingCanvas:** pencil/erase/undo/trash all routed through resolver. **Chrome assets activated:** the `media.record` and `ui.undo` mixed-mode paths now point at `assets/TriviaChrome/chrome-record.webp` and `chrome-undo.webp` instead of the toon fallback. **28 test suites / 615 tests passing**, `npx tsc --noEmit` clean, triple audit clean. Only intentional exclusion: `SudokuScreen` keeps direct `MEDIA_ICONS.gamePlay` / `MEDIA_ICONS.pause` use — see Decisions doc. |
 | Apr 21 | Session 31: **Toon icon wiring + circle removal.** Swapped `mediaIcons.tsx` to toon assets in `assets/toon-app-icons/` (8 media icons). Replaced 4 emoji in `DrawingCanvas.tsx` with WebP icons (pen/eraser/undo/clear); added `undo` key to `appIconAssets.ts`. Stripped circle backgrounds from icon buttons across 11 files: VoiceMemoDetailScreen (media controls, playback mode, save/trash, clip delete, photo delete, toolbar), NoteEditorToolbar (5 buttons), VoiceMemoCard, NoteVoiceMemo, VoiceRecordScreen (all controls + camera), NotepadScreen FAB, VoiceMemoListScreen FAB, NoteImageStrip photo delete. Replaced `GlowIcon` with plain `Image` on voice screens. Swapped `APP_ICONS.closeX` → `APP_ICONS.loss` (toon red X) at all delete/dismiss buttons in changed files. New `icon-record.webp` replaces microphone on VoiceRecordScreen. Fixed playAll-with-1-clip (now repeats) and stop-after-clip (now pauses). Icon size bumps + spacing on voice memo detail media controls. **28 test suites / 615 tests passing**, `npx tsc --noEmit` clean. Triple audit (Codex + Claude + Gemini) clean — two minor fixes applied (stale GlowIcon on clip play, unused microphoneIcon variable). **Pending:** 3 circle-removal prompts written (alarm/reminder, timer/sound, nav buttons). 21 chrome icon generation prompts written (trivia categories + undo + record). |
+| Apr 22 | Session 41: **v2.0.0 shipped — Pro tier activated, App Check enforced, paywall live.** **App Check:** `@react-native-firebase/app-check` initialized at module scope in `App.tsx` with debug provider in `__DEV__` / `playIntegrity` provider in production. `cloudCheckers.ts` attaches the attestation token via `X-Firebase-AppCheck` header; `functions/src/index.ts` verifies every request with `getAppCheck().verifyToken()` and rejects missing/invalid tokens with 401 before processing. Firestore enforcement enabled via the Firebase Console (no rules change needed — enforcement is a project-level toggle). Cloud Run IAM kept at "Allow public access" — App Check handles auth at the application layer so the Cloud Function can return its own 401 responses instead of IAM rejecting before code runs. Debug tokens registered in Firebase Console for local dev builds. `cloudStockfish.ts` intentionally skipped — it calls Lichess (not a Firebase endpoint). **Pro tier activation:** founding gate reverted in `foundingStatus.ts` — `runFoundingMigration()` only grants founding Pro when `kvGet('onboardingComplete') === 'true'` (set by pre-v2.0.0 installs). Fresh v2.0.0 installs skip the grant and hit the paywall. Idempotent via `founding_check_done` flag. ProGate benefits updated: Multiplayer Games + Icon Themes added to the feature list. **Pre-ship triple audit (Codex + Claude + Gemini):** 1 P1 + 1 P2 found, both fixed. **P1 — Backup restore founding bypass:** fresh v2.0.0 install restoring a pre-v1.23.0 backup (which carries `onboardingComplete='true'` but no `founding_check_done`) would grant founding Pro on the next cold start. Fixed by writing `kvSet('founding_check_done', 'true')` immediately after `reopenDb()` in `importBackup`. Both legit and illicit restorations now follow the paywall path — pre-v1.23.0 users who restore their own backup no longer get auto-founding, accepted trade-off since that scenario also closes the "share a backup to grant founding Pro" leak. **P2 — Restore flow race condition:** `useEntitlement.restore()` called the hook's `restorePurchases()` (returns `Promise<void>`) and relied on the `availablePurchases` effect to persist Pro in a later render tick. Callers reading `isProUser()` right after `await restore()` flashed "No purchases found". Fixed by importing top-level `getAvailablePurchases` (value-returning, per expo-iap's own docs) and processing the Pro purchase synchronously inside `restore()` — `finishTransaction` + `setProStatus` + `setIsPro(true)` all before the awaited promise resolves. The `availablePurchases` effect keeps its `!isProUser()` guard so there's no double-process. Gemini clean pass. **28 suites / 614 tests passing**, `npx tsc --noEmit` clean. **v2.0.0 (versionCode 44) uploaded to Play Store, awaiting review.** |
