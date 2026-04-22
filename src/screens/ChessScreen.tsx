@@ -215,6 +215,7 @@ export default function ChessScreen({ navigation, route }: Props) {
   useIconTheme();
   const chevronLeftIcon = useAppIcon('ui.chevronLeft');
   const chevronRightIcon = useAppIcon('ui.chevronRight');
+  const chessCardIcon = useAppIcon('card.chess');
 
   const [selectedColor, setSelectedColor] = useState<'w' | 'b'>('w');
   const [selectedDifficulty, setSelectedDifficulty] = useState(2);
@@ -870,7 +871,7 @@ export default function ChessScreen({ navigation, route }: Props) {
           accessibilityLabel="Play against CPU"
         >
           <Image
-            source={require('../../assets/icons/icon-chess.webp')}
+            source={chessCardIcon}
             style={styles.modeCardIcon}
             resizeMode="contain"
           />
@@ -1696,7 +1697,7 @@ export default function ChessScreen({ navigation, route }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
         <GameNavButtons topOffset={insets.top + 10} />
         <View style={styles.header}>
-          <Image source={require('../../assets/icons/icon-chess.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+          <Image source={chessCardIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </View>
         <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Chess</Text>
         {renderBody()}

@@ -42,6 +42,10 @@ export default function GamesScreen({ navigation }: Props) {
   const offlineGlobeIcon = useAppIcon('card.offlineGlobe');
   const sudokuIcon = useAppIcon('card.sudoku');
   const chartIcon = useAppIcon('card.chart');
+  const chessCardIcon = useAppIcon('card.chess');
+  const checkersCardIcon = useAppIcon('card.checkers');
+  const triviaCardIcon = useAppIcon('card.trivia');
+  const memoryCardIcon = useAppIcon('card.memoryMatch');
 
   const [riddleStreak, setRiddleStreak] = useState(0);
   const tutorial = useTutorial('games');
@@ -327,7 +331,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={require('../../assets/icons/icon-chess.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={chessCardIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Chess</Text>
@@ -362,7 +366,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={require('../../assets/icons/icon-checkers.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={checkersCardIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Checkers</Text>
@@ -397,7 +401,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={require('../../assets/trivia/trivia-general.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={triviaCardIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trivia</Text>
@@ -464,7 +468,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={require('../../assets/memory-match/card-back.webp')} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={memoryCardIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Memory Guy Match</Text>

@@ -38,6 +38,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
   const fireIcon = useAppIcon('flame');
   const starIcon = useAppIcon('status.star');
   const booksIcon = useAppIcon('trivia.books');
+  const searchIcon = useAppIcon('search');
 
   const {
     mode, setMode,
@@ -493,7 +494,7 @@ export default function DailyRiddleScreen({ navigation }: Props) {
             accessibilityLabel="Reveal answer"
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Image source={require('../../assets/icons/icon-magnify.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+              <Image source={searchIcon} style={{ width: 18, height: 18 }} resizeMode="contain" />
               <Text style={styles.revealBtnText}>Reveal Answer</Text>
             </View>
           </TouchableOpacity>

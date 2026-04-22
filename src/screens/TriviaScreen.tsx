@@ -165,14 +165,14 @@ export default function TriviaScreen({ navigation, route }: Props) {
   const { theme } = useIconTheme();
 
   const CATEGORY_IMAGES = useMemo((): Record<TriviaParentCategory, ImageSourcePropType> => ({
-    general: require('../../assets/trivia/trivia-general.webp'),
+    general: resolveIconWithTheme('trivia.general', theme),
     popCulture: resolveIconWithTheme('trivia.popcorn', theme),
     scienceTech: resolveIconWithTheme('trivia.science', theme),
     historyPolitics: resolveIconWithTheme('trivia.history', theme),
     geography: resolveIconWithTheme('trivia.geography', theme),
     sportsLeisure: resolveIconWithTheme('trivia.recliner', theme),
     gamingGeek: resolveIconWithTheme('trivia.d20', theme),
-    mythFiction: require('../../assets/trivia/scroll_icon.webp'),
+    mythFiction: resolveIconWithTheme('trivia.mythFiction', theme),
   }), [theme]);
 
   // Phase state (CPU)

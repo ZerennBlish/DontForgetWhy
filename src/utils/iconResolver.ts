@@ -33,6 +33,11 @@ export type IconKey =
   | 'checker.regular.dark' | 'checker.king.dark'
   // Game-card visuals
   | 'card.sudoku' | 'card.chart' | 'card.globe' | 'card.offlineGlobe'
+  // Game card icons (GamesScreen + MemoryScoreScreen)
+  | 'card.chess' | 'card.checkers' | 'card.trivia'
+  | 'card.memoryMatch' | 'card.guessWhy'
+  // Trivia categories that previously had no chrome version
+  | 'trivia.general' | 'trivia.mythFiction' | 'trivia.gadgets'
   // Status glyphs
   | 'status.star' | 'status.win' | 'status.loss' | 'status.hourglass'
   | 'status.smiley' | 'status.party' | 'status.quick'
@@ -207,6 +212,22 @@ export function resolveIconWithTheme(
         return require('../../assets/trivia/game_controller.webp');
       case 'trivia.comics':
         return require('../../assets/trivia/explosion_speech_bubble.webp');
+      case 'card.chess':
+        return require('../../assets/icons/icon-chess.webp');
+      case 'card.checkers':
+        return require('../../assets/icons/icon-checkers.webp');
+      case 'card.trivia':
+        return require('../../assets/trivia/trivia-general.webp');
+      case 'card.memoryMatch':
+        return require('../../assets/memory-match/card-back.webp');
+      case 'card.guessWhy':
+        return require('../../assets/icons/guess-why.webp');
+      case 'trivia.general':
+        return require('../../assets/trivia/trivia-general.webp');
+      case 'trivia.mythFiction':
+        return require('../../assets/trivia/scroll_icon.webp');
+      case 'trivia.gadgets':
+        return require('../../assets/trivia/lightbulb_icon.webp');
     }
     // Game keys fall through to mixed handling below.
   }
@@ -331,6 +352,22 @@ export function resolveIconWithTheme(
         return CHROME_GAME_ICONS.triviaVideogames;
       case 'trivia.comics':
         return CHROME_GAME_ICONS.triviaComics;
+      case 'card.chess':
+        return require('../../assets/TriviaChrome/chrome-chess-card.webp');
+      case 'card.checkers':
+        return require('../../assets/TriviaChrome/chrome-checkers-card.webp');
+      case 'card.trivia':
+        return require('../../assets/TriviaChrome/chrome-brain.webp');
+      case 'card.memoryMatch':
+        return require('../../assets/TriviaChrome/chrome-memory-cards.webp');
+      case 'card.guessWhy':
+        return require('../../assets/TriviaChrome/chrome-question-mark.webp');
+      case 'trivia.general':
+        return require('../../assets/TriviaChrome/chrome-question-mark.webp');
+      case 'trivia.mythFiction':
+        return require('../../assets/TriviaChrome/chrome-mystical-scroll.webp');
+      case 'trivia.gadgets':
+        return require('../../assets/TriviaChrome/chrome-lightbulb.webp');
     }
     // Utility/abstract fall through to mixed handling below.
   }
@@ -554,6 +591,22 @@ export function resolveIconWithTheme(
       return require('../../assets/trivia/game_controller.webp');
     case 'trivia.comics':
       return require('../../assets/trivia/explosion_speech_bubble.webp');
+    case 'card.chess':
+      return require('../../assets/icons/icon-chess.webp');
+    case 'card.checkers':
+      return require('../../assets/icons/icon-checkers.webp');
+    case 'card.trivia':
+      return require('../../assets/trivia/trivia-general.webp');
+    case 'card.memoryMatch':
+      return require('../../assets/memory-match/card-back.webp');
+    case 'card.guessWhy':
+      return require('../../assets/icons/guess-why.webp');
+    case 'trivia.general':
+      return require('../../assets/trivia/trivia-general.webp');
+    case 'trivia.mythFiction':
+      return require('../../assets/trivia/scroll_icon.webp');
+    case 'trivia.gadgets':
+      return require('../../assets/trivia/lightbulb_icon.webp');
   }
 
   // Compile-time exhaustiveness check — TypeScript errors here if any

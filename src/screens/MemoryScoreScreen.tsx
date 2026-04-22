@@ -20,17 +20,11 @@ import { hapticLight, hapticHeavy } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import { GameNavButtons } from '../components/GameNavButtons';
 import { useAppIcon } from '../hooks/useAppIcon';
+import { resolveIconWithTheme } from '../utils/iconResolver';
+import { useIconTheme } from '../hooks/useIconTheme';
 import type { RootStackParamList } from '../navigation/types';
 import type { ThemeColors } from '../theme/colors';
 import type { TriviaStats, TriviaCategory } from '../types/trivia';
-
-const SECTION_ICONS: Record<string, ImageSourcePropType> = {
-  guessWhy: require('../../assets/icons/guess-why.webp'),
-  chess: require('../../assets/icons/icon-chess.webp'),
-  checkers: require('../../assets/icons/icon-checkers.webp'),
-  trivia: require('../../assets/trivia/trivia-general.webp'),
-  memoryMatch: require('../../assets/memory-match/card-back.webp'),
-};
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MemoryScore'>;
 
@@ -115,6 +109,16 @@ export default function MemoryScoreScreen({ navigation }: Props) {
   const skipIcon = useAppIcon('ui.skip');
   const starIcon = useAppIcon('status.star');
   const sudokuIcon = useAppIcon('card.sudoku');
+
+  const { theme } = useIconTheme();
+
+  const SECTION_ICONS = useMemo((): Record<string, ImageSourcePropType> => ({
+    guessWhy: resolveIconWithTheme('card.guessWhy', theme),
+    chess: resolveIconWithTheme('card.chess', theme),
+    checkers: resolveIconWithTheme('card.checkers', theme),
+    trivia: resolveIconWithTheme('card.trivia', theme),
+    memoryMatch: resolveIconWithTheme('card.memoryMatch', theme),
+  }), [theme]);
 
   const [guessWhyStats, setGuessWhyStats] = useState<GuessWhyStats>({
     wins: 0, losses: 0, skips: 0, streak: 0, bestStreak: 0,

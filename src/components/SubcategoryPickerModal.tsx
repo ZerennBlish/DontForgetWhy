@@ -62,25 +62,25 @@ export default function SubcategoryPickerModal({
   const { theme } = useIconTheme();
 
   const PARENT_IMAGES = useMemo((): Record<TriviaParentCategory, ImageSourcePropType> => ({
-    general: require('../../assets/trivia/trivia-general.webp'),
+    general: resolveIconWithTheme('trivia.general', theme),
     popCulture: resolveIconWithTheme('trivia.popcorn', theme),
     scienceTech: resolveIconWithTheme('trivia.science', theme),
     historyPolitics: resolveIconWithTheme('trivia.history', theme),
     geography: resolveIconWithTheme('trivia.geography', theme),
     sportsLeisure: resolveIconWithTheme('trivia.recliner', theme),
     gamingGeek: resolveIconWithTheme('trivia.d20', theme),
-    mythFiction: require('../../assets/trivia/scroll_icon.webp'),
+    mythFiction: resolveIconWithTheme('trivia.mythFiction', theme),
   }), [theme]);
 
   const SUBCATEGORY_IMAGES = useMemo((): Record<TriviaSubcategory, ImageSourcePropType> => ({
-    generalKnowledge: require('../../assets/trivia/trivia-general.webp'),
+    generalKnowledge: resolveIconWithTheme('trivia.general', theme),
     film: resolveIconWithTheme('trivia.movies', theme),
     music: resolveIconWithTheme('trivia.music', theme),
     television: resolveIconWithTheme('trivia.television', theme),
     celebrities: resolveIconWithTheme('trivia.celebrities', theme),
     scienceNature: resolveIconWithTheme('trivia.science', theme),
     computers: resolveIconWithTheme('trivia.computers', theme),
-    gadgets: require('../../assets/trivia/lightbulb_icon.webp'),
+    gadgets: resolveIconWithTheme('trivia.gadgets', theme),
     mathematics: resolveIconWithTheme('trivia.math', theme),
     history: resolveIconWithTheme('trivia.history', theme),
     politics: resolveIconWithTheme('trivia.politics', theme),
@@ -91,7 +91,7 @@ export default function SubcategoryPickerModal({
     vehicles: resolveIconWithTheme('trivia.vehicles', theme),
     videoGames: resolveIconWithTheme('trivia.videogames', theme),
     comicsAnime: resolveIconWithTheme('trivia.comics', theme),
-    mythologyBooks: require('../../assets/trivia/scroll_icon.webp'),
+    mythologyBooks: resolveIconWithTheme('trivia.mythFiction', theme),
   }), [theme]);
 
   const { totalCount, subs } = useMemo(() => {

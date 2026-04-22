@@ -97,7 +97,8 @@
       "Bash([ ! -f \"/mnt/c/DontForgetWhy/$f\" ])",
       "Bash(echo \"EXIT CODE: $?\")",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(git check-attr *)"
+      "Bash(git check-attr *)",
+      "Bash(echo \"TSC_EXIT=$?\")"
     ]
   }
 }

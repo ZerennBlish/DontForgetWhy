@@ -161,6 +161,7 @@ export default function CheckersScreen({ navigation, route }: Props) {
   // resolveIcon at render time) reflects the current theme on re-render.
   useIconTheme();
   const chevronRightIcon = useAppIcon('ui.chevronRight');
+  const checkersCardIcon = useAppIcon('card.checkers');
 
   const [selectedColor, setSelectedColor] = useState<PieceColor>('r');
   const [selectedDifficulty, setSelectedDifficulty] = useState(2);
@@ -700,7 +701,7 @@ export default function CheckersScreen({ navigation, route }: Props) {
           accessibilityLabel="Play against CPU"
         >
           <Image
-            source={require('../../assets/icons/icon-checkers.webp')}
+            source={checkersCardIcon}
             style={styles.modeCardIcon}
             resizeMode="contain"
           />
@@ -1233,7 +1234,7 @@ export default function CheckersScreen({ navigation, route }: Props) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}>
         <GameNavButtons topOffset={insets.top + 10} />
         <View style={styles.header}>
-          <Image source={require('../../assets/icons/icon-checkers.webp')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+          <Image source={checkersCardIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </View>
         <Text style={[styles.title, { textAlign: 'center', marginTop: 0 }]}>Checkers</Text>
         {renderBody()}
