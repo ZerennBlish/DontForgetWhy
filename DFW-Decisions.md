@@ -4,6 +4,12 @@
 
 **For Sessions 1-28 decision history, see DFW-Decisions-Archive.md.**
 
+### Session 32 Additions (Icon Work, Apr 22)
+
+- **SudokuScreen excluded from media icon migration (Session 32)** — `SudokuScreen` continues to use `MEDIA_ICONS.gamePlay` and `MEDIA_ICONS.pause` directly via `<GlowIcon source={...}>`. `gamePlay` is the green character play icon — inherently toon, with no chrome equivalent that makes sense in a game-row hint context. Game screens in mixed mode show toon art by design; the chrome theme swaps board pieces only, not the in-game cue glyphs. Documented as an intentional exclusion, not a missed migration. If a chrome equivalent is ever added, the path is to introduce a new `card.gamePlay` (or similar) `IconKey`, wire it through the three resolver branches, and swap both `GlowIcon source` props to `useAppIcon()` results.
+
+- **Trivia icon theme strategy (Session 32)** — Parent categories and subcategories route through `resolveIconWithTheme()` inside a `useMemo` in the component body of `TriviaScreen` and `SubcategoryPickerModal`, rather than via static module-level `Record` constants. Reason: the static-const pattern resolves at module-eval time, so a Pro user toggling theme in Settings would not see trivia tiles update without a full screen unmount/remount. The `useMemo([theme])` pattern recomputes the map in the same React batch as the theme change, matching how `useAppIcon` re-renders single-icon consumers. The 5 entries that originally had no chrome equivalent (`trivia.general`, `trivia.mythFiction`, `trivia.gadgets`, plus the corresponding `generalKnowledge` / `mythologyBooks` subcategory aliases) now have chrome assets in `assets/TriviaChrome/` and route through dedicated `IconKey`s. **Followup:** `assets/icons/icon-magnify.webp` is orphaned after `DailyRiddleScreen`'s migration to `useAppIcon('search')` — flagged as a cleanup candidate, not deleted in Session 32.
+
 ### Session 31 Additions (Apr 21)
 
 - **Toon icons wired before theme infrastructure (Session 31)** — Went straight to swapping icons and removing circles rather than building Phase 0-4 resolver infrastructure first. Visual progress now, theme system wraps it later. Direct `require()` swaps in `mediaIcons.tsx` and hardcoded `APP_ICONS.loss` references will be migrated to `useAppIcon()` during Phase 3.

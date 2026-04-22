@@ -832,6 +832,7 @@ Extends the static two-tier split described in §5 ("Two-Tier Icon System") with
 - `assets/chess/`, `assets/checkers/` — anthropomorphic piece art (existing).
 - `assets/chrome-game/` — **new.** Silver game-surface art split into `chess/`, `checkers/`, `cards/`, `status/`, `ui/`, `trivia/` (38 files total).
 - `assets/toon-app-icons/` — **new.** Character-art versions of the utility glyphs (24 files).
+- `assets/TriviaChrome/` — **Session 32.** 28 chrome trivia/utility icons (512×512 WebP, transparent bg) covering parent + subcategory trivia art, the chrome game cards (`chrome-chess-card`, `chrome-checkers-card`, `chrome-brain`, `chrome-memory-cards`, `chrome-question-mark`, `chrome-mystical-scroll`, `chrome-lightbulb`), and chrome `media.record` + `ui.undo` glyphs that previously fell back to toon assets.
 
 ### Service Layer — `src/services/iconTheme.ts`
 
@@ -844,7 +845,7 @@ Extends the static two-tier split described in §5 ("Two-Tier Icon System") with
 
 Single source of truth. Exports:
 
-- `IconKey` — union of 72 string literals covering utility glyphs, abstract/structural keys (`closeX`, `checkmark`, `backArrow`, `home`), decorative keys (`hammock`, `house`, `couch`, `beach-chair`), chess pieces (12), checker pieces (4), game cards (4), status glyphs (7), UI controls (7), and trivia categories (5).
+- `IconKey` — union of ~105 string literals covering utility glyphs (25), abstract/structural keys (`closeX`, `checkmark`, `backArrow`, `home`), decorative keys (`hammock`, `house`, `couch`, `beach-chair`), chess pieces (12), checker pieces (4), game-card visuals (9 — including Session 32's `card.chess` / `card.checkers` / `card.trivia` / `card.memoryMatch` / `card.guessWhy`), status glyphs (7), UI controls (8 incl. `ui.undo`), media controls (9), and trivia categories (24 — chrome set + parent + subcategory + Session 32's `trivia.general` / `trivia.mythFiction` / `trivia.gadgets`).
 - `resolveIcon(key): ImageSourcePropType` — reads the current theme via `getIconTheme()`. For use in non-hook utility modules.
 - `resolveIconWithTheme(key, theme): ImageSourcePropType` — pure function. Used by the hooks + all tests.
 
@@ -855,7 +856,7 @@ Layered switch: (1) decorative keys are theme-independent; (2) anthropomorphic o
 Flat maps from semantic name → `require()`'d `ImageSourcePropType`:
 
 - `src/data/appIconAssets.ts` — chrome utility + a few character-art aliases (`save`, `edit`, `star`, `win`, etc.). Historical layout predates the dual-theme split.
-- `src/utils/chromeGameAssets.ts` — 39 keys across chess pieces, checkers pieces, cards, status, UI, trivia. Consumed only when `iconTheme === 'chrome'`.
+- `src/utils/chromeGameAssets.ts` — 58 keys across chess pieces (12), checkers pieces (4), cards (4), status (7), UI (7), and trivia (24 = 5 utility/category icons + 19 trivia parent + subcategory entries added in Session 32 pointing at `assets/TriviaChrome/`). Consumed only when `iconTheme === 'chrome'`.
 - `src/utils/toonAppIcons.ts` — 24 keys for toon utility glyphs. Consumed only when `iconTheme === 'anthropomorphic'`.
 
 Mixed-mode game art and anthropomorphic overrides for abstract keys (`closeX` → `icon-loss`, `checkmark` → `icon-win`, `backArrow` → `icon-game-back`, `home` → `icon-game-home`) are inlined as `require()`s in the resolver rather than placed in a registry — a deliberate trade-off. Future cleanup is tracked under audit finding P2-2.
@@ -901,7 +902,7 @@ The following assets are intentionally **not** routed through the resolver — t
 
 - Memory Match card faces (`guess-why*.webp`, `guess-right.webp`, `guess-wrong.webp`, guess-why category cards).
 - Calendar empty-state decorative illustrations (routed under the decorative `IconKey`s — theme-independent).
-- Media controls (`play`, `pause`, `stop`, `repeat`, `play-all`, `play-stop`, `skip-back`, `skip-forward`) via `src/assets/mediaIcons.tsx`.
+- Media controls (`play`, `pause`, `stop`, `repeat`, `play-all`, `play-stop`, `skip-back`, `skip-forward`) via `src/assets/mediaIcons.tsx`. **Note (Session 32):** `mediaIcons.tsx` is now legacy — its `MEDIA_ICONS` registry is only consumed directly by `SudokuScreen` (intentional game-context exception, see Decisions doc). All other consumers (VoiceMemoDetail, VoiceRecord, VoiceMemoCard, NoteVoiceMemo, Timer, SoundPicker) route through `useAppIcon('media.*')`. The `GlowIcon` wrapper component in the same file is still used as a layout/glow component by `NoteVoiceMemo` and `SudokuScreen` — that's a layout primitive, not the icons registry.
 - Screen backgrounds (`chessbg.webp`, `checkers-bg.webp`, user-supplied photo backgrounds).
 - Trivia category icons used in specific screen layouts (MemoryScoreScreen rank badges, etc.).
 - Game-header chrome (`icon-chess.webp`, `icon-checkers.webp`, `icon-magnify.webp`) — used as brand glyphs, not as theme-aware surfaces.
