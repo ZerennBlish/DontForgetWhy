@@ -388,22 +388,17 @@ describe('validateBackup', () => {
 // importBackup — post-restore founding migration
 // ---------------------------------------------------------------------------
 
-describe('importBackup post-restore founding migration', () => {
+describe('importBackup does NOT run founding migration (v2.0.0 paywall)', () => {
   beforeEach(() => {
     mockedRunFoundingMigration.mockReset();
   });
 
-  it('calls runFoundingMigration after a successful restore', async () => {
+  it('does NOT call runFoundingMigration after a successful restore', async () => {
+    // v2.0.0: restoring a backup must never trigger the founding grant.
+    // A pre-v1.23.0 backup carries onboardingComplete='true', so calling
+    // the migration here would let any old backup bypass the paywall.
     setupValidBackup();
     await importBackup('file:///mock/test.dfw');
-    expect(mockedRunFoundingMigration).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not throw if runFoundingMigration throws', async () => {
-    setupValidBackup();
-    mockedRunFoundingMigration.mockImplementationOnce(() => {
-      throw new Error('boom');
-    });
-    await expect(importBackup('file:///mock/test.dfw')).resolves.toBeUndefined();
+    expect(mockedRunFoundingMigration).not.toHaveBeenCalled();
   });
 });

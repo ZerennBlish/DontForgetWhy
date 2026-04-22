@@ -48,19 +48,19 @@ import type { RootStackParamList } from './src/navigation/types';
 import { FONTS } from './src/theme/fonts';
 import appCheck from '@react-native-firebase/app-check';
 
-// Initialize App Check before any Firebase service call. Debug provider
-// in development so dev builds work without Play Integrity; Play Integrity
-// in production. Token auto-refresh is on so a stale token from a long
-// background never blocks the next request.
+// Initialize App Check at module scope, before any Firebase service call.
+// Provider construction is a three-step dance: call `appCheck()` to get
+// the instance, build the RN provider on it, then `.configure()` the
+// provider before passing it to `initializeAppCheck`. Debug provider in
+// development; Play Integrity in production.
+const rnfbProvider = appCheck().newReactNativeFirebaseAppCheckProvider();
+rnfbProvider.configure({
+  android: {
+    provider: __DEV__ ? 'debug' : 'playIntegrity',
+  },
+});
 appCheck().initializeAppCheck({
-  provider: appCheck.newReactNativeFirebaseAppCheckProvider({
-    android: {
-      provider: __DEV__ ? 'debug' : 'playIntegrity',
-    },
-    apple: {
-      provider: 'appAttest',
-    },
-  }),
+  provider: rnfbProvider,
   isTokenAutoRefreshEnabled: true,
 });
 

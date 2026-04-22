@@ -32,23 +32,14 @@ beforeEach(() => {
 // ── runFoundingMigration ────────────────────────────────────────
 
 describe('runFoundingMigration', () => {
-  it('on fresh install, grants founding and marks check done', () => {
+  it('on fresh install (no onboardingComplete), DOES NOT grant founding but marks check done', () => {
     runFoundingMigration();
 
-    expect(mockedSetProStatus).toHaveBeenCalledTimes(1);
-    const arg = mockedSetProStatus.mock.calls[0][0];
-    expect(arg.purchased).toBe(true);
-    expect(arg.productId).toBe('founding_user');
-    expect(typeof arg.purchaseDate).toBe('string');
-    expect(() => new Date(arg.purchaseDate).toISOString()).not.toThrow();
-
+    // v2.0.0 paywall flip: fresh installs no longer get auto-Pro.
+    expect(mockedSetProStatus).not.toHaveBeenCalled();
     expect(kvStore.get('founding_check_done')).toBe('true');
-    const rawStatus = kvStore.get('founding_status');
-    expect(rawStatus).toBeDefined();
-    const parsed = JSON.parse(rawStatus!) as FoundingDetails;
-    expect(parsed.isFoundingUser).toBe(true);
-    expect(typeof parsed.grantedAt).toBe('string');
-    expect(isFoundingUser()).toBe(true);
+    expect(kvStore.get('founding_status')).toBeUndefined();
+    expect(isFoundingUser()).toBe(false);
   });
 
   it('grants founding on first run when onboardingComplete is already set (upgrade path)', () => {
@@ -85,16 +76,15 @@ describe('runFoundingMigration', () => {
     expect(typeof parsed.grantedAt).toBe('string');
   });
 
-  it('grants founding regardless of onboardingComplete value (corrupted values no longer gate the grant)', () => {
+  it('does NOT grant founding when onboardingComplete is anything other than the literal string "true"', () => {
     kvStore.set('onboardingComplete', 'false');
     runFoundingMigration();
 
-    expect(mockedSetProStatus).toHaveBeenCalledTimes(1);
+    // v2.0.0: only the exact value 'true' qualifies. Truthy-but-wrong
+    // values like 'false', 'yes', '1' must not grant founding.
+    expect(mockedSetProStatus).not.toHaveBeenCalled();
     expect(kvStore.get('founding_check_done')).toBe('true');
-    const rawStatus = kvStore.get('founding_status');
-    expect(rawStatus).toBeDefined();
-    const parsed = JSON.parse(rawStatus!) as FoundingDetails;
-    expect(parsed.isFoundingUser).toBe(true);
+    expect(kvStore.get('founding_status')).toBeUndefined();
   });
 
   it('is idempotent: a second run does not re-grant or re-write anything', () => {
@@ -121,22 +111,18 @@ describe('runFoundingMigration', () => {
     expect(kvStore.get('founding_status')).toBeUndefined();
   });
 
-  it('on completely fresh install (empty kv store), grants founding and Pro', () => {
+  it('on completely fresh install (empty kv store), DOES NOT grant founding (v2.0.0 paywall)', () => {
     expect(kvStore.size).toBe(0);
     runFoundingMigration();
 
-    expect(mockedSetProStatus).toHaveBeenCalledTimes(1);
-    const arg = mockedSetProStatus.mock.calls[0][0];
-    expect(arg.purchased).toBe(true);
-    expect(arg.productId).toBe('founding_user');
-
-    const rawStatus = kvStore.get('founding_status');
-    expect(rawStatus).toBeDefined();
-    const parsed = JSON.parse(rawStatus!) as FoundingDetails;
-    expect(parsed.isFoundingUser).toBe(true);
+    expect(mockedSetProStatus).not.toHaveBeenCalled();
+    expect(kvStore.get('founding_check_done')).toBe('true');
+    expect(kvStore.get('founding_status')).toBeUndefined();
+    expect(isFoundingUser()).toBe(false);
   });
 
-  it('is idempotent on repeat invocations', () => {
+  it('is idempotent on repeat invocations (existing user upgrade path)', () => {
+    kvStore.set('onboardingComplete', 'true');
     runFoundingMigration();
     runFoundingMigration();
 
@@ -197,29 +183,22 @@ describe('getFoundingDetails', () => {
   });
 });
 
-// ── v2.0.0 revert guard ─────────────────────────────────────────
+// ── v2.0.0 paywall gate (post-revert regression guard) ──────────
 
-describe('v2.0.0 revert guard', () => {
-  it('ONBOARDING_KEY declaration and TODO(v2.0.0) marker must both persist until revert', () => {
+describe('v2.0.0 paywall gate', () => {
+  it('source contains the onboarding gate that blocks fresh-install founding grants', () => {
     const source = fs.readFileSync(
       path.join(__dirname, '..', 'src', 'services', 'foundingStatus.ts'),
       'utf-8',
     );
 
-    // Pin the actual constant declaration, not just the token. A prior
-    // version of this test matched `/ONBOARDING_KEY/`, which passed as
-    // long as the string appeared anywhere — including in the TODO
-    // comment itself. Deleting the `const ONBOARDING_KEY = ...` line
-    // would have slipped through. This regex forces the declaration
-    // to survive.
+    // Regression guard: if someone deletes the gate, every fresh v2.0.0
+    // install would silently get founding Pro again — paywall bypass.
+    expect(source).toMatch(
+      /kvGet\(ONBOARDING_KEY\)\s*!==\s*['"]true['"]/,
+    );
     expect(source).toMatch(
       /const\s+ONBOARDING_KEY\s*=\s*['"]onboardingComplete['"]/,
     );
-
-    // Pin the TODO marker verbatim. When v2.0.0 lands, the engineer
-    // doing the revert must see this marker and restore the
-    // `onboardingComplete === 'true'` gate. Losing the marker means
-    // losing the forcing function.
-    expect(source).toContain('TODO(v2.0.0)');
   });
 });

@@ -32,7 +32,8 @@ const BENEFITS: readonly string[] = [
   'Unlimited Brain Games',
   'Premium Themes (Vivid, Sunset, Ruby)',
   'Google Calendar Sync',
-  'Multiplayer Chess (coming soon)',
+  'Multiplayer Games',
+  'Chrome & Toon Icon Themes',
 ];
 
 interface ProGateProps {

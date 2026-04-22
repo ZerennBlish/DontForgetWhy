@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useIAP, ErrorCode } from 'expo-iap';
+import { useIAP, ErrorCode, getAvailablePurchases } from 'expo-iap';
 import { isProUser, setProStatus } from '../services/proStatus';
 
 const PRODUCT_ID = 'dfw_pro_unlock';
@@ -174,12 +174,28 @@ export default function useEntitlement(): EntitlementState {
     setError(null);
     try {
       await restorePurchases();
-    } catch (e: any) {
-      setError(e?.message ?? 'Restore failed');
+      // Hook's restorePurchases returns Promise<void>; the top-level
+      // getAvailablePurchases is value-returning and lets us persist Pro
+      // synchronously before this promise resolves, so callers that read
+      // isProUser() right after `await restore()` see the updated state.
+      const purchases = await getAvailablePurchases();
+      const owned = purchases?.find((p) => p.productId === PRODUCT_ID);
+      if (owned && !isProUser()) {
+        await finishTransaction({ purchase: owned, isConsumable: false });
+        setProStatus({
+          purchased: true,
+          productId: PRODUCT_ID,
+          purchaseDate: new Date(owned.transactionDate ?? Date.now()).toISOString(),
+          purchaseToken: owned.purchaseToken ?? undefined,
+        });
+        setIsPro(true);
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Restore failed');
     } finally {
       setLoading(false);
     }
-  }, [connected, restorePurchases]);
+  }, [connected, restorePurchases, finishTransaction]);
 
   return {
     isPro,
