@@ -127,6 +127,20 @@ Triple audit (Codex + Claude + Gemini) on the Session 32 scope (Cloud Checkers A
 
 **Note on legacy stats migration (downgraded from flagged):** Old trivia stats from pre-Session-32 category names (food, kids) are silently dropped on first load — `validateStats` rebuilds `categoryStats` keyed by the current `ALL_CATEGORIES` list. This was flagged during audit as a potential data-loss concern but downgraded: the Session 32 scope is pre-2.0 testers only (no production build shipped this session), the old stats were never user-facing in a way that exposed the dropped category names, and the per-category aggregate values (round counts, accuracy) weren't meaningful across the taxonomy change. Documented here for the record — if a future migration ever needs to round-trip pre-Session-32 stats, this note is the starting point
 
+### Session 33 — Icon Resolver Bypass + Nav Spacing Fixes
+
+Two visual regressions introduced by the Session 32 resolver-rewire sweep, both surfaced once the theme system was actually flipped between chrome and anthropomorphic in QA. Fixed in Session 33 as a small follow-up pass.
+
+**Bug: Nav buttons rendered as oversized floating glyphs in chrome/mixed mode (Visual, Zerenn-found)**
+- Found: Session 33 manual testing after the Session 32 resolver rewire landed
+- Cause: Session 32's pass through `BackButton.tsx`, `HomeButton.tsx`, and `GameNavButtons.tsx` migrated the icon source from a hardcoded `require('../../assets/icons/icon-game-back.webp')` etc. to `useAppIcon('backArrow')` / `useAppIcon('home')`, but in doing so it stripped the chrome circle background and kept the toon-scale 40×40 image dimensions for every theme. That was fine in the original anthropomorphic-only world (toon character art at 40×40 IS its own visual container), but as soon as the resolver returned a chrome glyph (the default `mixed` theme + the Pro `chrome` theme), the bare 40×40 chrome arrow/house floated in the corner with no visual anchor. Looked broken on every productivity screen and every game screen
+- Fix: Reintroduced theme-conditional rendering in all three components. `isChrome = iconTheme !== 'anthropomorphic'` discriminator drives a branch — chrome path wraps the icon in a 36×36 `borderRadius: 18` circle with a mode-aware bg (`rgba(30,30,40,0.8)` when `forceDark || colors.mode === 'dark'`, `rgba(0,0,0,0.15)` on light themes) and shrinks the glyph to 22×22; anthropomorphic path keeps the bare 40×40 layout. Outer `TouchableOpacity` always exposes a 44×44 minimum touch target via `minWidth` / `minHeight` so the visual circle resize doesn't shrink the accessibility hit area. Made `forceDark` functional on `BackButton` and `HomeButton` at the same time — the prop was declared in Session 32 but never read
+
+**Bug: GameNavButtons drifted 4px left of productivity screens (Visual, Zerenn-found)**
+- Found: Session 33 manual testing
+- Cause: `GameNavButtons` styled the container with `left: 16` + `gap: 8`, while productivity screens position back at `left: 20` and home at `left: 64` (back's 44px touch target + 0 gap puts home flush at 64). The 4px horizontal drift + the 8px gap between buttons made the game-screen nav cluster visibly off when a user moved between productivity and game screens — most noticeable on chess/checkers entry where the home button visibly jumped. Inconsistency snuck through Session 32 because the rewire focused on icon source migration, not container geometry
+- Fix: `GameNavButtons` container changed to `left: 20` with the `gap: 8` removed. The two flush 44×44 touch targets now place the back button's center at left 42 and the home button's touch area at left 64, matching the productivity-screen `headerBack left: 20` / `headerHome left: 64` pattern exactly
+
 ### Session 34 — Voice Memo Orphan-State Cleanup
 
 **Bug: Untitled voice memos persist as empty shells after recording (UX, Zerenn-found)**

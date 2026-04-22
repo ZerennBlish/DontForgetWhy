@@ -4,36 +4,19 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppIcon } from '../hooks/useAppIcon';
+import { useIconTheme } from '../hooks/useIconTheme';
 
 interface GameNavButtonsProps {
-  /**
-   * Custom back handler. When set, taps on the back button call this
-   * function instead of the default navigation behavior. Used by active
-   * gameplay screens to bounce the user back to the in-game menu phase
-   * (e.g. Sudoku/Trivia/MemoryMatch handleBackFromGame). Leave undefined
-   * on menu/result screens so the button just pops the stack.
-   */
   onBack?: () => void;
-  /**
-   * Vertical offset from the top of the screen. Defaults to 12, but
-   * callers should pass `insets.top + 10` to clear the device safe area.
-   */
   topOffset?: number;
 }
 
-/**
- * Character-style back + home button pair for game screens. Replaces
- * the productivity-side BackButton/HomeButton chrome with the
- * full-color game icon set so the games section reads as its own world.
- *
- * Renders as an absolutely-positioned row in the top-left corner. Each
- * game screen previously had two separately-positioned wrapper Views
- * for BackButton and HomeButton; replace both with one of these.
- */
 export function GameNavButtons({ onBack, topOffset = 12 }: GameNavButtonsProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const backArrowIcon = useAppIcon('backArrow');
   const homeIcon = useAppIcon('home');
+  const { theme: iconTheme } = useIconTheme();
+  const isChrome = iconTheme !== 'anthropomorphic';
 
   const handleBack = useCallback(() => {
     if (onBack) {
@@ -43,13 +26,11 @@ export function GameNavButtons({ onBack, topOffset = 12 }: GameNavButtonsProps) 
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      // Cold-start / deep-link entry — no parent screen to pop to.
       navigation.navigate('Home');
     }
   }, [onBack, navigation]);
 
   const handleHome = useCallback(() => {
-    // popToTop fires beforeRemove so games can save state on the way out.
     if (navigation.canGoBack()) {
       navigation.popToTop();
     } else {
@@ -61,24 +42,38 @@ export function GameNavButtons({ onBack, topOffset = 12 }: GameNavButtonsProps) 
     <View style={[styles.container, { top: topOffset }]} pointerEvents="box-none">
       <TouchableOpacity
         onPress={handleBack}
-        style={styles.button}
+        style={styles.touchTarget}
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel="Go back"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Image source={backArrowIcon} style={styles.icon} resizeMode="contain" accessible={false} />
+        <View style={isChrome ? styles.chromeCircle : styles.toonContainer}>
+          <Image
+            source={backArrowIcon}
+            style={isChrome ? styles.chromeIcon : styles.toonIcon}
+            resizeMode="contain"
+            accessible={false}
+          />
+        </View>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={handleHome}
-        style={styles.button}
+        style={styles.touchTarget}
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel="Go to home screen"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Image source={homeIcon} style={styles.icon} resizeMode="contain" accessible={false} />
+        <View style={isChrome ? styles.chromeCircle : styles.toonContainer}>
+          <Image
+            source={homeIcon}
+            style={isChrome ? styles.chromeIcon : styles.toonIcon}
+            resizeMode="contain"
+            accessible={false}
+          />
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -87,15 +82,35 @@ export function GameNavButtons({ onBack, topOffset = 12 }: GameNavButtonsProps) 
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: 16,
+    left: 20,
     flexDirection: 'row',
-    gap: 8,
     zIndex: 10,
   },
-  button: {
-    padding: 4,
+  touchTarget: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  icon: {
+  chromeCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30,30,40,0.8)',
+  },
+  toonContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chromeIcon: {
+    width: 22,
+    height: 22,
+  },
+  toonIcon: {
     width: 40,
     height: 40,
   },

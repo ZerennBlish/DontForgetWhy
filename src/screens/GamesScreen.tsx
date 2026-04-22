@@ -244,8 +244,8 @@ export default function GamesScreen({ navigation }: Props) {
           height: 24,
         },
         globeImage: {
-          width: 24,
-          height: 24,
+          width: 28,
+          height: 28,
         },
       }),
     [colors, insets.bottom],
@@ -294,7 +294,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={lightbulbIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={lightbulbIcon} style={{ width: 48, height: 48 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Daily Riddle</Text>
@@ -303,7 +303,7 @@ export default function GamesScreen({ navigation }: Props) {
           </Text>
           {riddleStreak > 0 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, justifyContent: 'center' }}>
-              <Image source={fireIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <Image source={fireIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
               <Text style={styles.streakText}>{riddleStreak} day streak</Text>
             </View>
           )}
@@ -331,7 +331,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={chessCardIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={chessCardIcon} style={{ width: 48, height: 48 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Chess</Text>
@@ -366,7 +366,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={checkersCardIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={checkersCardIcon} style={{ width: 48, height: 48 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Checkers</Text>
@@ -401,7 +401,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={triviaCardIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={triviaCardIcon} style={{ width: 48, height: 48 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trivia</Text>
@@ -438,7 +438,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={sudokuIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={sudokuIcon} style={{ width: 48, height: 48 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Sudoku</Text>
@@ -468,7 +468,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={memoryCardIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={memoryCardIcon} style={{ width: 48, height: 48 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Memory Guy Match</Text>
@@ -498,7 +498,7 @@ export default function GamesScreen({ navigation }: Props) {
         accessibilityRole="button"
       >
         <View style={{ width: 56, alignItems: 'center' }}>
-          <Image source={chartIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
+          <Image source={chartIcon} style={{ width: 48, height: 48 }} resizeMode="contain" />
         </View>
         <View style={styles.gameInfo}>
           <Text style={styles.gameName}>Trophies</Text>
