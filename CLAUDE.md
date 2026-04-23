@@ -11,7 +11,8 @@ npx tsc --noEmit              # Must pass before production builds
 npx jest                       # Must pass before production builds
 cd functions && npm run build  # Cloud Functions (separate Node 20 project)
 ```
-
+## LAPTOP CONSTRAINT
+When running on the laptop (slower machine), do NOT run `npx tsc --noEmit` or `npx jest` as verification steps. Report what needs to be verified and the user will run them manually in PowerShell after the prompt completes.
 ## Critical Rules
 
 - **NEVER write package-lock.json.** Edit `package.json` directly for dep changes. The user regenerates the lockfile in PowerShell. WSL-generated lockfiles break EAS builds.
