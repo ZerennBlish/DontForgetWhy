@@ -1,3 +1,4 @@
+// Node 22 runtime
 import {onRequest} from "firebase-functions/v2/https";
 import {initializeApp} from "firebase-admin/app";
 import {getAppCheck} from "firebase-admin/app-check";
