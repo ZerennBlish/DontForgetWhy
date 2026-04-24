@@ -275,7 +275,7 @@ export default function VoiceMemoListScreen({ navigation }: Props) {
       ...StyleSheet.absoluteFillObject,
       width: '100%',
       height: '100%',
-      opacity: colors.mode === 'dark' ? 0.15 : 0.06,
+      opacity: colors.watermarkOpacity,
     },
     container: {
       flex: 1,

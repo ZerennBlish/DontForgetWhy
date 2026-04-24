@@ -916,7 +916,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
           ) : (
             <Image
               source={require('../../assets/fullscreenicon.webp')}
-              style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
+              style={{ width: '100%', height: '100%', opacity: colors.watermarkOpacity }}
               resizeMode="cover"
             />
           )}
@@ -960,7 +960,7 @@ export default function VoiceMemoDetailScreen({ navigation, route }: Props) {
         ) : (
           <Image
             source={require('../../assets/fullscreenicon.webp')}
-            style={{ width: '100%', height: '100%', opacity: colors.mode === 'dark' ? 0.15 : 0.06 }}
+            style={{ width: '100%', height: '100%', opacity: colors.watermarkOpacity }}
             resizeMode="cover"
           />
         )}

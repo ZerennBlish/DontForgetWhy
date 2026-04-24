@@ -657,7 +657,7 @@ export default function OnboardingScreen({ navigation, route }: Props) {
       ...StyleSheet.absoluteFillObject,
       width: '100%',
       height: '100%',
-      opacity: displayColors.mode === 'dark' ? 0.15 : 0.06,
+      opacity: displayColors.watermarkOpacity,
     },
     slide: {
       width: SCREEN_WIDTH,

@@ -17,6 +17,7 @@ export interface ThemeColors {
   overlayText: string;
   overlaySecondary: string;
   modalOverlay: string;
+  watermarkOpacity: number;
   success: string;
   // Section colors — every theme defines its own palette
   sectionAlarm: string;
@@ -48,6 +49,7 @@ const dark: ThemeColors = {
   overlayText: '#FFFFFF',
   overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(0, 0, 0, 0.7)',
+  watermarkOpacity: 0.20,
   success: '#4CAF50',
   sectionAlarm: '#FF6B6B',
   sectionReminder: '#4A90D9',
@@ -78,6 +80,7 @@ const light: ThemeColors = {
   overlayText: '#FFFFFF',
   overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
+  watermarkOpacity: 0.15,
   success: '#16A34A',
   sectionAlarm: '#EF4444',
   sectionReminder: '#3B82F6',
@@ -108,6 +111,7 @@ const highContrast: ThemeColors = {
   overlayText: '#FFFFFF',
   overlaySecondary: 'rgba(255,255,255,0.85)',
   modalOverlay: 'rgba(0, 0, 0, 0.85)',
+  watermarkOpacity: 0.20,
   success: '#44FF44',
   sectionAlarm: '#FF4444',
   sectionReminder: '#4DA6FF',
@@ -138,6 +142,7 @@ const vivid: ThemeColors = {
   overlayText: '#FFFFFF',
   overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(4, 8, 4, 0.85)',
+  watermarkOpacity: 0.20,
   success: '#00FF88',
   sectionAlarm: '#FF6B9D',
   sectionReminder: '#7C5CFC',
@@ -168,6 +173,7 @@ const sunset: ThemeColors = {
   overlayText: '#FFFFFF',
   overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
+  watermarkOpacity: 0.15,
   success: '#16A34A',
   sectionAlarm: '#E04545',
   sectionReminder: '#2E94AB',
@@ -198,6 +204,7 @@ const ruby: ThemeColors = {
   overlayText: '#FFFFFF',
   overlaySecondary: 'rgba(255,255,255,0.7)',
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
+  watermarkOpacity: 0.15,
   success: '#16A34A',
   sectionAlarm: '#E11D48',
   sectionReminder: '#3B82F6',

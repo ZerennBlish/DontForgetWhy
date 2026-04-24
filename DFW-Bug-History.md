@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 37 (April 19, 2026)
+**Last updated:** Session 42 (April 24, 2026)
 
 **For Sessions 1-28 bug history, see DFW-Bug-History-Archive.md.**
 
@@ -214,4 +214,12 @@ Triple audit (Codex + Claude + Gemini) on the Session 34 voice memo changes in `
 - Found: Session 37 — user noticed `.claude/settings.local.json` had new permission entries for `Bash(bash /tmp/check_exports.sh)` and `Bash(bash /tmp/final_check.sh)`
 - Cause: Codex audit (Pass 2 chunk 1) generated two shell scripts in `/tmp/` for export verification. Scripts themselves were benign grep aggregators. However, writing ANY file during a "read-only" audit violates the contract. The scripts were opaque to the user — tool-use output showed the command name but not the script contents.
 - Fix: Every audit prompt now explicitly prohibits `/tmp` writes and mandates inline bash commands. Standing rule for all future audits and fix prompts.
+
+### Session 42 — Multiplayer Create-Game Permission Denied on Dev Build
+
+**Bug: Firestore `permission-denied` on multiplayer chess create, dev builds only (environmental, Zerenn-found)**
+- Found: Session 42 — new dev build on S23 Ultra, Create Game fired `[firestore/permission-denied] The caller does not have permission to execute the specified operation`. Production build unaffected.
+- Cause: App Check debug provider generates a fresh local secret on app install. The token previously registered in the Firebase Console (for the prior dev install) no longer matches what the new install is sending. App Check enforcement rejects the request before Firestore rules are even evaluated. Dev-only because prod uses `playIntegrity` (attestation-based, no registration required). Diagnostic misdirect worth noting: the failing Firestore call is `assertBelowActiveGameLimit` (first compound `.where()` query inside `createGame`), not the final `.set()` — the deprecation warning on `where` was the tell that pointed at which line actually fails.
+- Fix: No code change. Grab the current debug token from logcat on cold launch (`adb logcat | Select-String "Enter this debug secret"`), register it in Firebase Console → App Check → Apps → Android → ⋮ Manage debug tokens, delete stale entries.
+- Recurrence: Every dev build reinstall regenerates the secret. Re-register when it happens. Not a bug to fix, a workflow step to remember.
 - No data loss or code corruption resulted from this incident.
