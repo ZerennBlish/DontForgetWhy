@@ -9,7 +9,7 @@ Don't Forget Why — React Native 0.83.4 / Expo SDK 55 / TypeScript Android app.
 ```bash
 npx tsc --noEmit              # Must pass before production builds
 npx jest                       # Must pass before production builds
-cd functions && npm run build  # Cloud Functions (separate Node 20 project)
+cd functions && npm run build  # Cloud Functions (separate Node 22 project)
 ```
 ## LAPTOP CONSTRAINT
 When running on the laptop (slower machine), do NOT run `npx tsc --noEmit` or `npx jest` as verification steps. Report what needs to be verified and the user will run them manually in PowerShell after the prompt completes.
@@ -19,6 +19,7 @@ When running on the laptop (slower machine), do NOT run `npx tsc --noEmit` or `n
 - **NEVER run npm install.** Same reason. Only edit package.json.
 - `functions/` is a separate Node project. Don't install its deps from the project root.
 - `metro.config.js` blockList must stay anchored to project-local `functions/` — unanchored regexes have broken production builds.
+- **Audit prompts are read-only.** Auditors never create, modify, or delete files. No scripts to `/tmp` or any other location. Inline bash commands only. Report findings as text — fixes are applied by the implementer (Claude Code), not the auditor.
 
 ## Structure
 
