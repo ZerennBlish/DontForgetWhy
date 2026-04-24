@@ -100,7 +100,8 @@
       "Bash(git check-attr *)",
       "Bash(echo \"TSC_EXIT=$?\")",
       "Bash(echo \"FN_EXIT=$?\")",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(set +e)"
     ]
   }
 }

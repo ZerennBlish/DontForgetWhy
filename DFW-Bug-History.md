@@ -223,3 +223,11 @@ Triple audit (Codex + Claude + Gemini) on the Session 34 voice memo changes in `
 - Fix: No code change. Grab the current debug token from logcat on cold launch (`adb logcat | Select-String "Enter this debug secret"`), register it in Firebase Console → App Check → Apps → Android → ⋮ Manage debug tokens, delete stale entries.
 - Recurrence: Every dev build reinstall regenerates the secret. Re-register when it happens. Not a bug to fix, a workflow step to remember.
 - No data loss or code corruption resulted from this incident.
+
+### Session 42 — Watermark Opacity Drift (13-file inline ternary pattern)
+
+**Finding: Hardcoded per-mode opacity across 13 screens (architectural, audit-found)**
+- Found: Session 42 pre-ship audit. All 13 watermark render sites used `opacity: colors.mode === 'dark' ? 0.15 : 0.06` inline. Values were tuned for the old low-detail clock watermark. When the asset changed to a detailed character illustration, all 13 needed updating simultaneously — the light-theme watermark was nearly invisible at 0.06.
+- Cause: Original implementation copy-pasted the ternary rather than centralizing it as a theme token. Invisible as drift until the asset changed.
+- Fix: Added `watermarkOpacity: number` to `ThemeColors` interface. Dark themes: 0.20, light themes: 0.15. All 13 sites now reference `colors.watermarkOpacity`. One-place tuning going forward.
+- Rule: Per-mode visual constants appearing in more than one screen should be theme tokens from the start.

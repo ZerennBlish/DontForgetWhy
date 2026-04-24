@@ -1,8 +1,14 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 41 (April 22, 2026) — v2.0.0 ship (Pro tier + App Check)
+**Last updated:** Session 42 (April 24, 2026) — v2.0.1 ship (branding refresh + EOL normalization)
 
 **For Sessions 1-28 decision history, see DFW-Decisions-Archive.md.**
+
+### Session 42 Additions — v2.0.1 Ship (Apr 24)
+
+- **Per-mode visual constants belong in ThemeColors, not inline ternaries (Session 42)** — The old watermark opacity pattern (`opacity: colors.mode === 'dark' ? 0.15 : 0.06`) was hardcoded across 13 screen files. It was invisible as tech debt until the watermark asset changed (from a low-detail clock silhouette to a detailed character illustration), at which point all 13 sites needed new values and the drift became a 13-file edit. Fixed by adding `watermarkOpacity: number` to the `ThemeColors` interface — dark themes get 0.20, light themes get 0.15, tuned per-theme and set in one place. Rule going forward: any per-mode visual constant (opacity, blur radius, shadow elevation, overlay alpha) that appears in more than one screen should be a theme token from the start. The "it's just one ternary" instinct is what creates 13-file drift.
+
+- **`.gitattributes` with `* text=auto eol=lf` added permanently (Session 42)** — The repo had no EOL policy. Files saved by Windows-side tools (PowerShell, VS Code) used CRLF; Claude Code in WSL wrote LF. The resulting diff pollution (50+ files showing as modified with content-identical CRLF→LF changes) made code review impractical and threatened to pollute git blame across the entire repo. Fixed by adding `.gitattributes` with `* text=auto eol=lf` + explicit binary markers for image/audio/font/keystore files, then running `git add --renormalize .` to normalize all tracked text files in one commit. Going forward, git handles the conversion automatically — contributors on any platform (Windows, WSL, Mac) get LF in the repo and their native line endings in the working tree.
 
 ### Session 41 Additions — v2.0.0 Ship (Apr 22)
 

@@ -1,6 +1,6 @@
 # DFW Project Setup & Version History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 41 (April 22, 2026) — **v2.0.0 (versionCode 44) uploaded to Play Store, awaiting review**. v1.24.0 (versionCode 43) remains the installed baseline until review clears.
+**Last updated:** Session 42 (April 24, 2026) — **v2.0.1 (versionCode 45) shipped**.
 
 ---
 
@@ -12,13 +12,13 @@
 **Package:** com.zerennblish.DontForgetWhy
 **Stack:** React Native 0.83.4 + Expo SDK 55 + TypeScript (strict mode)
 **Platform:** Android (primary), iOS (secondary/future)
-**Monetization:** Free, no ads, no tracking. Potential future Pro features ($1.99 one-time) for online content.
+**Monetization:** Free, no ads, no tracking. $1.99 one-time Pro unlock, live since v2.0.0.
 **GitHub:** https://github.com/ZerennBlish/DontForgetWhy
 **Contact:** baldguyandcompanygames@gmail.com
 
 **What it is:** An alarm, reminder, timer, and notepad app with built-in mini-games and a personality-driven identity. The hook: every alarm requires a mandatory note explaining WHY it was set. When the alarm fires, the note displays prominently. "Remember why you woke up."
 
-**Store tagline:** "Set alarms. Forget why. Get roasted."
+**Store tagline:** "Alarms. Notes. Games. Judgment."
 **Brand closer:** "No accounts. No tracking. No ads. Just you and your questionable memory."
 
 **Built from scratch starting February 8, 2026.** First working prototype ran on Zerenn's phone within hours of the first session. The app went from zero to closed testing on Google Play in 10 days.
@@ -268,6 +268,7 @@ DontForgetWhy/
 | Apr 5 | 1.13.0 | 30 | Chess engine hardened (Session 17): opening book, transposition table, killer moves, null-move pruning, tapered eval, min-depth/max-time difficulty model. 2 audit rounds, 6 findings fixed. Benchmark test removed for production. | Production |
 | Apr 5 | 1.14.0 | 31 | Checkers (Session 18): pure JS engine, 5 difficulty levels, American rules, Memory Score integration. Scoring overhaul: max 140 (7 games × 20), chess blunder penalty removed, chess+checkers stat sections. UI: emoji removal from headers, GamesScreen reordered. 52 checkers tests. | Production |
 | Apr 22 | 2.0.0 | 44 | **v2.0.0 major release.** Pro tier activated (paywall live, founding gate reverted to `onboardingComplete`, ProGate benefits updated — Multiplayer Games + Icon Themes). App Check enforced — `@react-native-firebase/app-check` client with Play Integrity / debug provider + Cloud Function `verifyToken` + Firestore enforcement via Console. Multiplayer chess/checkers/trivia (Session 39). Dual-theme icon system complete (chrome/mixed/anthropomorphic via `iconResolver.ts`, Sessions 32 + 33 + 40). Pre-ship triple audit: P1 backup restore founding bypass fixed (`founding_check_done` written post-restore in `importBackup`); P2 restore race fixed (synchronous purchase processing in `useEntitlement.restore()` via top-level `getAvailablePurchases`). 28 suites / 614 tests passing. | Uploaded — awaiting Play Store review |
+| Apr 24 | 2.0.1 | 45 | **v2.0.1 branding refresh.** New grumpy alarm clock mascot replaces prior clock-with-question-mark for both the Android launcher icon (`assets/adaptive-icon.png`, now RGBA) and the in-app watermark (`assets/fullscreenicon.webp`). `watermarkOpacity: number` added to `ThemeColors` — dark themes 0.20 (up from 0.15), light themes 0.15 (up from 0.06) — replacing 13 inline `colors.mode === 'dark' ? 0.15 : 0.06` ternaries across the screen layer. `.gitattributes` added with `* text=auto eol=lf` + explicit binary markers; `git add --renormalize .` swept the working tree to LF in one commit. Cloud Functions Node.js 20 → 22 runtime upgrade (deployed, verified). Multiplayer dev-build `permission-denied` diagnosed as App Check debug-token rotation — workflow step, no code change. Agent docs (CLAUDE.md, AGENTS.md) updated for Node 22, audit-only / no-`/tmp`-writes rule, `src/modals/` reference corrected to `src/components/*Modal.tsx`. 28 suites / 614 tests passing. | Uploading to Play Store |
 
 ---
 
