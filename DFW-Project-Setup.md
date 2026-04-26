@@ -554,3 +554,12 @@ Standing rules for reviewing Claude Code's actions before approving permissions 
 - **Watch for files outside the prompt's explicit file list in `git status`** — Deny extra changes. A prompt scoped to `@fileA @fileB` should only modify `fileA` and `fileB`; anything else is out-of-scope drift.
 - **Rely on PowerShell `git status` for verification, not Claude Code's own summary** — Tool-use summaries can omit edits (especially subtle whitespace changes or unrelated file touches). PowerShell is the ground truth.
 - **Verify branch with `git branch --show-current` before every prompt** — Session 37 discovered work had been landing on `main` instead of `dev` due to an unfinished merge. If not on `dev`, switch first.
+
+---
+
+## 10. Workflow Rules
+
+- **Desktop Commander is read-only for Opus unless Zerenn says otherwise.** Opus can view live files, directory state, git state, and run diagnostics. All edits (code, docs, config) still go through Claude Code. Git repo management (non-editing operations like rebase abort, status checks) is a valid Desktop Commander use case.
+- **Before writing any prompt that runs `tsc` or `jest`, confirm which machine Zerenn is on.** Laptop = Zerenn runs them manually in PowerShell, prompt skips those steps. Desktop = Claude Code can run them.
+- **Every step in a Claude Code prompt must be correct as written.** No "do X unless Y breaks" conditionals. If uncertain whether a step is safe, resolve the uncertainty before writing the prompt, not inside it.
+- **Never nudge toward shipping over correctness.** "Ship it, the quirk is cosmetic" is the exact shortcut this project exists to avoid. If the right answer is more work, say so.
