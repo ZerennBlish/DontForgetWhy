@@ -101,7 +101,9 @@
       "Bash(echo \"TSC_EXIT=$?\")",
       "Bash(echo \"FN_EXIT=$?\")",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(set +e)"
+      "Bash(set +e)",
+      "Bash(powershell.exe *)",
+      "Bash(xxd)"
     ]
   }
 }
