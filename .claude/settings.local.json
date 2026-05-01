@@ -103,7 +103,10 @@
       "Bash(echo \"EXIT:$?\")",
       "Bash(set +e)",
       "Bash(powershell.exe *)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(echo \"---exit $?---\")",
+      "Bash(echo \"tsc_exit=$?\")",
+      "Bash(echo \"\\(exit $?\\)\")"
     ]
   }
 }

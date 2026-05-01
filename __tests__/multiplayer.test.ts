@@ -73,7 +73,10 @@ function makeDocRef(code: string) {
     delete: jest.fn(async () => {
       docs.delete(code);
     }),
-    onSnapshot: jest.fn((cb: (snap: unknown) => void) => {
+    onSnapshot: jest.fn((
+      cb: (snap: unknown) => void,
+      _errorCallback?: (error: unknown) => void,
+    ) => {
       const data = docs.get(code);
       cb({
         id: code,
@@ -140,25 +143,70 @@ const firestoreInstance = {
   collection: jest.fn((name: string) => makeCollection(name)),
 };
 
-type FirestoreMockFn = jest.Mock & {
-  FieldValue: { arrayUnion: jest.Mock };
-  Timestamp: { now: jest.Mock };
-};
+const arrayUnionMock = jest.fn((...values: unknown[]) => ({
+  __op: 'arrayUnion',
+  values,
+}));
 
-const firestoreFn = jest.fn(() => firestoreInstance) as FirestoreMockFn;
-firestoreFn.FieldValue = {
-  arrayUnion: jest.fn((...values: unknown[]) => ({
-    __op: 'arrayUnion',
-    values,
-  })),
+type WhereTag = {
+  __c: 'where';
+  field: string;
+  op: string;
+  value: unknown;
 };
-firestoreFn.Timestamp = {
-  now: jest.fn(() => ({ seconds: 0, nanoseconds: 0 })),
+type OrderByTag = {
+  __c: 'orderBy';
+  field: string;
+  direction: 'asc' | 'desc';
 };
+type ConstraintTag = WhereTag | OrderByTag;
 
 jest.mock('@react-native-firebase/firestore', () => ({
   __esModule: true,
-  default: firestoreFn,
+  getFirestore: jest.fn(() => firestoreInstance),
+  collection: jest.fn((_fs: unknown, name: string) =>
+    firestoreInstance.collection(name),
+  ),
+  doc: jest.fn((coll: MockCollection, id: string) => coll.doc(id)),
+  getDoc: jest.fn(async (ref: ReturnType<typeof makeDocRef>) => ref.get()),
+  getDocs: jest.fn(async (q: MockCollection) => q.get()),
+  setDoc: jest.fn(async (
+    ref: ReturnType<typeof makeDocRef>,
+    payload: DocData,
+  ) => ref.set(payload)),
+  updateDoc: jest.fn(async (
+    ref: ReturnType<typeof makeDocRef>,
+    updates: DocData,
+  ) => ref.update(updates)),
+  deleteDoc: jest.fn(async (ref: ReturnType<typeof makeDocRef>) => ref.delete()),
+  query: jest.fn((coll: MockCollection, ...constraints: ConstraintTag[]) => {
+    let chain = coll;
+    for (const c of constraints) {
+      if (c.__c === 'where') chain = chain.where(c.field, c.op, c.value);
+      else if (c.__c === 'orderBy') chain = chain.orderBy(c.field, c.direction);
+    }
+    return chain;
+  }),
+  where: jest.fn((field: string, op: string, value: unknown): WhereTag => ({
+    __c: 'where',
+    field,
+    op,
+    value,
+  })),
+  orderBy: jest.fn((
+    field: string,
+    direction: 'asc' | 'desc' = 'asc',
+  ): OrderByTag => ({
+    __c: 'orderBy',
+    field,
+    direction,
+  })),
+  onSnapshot: jest.fn((
+    ref: ReturnType<typeof makeDocRef>,
+    callback: (snap: unknown) => void,
+    errorCallback?: (error: unknown) => void,
+  ) => ref.onSnapshot(callback, errorCallback)),
+  arrayUnion: arrayUnionMock,
 }));
 
 // ── Auth + Pro mocks ─────────────────────────────────────────────────
@@ -249,7 +297,7 @@ beforeEach(() => {
   currentUser = null;
   proStatus = false;
   firestoreInstance.collection.mockClear();
-  firestoreFn.FieldValue.arrayUnion.mockClear();
+  arrayUnionMock.mockClear();
 });
 
 // ── generateGameCode ─────────────────────────────────────────────────

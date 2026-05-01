@@ -1,4 +1,5 @@
-import appCheck from '@react-native-firebase/app-check';
+import { getApp } from '@react-native-firebase/app';
+import { getToken as getAppCheckToken } from '@react-native-firebase/app-check';
 import { checkConnectivity } from '../utils/connectivity';
 import type { Board, PieceColor, CheckersMove } from './checkersAI';
 
@@ -59,7 +60,7 @@ export async function getCloudCheckersMove(
     // the existing behavior for any cloud failure (so no new failure mode).
     let appCheckToken = '';
     try {
-      const { token } = await appCheck().getToken();
+      const { token } = await getAppCheckToken(getApp().appCheck());
       appCheckToken = token;
     } catch {
       // Token fetch failed — proceed without header.

@@ -1,4 +1,18 @@
-import firestore from '@react-native-firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  collection,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  arrayUnion,
+} from '@react-native-firebase/firestore';
 import { getCurrentUser } from './firebaseAuth';
 import { isProUser } from './proStatus';
 
@@ -57,8 +71,8 @@ const CLEANUP_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function gamesCollection() {
-  return firestore().collection(COLLECTION);
+function gamesRef() {
+  return collection(getFirestore(), COLLECTION);
 }
 
 function requireAuthedPlayer(): MultiplayerPlayer {
@@ -69,10 +83,12 @@ function requireAuthedPlayer(): MultiplayerPlayer {
 }
 
 async function assertBelowActiveGameLimit(uid: string): Promise<void> {
-  const snap = await gamesCollection()
-    .where('players', 'array-contains', uid)
-    .where('status', 'in', ['waiting', 'active'])
-    .get();
+  const q = query(
+    gamesRef(),
+    where('players', 'array-contains', uid),
+    where('status', 'in', ['waiting', 'active']),
+  );
+  const snap = await getDocs(q);
   if (snap.size >= MAX_ACTIVE_GAMES) {
     throw new Error(
       'Maximum 5 active games. Finish or resign an existing game.',
@@ -111,7 +127,7 @@ export async function createGame(
   let code = '';
   for (let attempt = 0; attempt < UNIQUE_RETRIES; attempt++) {
     const candidate = generateGameCode();
-    const existing = await gamesCollection().doc(candidate).get();
+    const existing = await getDoc(doc(gamesRef(), candidate));
     if (!existing.exists()) {
       code = candidate;
       break;
@@ -124,7 +140,7 @@ export async function createGame(
   const now = new Date().toISOString();
   const turn = effectiveHostColor === 'w' ? me.uid : '';
 
-  const doc: MultiplayerGame = {
+  const gameDoc: MultiplayerGame = {
     code,
     type,
     host: me,
@@ -143,7 +159,7 @@ export async function createGame(
     lastMoveAt: now,
   };
 
-  await gamesCollection().doc(code).set(doc);
+  await setDoc(doc(gamesRef(), code), gameDoc);
   return { code, gameId: code };
 }
 
@@ -156,8 +172,8 @@ export async function joinGame(
   await assertBelowActiveGameLimit(me.uid);
 
   const normalized = code.trim().toUpperCase();
-  const ref = gamesCollection().doc(normalized);
-  const snap = await ref.get();
+  const ref = doc(gamesRef(), normalized);
+  const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error('Game not found');
 
   const game = snap.data() as MultiplayerGame | undefined;
@@ -171,15 +187,15 @@ export async function joinGame(
   const now = new Date().toISOString();
   const turn = game.hostColor === 'w' ? game.host.uid : me.uid;
 
-  await ref.update({
+  await updateDoc(ref, {
     guest: me,
-    players: firestore.FieldValue.arrayUnion(me.uid),
+    players: arrayUnion(me.uid),
     status: 'active',
     turn,
     lastMoveAt: now,
   });
 
-  const updated = await ref.get();
+  const updated = await getDoc(ref);
   return updated.data() as MultiplayerGame;
 }
 
@@ -189,8 +205,8 @@ export async function makeMove(
   newGameState: string,
 ): Promise<void> {
   const me = requireAuthedPlayer();
-  const ref = gamesCollection().doc(code);
-  const snap = await ref.get();
+  const ref = doc(gamesRef(), code);
+  const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error('Game not found');
 
   const game = snap.data() as MultiplayerGame;
@@ -200,7 +216,7 @@ export async function makeMove(
   const opponent = opponentOf(game, me.uid);
   if (!opponent) throw new Error('Opponent not found');
 
-  await ref.update({
+  await updateDoc(ref, {
     gameState: newGameState,
     moves: [...game.moves, moveSan],
     turn: opponent,
@@ -215,7 +231,7 @@ export async function endGame(
   result: GameResult,
   winnerUid: string | null = null,
 ): Promise<void> {
-  await gamesCollection().doc(code).update({
+  await updateDoc(doc(gamesRef(), code), {
     status: 'finished',
     result,
     winner: winnerUid,
@@ -225,7 +241,7 @@ export async function endGame(
 
 export async function resign(code: string): Promise<void> {
   const me = requireAuthedPlayer();
-  const snap = await gamesCollection().doc(code).get();
+  const snap = await getDoc(doc(gamesRef(), code));
   if (!snap.exists()) throw new Error('Game not found');
 
   const game = snap.data() as MultiplayerGame;
@@ -239,7 +255,7 @@ export async function resign(code: string): Promise<void> {
 
 export async function offerDraw(code: string): Promise<void> {
   const me = requireAuthedPlayer();
-  await gamesCollection().doc(code).update({ drawOffer: me.uid });
+  await updateDoc(doc(gamesRef(), code), { drawOffer: me.uid });
 }
 
 export async function respondToDraw(
@@ -249,13 +265,13 @@ export async function respondToDraw(
   if (accept) {
     await endGame(code, 'draw', null);
   } else {
-    await gamesCollection().doc(code).update({ drawOffer: null });
+    await updateDoc(doc(gamesRef(), code), { drawOffer: null });
   }
 }
 
 export async function requestBreak(code: string): Promise<void> {
   const me = requireAuthedPlayer();
-  await gamesCollection().doc(code).update({ pauseRequest: me.uid });
+  await updateDoc(doc(gamesRef(), code), { pauseRequest: me.uid });
 }
 
 export async function respondToBreak(
@@ -263,7 +279,7 @@ export async function respondToBreak(
   accept: boolean,
 ): Promise<void> {
   if (accept) {
-    await gamesCollection().doc(code).update({ pauseRequest: null });
+    await updateDoc(doc(gamesRef(), code), { pauseRequest: null });
     return;
   }
   // Decline = responder forfeits (chose not to wait).
@@ -275,47 +291,50 @@ export function listenToGame(
   callback: (game: MultiplayerGame | null) => void,
   onError?: (error: Error) => void,
 ): () => void {
-  return gamesCollection()
-    .doc(code)
-    .onSnapshot(
-      (snapshot) => {
-        if (snapshot && snapshot.exists()) {
-          callback(snapshot.data() as MultiplayerGame);
-        } else {
-          callback(null);
-        }
-      },
-      (error) => {
-        console.warn('[listenToGame] onSnapshot error:', error);
-        if (onError) {
-          onError(error instanceof Error ? error : new Error(String(error)));
-        }
-      },
-    );
+  return onSnapshot(
+    doc(gamesRef(), code),
+    (snapshot) => {
+      if (snapshot && snapshot.exists()) {
+        callback(snapshot.data() as MultiplayerGame);
+      } else {
+        callback(null);
+      }
+    },
+    (error) => {
+      console.warn('[listenToGame] onSnapshot error:', error);
+      if (onError) {
+        onError(error instanceof Error ? error : new Error(String(error)));
+      }
+    },
+  );
 }
 
 export async function getMyGames(uid: string): Promise<MultiplayerGame[]> {
-  const snap = await gamesCollection()
-    .where('players', 'array-contains', uid)
-    .where('status', 'in', ['waiting', 'active'])
-    .orderBy('lastMoveAt', 'desc')
-    .get();
+  const q = query(
+    gamesRef(),
+    where('players', 'array-contains', uid),
+    where('status', 'in', ['waiting', 'active']),
+    orderBy('lastMoveAt', 'desc'),
+  );
+  const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as MultiplayerGame);
 }
 
 export async function cleanupFinishedGames(uid: string): Promise<void> {
   try {
-    const snap = await gamesCollection()
-      .where('players', 'array-contains', uid)
-      .where('status', '==', 'finished')
-      .get();
+    const q = query(
+      gamesRef(),
+      where('players', 'array-contains', uid),
+      where('status', '==', 'finished'),
+    );
+    const snap = await getDocs(q);
     const cutoff = Date.now() - CLEANUP_MAX_AGE_MS;
     const deletions: Promise<void>[] = [];
     for (const d of snap.docs) {
       const game = d.data() as MultiplayerGame;
       const last = Date.parse(game.lastMoveAt);
       if (Number.isFinite(last) && last < cutoff) {
-        deletions.push(d.ref.delete());
+        deletions.push(deleteDoc(d.ref));
       }
     }
     await Promise.all(deletions);

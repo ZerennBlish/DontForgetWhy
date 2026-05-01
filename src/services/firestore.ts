@@ -1,5 +1,13 @@
-import firestore from '@react-native-firebase/firestore';
-import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  collection,
+  getDoc,
+  setDoc,
+  deleteDoc,
+  Timestamp,
+  type FirebaseFirestoreTypes,
+} from '@react-native-firebase/firestore';
 import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
 
 const USERS_COLLECTION = 'users';
@@ -33,14 +41,14 @@ function isUserProfile(value: unknown): value is UserProfile {
 }
 
 export function firestoreTimestamp(): FirebaseFirestoreTypes.Timestamp {
-  return firestore.Timestamp.now();
+  return Timestamp.now();
 }
 
 export async function createOrUpdateUserProfile(
   user: FirebaseAuthTypes.User,
 ): Promise<void> {
-  const docRef = firestore().collection(USERS_COLLECTION).doc(user.uid);
-  const snap = await docRef.get();
+  const docRef = doc(collection(getFirestore(), USERS_COLLECTION), user.uid);
+  const snap = await getDoc(docRef);
   const now = firestoreTimestamp();
 
   const payload: Record<string, unknown> = {
@@ -54,11 +62,12 @@ export async function createOrUpdateUserProfile(
     payload.createdAt = now;
   }
 
-  await docRef.set(payload, { merge: true });
+  await setDoc(docRef, payload, { merge: true });
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  const snap = await firestore().collection(USERS_COLLECTION).doc(uid).get();
+  const docRef = doc(collection(getFirestore(), USERS_COLLECTION), uid);
+  const snap = await getDoc(docRef);
   if (!snap.exists()) return null;
   const data = snap.data();
   if (!isUserProfile(data)) return null;
@@ -66,5 +75,5 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function deleteUserProfile(uid: string): Promise<void> {
-  await firestore().collection(USERS_COLLECTION).doc(uid).delete();
+  await deleteDoc(doc(collection(getFirestore(), USERS_COLLECTION), uid));
 }
