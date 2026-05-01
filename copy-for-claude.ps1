@@ -23,7 +23,8 @@ $rootFiles = @(
     "DFW-Data-Models.md",
     "DFW-Decisions.md",
     "DFW-Features.md",
-    "DFW-Project-Setup.md"
+    "DFW-Project-Setup.md",
+    "DFW-Close-Out.md"
 )
 foreach ($f in $rootFiles) {
     $src = "C:\DontForgetWhy\$f"

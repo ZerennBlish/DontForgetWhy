@@ -42,3 +42,6 @@ yarn-error.*
 
 # Claude Code local settings
 .claude/
+
+# Session prompts (local, deleted after each session)
+Prompts/
