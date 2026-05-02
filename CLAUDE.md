@@ -17,9 +17,11 @@
 
 ## Commands
 
+`tsc` and `jest` only run when source code (`*.ts`, `*.tsx`, `*.js`) was modified this session. Skip both for doc-only, config-only, or script-only sessions — they verify nothing in those cases.
+
 ```bash
-npx tsc --noEmit              # Must pass before production builds — 0 errors
-npx jest                       # Must pass before production builds — all green
+npx tsc --noEmit              # Must pass before production builds (when code changed) — 0 errors
+npx jest                       # Must pass before production builds (when code changed) — all green
 cd functions && npm run build  # Cloud Functions (separate Node 22 project)
 ```
 
@@ -43,6 +45,7 @@ cd functions && npm run build  # Cloud Functions (separate Node 22 project)
 - **Zerenn is not a code reviewer.** Audits are the AI team's job (Codex, Gemini, Claude Code in audit mode). Never ask him to read a block of code and tell you if it looks right.
 - **Trust his bug diagnoses.** If he says it doesn't work, he tested it. Don't ask if he ran the prompt.
 - **Restart first when something stopped working.** If something worked yesterday and doesn't today (especially after sleep/wake), suggest a restart before deeper diagnostics. ~90% of weird-state bugs across all electronics resolve with a restart.
+- **Verification scope matches change scope.** Run `tsc` / `jest` only if source code changed. Doc-only or config-only sessions skip them — they verify nothing in those cases. Grep counts and file checks still apply to docs.
 - **Destructive operations need explicit confirmation.** Force pushes, hard resets, recursive deletes, dropping branches, amending published commits, `--no-verify` — ask first.
 
 ### Project-specific (Don't Forget Why)
