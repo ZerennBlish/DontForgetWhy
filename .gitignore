@@ -48,3 +48,6 @@ Prompts/
 
 # Build artifacts
 *.apk
+
+# Build artifacts
+*.apk
