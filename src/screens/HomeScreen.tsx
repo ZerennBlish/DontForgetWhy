@@ -8,7 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ToastAndroid,
-  AppState,
+  Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -50,6 +50,29 @@ const EMPTY_TODAY_LINES = [
   'Zero events. The universe isn\'t impressed.',
   'A blank slate. Try not to ruin it.',
   'No plans. Your calendar is judging you.',
+];
+
+const WELCOME_SLIDES = [
+  {
+    title: 'Welcome to Don\'t Forget Why',
+    subtitle: 'Alarms. Notes. Games. Judgment.',
+    icon: null, // Uses the character image
+  },
+  {
+    title: 'More Than Just Alarms',
+    subtitle: 'Alarms with attitude, timers, reminders, and calendar sync — all in one place.',
+    icons: ['alarm', 'stopwatch', 'bell', 'calendar'] as const,
+  },
+  {
+    title: 'Your Stuff, Your Way',
+    subtitle: 'Notepad, voice memos, 6 themes, custom icons. No accounts. No tracking. No ads.',
+    icons: ['notepad', 'microphone', 'gear'] as const,
+  },
+  {
+    title: 'Games That Judge You',
+    subtitle: 'Chess, checkers, trivia, sudoku, memory match, daily riddle. Brain training with personality.',
+    icons: ['gamepad'] as const,
+  },
 ];
 
 interface TodayEvent {
@@ -208,14 +231,22 @@ export default function HomeScreen({ navigation }: Props) {
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
   const [bannerQuote] = useState<BannerQuote>(getRandomBannerQuote);
   const [emptyLine] = useState(() => EMPTY_TODAY_LINES[Math.floor(Math.random() * EMPTY_TODAY_LINES.length)]);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [welcomeSlide, setWelcomeSlide] = useState(0);
 
   const openingPlayerRef = useRef<PlayerWithEvents | null>(null);
+  const dismissWelcomeRef = useRef<(() => void) | null>(null);
+  const welcomeScrollRef = useRef<ScrollView>(null);
+  const screenWidth = Dimensions.get('window').width;
 
   useEffect(() => {
-    let cancelled = false;
+    // One-time welcome overlay + opening clip
+    const alreadyPlayed = kvGet('opening_clip_played');
+    if (alreadyPlayed) return;
 
-    if (kvGet('opening_clip_played')) return;
-    kvSet('opening_clip_played', 'true');
+    setShowWelcome(true);
+    let cancelled = false;
+    let slideTimer: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
       try {
@@ -232,32 +263,70 @@ export default function HomeScreen({ navigation }: Props) {
           openingPlayerRef.current = null;
           return;
         }
+
+        // Auto-advance slides every 6.5 seconds (4 slides × 6.5s = 26s clip)
+        slideTimer = setInterval(() => {
+          setWelcomeSlide((prev) => {
+            const next = prev < 3 ? prev + 1 : prev;
+            if (next !== prev) {
+              welcomeScrollRef.current?.scrollTo({ x: next * screenWidth, animated: true });
+            }
+            return next;
+          });
+        }, 6500);
+
+        // Listen for playback completion
+        const sub = player.addListener('playbackStatusUpdate', (status) => {
+          if (status.didJustFinish && !cancelled) {
+            dismissWelcome();
+          }
+        });
+
         player.play();
+
+        // Store subscription removal for cleanup
+        openingPlayerRef.current = Object.assign(player, { _statusSub: sub });
       } catch (e) {
         console.warn('[HomeScreen] opening clip error:', e);
+        // If clip fails, still show overlay — user can skip
       }
     })();
 
-    return () => {
+    function dismissWelcome() {
       cancelled = true;
+      if (slideTimer) clearInterval(slideTimer);
+      kvSet('opening_clip_played', 'true');
+      setShowWelcome(false);
+      setWelcomeSlide(0);
+      if (openingPlayerRef.current) {
+        try { openingPlayerRef.current.pause(); } catch { /* */ }
+        try {
+          const sub = (openingPlayerRef.current as any)._statusSub;
+          if (sub?.remove) sub.remove();
+        } catch { /* */ }
+        try { openingPlayerRef.current.remove(); } catch { /* */ }
+        openingPlayerRef.current = null;
+      }
+    }
+
+    // Expose dismissWelcome for the skip button via ref
+    dismissWelcomeRef.current = dismissWelcome;
+
+    return () => {
+      dismissWelcome();
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('blur', () => {
       if (openingPlayerRef.current) {
         try { openingPlayerRef.current.pause(); } catch { /* */ }
         try { openingPlayerRef.current.remove(); } catch { /* */ }
         openingPlayerRef.current = null;
       }
-    };
-  }, []);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (nextState) => {
-      if (nextState !== 'active' && openingPlayerRef.current) {
-        try { openingPlayerRef.current.pause(); } catch { /* */ }
-        try { openingPlayerRef.current.remove(); } catch { /* */ }
-        openingPlayerRef.current = null;
-      }
     });
-    return () => sub.remove();
-  }, []);
+    return unsubscribe;
+  }, [navigation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -560,6 +629,81 @@ export default function HomeScreen({ navigation }: Props) {
       textAlign: 'center',
       textAlignVertical: 'center',
     },
+    // Welcome overlay
+    welcomeOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.92)',
+      zIndex: 100,
+    },
+    welcomeScrollContent: {
+      alignItems: 'stretch',
+    },
+    welcomeSlide: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 40,
+    },
+    welcomeCharacter: {
+      width: 160,
+      height: 160,
+      marginBottom: 24,
+    },
+    welcomeIconRow: {
+      flexDirection: 'row',
+      gap: 20,
+      marginBottom: 24,
+    },
+    welcomeIcon: {
+      width: 48,
+      height: 48,
+    },
+    welcomeTitle: {
+      fontSize: 22,
+      fontFamily: FONTS.bold,
+      color: '#FFFFFF',
+      textAlign: 'center',
+      marginBottom: 12,
+    },
+    welcomeSubtitle: {
+      fontSize: 14,
+      fontFamily: FONTS.regular,
+      color: 'rgba(255, 255, 255, 0.7)',
+      textAlign: 'center',
+      lineHeight: 20,
+      marginBottom: 32,
+    },
+    welcomeDots: {
+      position: 'absolute',
+      bottom: 120,
+      alignSelf: 'center',
+      flexDirection: 'row',
+      gap: 8,
+    },
+    welcomeDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    welcomeDotActive: {
+      backgroundColor: '#FFFFFF',
+      width: 24,
+    },
+    welcomeSkip: {
+      position: 'absolute',
+      bottom: 60,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    welcomeSkipText: {
+      fontSize: 14,
+      fontFamily: FONTS.semiBold,
+      color: '#FFFFFF',
+    },
   }), [colors, insets]);
 
   return (
@@ -726,6 +870,90 @@ export default function HomeScreen({ navigation }: Props) {
           )}
         </View>
       </View>
+
+      {showWelcome && (
+        <View style={styles.welcomeOverlay}>
+          <ScrollView
+            ref={welcomeScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+              setWelcomeSlide(index);
+            }}
+            style={StyleSheet.absoluteFill}
+            contentContainerStyle={styles.welcomeScrollContent}
+          >
+            {WELCOME_SLIDES.map((slide, i) => (
+              <View key={i} style={[styles.welcomeSlide, { width: screenWidth }]}>
+                {/* Character image on slide 0 */}
+                {i === 0 && (
+                  <Image
+                    source={require('../../assets/adaptive-icon.png')}
+                    style={styles.welcomeCharacter}
+                    resizeMode="contain"
+                  />
+                )}
+
+                {/* Icon row for slides 1-3 */}
+                {i > 0 && (slide as any).icons && (
+                  <View style={styles.welcomeIconRow}>
+                    {((slide as any).icons as string[]).map((key: string) => {
+                      const iconSource: Record<string, any> = {
+                        alarm: alarmIcon,
+                        stopwatch: stopwatchIcon,
+                        bell: bellIcon,
+                        calendar: calendarIcon,
+                        notepad: notepadIcon,
+                        microphone: microphoneIcon,
+                        gear: gearIcon,
+                        gamepad: gamepadIcon,
+                      };
+                      return iconSource[key] ? (
+                        <Image
+                          key={key}
+                          source={iconSource[key]}
+                          style={styles.welcomeIcon}
+                          resizeMode="contain"
+                        />
+                      ) : null;
+                    })}
+                  </View>
+                )}
+
+                <Text style={styles.welcomeTitle}>{slide.title}</Text>
+                <Text style={styles.welcomeSubtitle}>{slide.subtitle}</Text>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Dot indicators — positioned absolutely over the scroll */}
+          <View style={styles.welcomeDots}>
+            {WELCOME_SLIDES.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.welcomeDot,
+                  i === welcomeSlide && styles.welcomeDotActive,
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Skip button — always visible */}
+          <TouchableOpacity
+            style={styles.welcomeSkip}
+            onPress={() => dismissWelcomeRef.current?.()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Skip introduction"
+          >
+            <Text style={styles.welcomeSkipText}>Skip</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
