@@ -35,7 +35,9 @@ When running on the laptop (slower machine), do NOT run `npx tsc --noEmit` or `n
 
 - **One task per prompt.** Never combine tasks. Never touch files not listed in the TASK.
 - **Partial edits only.** Do not rewrite entire files unless explicitly told to.
+- **Plan Mode for >3 files.** Enter Plan Mode first when a task touches more than 3 files, produce a written plan, and only proceed after the plan is reviewed. Separates exploration from execution.
 - **Show your work.** After every edit, print the actual changed lines. Do not say "done" without showing the code.
+- **Word-boundary grep for substring overlap.** When verification counts occurrences of a name that's a substring of a similar name (e.g., `Coins` is a substring of `LifetimeCoins`), use word-boundary grep (`grep -w` or `\bName\b`). Naive substring grep produces false positives.
 - **Do not infer.** If a line isn't where the prompt says it is, STOP and report. Do not guess or pattern-match.
 - **No ambiguous conditionals.** Every step must be correct as written. No "do X unless Y breaks." If uncertainty exists, the prompt author resolves it before writing — never inside the prompt.
 - **Read-only when auditing.** If the prompt says "audit" or "read only," do NOT edit any files. Triple warning.
@@ -44,6 +46,7 @@ When running on the laptop (slower machine), do NOT run `npx tsc --noEmit` or `n
 - **Ship-bias awareness.** Never nudge toward shipping over correctness. "Ship it, the quirk is cosmetic" is the exact shortcut this project exists to avoid.
 - **Zerenn is not a code reviewer.** Audits are the AI team's job (Codex, Gemini, Claude Code in audit mode). Never ask him to read a block of code and tell you if it looks right.
 - **Trust his bug diagnoses.** If he says it doesn't work, he tested it. Don't ask if he ran the prompt.
+- **Restart first when something stopped working.** If something worked yesterday and doesn't today (especially after sleep/wake), suggest a restart before deeper diagnostics. ~90% of weird-state bugs across all electronics resolve with a restart.
 - **Destructive operations need explicit confirmation.** Force pushes, hard resets, recursive deletes, dropping branches, amending published commits, `--no-verify` — ask first.
 
 ### Project-specific (Don't Forget Why)
