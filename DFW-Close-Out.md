@@ -8,7 +8,7 @@ This is the operations workflow Opus runs at the end of every DFW session. Lives
 
 ## On the OneDrive Stash
 
-Step 7 below copies files into a OneDrive-synced folder (`C:\Users\baldy\OneDrive\Desktop\DFW\FilesForClaude`). This is intentional and safe, even though OneDrive sync is otherwise dangerous during active development.
+Step 7 below copies files into a OneDrive-synced folder (`C:\Users\baldy\OneDrive\Desktop\BaldGuyandCompanyGames\Dont_Forget_Why\FilesForClaude`). This is intentional and safe, even though OneDrive sync is otherwise dangerous during active development.
 
 The risk with OneDrive is sync timing fighting file writes — editing files inside a synced folder while a build runs can cause sync to grab a half-written file. The stash avoids this entirely: it's a one-shot copy-in destination, not an edit target. Nothing modifies the staged copies after the copy completes; sync just uploads them. The stash is staging, not a development directory.
 

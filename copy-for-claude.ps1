@@ -1,4 +1,4 @@
-$dest = "C:\Users\baldy\OneDrive\Desktop\DFW\FilesForClaude"
+$dest = "C:\Users\baldy\OneDrive\Desktop\BaldGuyandCompanyGames\Dont_Forget_Why\FilesForClaude"
 
 # Clear old files so deleted/renamed files don't linger as stale uploads
 if (Test-Path $dest) { Remove-Item "$dest\*" -Force }
