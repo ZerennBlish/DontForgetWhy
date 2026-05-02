@@ -57,6 +57,68 @@ When app resumes on AlarmFire with no pending alarm data AND no displayed alarm/
 
 All prior channel versions deleted on every app startup.
 
+### Cold Start & Pending Data Flow
+
+The notification system has three reentrant paths into AlarmFireScreen, depending on whether the app is killed, backgrounded, or in foreground when the alarm fires.
+
+**Init Phase (cold start):** `App.tsx` mount reads `getPendingAlarm()` — module-level data set by the background handler before React mounted. If found, builds `alarmFireParams`, marks the notification as handled in the dedupe map, and sets the initial route to AlarmFire so the user lands there directly with no flash of HomeScreen. Fallback: `notifee.getInitialNotification()` for PRESS/fullScreenAction cold starts that did not go through the background handler.
+
+**onNavigationReady (warm start):** Fires when `NavigationContainer` becomes ready. Catches pending data not consumed by init phase (e.g., app was already running when the notification fired). Reads, clears, and navigates to AlarmFire.
+
+**AppState fallback (background → foreground):** Listens for `'active'` state transitions. Calls `consumePendingAlarm()` to read module-level pending data. Secondary fallback: if no pending data, scans `notifee.getDisplayedNotifications()` for active alarm/timer notifications not yet handled.
+
+**Dedupe map:** `_handledNotifs: Map<string, number>` in `pendingAlarm.ts`. Key is notification ID, value is timestamp. TTL is 10 minutes. Cleaned on each `markNotifHandled()` call. Prevents double navigation when one notification fires events through multiple paths.
+
+### Snooze Flow
+
+User taps Snooze on AlarmFireScreen → `handleSnooze()`:
+1. Cancel everything: `cancelAllNotifications()` → `Vibration.cancel()` + `stopAlarmSound()` + cancel all notification IDs.
+2. Schedule snooze: `scheduleSnooze(alarm, 5)` creates a new trigger 5 minutes out with the same channel, fullScreenAction, and payload.
+3. Persist snooze notification ID: `updateSingleAlarm()` appends the new ID to `notificationIds` so the snooze trigger gets cancelled if the alarm is disabled or deleted while snoozed.
+4. Increment snooze count: `incrementSnoozeCount(alarm.id)` writes to kv_store.
+5. Show shame message: `getSnoozeMessage(count)` returns a tier-based escalating roast (7 messages per tier, 4 tiers).
+6. Animate message for 3.5 seconds.
+7. Exit to lock screen: `navigation.reset()` then `BackHandler.exitApp()`.
+
+Snooze count is reset only on Dismiss, not on alarm completion or Guess Why win.
+
+### Yearly Reminder Reschedule
+
+Notifee has no `RepeatFrequency.YEARLY`. Yearly reminders use one-time triggers and are auto-rescheduled on DELIVERED/DISMISSED.
+
+`rescheduleYearlyReminder()` exists in BOTH `index.ts` (background handler) and `App.tsx` (foreground handler) since either context can receive the event:
+1. Load reminder from storage.
+2. Check: `recurring` + has `dueDate` + no `days` array → yearly pattern.
+3. Cancel old notification IDs.
+4. Bump `dueDate` to next year (handles Feb 29 → Feb 28 on non-leap years).
+5. Schedule new one-time trigger.
+6. Update reminder in storage.
+
+### Sound Stop Triggers
+
+Alarm sound stops when:
+- User taps Dismiss → `cancelAllNotifications()` → `stopAlarmSound()`.
+- User taps Snooze → same path.
+- User taps Guess Why → same path.
+- User swipes notification → DISMISSED event handler → `stopAlarmSound()`.
+- AlarmFireScreen unmounts → useEffect cleanup → `stopAlarmSound()`.
+
+### File Responsibilities (Notification System)
+
+| File | Role |
+|------|------|
+| `plugins/withAlarmChannel.js` | Generates Java: AlarmChannelHelper (channels + MediaPlayer), AlarmChannelModule (RN bridge), AlarmChannelPackage |
+| `plugins/withAlarmWake.js` | Injects wake flags into MainActivity: showWhenLocked, turnScreenOn, keepScreenOn, dismissKeyguard |
+| `plugins/withNotifee.js` | Adds notification permissions to AndroidManifest |
+| `src/services/notifications.ts` | Scheduling, channel creation, snooze, timer notifications, sound preview |
+| `src/services/alarmSound.ts` | JS bridge to native MediaPlayer: play, stop, resolve URI |
+| `src/services/pendingAlarm.ts` | Module-level data bridge (background → React) + notification dedupe map |
+| `index.ts` | Background event handler: sound, pending data, one-time alarm deletion, yearly reschedule |
+| `App.tsx` | Foreground event handler, init phase, onNavigationReady, AppState fallback, yearly reschedule |
+| `src/screens/AlarmFireScreen.tsx` | Sound fallback, vibration, dismiss/snooze/guess why handlers, UI |
+| `src/screens/OnboardingScreen.tsx` | Permission setup: notifications, exact alarm, battery, full-screen, Samsung DND, overlay |
+| `src/utils/fullScreenPermission.ts` | Full-screen intent permission check (conservative false on API 34+) |
+
 ---
 
 ## 2. Sound Architecture
