@@ -23,10 +23,6 @@ npx jest                       # Must pass before production builds — all gree
 cd functions && npm run build  # Cloud Functions (separate Node 22 project)
 ```
 
-### Laptop Constraint
-
-When running on the laptop (slower machine), do NOT run `npx tsc --noEmit` or `npx jest` as verification steps. Report what needs to be verified and the user will run them manually in PowerShell after the prompt completes.
-
 ---
 
 ## Rules — READ THESE BEFORE EVERY TASK

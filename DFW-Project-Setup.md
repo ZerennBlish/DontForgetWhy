@@ -35,10 +35,6 @@
 - Claude Code runs through WSL/Ubuntu
 - ADB: `C:\platform-tools\platform-tools\adb.exe`
 
-### Laptop (Backup — Fully Operational)
-- Windows, 8GB RAM. Same path structure.
-- All three branches available. Claude Code operational.
-
 ### Phone
 - Samsung Galaxy S23 Ultra, production Play Store build only
 - Dev builds cannot install over production (signature mismatch) — test on emulators
@@ -57,15 +53,15 @@
 - Do NOT run dev server from WSL (gives internal IP phone can't reach)
 
 ### Emulator Testing Matrix
-- 6 AVDs configured on both desktop and laptop machines
+- 6 AVDs configured on the desktop
 - Devices: Pixel 7 (baseline), Galaxy S25 FE (custom profile, 1080x2340 19.5:9), Pixel 5 (smaller 6.0"), Moto G Power (custom profile, 720x1600 budget), Galaxy S23 Ultra (custom profile, 1440x3088 QHD+), Pixel Tablet (2560x1600)
 - All running API 35 (Android 15 VanillaIceCream) x86_64 system images
 - EAS build profile "development-emulator" added to eas.json with env `ORG_GRADLE_PROJECT_reactNativeArchitectures=x86_64`
 - Emulator dev build APK stored at `C:\DontForgetWhy\DFW-emulator.apk`
 - ARM dev build for physical devices, x86_64 build for emulators — separate APKs
 - All emulators connect to same dev server simultaneously for side-by-side testing
-- Android Studio Panda 2 (2025.3.2) on both machines
-- Windows Hypervisor Platform enabled on both machines for hardware acceleration
+- Android Studio Panda 2 (2025.3.2)
+- Windows Hypervisor Platform enabled for hardware acceleration
 - adb path: `$env:LOCALAPPDATA\Android\Sdk\platform-tools` (may need full path in PowerShell: `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"`)
 
 ---
@@ -560,6 +556,5 @@ Standing rules for reviewing Claude Code's actions before approving permissions 
 ## 10. Workflow Rules
 
 - **Desktop Commander is read-only for Opus unless Zerenn says otherwise.** Opus can view live files, directory state, git state, and run diagnostics. All edits (code, docs, config) still go through Claude Code. Git repo management (non-editing operations like rebase abort, status checks) is a valid Desktop Commander use case.
-- **Before writing any prompt that runs `tsc` or `jest`, confirm which machine Zerenn is on.** Laptop = Zerenn runs them manually in PowerShell, prompt skips those steps. Desktop = Claude Code can run them.
 - **Every step in a Claude Code prompt must be correct as written.** No "do X unless Y breaks" conditionals. If uncertain whether a step is safe, resolve the uncertainty before writing the prompt, not inside it.
 - **Never nudge toward shipping over correctness.** "Ship it, the quirk is cosmetic" is the exact shortcut this project exists to avoid. If the right answer is more work, say so.
