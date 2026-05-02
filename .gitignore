@@ -45,3 +45,6 @@ yarn-error.*
 
 # Session prompts (local, deleted after each session)
 Prompts/
+
+# Build artifacts
+*.apk
