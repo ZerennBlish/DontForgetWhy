@@ -319,11 +319,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('blur', () => {
-      if (openingPlayerRef.current) {
-        try { openingPlayerRef.current.pause(); } catch { /* */ }
-        try { openingPlayerRef.current.remove(); } catch { /* */ }
-        openingPlayerRef.current = null;
-      }
+      dismissWelcomeRef.current?.();
     });
     return unsubscribe;
   }, [navigation]);
@@ -406,7 +402,7 @@ export default function HomeScreen({ navigation }: Props) {
     { key: 'calendar', label: 'Calendar', color: colors.sectionCalendar, getSubtitle: (c: Counts) => `${c.todayEvents} today` },
     { key: 'notepad', label: 'Notepad', color: colors.sectionNotepad, getSubtitle: (c: Counts) => `${c.notes} note${c.notes !== 1 ? 's' : ''}` },
     { key: 'voice', label: 'Voice', color: colors.sectionVoice, getSubtitle: (c: Counts) => `${c.voiceMemos} memo${c.voiceMemos !== 1 ? 's' : ''}` },
-    { key: 'games', label: 'Games', color: colors.sectionGames, getSubtitle: () => '5 games' },
+    { key: 'games', label: 'Games', color: colors.sectionGames, getSubtitle: () => '7 games' },
   ], [colors]);
 
   const bannerColorMap: Record<string, string> = useMemo(() => ({
