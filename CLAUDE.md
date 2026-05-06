@@ -1,6 +1,10 @@
 # CLAUDE.md — Don't Forget Why
 
-**Project-specific Claude Code instructions.** Lives at the root of the DFW repo. Claude Code reads this automatically at session start.
+**Project-specific Claude Code instructions.** Lives at the root of the DFW repo. Auto-loaded by CC at session start.
+
+For universal cross-project conventions and persona context, see `ai-docs\About-Me.md`.
+For Opus orchestration rules (prompt drafting, audit workflow, session close-out), see `ai-docs\Opus.md`.
+For locked design decisions, see `ai-docs\DFW-Decisions.md`.
 
 ---
 
@@ -10,8 +14,7 @@
 - Package: `com.zerennblish.DontForgetWhy`
 - Publisher: Bald Guy & Company Games
 - Repo: `C:\DontForgetWhy` (WSL: `/mnt/c/DontForgetWhy`)
-- Long prompts live in the design chat (Claude Opus) — delivered as `.md` files, read via WSL path
-- Desktop Commander available for read-only repo inspection from the design chat. Claude Code is the sole file editor.
+- Desktop Commander available for read-only repo inspection from the design chat (Opus). Claude Code is the sole file editor.
 
 ---
 
@@ -27,28 +30,7 @@ cd functions && npm run build  # Cloud Functions (separate Node 22 project)
 
 ---
 
-## Rules — READ THESE BEFORE EVERY TASK
-
-### Universal (apply to every session)
-
-- **One task per prompt.** Never combine tasks. Never touch files not listed in the TASK.
-- **Partial edits only.** Do not rewrite entire files unless explicitly told to.
-- **Plan Mode for >3 files.** Enter Plan Mode first when a task touches more than 3 files, produce a written plan, and only proceed after the plan is reviewed. Separates exploration from execution.
-- **Show your work.** After every edit, print the actual changed lines. Do not say "done" without showing the code.
-- **Word-boundary grep for substring overlap.** When verification counts occurrences of a name that's a substring of a similar name (e.g., `Coins` is a substring of `LifetimeCoins`), use word-boundary grep (`grep -w` or `\bName\b`). Naive substring grep produces false positives.
-- **Do not infer.** If a line isn't where the prompt says it is, STOP and report. Do not guess or pattern-match.
-- **No ambiguous conditionals.** Every step must be correct as written. No "do X unless Y breaks." If uncertainty exists, the prompt author resolves it before writing — never inside the prompt.
-- **Read-only when auditing.** If the prompt says "audit" or "read only," do NOT edit any files. Triple warning.
-- **Cascade rule.** If a session starts cascading (each fix creating new fixes), stop and revert immediately. Do not attempt "one more fix."
-- **Build only what was asked.** No extra files, no abstractions for hypothetical future needs, no flexibility added for cases not asked about. If you find yourself adding "in case we need to..." — stop.
-- **Ship-bias awareness.** Never nudge toward shipping over correctness. "Ship it, the quirk is cosmetic" is the exact shortcut this project exists to avoid.
-- **Zerenn is not a code reviewer.** Audits are the AI team's job (Codex, Gemini, Claude Code in audit mode). Never ask him to read a block of code and tell you if it looks right.
-- **Trust his bug diagnoses.** If he says it doesn't work, he tested it. Don't ask if he ran the prompt.
-- **Restart first when something stopped working.** If something worked yesterday and doesn't today (especially after sleep/wake), suggest a restart before deeper diagnostics. ~90% of weird-state bugs across all electronics resolve with a restart.
-- **Verification scope matches change scope.** Run `tsc` / `jest` only if source code changed. Doc-only or config-only sessions skip them — they verify nothing in those cases. Grep counts and file checks still apply to docs.
-- **Destructive operations need explicit confirmation.** Force pushes, hard resets, recursive deletes, dropping branches, amending published commits, `--no-verify` — ask first.
-
-### Project-specific (Don't Forget Why)
+## Project-Specific Code Rules
 
 - **NEVER write `package-lock.json`.** Edit `package.json` directly for dep changes. The user regenerates the lockfile in PowerShell. WSL-generated lockfiles pass local checks but fail EAS `npm ci` due to cross-platform resolution gaps. This is non-negotiable.
 - **NEVER run `npm install` from WSL.** Same reason. Only edit `package.json`.
@@ -101,7 +83,6 @@ __tests__/         — Jest test files
 
 - TypeScript strict mode
 - Prefer early returns over deep nesting
-- No `&&` in shell commands — PowerShell doesn't support it. One command per code block.
 - `@path/to/file` references for file targeting in prompts
 
 ---
@@ -120,15 +101,18 @@ __tests__/         — Jest test files
 
 ## Reference Docs
 
-Six technical reference docs live at the repo root:
-- `DFW-Architecture.md` — screens, UI patterns, theme system, Cloud Functions, widgets
-- `DFW-Features.md` — feature descriptions (Trivia, Pro tier, calendar, etc.)
-- `DFW-Data-Models.md` — storage schemas
-- `DFW-Bug-History.md` — bug narratives + root causes
-- `DFW-Decisions.md` — design/architecture/monetization decisions
-- `DFW-Project-Setup.md` — dev environment, builds, maintenance cadence, key commands
+Project-specific reference docs in `ai-docs\`:
+- `ai-docs\DFW-Architecture.md` — screens, UI patterns, theme system, Cloud Functions, widgets
+- `ai-docs\DFW-Features.md` — feature descriptions (Trivia, Pro tier, calendar, etc.)
+- `ai-docs\DFW-Data-Models.md` — storage schemas
+- `ai-docs\DFW-Bug-History.md` — bug narratives + root causes
+- `ai-docs\DFW-Decisions.md` — design/architecture/monetization decisions
+- `ai-docs\DFW-Project-Setup.md` — dev environment, builds, maintenance cadence, key commands
 
 Read relevant docs when working on related systems, not for every task.
+
+For universal rules and persona context, see `ai-docs\About-Me.md`.
+For Opus orchestration manual, see `ai-docs\Opus.md`.
 
 ---
 

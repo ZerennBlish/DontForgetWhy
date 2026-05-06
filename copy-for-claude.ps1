@@ -1,73 +1,94 @@
-$dest = "C:\Users\baldy\OneDrive\Desktop\BaldGuy&CompanyGames\Dont_Forget_Why\FilesForClaude"
+# copy-for-claude.ps1
+# Stages all DFW project-knowledge files into a flat OneDrive folder
+# for Claude.ai project knowledge upload. Run from anywhere — paths are absolute.
+#
+# Maintenance:
+#   - When adding, removing, or renaming a TOP-LEVEL config/doc file, update
+#     the $rootFiles list below.
+#   - Folders (ai-docs/, plugins/, src/, __tests__/) are auto-discovered.
+#     Adding new files inside those folders does NOT require updating this script.
 
-# Clear old files so deleted/renamed files don't linger as stale uploads
-if (Test-Path $dest) { Remove-Item "$dest\*" -Force }
-else { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+$source = "C:\DontForgetWhy"
+$dest   = "C:\Users\baldy\OneDrive\Desktop\DFW\FilesForClaude"
 
-# Root files
+# --- Setup ---
+
+# Wipe destination so deleted/renamed files don't linger as stale uploads.
+if (Test-Path $dest) {
+    Remove-Item "$dest\*" -Force
+} else {
+    New-Item -ItemType Directory -Path $dest -Force | Out-Null
+}
+
+# --- Root config files (hand-maintained) ---
+
 $rootFiles = @(
-    "App.tsx",
-    "index.ts",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    "README.md",
+    "ROADMAP.md",
     "app.json",
     "package.json",
     "eas.json",
     "tsconfig.json",
-    "firebase.json",
     "metro.config.js",
-    "ROADMAP.md",
-    "CLAUDE.md",
-    "AGENTS.md",
-    "GEMINI.md",
-    "DFW-Architecture.md",
-    "DFW-Bug-History.md",
-    "DFW-Data-Models.md",
-    "DFW-Decisions.md",
-    "DFW-Features.md",
-    "DFW-Project-Setup.md",
-    "DFW-Close-Out.md"
+    "firebase.json",
+    "firestore.rules",
+    "firestore.indexes.json",
+    "App.tsx",
+    "index.ts"
 )
+
 foreach ($f in $rootFiles) {
-    $src = "C:\DontForgetWhy\$f"
-    if (Test-Path $src) { Copy-Item $src "$dest\$f" }
-    else { Write-Warning "Missing: $f" }
+    $src = Join-Path $source $f
+    if (Test-Path $src) {
+        Copy-Item $src "$dest\$f" -Force
+    } else {
+        Write-Warning "Missing root file: $f"
+    }
 }
 
-# Rename collisions for flat copy
-$renames = @{
-    "metro.config.js" = "metro_config.js"
-}
-foreach ($old in $renames.Keys) {
-    $path = "$dest\$old"
-    if (Test-Path $path) { Rename-Item $path $renames[$old] }
+# --- AI documentation (auto-discovered: all .md in ai-docs/) ---
+
+$aiDocs = Join-Path $source "ai-docs"
+if (Test-Path $aiDocs) {
+    Get-ChildItem -Path $aiDocs -Filter "*.md" -File | ForEach-Object {
+        Copy-Item $_.FullName "$dest\$($_.Name)" -Force
+    }
 }
 
-# All src subfolders — copy flat
-$srcRoot = "C:\DontForgetWhy\src"
+# --- Expo config plugins (auto-discovered: all .js in plugins/) ---
+
+$plugins = Join-Path $source "plugins"
+if (Test-Path $plugins) {
+    Get-ChildItem -Path $plugins -Filter "*.js" -File | ForEach-Object {
+        Copy-Item $_.FullName "$dest\$($_.Name)" -Force
+    }
+}
+
+# --- Source tree (recursive, flattened) ---
+
+$srcRoot = Join-Path $source "src"
 Get-ChildItem -Path $srcRoot -Recurse -File | ForEach-Object {
     $name = $_.Name
-    # Handle collision: navigation/types.ts -> navTypes.ts
+    # Collision handling: src/navigation/types.ts -> navTypes.ts
     if ($_.FullName -like "*navigation\types.ts") {
         $name = "navTypes.ts"
     }
     Copy-Item $_.FullName "$dest\$name" -Force
 }
 
-# Plugins
-$pluginsRoot = "C:\DontForgetWhy\plugins"
-if (Test-Path $pluginsRoot) {
-    Get-ChildItem -Path $pluginsRoot -File | ForEach-Object {
+# --- Jest test files (recursive, flattened) ---
+
+$testsRoot = Join-Path $source "__tests__"
+if (Test-Path $testsRoot) {
+    Get-ChildItem -Path $testsRoot -Recurse -File | ForEach-Object {
         Copy-Item $_.FullName "$dest\$($_.Name)" -Force
     }
 }
 
-# Test files
-$testsRoot = "C:\DontForgetWhy\__tests__"
-if (Test-Path $testsRoot) {
-    Get-ChildItem -Path $testsRoot -File | ForEach-Object {
-        # Rename .test.ts -> _test.ts to avoid flat copy collisions with src files
-        $name = $_.Name -replace '\.test\.ts$', '_test.ts'
-        Copy-Item $_.FullName "$dest\$name" -Force
-    }
-}
+# --- Summary ---
 
-Write-Host "Copied $((Get-ChildItem $dest).Count) files to $dest"
+$count = (Get-ChildItem $dest -File).Count
+Write-Host "Copied $count files to $dest"
