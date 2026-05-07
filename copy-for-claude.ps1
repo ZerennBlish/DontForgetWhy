@@ -1,15 +1,18 @@
-# copy-for-claude.ps1
+﻿# copy-for-claude.ps1
 # Stages all DFW project-knowledge files into a flat OneDrive folder
 # for Claude.ai project knowledge upload. Run from anywhere — paths are absolute.
 #
 # Maintenance:
 #   - When adding, removing, or renaming a TOP-LEVEL config/doc file, update
 #     the $rootFiles list below.
-#   - Folders (ai-docs/, plugins/, src/, __tests__/) are auto-discovered.
+#   - Folders (ai-docs/, plugins/) are auto-discovered.
 #     Adding new files inside those folders does NOT require updating this script.
+#   - Source code (src/, __tests__/, App.tsx, index.ts) is NO LONGER copied.
+#     Opus reads the live repo via Desktop Commander when needed. Keeping
+#     scripts in project knowledge would only go stale and waste context space.
 
 $source = "C:\DontForgetWhy"
-$dest   = "C:\Users\baldy\OneDrive\Desktop\DFW\FilesForClaude"
+$dest   = "C:\Users\baldy\OneDrive\Desktop\BaldGuy&CompanyGames\Dont_Forget_Why\FilesForClaude"
 
 # --- Setup ---
 
@@ -35,9 +38,7 @@ $rootFiles = @(
     "metro.config.js",
     "firebase.json",
     "firestore.rules",
-    "firestore.indexes.json",
-    "App.tsx",
-    "index.ts"
+    "firestore.indexes.json"
 )
 
 foreach ($f in $rootFiles) {
@@ -63,27 +64,6 @@ if (Test-Path $aiDocs) {
 $plugins = Join-Path $source "plugins"
 if (Test-Path $plugins) {
     Get-ChildItem -Path $plugins -Filter "*.js" -File | ForEach-Object {
-        Copy-Item $_.FullName "$dest\$($_.Name)" -Force
-    }
-}
-
-# --- Source tree (recursive, flattened) ---
-
-$srcRoot = Join-Path $source "src"
-Get-ChildItem -Path $srcRoot -Recurse -File | ForEach-Object {
-    $name = $_.Name
-    # Collision handling: src/navigation/types.ts -> navTypes.ts
-    if ($_.FullName -like "*navigation\types.ts") {
-        $name = "navTypes.ts"
-    }
-    Copy-Item $_.FullName "$dest\$name" -Force
-}
-
-# --- Jest test files (recursive, flattened) ---
-
-$testsRoot = Join-Path $source "__tests__"
-if (Test-Path $testsRoot) {
-    Get-ChildItem -Path $testsRoot -Recurse -File | ForEach-Object {
         Copy-Item $_.FullName "$dest\$($_.Name)" -Force
     }
 }
