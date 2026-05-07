@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 42 (April 24, 2026)
+**Last updated:** Session 44 (May 7, 2026) — v2.0.2 doc close-out
 
 **For Sessions 1-28 bug history, see DFW-Bug-History-Archive.md.**
 
@@ -30,6 +30,10 @@
 **Widget renders transparent (Feb 12):** registerWidgetTaskHandler inside App.tsx instead of module-level entry point. Fix: created index.ts.
 
 **Alarms silent on silent/vibrate mode (Feb 26):** Entire MediaPlayer architecture change (see Architecture doc section 1).
+
+**Opening.mp3 plays on every launch instead of once (v2.0.2 fix):** The `opening_clip_played` kv flag wasn't persisting correctly — the flag write was separated from the dismissal logic, so certain code paths (crash, force-kill, navigation away) could dismiss the overlay without writing the flag. Fix: consolidated all cleanup into a single `dismissWelcome()` function that writes the flag, pauses audio, removes listeners, and clears the interval. The function is called from four paths: clip completion, skip button, navigation blur, and useEffect cleanup. Flag is written at dismiss time (not mount time) so a mid-presentation crash replays the overlay rather than silently skipping it.
+
+**Welcome overlay audio continues after navigating away (v2.0.2 fix):** The welcome overlay played Opening.mp3 but had no awareness of navigation events. If the user tapped a section card during the presentation, they'd navigate to another screen while the audio kept playing in the background. Fix: added a separate `useEffect` that listens for the `blur` event on HomeScreen's navigation and calls `dismissWelcomeRef.current?.()`.
 
 ---
 

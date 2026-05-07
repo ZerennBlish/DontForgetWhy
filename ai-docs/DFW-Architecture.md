@@ -1,6 +1,6 @@
 # DFW Architecture
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 41 (April 22, 2026) — v2.0.0 ship (Pro tier + App Check)
+**Last updated:** Session 44 (May 7, 2026) — v2.0.2 doc close-out
 
 ---
 
