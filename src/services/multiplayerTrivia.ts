@@ -1,4 +1,16 @@
-import firestore from '@react-native-firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  collection,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  arrayUnion,
+} from '@react-native-firebase/firestore';
 import { generateGameCode, listenToGame } from './multiplayer';
 import { getCurrentUser } from './firebaseAuth';
 import { isProUser } from './proStatus';
@@ -82,8 +94,8 @@ export { listenToGame, generateGameCode };
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function gamesCollection() {
-  return firestore().collection(COLLECTION);
+function gamesRef() {
+  return collection(getFirestore(), COLLECTION);
 }
 
 function requireAuthedPlayer(): { uid: string; displayName: string } {
@@ -94,10 +106,12 @@ function requireAuthedPlayer(): { uid: string; displayName: string } {
 }
 
 async function assertBelowActiveGameLimit(uid: string): Promise<void> {
-  const snap = await gamesCollection()
-    .where('players', 'array-contains', uid)
-    .where('status', 'in', ['waiting', 'active'])
-    .get();
+  const q = query(
+    gamesRef(),
+    where('players', 'array-contains', uid),
+    where('status', 'in', ['waiting', 'active']),
+  );
+  const snap = await getDocs(q);
   if (snap.size >= MAX_ACTIVE_GAMES) {
     throw new Error(
       'Maximum 5 active games. Finish or resign an existing game.',
@@ -134,7 +148,7 @@ export async function createTriviaGame(
   let code = '';
   for (let attempt = 0; attempt < UNIQUE_RETRIES; attempt++) {
     const candidate = generateGameCode();
-    const existing = await gamesCollection().doc(candidate).get();
+    const existing = await getDoc(doc(gamesRef(), candidate));
     if (!existing.exists()) {
       code = candidate;
       break;
@@ -149,7 +163,7 @@ export async function createTriviaGame(
     score: 0,
   };
 
-  const doc: TriviaMultiplayerGame = {
+  const gameDoc: TriviaMultiplayerGame = {
     code,
     type: 'trivia',
     host: { uid: me.uid, displayName: me.displayName },
@@ -171,7 +185,7 @@ export async function createTriviaGame(
     lastMoveAt: now,
   };
 
-  await gamesCollection().doc(code).set(doc);
+  await setDoc(doc(gamesRef(), code), gameDoc);
   return { code };
 }
 
@@ -182,8 +196,8 @@ export async function joinTriviaGame(
   if (!isProUser()) throw new Error('Pro required to join multiplayer games');
 
   const normalized = code.trim().toUpperCase();
-  const ref = gamesCollection().doc(normalized);
-  const snap = await ref.get();
+  const ref = doc(gamesRef(), normalized);
+  const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error('Game not found');
 
   const game = snap.data() as TriviaMultiplayerGame | undefined;
@@ -203,20 +217,20 @@ export async function joinTriviaGame(
   };
   const updatedTriviaPlayers = [...game.triviaPlayers, newPlayer];
 
-  await ref.update({
-    players: firestore.FieldValue.arrayUnion(me.uid),
+  await updateDoc(ref, {
+    players: arrayUnion(me.uid),
     triviaPlayers: updatedTriviaPlayers,
     lastMoveAt: now,
   });
 
-  const updated = await ref.get();
+  const updated = await getDoc(ref);
   return updated.data() as TriviaMultiplayerGame;
 }
 
 export async function startTriviaGame(code: string): Promise<void> {
   const me = requireAuthedPlayer();
-  const ref = gamesCollection().doc(code);
-  const snap = await ref.get();
+  const ref = doc(gamesRef(), code);
+  const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error('Game not found');
 
   const game = snap.data() as TriviaMultiplayerGame;
@@ -238,7 +252,7 @@ export async function startTriviaGame(code: string): Promise<void> {
   if (selected.length === 0) throw new Error('No questions available');
 
   const now = nowIso();
-  await ref.update({
+  await updateDoc(ref, {
     questions: selected,
     status: 'active',
     phase: 'question',
@@ -256,8 +270,8 @@ export async function submitAnswer(
   answer: string,
 ): Promise<void> {
   const me = requireAuthedPlayer();
-  const ref = gamesCollection().doc(code);
-  const snap = await ref.get();
+  const ref = doc(gamesRef(), code);
+  const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error('Game not found');
 
   const game = snap.data() as TriviaMultiplayerGame;
@@ -316,13 +330,13 @@ export async function submitAnswer(
     // advanceToNextQuestion handles moving on.
   }
 
-  await ref.update(updates);
+  await updateDoc(ref, updates);
 }
 
 export async function advanceToNextQuestion(code: string): Promise<void> {
   const me = requireAuthedPlayer();
-  const ref = gamesCollection().doc(code);
-  const snap = await ref.get();
+  const ref = doc(gamesRef(), code);
+  const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error('Game not found');
 
   const game = snap.data() as TriviaMultiplayerGame;
@@ -341,7 +355,7 @@ export async function advanceToNextQuestion(code: string): Promise<void> {
       const maxScore = Math.max(...game.triviaPlayers.map((p) => p.score));
       const top = game.triviaPlayers.filter((p) => p.score === maxScore);
       const winner = top.length === 1 ? top[0].uid : null;
-      await ref.update({
+      await updateDoc(ref, {
         phase: 'final',
         status: 'finished',
         winner,
@@ -351,7 +365,7 @@ export async function advanceToNextQuestion(code: string): Promise<void> {
       // Rotate to next player for the new question.
       const n = game.triviaPlayers.length;
       const newRotationStart = (game.rotationStartIndex + 1) % n;
-      await ref.update({
+      await updateDoc(ref, {
         currentQuestionIndex: nextIdx,
         activePlayerIndex: newRotationStart,
         rotationStartIndex: newRotationStart,
@@ -363,7 +377,7 @@ export async function advanceToNextQuestion(code: string): Promise<void> {
     }
   } else {
     // Wrong + someone hasn't tried yet — activePlayerIndex was set in submitAnswer.
-    await ref.update({
+    await updateDoc(ref, {
       lastAnswer: null,
       phase: 'question',
       lastMoveAt: now,
@@ -373,8 +387,8 @@ export async function advanceToNextQuestion(code: string): Promise<void> {
 
 export async function leaveTriviaGame(code: string): Promise<void> {
   const me = requireAuthedPlayer();
-  const ref = gamesCollection().doc(code);
-  const snap = await ref.get();
+  const ref = doc(gamesRef(), code);
+  const snap = await getDoc(ref);
   if (!snap.exists()) return;
 
   const game = snap.data() as TriviaMultiplayerGame;
@@ -385,7 +399,7 @@ export async function leaveTriviaGame(code: string): Promise<void> {
   if (game.status === 'waiting') {
     if (game.host.uid === me.uid) {
       // Host aborting the lobby — mark finished (client-side deletes are blocked).
-      await ref.update({
+      await updateDoc(ref, {
         status: 'finished',
         phase: 'final',
         winner: null,
@@ -397,7 +411,7 @@ export async function leaveTriviaGame(code: string): Promise<void> {
       (p) => p.uid !== me.uid,
     );
     const newPlayers = game.players.filter((uid) => uid !== me.uid);
-    await ref.update({
+    await updateDoc(ref, {
       triviaPlayers: newTriviaPlayers,
       players: newPlayers,
       lastMoveAt: now,
@@ -409,7 +423,7 @@ export async function leaveTriviaGame(code: string): Promise<void> {
     const remaining = game.triviaPlayers.filter((p) => p.uid !== me.uid);
     if (remaining.length <= 1) {
       const winner = remaining[0]?.uid ?? null;
-      await ref.update({
+      await updateDoc(ref, {
         status: 'finished',
         phase: 'final',
         winner,
@@ -471,18 +485,20 @@ export async function leaveTriviaGame(code: string): Promise<void> {
       };
     }
 
-    await ref.update(updates);
+    await updateDoc(ref, updates);
   }
 }
 
 export async function getTriviaGames(
   uid: string,
 ): Promise<TriviaMultiplayerGame[]> {
-  const snap = await gamesCollection()
-    .where('players', 'array-contains', uid)
-    .where('status', 'in', ['waiting', 'active'])
-    .orderBy('lastMoveAt', 'desc')
-    .get();
+  const q = query(
+    gamesRef(),
+    where('players', 'array-contains', uid),
+    where('status', 'in', ['waiting', 'active']),
+    orderBy('lastMoveAt', 'desc'),
+  );
+  const snap = await getDocs(q);
   const all = snap.docs.map((d) => d.data() as TriviaMultiplayerGame);
   return all.filter((g) => g.type === 'trivia');
 }

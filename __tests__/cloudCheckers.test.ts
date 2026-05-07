@@ -1,11 +1,16 @@
-// `virtual: true` lets the mock register before the package is installed
+// `virtual: true` lets the mocks register before the packages are installed
 // (the lockfile is regenerated outside this WSL session). After install,
 // the flag is harmless — the factory still wins over the real module.
 jest.mock('@react-native-firebase/app-check', () => ({
   __esModule: true,
-  default: () => ({
-    getToken: jest.fn().mockResolvedValue({ token: 'test-appcheck-token' }),
-  }),
+  getToken: jest.fn().mockResolvedValue({ token: 'test-appcheck-token' }),
+}), { virtual: true });
+
+jest.mock('@react-native-firebase/app', () => ({
+  __esModule: true,
+  getApp: jest.fn(() => ({
+    appCheck: jest.fn(() => ({})),
+  })),
 }), { virtual: true });
 
 import { getCloudCheckersMove } from '../src/services/cloudCheckers';

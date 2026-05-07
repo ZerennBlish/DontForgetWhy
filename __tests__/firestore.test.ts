@@ -21,23 +21,30 @@ const docRefMock = {
 };
 
 const collectionMock = {
-  doc: jest.fn(() => docRefMock),
+  doc: jest.fn((_id: string) => docRefMock),
 };
 
 const firestoreInstance = {
-  collection: jest.fn(() => collectionMock),
+  collection: jest.fn((_name: string) => collectionMock),
 };
 
-const firestoreFn = jest.fn(() => firestoreInstance) as jest.Mock & {
-  Timestamp: { now: jest.Mock };
-};
-firestoreFn.Timestamp = {
+const TimestampMock = {
   now: jest.fn(() => ({ seconds: 1700000000, nanoseconds: 0 })),
 };
 
 jest.mock('@react-native-firebase/firestore', () => ({
   __esModule: true,
-  default: firestoreFn,
+  getFirestore: jest.fn(() => firestoreInstance),
+  collection: jest.fn((_fs: unknown, name: string) => firestoreInstance.collection(name)),
+  doc: jest.fn((coll: typeof collectionMock, id: string) => coll.doc(id)),
+  getDoc: jest.fn(async (ref: typeof docRefMock) => ref.get()),
+  setDoc: jest.fn(async (
+    ref: typeof docRefMock,
+    payload: Record<string, unknown>,
+    options: unknown,
+  ) => ref.set(payload, options)),
+  deleteDoc: jest.fn(async (ref: typeof docRefMock) => ref.delete()),
+  Timestamp: TimestampMock,
 }));
 
 import {
@@ -66,14 +73,13 @@ beforeEach(() => {
   docRefMock.delete.mockClear();
   collectionMock.doc.mockClear();
   firestoreInstance.collection.mockClear();
-  firestoreFn.mockClear();
-  firestoreFn.Timestamp.now.mockClear();
+  TimestampMock.now.mockClear();
 });
 
 describe('firestoreTimestamp', () => {
-  it('returns a Timestamp from firestore.Timestamp.now()', () => {
+  it('returns a Timestamp from Timestamp.now()', () => {
     const ts = firestoreTimestamp();
-    expect(firestoreFn.Timestamp.now).toHaveBeenCalled();
+    expect(TimestampMock.now).toHaveBeenCalled();
     expect(ts).toEqual({ seconds: 1700000000, nanoseconds: 0 });
   });
 });

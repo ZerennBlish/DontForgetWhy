@@ -46,21 +46,22 @@ import { runFoundingMigration } from './src/services/foundingStatus';
 import { useNotificationRouting } from './src/hooks/useNotificationRouting';
 import type { RootStackParamList } from './src/navigation/types';
 import { FONTS } from './src/theme/fonts';
-import appCheck from '@react-native-firebase/app-check';
+import { getApp } from '@react-native-firebase/app';
+import { initializeAppCheck } from '@react-native-firebase/app-check';
 
 // Initialize App Check at module scope, before any Firebase service call.
-// Provider construction is a three-step dance: call `appCheck()` to get
-// the instance, build the RN provider on it, then `.configure()` the
-// provider before passing it to `initializeAppCheck`. Debug provider in
-// development; Play Integrity in production.
-const rnfbProvider = appCheck().newReactNativeFirebaseAppCheckProvider();
-rnfbProvider.configure({
-  android: {
-    provider: __DEV__ ? 'debug' : 'playIntegrity',
+// Debug provider in development; Play Integrity in production.
+// Pass providerOptions inline — the runtime accepts a config object in place
+// of a constructed `ReactNativeFirebaseAppCheckProvider`, and the v24 barrel
+// re-exports that class as a type-only symbol so `new` doesn't type-check.
+initializeAppCheck(getApp(), {
+  provider: {
+    providerOptions: {
+      android: {
+        provider: __DEV__ ? 'debug' : 'playIntegrity',
+      },
+    },
   },
-});
-appCheck().initializeAppCheck({
-  provider: rnfbProvider,
   isTokenAutoRefreshEnabled: true,
 });
 

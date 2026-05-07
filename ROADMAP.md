@@ -599,7 +599,7 @@ See `DFW-Features.md` §Pro Tier for the canonical tier breakdown (what's Pro-ga
 - Don't ship dead features
 - Build with `--clear` when new assets added
 - Always include Jest tests for new services/features
-- Backups: desktop (primary) + GitHub + USB. Laptop no longer used for coding (WSL freezes) — kept as passive git backup and voice/image workstation only.
+- Backups: desktop (primary) + GitHub + USB.
 - Never put repos in OneDrive
 
 ### Git Rules
