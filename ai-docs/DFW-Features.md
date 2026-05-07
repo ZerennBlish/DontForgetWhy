@@ -1,13 +1,13 @@
 # DFW Features
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 39 (April 20, 2026)
+**Last updated:** Session 44 (May 7, 2026) — v2.0.2 doc close-out
 
 ---
 
 ## 1. App Features — Current State
 
 ### Core Utility
-- **Home Screen** — 2×3 icon grid: Alarms, Reminders, Calendar, Notepad, Voice, Games. Section colors per theme. Quick Capture row: Quick Note, Quick Record, Quick Timer. Personality banner: 63 rotating sarcastic quotes across 7 sections (`homeBannerQuotes.ts`, colors via `bannerColorMap`). Today section shows today's alarms + reminders. Settings gear in title bar. All overlay text bgUri-aware.
+- **Home Screen** — 2×3 icon grid: Alarms, Reminders, Calendar, Notepad, Voice, Games. Section colors per theme. Quick Capture row: Quick Note, Quick Record, Quick Timer. Personality banner: 63 rotating sarcastic quotes across 7 sections (`homeBannerQuotes.ts`, colors via `bannerColorMap`). Today section shows today's alarms + reminders. Settings gear in title bar. All overlay text bgUri-aware. **Welcome overlay (v2.0.2):** 4-slide guided walkthrough on first launch, auto-advancing every 6.5s synced to the ~26s Opening.mp3 clip. Gated by `opening_clip_played` kv flag. Dismisses on clip completion, skip tap, or navigation away.
 - **Alarms** — standalone AlarmListScreen. Reason field, 7 sound presets + custom system sounds (listed via native `AlarmChannelModule.getSystemAlarmSounds` using `RingtoneManager.TYPE_ALARM`), snooze (1/3/5/10/15 min), recurring (daily/weekly/monthly/yearly) + one-time, emoji icon, per-alarm Guess Why toggle, private mode (blank card). Notification action buttons: Snooze + Dismiss.
 - **Reminders** — standalone ReminderScreen. Due dates, 5 recurring patterns, 6-hour completion window, date-only mode, completion history, sound mode (sound/vibrate/silent), emoji icon.
 - **Timers** — standalone TimerScreen. **21 built-in presets** + saveable custom timers, recently used quick-start (max 3), sound mode per timer, pinnable to widget. "Pin"/"Pinned" capsule overlay on preset cards. Built-in presets render custom WebP icons via `timerPresetAssets.ts` registry; user-created timers use emoji. Notification action: Dismiss only.

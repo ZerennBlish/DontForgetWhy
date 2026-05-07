@@ -1,8 +1,16 @@
 # DFW Design Decisions & Environment Knowledge
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 42 (April 24, 2026) — v2.0.1 ship (branding refresh + EOL normalization)
+**Last updated:** Session 44 (May 7, 2026) — v2.0.2 doc close-out
 
 **For Sessions 1-28 decision history, see DFW-Decisions-Archive.md.**
+
+### v2.0.2 Additions — Welcome Overlay (between S43-S44)
+
+- **Welcome overlay is inline in HomeScreen, not a separate screen or component** — The 4-slide guided walkthrough (`WELCOME_SLIDES` array + `showWelcome`/`welcomeSlide` state) lives entirely in `HomeScreen.tsx` rather than being extracted to a dedicated `WelcomeOverlay` component or a standalone screen. Rationale: the overlay is tightly coupled to HomeScreen's lifecycle — it plays Opening.mp3 via the same audio pipeline, auto-advances on a timer synced to the clip length, and must dismiss itself when the user navigates away via the blur listener. Extracting it would require forwarding refs, player instances, and navigation listeners across a component boundary for a one-time-use feature. The `WELCOME_SLIDES` data array is defined at module scope for readability. If the overlay grows more slides or interactive elements in the future, extraction would become justified.
+
+- **One-time gating via `kvGet('opening_clip_played')` written inside `dismissWelcome()`** — The flag is written at dismiss time (not at mount time) so that if the app crashes or the user force-kills mid-presentation, the overlay shows again on next launch rather than being silently skipped. This fixes the long-standing bug where the flag wasn't persisting correctly and the clip triggered on every launch. The `dismissWelcome` function is the single cleanup path — called by clip completion listener, skip button, navigation blur, and the useEffect cleanup.
+
+- **Navigation blur dismisses the welcome overlay** — A separate `useEffect` listens for the `blur` event on HomeScreen's navigation and calls `dismissWelcomeRef.current?.()`. This prevents the overlay (and its audio) from continuing to play when the user taps a section card and navigates to another screen during the presentation.
 
 ### Session 42 Additions — v2.0.1 Ship (Apr 24)
 
