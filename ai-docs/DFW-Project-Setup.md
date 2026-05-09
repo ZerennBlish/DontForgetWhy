@@ -35,6 +35,11 @@
 - Claude Code runs through WSL/Ubuntu
 - ADB: `C:\platform-tools\platform-tools\adb.exe`
 
+### Laptop (Secondary — Fully Operational)
+- Windows, i7-10750H, 24GB RAM, RTX 2060, 256GB SSD + 1TB HDD.
+- Project at `D:\DontForgetWhy` (on the 1TB HDD). `C:\DontForgetWhy` is a directory junction pointing at it — all scripts and docs that reference `C:\DontForgetWhy` resolve correctly through the junction without modification. Data physically lives on D:\.
+- All branches available. Claude Code operational.
+
 ### Phone
 - Samsung Galaxy S23 Ultra, production Play Store build only
 - Dev builds cannot install over production (signature mismatch) — test on emulators
