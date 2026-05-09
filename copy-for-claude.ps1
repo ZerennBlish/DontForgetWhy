@@ -49,11 +49,11 @@ foreach ($f in $rootFiles) {
     }
 }
 
-# --- AI documentation (auto-discovered: all .md in ai-docs/) ---
+# --- AI documentation (auto-discovered: all .md in ai-docs/, recursive) ---
 
 $aiDocs = Join-Path $source "ai-docs"
 if (Test-Path $aiDocs) {
-    Get-ChildItem -Path $aiDocs -Filter "*.md" -File | ForEach-Object {
+    Get-ChildItem -Path $aiDocs -Filter "*.md" -File -Recurse | ForEach-Object {
         Copy-Item $_.FullName "$dest\$($_.Name)" -Force
     }
 }

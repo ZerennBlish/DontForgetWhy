@@ -8,7 +8,7 @@ This is the operations workflow Opus runs at the end of every DFW session. Lives
 
 ## On the OneDrive Stash
 
-Step 7 below copies files into a OneDrive-synced folder. This is intentional and safe even though OneDrive sync is otherwise dangerous during active development.
+Step 8 below copies files into a OneDrive-synced folder. This is intentional and safe even though OneDrive sync is otherwise dangerous during active development.
 
 The risk with OneDrive sync is timing collisions between sync and file writes — editing a file inside a synced folder while a build runs can cause sync to grab a half-written file. The stash avoids this entirely: it's a one-shot copy-in destination, not an edit target. Nothing modifies the staged copies after the copy completes; sync just uploads them. The stash is staging, not a development directory.
 
@@ -73,7 +73,13 @@ Update any of these that changed this session:
 
 ---
 
-## Step 5 — Commit and push
+## Step 5 — Write session handoff
+
+Opus writes the session handoff to `ai-docs\Sessions\Session-NN-Handoff.md`. This file captures what landed, what's open, and where the next session picks up. It lives in the repo so the flat copy (Step 8) picks it up and it makes it into project knowledge for the next session.
+
+---
+
+## Step 6 — Commit and push
 
 ```powershell
 git add .
@@ -91,7 +97,7 @@ Separate commands — PowerShell doesn't `&&`-chain.
 
 ---
 
-## Step 6 — Final push verification
+## Step 7 — Final push verification
 
 ```powershell
 git status
@@ -105,7 +111,7 @@ Both must return empty. If not, fix before proceeding.
 
 ---
 
-## Step 7 — Flat copy to OneDrive stash
+## Step 8 — Flat copy to OneDrive stash
 
 Run the flat copy script to stage files for Claude.ai project knowledge upload:
 
@@ -117,15 +123,9 @@ The script copies repo-root config files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`,
 
 ---
 
-## Step 8 — Upload to Claude.ai
+## Step 9 — Upload to Claude.ai
 
 Drag-and-drop all files from the OneDrive stash folder into the Claude.ai project knowledge panel. Replace existing files.
-
----
-
-## Step 9 — Session handoff
-
-Session handoffs are written by Opus in the design chat at the end of the session and carried forward as context for the next session. They are not stored as files in the repo.
 
 ---
 
