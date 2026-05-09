@@ -99,7 +99,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.PLACEHOLDER"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {
