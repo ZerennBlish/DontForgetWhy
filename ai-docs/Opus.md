@@ -169,7 +169,7 @@ For repeated audit patterns, use the `/audit-readonly` slash command if present 
 Every session ends with the same workflow. Opus runs it without being asked.
 
 1. **Update affected docs** — `CLAUDE.md`, `DFW-Decisions.md`, `ai-docs\About-Me.md` (if universal rules changed), `ai-docs\Opus.md` (if drafting/audit/close-out rules changed) via Desktop Commander writes (announce-and-write rule).
-2. **Write session handoff** to `ai-docs\Sessions\Session-NN-Handoff.md`.
+2. **Write session handoff** to `ai-docs\Sessions\Session-NN-Handoff.md`. Must be on disk before the flat copy so it makes it into project knowledge.
 3. **Commit and push everything:**
    ```powershell
    git add .
@@ -181,7 +181,8 @@ Every session ends with the same workflow. Opus runs it without being asked.
    git push
    ```
    Separate commands — PowerShell doesn't `&&`-chain.
-4. **Project knowledge sync** — see `DFW-Close-Out.md` for upload workflow and file list.
+4. **Flat copy** — `.\copy-for-claude.ps1` stages files for upload. Runs after push so the handoff is included.
+5. **Upload to Claude.ai** — see `Close-Out.md` for full workflow.
 
 ---
 
