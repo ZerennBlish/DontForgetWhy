@@ -92,7 +92,7 @@ export default function MultiplayerDiceGame({
       mp.game.dice.some((d) => d !== 0)
     ) {
       if (prevDiceKeyRef.current !== '') {
-        void playGameSound('tap');
+        void playGameSound('diceRoll');
         hapticLight();
       }
       prevDiceKeyRef.current = diceKey;
@@ -163,7 +163,7 @@ export default function MultiplayerDiceGame({
 
   const handleRoll = () => {
     hapticLight();
-    void playGameSound('tap');
+    void playGameSound('diceRoll');
     mp.roll();
   };
 

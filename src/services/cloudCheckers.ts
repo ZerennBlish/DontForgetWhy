@@ -47,6 +47,9 @@ function isCloudResponse(v: unknown): v is CloudResponse {
       typeof m.to[1] !== 'number'
     ) return false;
     if (!Array.isArray(m.captured)) return false;
+    for (const c of m.captured) {
+      if (!Array.isArray(c) || c.length !== 2 || typeof c[0] !== 'number' || typeof c[1] !== 'number') return false;
+    }
     if (typeof m.crowned !== 'boolean') return false;
   }
   return true;

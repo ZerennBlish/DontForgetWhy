@@ -199,6 +199,8 @@ export async function joinTriviaGame(
   const normalized = code.trim().toUpperCase();
   const ref = doc(gamesRef(), normalized);
 
+  await assertBelowActiveGameLimit(me.uid);
+
   return runTransaction(getFirestore(), async (transaction) => {
     const snap = await transaction.get(ref);
     if (!snap.exists()) throw new Error('Game not found');
@@ -209,8 +211,6 @@ export async function joinTriviaGame(
     if (game.status !== 'waiting') throw new Error('Game already started');
     if (game.triviaPlayers.length >= 4) throw new Error('Game is full');
     if (game.players.includes(me.uid)) throw new Error('Already in this game');
-
-    await assertBelowActiveGameLimit(me.uid);
 
     const now = nowIso();
     const newPlayer: TriviaPlayer = {

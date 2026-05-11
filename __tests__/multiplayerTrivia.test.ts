@@ -327,6 +327,33 @@ describe('createTriviaGame', () => {
 // ── joinTriviaGame ───────────────────────────────────────────────────
 
 describe('joinTriviaGame', () => {
+  it('throws if not signed in', async () => {
+    currentUser = null;
+    proStatus = true;
+    seedTriviaGame('ABC234');
+    await expect(joinTriviaGame('ABC234')).rejects.toThrow(/not signed in/i);
+  });
+
+  it('throws if not Pro', async () => {
+    currentUser = p2;
+    proStatus = false;
+    seedTriviaGame('ABC234');
+    await expect(joinTriviaGame('ABC234')).rejects.toThrow(/pro required/i);
+  });
+
+  it('throws if joiner already has 5 active games', async () => {
+    currentUser = p2;
+    proStatus = true;
+    for (let i = 0; i < 5; i++) {
+      seedTriviaGame('HAVE0' + i, {
+        players: [p2.uid],
+        status: 'active',
+      });
+    }
+    seedTriviaGame('ABC234');
+    await expect(joinTriviaGame('ABC234')).rejects.toThrow(/maximum 5/i);
+  });
+
   it('throws for invalid code', async () => {
     currentUser = p2;
     proStatus = true;
