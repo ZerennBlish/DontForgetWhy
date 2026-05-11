@@ -26,6 +26,7 @@ import { isProUser } from '../services/proStatus';
 import { getMyGames as mpGetMyGames } from '../services/multiplayer';
 import { getCurrentUser } from '../services/firebaseAuth';
 import { useAppIcon } from '../hooks/useAppIcon';
+import { DICE_CARD_ICON } from '../data/diceAssets';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Games'>;
@@ -451,6 +452,49 @@ export default function GamesScreen({ navigation }: Props) {
         <View
           style={styles.globeBadge}
         >
+          <Image
+            source={offlineGlobeIcon}
+            style={styles.globeImage}
+            resizeMode="contain"
+          />
+        </View>
+      </TouchableOpacity>
+
+      {/* That One Dice Game */}
+      <TouchableOpacity
+        style={styles.gameCard}
+        onPress={() => {
+          hapticLight();
+          playGameSound('tap');
+          if (!isPro) {
+            setGateGame(undefined);
+            setProGateVisible(true);
+            return;
+          }
+          navigation.navigate('DiceGame');
+        }}
+        activeOpacity={0.7}
+        accessibilityLabel="Play That One Dice Game, Pro required"
+        accessibilityRole="button"
+      >
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <Image source={DICE_CARD_ICON} style={{ width: 48, height: 48 }} resizeMode="contain" />
+        </View>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>That One Dice Game</Text>
+          <Text style={styles.gameDesc}>Yahtzee with a steal mechanic. 2-4 players.</Text>
+          <View style={styles.trialBadge}>
+            {isPro ? (
+              <Text style={styles.trialTextPro}>PRO</Text>
+            ) : (
+              <Text style={styles.trialTextLocked}>Pro required</Text>
+            )}
+          </View>
+        </View>
+        <View style={{ width: 56, alignItems: 'center' }}>
+          <ChevronRightIcon color={colors.sectionGames} size={16} />
+        </View>
+        <View style={styles.globeBadge}>
           <Image
             source={offlineGlobeIcon}
             style={styles.globeImage}

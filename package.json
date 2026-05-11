@@ -89,6 +89,16 @@
       "^../theme/(.*)$": "<rootDir>/src/theme/$1",
       "^../data/(.*)$": "<rootDir>/src/data/$1",
       "\\.(png|jpg|jpeg|gif|svg|webp|wav|mp3)$": "<rootDir>/__mocks__/fileMock.js"
+    },
+    "transform": {
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "jsx": "react"
+          }
+        }
+      ]
     }
   },
   "private": true

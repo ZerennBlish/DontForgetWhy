@@ -32,6 +32,7 @@ export type RootStackParamList = {
   Trivia: { multiplayerCode?: string } | undefined;
   Chess: { multiplayerCode?: string } | undefined;
   Checkers: { multiplayerCode?: string } | undefined;
+  DiceGame: undefined;
   Notepad: { noteId?: string; newNote?: boolean } | undefined;
   Calendar: { initialDate?: string } | undefined;
   VoiceRecord: { addToMemoId?: string } | undefined;
