@@ -6,6 +6,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  runTransaction,
   query,
   where,
   orderBy,
@@ -28,6 +29,7 @@ import {
   calculateTotal,
   canSteal,
   createEmptyScorecard,
+  getUnfilledCategories,
   isYahtzee,
 } from './diceGameScoring';
 
@@ -362,58 +364,72 @@ export async function claimSteal(
   code: string,
   stealerUid: string,
 ): Promise<boolean> {
+  // Wrap the whole claim in a Firestore transaction so two clients can't both
+  // read stealClaim === null and both write. The transaction's read-then-write
+  // is atomic at the document level; the second client will conflict and
+  // either retry (and see the existing claim) or fail. We also re-check the
+  // server clock against stealWindowEnd inside the transaction so a late
+  // claim from a laggy client can't sneak in after the window closed.
+  const firestore = getFirestore();
   const ref = doc(gamesRef(), code);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return false;
-  const game = snap.data() as DiceMultiplayerGame;
-  if (game.status !== 'active') return false;
-  if (!game.stealWindowActive) return false;
-  if (game.stealClaim !== null) return false; // someone else already claimed
-  if (game.lastScoredCategory === null || game.lastScoredPlayerUid === null) {
-    return false;
-  }
-  if (game.lastScoredValue === null) return false;
-  if (stealerUid === game.lastScoredPlayerUid) return false;
+  return runTransaction(firestore, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return false;
+    const game = snap.data() as DiceMultiplayerGame;
+    if (game.status !== 'active') return false;
+    if (!game.stealWindowActive) return false;
+    if (game.stealClaim !== null) return false; // someone else already claimed
+    if (game.lastScoredCategory === null || game.lastScoredPlayerUid === null) {
+      return false;
+    }
+    if (game.lastScoredValue === null) return false;
+    if (stealerUid === game.lastScoredPlayerUid) return false;
+    if (
+      game.stealWindowEnd !== null &&
+      Date.now() > game.stealWindowEnd
+    ) {
+      return false; // window already closed server-side
+    }
 
-  const category = game.lastScoredCategory as ScoringCategory;
-  const stealerCard = game.scorecards[stealerUid];
-  const victimCard = game.scorecards[game.lastScoredPlayerUid];
-  if (!stealerCard || !victimCard) return false;
+    const category = game.lastScoredCategory as ScoringCategory;
+    const stealerCard = game.scorecards[stealerUid];
+    const victimCard = game.scorecards[game.lastScoredPlayerUid];
+    if (!stealerCard || !victimCard) return false;
 
-  // Reuse the canSteal predicate via a synthetic DicePlayer view.
-  const stealerView = {
-    id: stealerUid,
-    name: stealerUid,
-    type: 'human' as const,
-    scorecard: stealerCard,
-    stealUsed: !!game.stealUsed[stealerUid],
-    stolenFrom: !!game.stolenFrom[stealerUid],
-    yahtzeeBonusCount: 0,
-  };
-  const victimView = {
-    id: game.lastScoredPlayerUid,
-    name: game.lastScoredPlayerUid,
-    type: 'human' as const,
-    scorecard: victimCard,
-    stealUsed: !!game.stealUsed[game.lastScoredPlayerUid],
-    stolenFrom: !!game.stolenFrom[game.lastScoredPlayerUid],
-    yahtzeeBonusCount: 0,
-  };
-  if (!canSteal(stealerView, victimView, category)) return false;
+    const stealerView = {
+      id: stealerUid,
+      name: stealerUid,
+      type: 'human' as const,
+      scorecard: stealerCard,
+      stealUsed: !!game.stealUsed[stealerUid],
+      stolenFrom: !!game.stolenFrom[stealerUid],
+      yahtzeeBonusCount: 0,
+    };
+    const victimView = {
+      id: game.lastScoredPlayerUid,
+      name: game.lastScoredPlayerUid,
+      type: 'human' as const,
+      scorecard: victimCard,
+      stealUsed: !!game.stealUsed[game.lastScoredPlayerUid],
+      stolenFrom: !!game.stolenFrom[game.lastScoredPlayerUid],
+      yahtzeeBonusCount: 0,
+    };
+    if (!canSteal(stealerView, victimView, category)) return false;
 
-  const points = game.lastScoredValue;
-  const newStealerCard: Scorecard = { ...stealerCard, [category]: points };
-  const newVictimCard: Scorecard = { ...victimCard, [category]: null };
+    const points = game.lastScoredValue;
+    const newStealerCard: Scorecard = { ...stealerCard, [category]: points };
+    const newVictimCard: Scorecard = { ...victimCard, [category]: null };
 
-  await updateDoc(ref, {
-    [`scorecards.${stealerUid}`]: newStealerCard,
-    [`scorecards.${game.lastScoredPlayerUid}`]: newVictimCard,
-    [`stealUsed.${stealerUid}`]: true,
-    [`stolenFrom.${game.lastScoredPlayerUid}`]: true,
-    stealClaim: { stealerUid, claimedAt: new Date().toISOString() },
-    lastActionAt: nowIso(),
+    transaction.update(ref, {
+      [`scorecards.${stealerUid}`]: newStealerCard,
+      [`scorecards.${game.lastScoredPlayerUid}`]: newVictimCard,
+      [`stealUsed.${stealerUid}`]: true,
+      [`stolenFrom.${game.lastScoredPlayerUid}`]: true,
+      stealClaim: { stealerUid, claimedAt: new Date().toISOString() },
+      lastActionAt: nowIso(),
+    });
+    return true;
   });
-  return true;
 }
 
 export async function advanceTurn(
@@ -431,14 +447,36 @@ export async function advanceTurn(
     callerUid === game.lastScoredPlayerUid || callerUid === game.host.uid;
   if (!allowed) throw new Error('Not authorized to advance turn');
 
+  // Idempotency: if the turn already advanced (lastScoredPlayerUid was reset
+  // to null) or the current player no longer matches the player whose turn
+  // ended, another client beat us to it — bail without writing again.
+  if (game.lastScoredPlayerUid === null) return;
+  if (game.currentPlayerUid !== game.lastScoredPlayerUid) return;
+
   const order = game.playerOrder;
   if (order.length === 0) throw new Error('No player order');
   const currentIdx = order.indexOf(game.currentPlayerUid);
-  const nextIdx = (currentIdx + 1) % order.length;
-  const wrapped = nextIdx === 0 && currentIdx === order.length - 1;
-  const nextRound = wrapped ? game.round + 1 : game.round;
 
-  if (nextRound > MAX_ROUNDS) {
+  // Advance to the next player, skipping anyone whose scorecard is fully
+  // filled. Mirrors the single-player skip in useDiceGame.applyEndStealWindow
+  // so a steal that completes a card pre-round-13 doesn't soft-lock the game.
+  let nextIdx = currentIdx;
+  let nextRound = game.round;
+  let foundScorer = false;
+  for (let i = 0; i < MAX_PLAYERS; i++) {
+    const wrapping = nextIdx === order.length - 1;
+    nextIdx = (nextIdx + 1) % order.length;
+    if (wrapping) nextRound++;
+    if (nextRound > MAX_ROUNDS) break;
+    const candidateUid = order[nextIdx];
+    const candidateCard = game.scorecards[candidateUid] ?? createEmptyScorecard();
+    if (getUnfilledCategories(candidateCard).length > 0) {
+      foundScorer = true;
+      break;
+    }
+  }
+
+  if (nextRound > MAX_ROUNDS || !foundScorer) {
     const rankings = order
       .map((uid) => ({
         uid,

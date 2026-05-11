@@ -102,6 +102,15 @@ export function useMultiplayerDiceGame({
   }, [gameCode]);
 
   // ── Steal window countdown + auto-advance ──────────────────────────────────
+  //
+  // Authority model: the scorer is the primary client that calls advanceTurn.
+  // The host is a delayed fallback that fires HOST_FALLBACK_EXTRA_MS later in
+  // case the scorer disconnected. The advanceTurn service is idempotent, so a
+  // double-fire is harmless — but the staggered timing keeps it from happening
+  // in the common case where both clients are online.
+
+  const HOST_FALLBACK_EXTRA_MS = 3000;
+  const POST_STEAL_ADVANCE_MS = 1500;
 
   const stealIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -128,11 +137,32 @@ export function useMultiplayerDiceGame({
       setStealTimeRemaining(0);
       return clearLocal;
     }
-    // A steal already happened — close the window locally; the player who
-    // scored (or host) will call advanceTurn.
+
+    // Helper: schedule advanceTurn at the given delay (ms from now) if this
+    // client is one of the responsible advancers.
+    const armAdvance = (baseDelayMs: number) => {
+      const isScorer = myUid === game.lastScoredPlayerUid;
+      const isHostFallback =
+        !isScorer && myUid === game.host.uid;
+      if (!isScorer && !isHostFallback) return;
+      const delay = Math.max(
+        0,
+        baseDelayMs + (isHostFallback ? HOST_FALLBACK_EXTRA_MS : 0),
+      );
+      advanceTimeoutRef.current = setTimeout(() => {
+        advanceTimeoutRef.current = null;
+        advanceTurnService(gameCode, myUid).catch((e) => {
+          console.warn('[useMultiplayerDiceGame] advanceTurn failed:', e);
+        });
+      }, delay);
+    };
+
+    // A steal already landed — close the local countdown and schedule the
+    // turn advance after a short feedback delay so players can see the steal.
     if (game.stealClaim !== null) {
       clearLocal();
       setStealTimeRemaining(0);
+      armAdvance(POST_STEAL_ADVANCE_MS);
       return clearLocal;
     }
 
@@ -148,20 +178,9 @@ export function useMultiplayerDiceGame({
     update();
     stealIntervalRef.current = setInterval(update, 100);
 
-    // Whoever just scored runs the advance timeout; the host falls back if
-    // they were the scorer (which is the same person) or if they disconnect
-    // (handled on next render — we re-arm the timeout if the host runs it).
-    const isResponsibleForAdvance =
-      myUid === game.lastScoredPlayerUid || myUid === game.host.uid;
-    if (isResponsibleForAdvance) {
-      const delay = Math.max(0, end - Date.now() + 50);
-      advanceTimeoutRef.current = setTimeout(() => {
-        advanceTimeoutRef.current = null;
-        advanceTurnService(gameCode, myUid).catch((e) => {
-          console.warn('[useMultiplayerDiceGame] advanceTurn failed:', e);
-        });
-      }, delay);
-    }
+    // Schedule advance at the natural window expiry. +50ms cushion so the
+    // server's stealWindowEnd has provably elapsed by the time we call.
+    armAdvance(end - Date.now() + 50);
 
     return clearLocal;
   }, [
@@ -206,7 +225,11 @@ export function useMultiplayerDiceGame({
     return cp?.displayName ?? '';
   }, [game]);
   const possibleScores =
-    game && game.status === 'active' && isMyTurn && game.rollsRemaining < MAX_ROLLS
+    game &&
+    game.status === 'active' &&
+    isMyTurn &&
+    !game.stealWindowActive &&
+    game.rollsRemaining < MAX_ROLLS
       ? getAllPossibleScores(game.dice, myScorecard)
       : [];
 

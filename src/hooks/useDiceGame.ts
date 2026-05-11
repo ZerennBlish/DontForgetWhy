@@ -4,6 +4,7 @@ import {
   DiceGamePhase,
   DiceGameResult,
   DicePlayer,
+  MAX_PLAYERS,
   MAX_ROLLS,
   MAX_ROUNDS,
   NUM_DICE,
@@ -22,6 +23,7 @@ import {
   createEmptyScorecard,
   getAllPossibleScores,
   getStealablePlayers,
+  getUnfilledCategories,
   isYahtzee,
 } from '../services/diceGameScoring';
 
@@ -220,11 +222,26 @@ function applyEndStealWindow(
     });
   }
 
-  const isLastInRound = prev.currentPlayerIndex === prev.players.length - 1;
-  const nextIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
-  const nextRound = isLastInRound ? prev.round + 1 : prev.round;
+  // Advance to the next player, skipping anyone whose scorecard is fully
+  // filled. A steal can complete a player's card before round 13 ends, which
+  // would otherwise soft-lock the game on their next turn (no category to
+  // score). MAX_PLAYERS-bounded so a fully-full table falls through to the
+  // game-over branch.
+  let nextIndex = prev.currentPlayerIndex;
+  let nextRound = prev.round;
+  let foundScorer = false;
+  for (let i = 0; i < MAX_PLAYERS; i++) {
+    const wrapping = nextIndex === newPlayers.length - 1;
+    nextIndex = (nextIndex + 1) % newPlayers.length;
+    if (wrapping) nextRound++;
+    if (nextRound > MAX_ROUNDS) break;
+    if (getUnfilledCategories(newPlayers[nextIndex].scorecard).length > 0) {
+      foundScorer = true;
+      break;
+    }
+  }
 
-  if (nextRound > MAX_ROUNDS) {
+  if (nextRound > MAX_ROUNDS || !foundScorer) {
     const totals = newPlayers.map((p, i) => ({
       playerIndex: i,
       total: calculateTotal(p.scorecard, p.yahtzeeBonusCount),
@@ -524,6 +541,8 @@ export function useDiceGame(): UseDiceGameReturn {
     sessionId: number,
   ) => {
     if (sessionIdRef.current !== sessionId) return;
+    const cp = snap.players[snap.currentPlayerIndex];
+    if (cp && getUnfilledCategories(cp.scorecard).length === 0) return;
     const plan = planCpuTurn(snap);
     for (const item of plan) {
       const step = item.step;

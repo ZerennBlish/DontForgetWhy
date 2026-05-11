@@ -246,6 +246,8 @@ function renderScreen() {
   const mockNav = {
     goBack: jest.fn(),
     navigate: jest.fn(),
+    dispatch: jest.fn(),
+    addListener: jest.fn(() => () => {}),
   };
   const mockRoute = { key: 'k', name: 'DiceGame', params: undefined };
   let root: ReactTestRenderer | undefined;

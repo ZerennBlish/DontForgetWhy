@@ -159,6 +159,28 @@ jest.mock('@react-native-firebase/firestore', () => ({
     async (ref: ReturnType<typeof makeDocRef>, updates: DocData) =>
       ref.update(updates),
   ),
+  // Minimal runTransaction mock: invokes the callback with a transaction
+  // object that proxies to the same in-memory docs. There is no real conflict
+  // detection — sequential awaits in tests guarantee ordering.
+  runTransaction: jest.fn(
+    async (
+      _fs: unknown,
+      callback: (txn: {
+        get: (r: ReturnType<typeof makeDocRef>) => Promise<unknown>;
+        update: (r: ReturnType<typeof makeDocRef>, u: DocData) => unknown;
+        set: (r: ReturnType<typeof makeDocRef>, p: DocData) => unknown;
+        delete: (r: ReturnType<typeof makeDocRef>) => unknown;
+      }) => Promise<unknown>,
+    ) => {
+      const txn = {
+        get: (r: ReturnType<typeof makeDocRef>) => r.get(),
+        update: (r: ReturnType<typeof makeDocRef>, u: DocData) => r.update(u),
+        set: (r: ReturnType<typeof makeDocRef>, p: DocData) => r.set(p),
+        delete: (r: ReturnType<typeof makeDocRef>) => r.delete(),
+      };
+      return callback(txn);
+    },
+  ),
   deleteDoc: jest.fn(async (ref: ReturnType<typeof makeDocRef>) => ref.delete()),
   query: jest.fn((coll: MockCollection, ...constraints: ConstraintTag[]) => {
     let chain = coll;

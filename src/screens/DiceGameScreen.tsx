@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
   createDiceGame as mpCreate,
   joinDiceGame as mpJoin,
   startDiceGame as mpStart,
+  leaveDiceGame as mpLeave,
   listenToGame,
   type DiceMultiplayerGame,
 } from '../services/multiplayerDice';
@@ -70,9 +71,11 @@ export default function DiceGameScreen({ navigation }: Props) {
   const entitlement = useEntitlement();
   const game = useDiceGame();
 
-  // Pro gating — Pro status checked once on render. ProGate auto-closes when
-  // the purchase lands (its internal effect calls onClose).
-  const [proGateVisible, setProGateVisible] = useState(true);
+  // Pro gating — Pro status read once on mount. ProGate auto-closes when the
+  // purchase lands (its internal effect calls onClose). The gate is rendered
+  // as a conditional return AFTER all hooks below, so Pro flipping mid-session
+  // never changes the hook count between renders.
+  const [proGateVisible, setProGateVisible] = useState(() => !isProUser());
 
   // Local-only theme override (Pro can flip between toon and chrome for the
   // session). Does not persist.
@@ -117,25 +120,33 @@ export default function DiceGameScreen({ navigation }: Props) {
     return () => unsub();
   }, [mpPhase, mpCode]);
 
-  // ── Gating: non-Pro users see the paywall full-screen ──────────────────────
+  // ── Navigation guard: confirm before leaving an active single-player game ──
+  // Multiplayer mode has its own guard inside MultiplayerDiceGame; skip there.
+  const bypassExitRef = useRef(false);
 
-  if (!isProUser()) {
-    return (
-      <ProGate
-        visible={proGateVisible}
-        onClose={() => {
-          setProGateVisible(false);
-          navigation.goBack();
-        }}
-        isPro={entitlement.isPro}
-        loading={entitlement.loading}
-        error={entitlement.error}
-        productPrice={entitlement.productPrice}
-        onPurchase={entitlement.purchase}
-        onRestore={entitlement.restore}
-      />
-    );
-  }
+  useEffect(() => {
+    if (diceMode === 'multiplayer') return;
+    const inActiveGame = game.phase !== 'setup' && game.phase !== 'gameOver';
+    if (!inActiveGame) return;
+
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (bypassExitRef.current) return;
+      e.preventDefault();
+      Alert.alert('Quit game?', 'Your current game will be lost.', [
+        { text: 'Keep playing', style: 'cancel' },
+        {
+          text: 'Quit',
+          style: 'destructive',
+          onPress: () => {
+            bypassExitRef.current = true;
+            game.resetGame();
+            navigation.dispatch(e.data.action);
+          },
+        },
+      ]);
+    });
+    return unsubscribe;
+  }, [navigation, diceMode, game.phase, game]);
 
   // ── Screen-level sound/haptic wrappers ─────────────────────────────────────
 
@@ -177,12 +188,16 @@ export default function DiceGameScreen({ navigation }: Props) {
   const onResetPress = () => {
     hapticLight();
     void playGameSound('tap');
+    // Player indices change between games — clear modal so it can't point at
+    // a stale opponent after Play Again.
+    setOpponentModalIndex(null);
     game.resetGame();
   };
 
   const onStartPress = () => {
     hapticLight();
     void playGameSound('tap');
+    setOpponentModalIndex(null);
     game.startGame(playerCount, 0);
   };
 
@@ -199,7 +214,7 @@ export default function DiceGameScreen({ navigation }: Props) {
     () =>
       StyleSheet.create({
         root: { flex: 1 },
-        overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
+        overlay: { flex: 1, backgroundColor: colors.modalOverlay },
         header: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -279,7 +294,7 @@ export default function DiceGameScreen({ navigation }: Props) {
           alignItems: 'center',
         },
         playButtonText: {
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontFamily: FONTS.bold,
           fontSize: 15,
         },
@@ -449,7 +464,7 @@ export default function DiceGameScreen({ navigation }: Props) {
         },
         dieImage: { width: 48, height: 48 },
         diePlaceholder: {
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontFamily: FONTS.bold,
           fontSize: 14,
           textAlign: 'center',
@@ -463,7 +478,7 @@ export default function DiceGameScreen({ navigation }: Props) {
           textAlign: 'center',
         },
         rollPrompt: {
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontSize: 13,
           fontFamily: FONTS.semiBold,
           textAlign: 'center',
@@ -479,7 +494,7 @@ export default function DiceGameScreen({ navigation }: Props) {
         },
         rollButtonDisabled: { opacity: 0.4 },
         rollButtonText: {
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontFamily: FONTS.bold,
           fontSize: 14,
         },
@@ -532,7 +547,7 @@ export default function DiceGameScreen({ navigation }: Props) {
         },
         stealButtonDisabled: { opacity: 0.4 },
         stealButtonText: {
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontFamily: FONTS.extraBold,
           fontSize: 16,
           letterSpacing: 1,
@@ -560,7 +575,7 @@ export default function DiceGameScreen({ navigation }: Props) {
         gameOverBackdrop: {
           position: 'absolute',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: colors.modalOverlay,
           justifyContent: 'center',
           alignItems: 'center',
           paddingHorizontal: 24,
@@ -599,7 +614,7 @@ export default function DiceGameScreen({ navigation }: Props) {
         // Modal
         modalBackdrop: {
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: colors.modalOverlay,
           justifyContent: 'center',
           alignItems: 'center',
           paddingHorizontal: 16,
@@ -634,25 +649,11 @@ export default function DiceGameScreen({ navigation }: Props) {
     [colors, insets.top, insets.bottom],
   );
 
-  // ── Quit confirmation when a game is in progress ───────────────────────────
-
+  // ── Back arrow: delegate to navigation. The beforeRemove guard above shows
+  // the quit confirmation during active gameplay; here we just request goBack.
   const handleBack = useCallback(() => {
-    if (game.phase === 'setup' || game.phase === 'gameOver') {
-      navigation.goBack();
-      return;
-    }
-    Alert.alert('Quit game?', 'Your current game will be lost.', [
-      { text: 'Keep playing', style: 'cancel' },
-      {
-        text: 'Quit',
-        style: 'destructive',
-        onPress: () => {
-          game.resetGame();
-          navigation.goBack();
-        },
-      },
-    ]);
-  }, [game, navigation]);
+    navigation.goBack();
+  }, [navigation]);
 
   // ── Multiplayer handlers ───────────────────────────────────────────────────
 
@@ -743,10 +744,19 @@ export default function DiceGameScreen({ navigation }: Props) {
   }, [mpCode]);
 
   const handleExitMpGame = useCallback(() => {
+    // Tell Firestore we left so the lobby cleans up (host promotion, player
+    // list pruning, finishing the doc when empty). The hook's unmount path
+    // also leaves on active forfeits, but lobby exits go through here only.
+    const user = getCurrentUser();
+    if (mpCode && user) {
+      mpLeave(mpCode, user.uid).catch((e) => {
+        console.warn('[DiceGameScreen] leaveDiceGame failed:', e);
+      });
+    }
     setMpCode(null);
     setMpLobbyGame(null);
     setMpPhase('menu');
-  }, []);
+  }, [mpCode]);
 
   // ── Renderers ──────────────────────────────────────────────────────────────
 
@@ -1520,6 +1530,28 @@ export default function DiceGameScreen({ navigation }: Props) {
       </ScrollView>
     );
   };
+
+  // ── Pro gate: full-screen paywall for non-Pro users. Rendered AFTER all
+  // hooks above so a Pro purchase mid-session does not change hook count.
+  if (proGateVisible) {
+    return (
+      <ProGate
+        visible={proGateVisible}
+        onClose={() => {
+          setProGateVisible(false);
+          if (!isProUser()) {
+            navigation.goBack();
+          }
+        }}
+        isPro={entitlement.isPro}
+        loading={entitlement.loading}
+        error={entitlement.error}
+        productPrice={entitlement.productPrice}
+        onPurchase={entitlement.purchase}
+        onRestore={entitlement.restore}
+      />
+    );
+  }
 
   return (
     <ImageBackground source={DICE_BACKGROUND} style={styles.root} resizeMode="cover">

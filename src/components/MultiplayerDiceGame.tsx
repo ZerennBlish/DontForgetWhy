@@ -360,7 +360,7 @@ export default function MultiplayerDiceGame({
         },
         dieImage: { width: 48, height: 48 },
         diePlaceholder: {
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontFamily: FONTS.bold,
           fontSize: 14,
           opacity: 0.8,
@@ -381,7 +381,7 @@ export default function MultiplayerDiceGame({
         },
         rollButtonDisabled: { opacity: 0.4 },
         rollButtonText: {
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontFamily: FONTS.bold,
           fontSize: 14,
         },
@@ -430,7 +430,7 @@ export default function MultiplayerDiceGame({
         },
         stealButtonDisabled: { opacity: 0.4 },
         stealButtonText: {
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontFamily: FONTS.extraBold,
           fontSize: 16,
           letterSpacing: 1,
@@ -486,13 +486,13 @@ export default function MultiplayerDiceGame({
           marginTop: 16,
         },
         primaryBtnText: {
-          color: '#FFFFFF',
+          color: colors.overlayText,
           fontFamily: FONTS.bold,
           fontSize: 15,
         },
         modalBackdrop: {
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: colors.modalOverlay,
           justifyContent: 'center',
           alignItems: 'center',
           paddingHorizontal: 16,
