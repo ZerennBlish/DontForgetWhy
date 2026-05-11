@@ -42,6 +42,7 @@ const SOUNDS = {
   triviaTap: require('../../assets/sounds/Triva-tap.wav'),
   triviaCorrect: require('../../assets/sounds/right-answer-Triva.wav'),
   triviaWrong: require('../../assets/sounds/wrong-answer-trivia.wav'),
+  diceRoll: require('../../assets/sounds/Five_dice.mp3'),
 } as const;
 
 export type SoundName = keyof typeof SOUNDS;
@@ -63,6 +64,7 @@ const VOLUMES: Record<SoundName, number> = {
   triviaTap: 0.4,
   triviaCorrect: 0.6,
   triviaWrong: 0.5,
+  diceRoll: 0.5,
 };
 
 // Player pool — one persistent player per sound name, created lazily on first use.

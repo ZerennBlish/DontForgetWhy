@@ -207,6 +207,15 @@ jest.mock('@react-native-firebase/firestore', () => ({
     errorCallback?: (error: unknown) => void,
   ) => ref.onSnapshot(callback, errorCallback)),
   arrayUnion: arrayUnionMock,
+  runTransaction: jest.fn(async (_fs: unknown, cb: (t: unknown) => Promise<unknown>) => {
+    const transaction = {
+      get: jest.fn(async (ref: ReturnType<typeof makeDocRef>) => ref.get()),
+      update: jest.fn((ref: ReturnType<typeof makeDocRef>, updates: DocData) => {
+        ref.update(updates);
+      }),
+    };
+    return cb(transaction);
+  }),
 }));
 
 // ── Auth + Pro mocks ─────────────────────────────────────────────────

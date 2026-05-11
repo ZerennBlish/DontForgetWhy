@@ -10,6 +10,7 @@ import {
   where,
   orderBy,
   arrayUnion,
+  runTransaction,
 } from '@react-native-firebase/firestore';
 import { generateGameCode, listenToGame } from './multiplayer';
 import { getCurrentUser } from './firebaseAuth';
@@ -197,34 +198,41 @@ export async function joinTriviaGame(
 
   const normalized = code.trim().toUpperCase();
   const ref = doc(gamesRef(), normalized);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Game not found');
 
-  const game = snap.data() as TriviaMultiplayerGame | undefined;
-  if (!game) throw new Error('Game not found');
-  if (game.type !== 'trivia') throw new Error('Game is not a trivia game');
-  if (game.status !== 'waiting') throw new Error('Game already started');
-  if (game.triviaPlayers.length >= MAX_PLAYERS) throw new Error('Game is full');
-  if (game.players.includes(me.uid)) throw new Error('Already in this game');
+  return runTransaction(getFirestore(), async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) throw new Error('Game not found');
 
-  await assertBelowActiveGameLimit(me.uid);
+    const game = snap.data() as TriviaMultiplayerGame | undefined;
+    if (!game) throw new Error('Game not found');
+    if (game.type !== 'trivia') throw new Error('Game is not a trivia game');
+    if (game.status !== 'waiting') throw new Error('Game already started');
+    if (game.triviaPlayers.length >= 4) throw new Error('Game is full');
+    if (game.players.includes(me.uid)) throw new Error('Already in this game');
 
-  const now = nowIso();
-  const newPlayer: TriviaPlayer = {
-    uid: me.uid,
-    displayName: me.displayName,
-    score: 0,
-  };
-  const updatedTriviaPlayers = [...game.triviaPlayers, newPlayer];
+    await assertBelowActiveGameLimit(me.uid);
 
-  await updateDoc(ref, {
-    players: arrayUnion(me.uid),
-    triviaPlayers: updatedTriviaPlayers,
-    lastMoveAt: now,
+    const now = nowIso();
+    const newPlayer: TriviaPlayer = {
+      uid: me.uid,
+      displayName: me.displayName,
+      score: 0,
+    };
+    const updatedTriviaPlayers = [...game.triviaPlayers, newPlayer];
+
+    transaction.update(ref, {
+      players: arrayUnion(me.uid),
+      triviaPlayers: updatedTriviaPlayers,
+      lastMoveAt: now,
+    });
+
+    return {
+      ...game,
+      players: [...game.players, me.uid],
+      triviaPlayers: updatedTriviaPlayers,
+      lastMoveAt: now,
+    };
   });
-
-  const updated = await getDoc(ref);
-  return updated.data() as TriviaMultiplayerGame;
 }
 
 export async function startTriviaGame(code: string): Promise<void> {
