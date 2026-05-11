@@ -123,6 +123,7 @@ export default function DiceGameScreen({ navigation }: Props) {
   // ── Navigation guard: confirm before leaving an active single-player game ──
   // Multiplayer mode has its own guard inside MultiplayerDiceGame; skip there.
   const bypassExitRef = useRef(false);
+  const prevDiceKeyRef = useRef('');
 
   useEffect(() => {
     if (diceMode === 'multiplayer') return;
@@ -148,11 +149,23 @@ export default function DiceGameScreen({ navigation }: Props) {
     return unsubscribe;
   }, [navigation, diceMode, game.phase, game]);
 
+  useEffect(() => {
+    if (game.phase !== 'rolling' && game.phase !== 'stealWindow') return;
+    const diceKey = game.dice.join('-');
+    if (diceKey !== prevDiceKeyRef.current && game.dice.some((d) => d !== 0)) {
+      if (prevDiceKeyRef.current !== '') {
+        void playGameSound('diceRoll');
+      }
+      prevDiceKeyRef.current = diceKey;
+    } else if (diceKey !== prevDiceKeyRef.current) {
+      prevDiceKeyRef.current = diceKey;
+    }
+  }, [game.dice, game.phase]);
+
   // ── Screen-level sound/haptic wrappers ─────────────────────────────────────
 
   const onRollPress = () => {
     hapticLight();
-    void playGameSound('tap');
     game.rollDice();
   };
 
@@ -191,6 +204,7 @@ export default function DiceGameScreen({ navigation }: Props) {
     // Player indices change between games — clear modal so it can't point at
     // a stale opponent after Play Again.
     setOpponentModalIndex(null);
+    prevDiceKeyRef.current = '';
     game.resetGame();
   };
 
@@ -198,6 +212,7 @@ export default function DiceGameScreen({ navigation }: Props) {
     hapticLight();
     void playGameSound('tap');
     setOpponentModalIndex(null);
+    prevDiceKeyRef.current = '';
     game.startGame(playerCount, 0);
   };
 
