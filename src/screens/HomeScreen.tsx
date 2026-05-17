@@ -719,7 +719,7 @@ export default function HomeScreen({ navigation }: Props) {
         )}
       </View>
 
-      <View style={[styles.scroll, styles.scrollContent]}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* A. Title bar */}
         <View style={styles.headerRow}>
           <View style={styles.gearSpacer} />
@@ -865,7 +865,7 @@ export default function HomeScreen({ navigation }: Props) {
             </ScrollView>
           )}
         </View>
-      </View>
+      </ScrollView>
 
       {showWelcome && (
         <View style={styles.welcomeOverlay}>

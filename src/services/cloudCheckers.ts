@@ -29,15 +29,30 @@ function isCloudResponse(v: unknown): v is CloudResponse {
   if (typeof v !== 'object' || v === null) return false;
   const o = v as Partial<CloudResponse>;
   if (!Array.isArray(o.moves) || o.moves.length === 0) return false;
-  const first = o.moves[0];
-  return (
-    typeof first === 'object' &&
-    first !== null &&
-    typeof first.move === 'object' &&
-    first.move !== null &&
-    Array.isArray(first.move.from) &&
-    Array.isArray(first.move.to)
-  );
+  for (const entry of o.moves) {
+    if (typeof entry !== 'object' || entry === null) return false;
+    if (typeof entry.score !== 'number') return false;
+    const m = entry.move;
+    if (typeof m !== 'object' || m === null) return false;
+    if (
+      !Array.isArray(m.from) ||
+      m.from.length !== 2 ||
+      typeof m.from[0] !== 'number' ||
+      typeof m.from[1] !== 'number'
+    ) return false;
+    if (
+      !Array.isArray(m.to) ||
+      m.to.length !== 2 ||
+      typeof m.to[0] !== 'number' ||
+      typeof m.to[1] !== 'number'
+    ) return false;
+    if (!Array.isArray(m.captured)) return false;
+    for (const c of m.captured) {
+      if (!Array.isArray(c) || c.length !== 2 || typeof c[0] !== 'number' || typeof c[1] !== 'number') return false;
+    }
+    if (typeof m.crowned !== 'boolean') return false;
+  }
+  return true;
 }
 
 /** Query the Cloud Function for a ranked checkers move.

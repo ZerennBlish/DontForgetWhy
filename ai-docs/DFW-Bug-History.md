@@ -1,6 +1,6 @@
 # DFW Bug History
 **Part of the DFW Technical Reference** — 6 docs: Architecture, Data-Models, Features, Bug-History, Decisions, Project-Setup
-**Last updated:** Session 44 (May 7, 2026) — v2.0.2 doc close-out
+**Last updated:** Session 47 (May 16, 2026) — v2.1.0 prep close-out
 
 **For Sessions 1-28 bug history, see DFW-Bug-History-Archive.md.**
 
@@ -235,3 +235,46 @@ Triple audit (Codex + Claude + Gemini) on the Session 34 voice memo changes in `
 - Cause: Original implementation copy-pasted the ternary rather than centralizing it as a theme token. Invisible as drift until the asset changed.
 - Fix: Added `watermarkOpacity: number` to `ThemeColors` interface. Dark themes: 0.20, light themes: 0.15. All 13 sites now reference `colors.watermarkOpacity`. One-place tuning going forward.
 - Rule: Per-mode visual constants appearing in more than one screen should be theme tokens from the start.
+
+### Session 47 — Backlog Audit Fixes + Dice Audio Recovery (v2.1.0 prep)
+
+**Bug: Multiplayer dice game silent — original audio prompt edits never landed (Session 47 audit, all three auditors)**
+- Found: Session 47 triple audit. Codex/Claude/Gemini all flagged that `MultiplayerDiceGame.tsx` still called `playGameSound('tap')` in both `handleRoll` and the reactive `prevDiceKeyRef` effect, while singleplayer `DiceGameScreen.tsx` correctly used `playGameSound('diceRoll')`. The mid-session prompt drafted to wire `diceRoll` across both screens stopped on a verification-count mismatch in `gameSounds.ts` and the follow-up only re-issued the registration step — the two `MultiplayerDiceGame.tsx` edits were never re-issued. Net effect: dice roll audio was inaudible in multiplayer mode in any build that shipped between Session 47's dice-audio commit and the audit.
+- Cause: Opus drafted a multi-file prompt with a single grep-count verification (`grep -c "diceRoll" src/utils/gameSounds.ts → expect 3`). When CC stopped on the count mismatch (the count was 2, not 3, because `SoundName` derives from `keyof typeof SOUNDS` and isn't a literal mention), only the registration was patched in the follow-up prompt — the `MultiplayerDiceGame.tsx` half of the original task was silently dropped.
+- Fix: Group A fix prompt re-issued both edits — `playGameSound('tap')` → `playGameSound('diceRoll')` at the two call sites (line 95 reactive effect, line 166 `handleRoll`). `grep -c "diceRoll" src/components/MultiplayerDiceGame.tsx` now returns 2.
+- Process lesson: when a multi-file prompt stops on a single-file verification mismatch, the follow-up prompt must re-issue **the remaining file edits**, not just patch the one that tripped. Verification steps that grep per-file are independent gates; a STOP on one shouldn't abandon the others.
+
+**Bug: `joinGame` race condition + missing `.exists()` guard after re-read (P1, audit-tracked from prior sessions)**
+- Found: Tracked since prior multiplayer session audits.
+- Cause: `joinGame` in `src/services/multiplayer.ts` did a non-atomic read-validate-write: `getDoc(ref)` → validate status/type/host → `updateDoc(ref, ...)` → re-read with `getDoc` and return. Two players hitting join simultaneously could both read `status === 'waiting'`, both pass validation, and both write — the second write silently overwriting the first guest. Separately, the post-update `getDoc` had no `.exists()` guard, so a doc deleted between write and re-read would surface a corrupt return value.
+- Fix: Wrapped the entire read-validate-write sequence in `runTransaction(getFirestore(), async (transaction) => { ... })`. The post-update re-read is eliminated entirely — the function constructs and returns the final state from within the transaction body. One change fixes both issues.
+
+**Bug: `joinTriviaGame` race condition + missing `.exists()` guard (P1, audit-tracked from prior sessions)**
+- Found: Tracked since prior multiplayer session audits.
+- Cause: Same pattern as `joinGame` in `multiplayerTrivia.ts` — non-atomic read-validate-write on the `triviaPlayers` roster, plus a re-read without `.exists()`. Simultaneous joins could overwrite each other's roster entries; mid-flight doc deletion could surface a corrupt return.
+- Fix: Same pattern as `joinGame` — wrapped in `runTransaction`, post-update re-read eliminated. Audit follow-up (Session 47 second audit pass) moved `assertBelowActiveGameLimit(me.uid)` from inside the transaction callback to the line above `return runTransaction(...)` — mirrors `joinGame`'s placement, avoids re-running the non-transactional query on every transaction retry.
+
+**Bug: `cloudCheckers.isCloudResponse` validation gap on `captured` array elements (P1, audit-found this session)**
+- Found: Session 47 triple audit (Codex P1, Claude personal P1, Gemini P3 — all three flagged).
+- Cause: `isCloudResponse` validated `m.from` and `m.to` as length-2 numeric tuples but only checked `Array.isArray(m.captured)`. A malformed cloud response like `captured: [null, "x", {foo: 1}]` passed validation and was cast to `[number, number][]` downstream. Any consumer destructuring coordinates (`const [r, c] = capt`) would hit undefined/wrong types.
+- Fix: Added a per-element loop after the `Array.isArray(m.captured)` check that verifies each entry is a length-2 array of numbers. Same shape check as `m.from` and `m.to` validation.
+
+**Bug: HomeScreen content unscrollable on small devices (P1, audit-tracked from prior sessions)**
+- Found: Tracked since prior UX audit on small Galaxy/Pixel screens.
+- Cause: The HomeScreen main content wrapper used `<View style={[styles.scroll, styles.scrollContent]}>` — `styles.scroll` is `flex: 1`. On smaller viewports the title row + personality banner + quick-capture row + 7-cell section grid + Today section exceeded the available height with no scroll mechanism. The Today section's nested `ScrollView` (with `nestedScrollEnabled`) only handled overflow within itself — the outer composition couldn't scroll.
+- Fix: Changed the outer wrapper to `<ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>`. The inner Today `ScrollView` continues to work via `nestedScrollEnabled`. The welcome overlay is rendered as a sibling absolute layer outside the ScrollView, so no `height: 100%` / flex-fill children break.
+
+**Bug: `multiplayerTrivia` service had no test coverage (P2, audit-tracked from prior sessions)**
+- Found: Tracked since `multiplayerTrivia.ts` was created.
+- Cause: When the trivia multiplayer service shipped, the corresponding `__tests__/multiplayerTrivia.test.ts` file was never written. `joinTriviaGame`, `submitAnswer`, `advanceToNextQuestion`, `leaveTriviaGame` and friends had zero unit test coverage. The race-condition rewrites (above) compounded the gap — the transaction-wrapped paths needed coverage but had no test harness.
+- Fix: Created `__tests__/multiplayerTrivia.test.ts` from scratch, mirroring the mock pattern in `multiplayer.test.ts` and including `runTransaction` mock from the start. 7 `describe` blocks (one per public function) covering main paths + key validation branches. Audit follow-up added three more `joinTriviaGame` tests (not signed in / not Pro / 5+ active games) to match `joinGame` parity in `multiplayer.test.ts`.
+
+**Process lesson: `npx jest` must be in every code-change verification block, not just `tsc --noEmit`.**
+- Found: Session 47 — Group A fix prompt for the join transactions passed CC's `tsc --noEmit` verification but broke 7 `joinGame` tests because the existing `multiplayer.test.ts` mock didn't include `runTransaction`. The breakage was caught only when Zerenn asked why jest wasn't part of the verification.
+- Cause: Opus drafted three audit-fix prompts (race conditions, cloudCheckers, HomeScreen scrollability) with only `tsc --noEmit` and grep counts in the verification block. Tests were never run, so the broken mock wasn't surfaced until after the user manually checked. Confirms `Opus.md`'s standing rule that verification blocks must include both `npx tsc --noEmit` AND `npx jest` for any prompt that modifies source code under test.
+- Fix going forward: every prompt that touches `src/` includes both commands in the verification block, no exceptions.
+
+**Bug: `multiplayer.test.ts` mock missing `runTransaction` (P2, surfaced by jest failure after Group A landed)**
+- Found: Session 47, after running `npx jest __tests__/multiplayer.test.ts` post-Group-A.
+- Cause: `joinGame` was rewritten to use `runTransaction`, but the existing Firestore mock in `multiplayer.test.ts` didn't export a `runTransaction` mock. All 7 `joinGame` tests failed with `(0 , firestore_1.runTransaction) is not a function`.
+- Fix: Added a `runTransaction` mock to the existing `jest.mock('@react-native-firebase/firestore', ...)` block. The mock builds a transaction object with `get`/`update` methods that delegate to the same in-memory `makeDocRef` store used by the rest of the mock, so all existing assertions about post-update doc state continue to pass.

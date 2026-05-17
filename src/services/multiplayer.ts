@@ -12,6 +12,7 @@ import {
   orderBy,
   onSnapshot,
   arrayUnion,
+  runTransaction,
 } from '@react-native-firebase/firestore';
 import { getCurrentUser } from './firebaseAuth';
 import { isProUser } from './proStatus';
@@ -173,30 +174,39 @@ export async function joinGame(
 
   const normalized = code.trim().toUpperCase();
   const ref = doc(gamesRef(), normalized);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Game not found');
 
-  const game = snap.data() as MultiplayerGame | undefined;
-  if (!game) throw new Error('Game not found');
-  if (game.type !== expectedType) {
-    throw new Error(`This is a ${game.type} game, not ${expectedType}`);
-  }
-  if (game.status !== 'waiting') throw new Error('Game already started');
-  if (game.host.uid === me.uid) throw new Error('Cannot join your own game');
+  return runTransaction(getFirestore(), async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) throw new Error('Game not found');
 
-  const now = new Date().toISOString();
-  const turn = game.hostColor === 'w' ? game.host.uid : me.uid;
+    const game = snap.data() as MultiplayerGame | undefined;
+    if (!game) throw new Error('Game not found');
+    if (game.type !== expectedType) {
+      throw new Error('This is a ' + game.type + ' game, not ' + expectedType);
+    }
+    if (game.status !== 'waiting') throw new Error('Game already started');
+    if (game.host.uid === me.uid) throw new Error('Cannot join your own game');
 
-  await updateDoc(ref, {
-    guest: me,
-    players: arrayUnion(me.uid),
-    status: 'active',
-    turn,
-    lastMoveAt: now,
+    const now = new Date().toISOString();
+    const turn = game.hostColor === 'w' ? game.host.uid : me.uid;
+
+    transaction.update(ref, {
+      guest: me,
+      players: arrayUnion(me.uid),
+      status: 'active',
+      turn,
+      lastMoveAt: now,
+    });
+
+    return {
+      ...game,
+      guest: me,
+      players: [...game.players, me.uid],
+      status: 'active' as GameStatus,
+      turn,
+      lastMoveAt: now,
+    };
   });
-
-  const updated = await getDoc(ref);
-  return updated.data() as MultiplayerGame;
 }
 
 export async function makeMove(

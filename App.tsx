@@ -29,6 +29,7 @@ import AboutScreen from './src/screens/AboutScreen';
 import TriviaScreen from './src/screens/TriviaScreen';
 import ChessScreen from './src/screens/ChessScreen';
 import CheckersScreen from './src/screens/CheckersScreen';
+import DiceGameScreen from './src/screens/DiceGameScreen';
 import NotepadScreen from './src/screens/NotepadScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import VoiceRecordScreen from './src/screens/VoiceRecordScreen';
@@ -260,6 +261,11 @@ function AppNavigator() {
             name="Checkers"
             component={CheckersScreen}
             options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="DiceGame"
+            component={DiceGameScreen}
+            options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen
             name="Notepad"
