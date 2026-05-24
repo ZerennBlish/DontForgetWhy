@@ -29,6 +29,12 @@ const voiceClips: Record<VoiceCategory, number[]> = {
     require('../../assets/voice/fire_15_so_i_can_leave.mp3'),
     require('../../assets/voice/fire_16_at_this_time.mp3'),
     require('../../assets/voice/fire_17_on_time_every_day.mp3'),
+    require('../../assets/voice/fire_18_ambition.mp3'),
+    require('../../assets/voice/fire_19_philosophical_cut.mp3'),
+    require('../../assets/voice/fire_20_split_kicker.mp3'),
+    require('../../assets/voice/fire_21_brush_teeth.mp3'),
+    require('../../assets/voice/fire_22_anywhere_else.mp3'),
+    require('../../assets/voice/fire_23_grizzly_bear.mp3'),
   ],
   snooze1: [
     require('../../assets/voice/snooze1_01_like_i_care.mp3'),
