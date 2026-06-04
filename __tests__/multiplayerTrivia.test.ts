@@ -183,6 +183,9 @@ jest.mock('@react-native-firebase/firestore', () => ({
       update: jest.fn((ref: ReturnType<typeof makeDocRef>, updates: DocData) => {
         ref.update(updates);
       }),
+      set: jest.fn((ref: ReturnType<typeof makeDocRef>, payload: DocData) => {
+        ref.set(payload);
+      }),
     };
     return cb(transaction);
   }),

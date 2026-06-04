@@ -213,6 +213,9 @@ jest.mock('@react-native-firebase/firestore', () => ({
       update: jest.fn((ref: ReturnType<typeof makeDocRef>, updates: DocData) => {
         ref.update(updates);
       }),
+      set: jest.fn((ref: ReturnType<typeof makeDocRef>, payload: DocData) => {
+        ref.set(payload);
+      }),
     };
     return cb(transaction);
   }),
@@ -439,6 +442,49 @@ describe('createGame', () => {
     const stored = docs.get(code) as unknown as MultiplayerGame;
     expect(stored.host.displayName).toBe('x@x.com');
   });
+
+  it('throws if every candidate code is already taken', async () => {
+    currentUser = host;
+    proStatus = true;
+    // Math.random()===0 makes generateGameCode deterministic, so all retries
+    // collide with the single seeded code.
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const onlyCode = generateGameCode();
+    seedGame(onlyCode, { players: [host.uid], status: 'waiting' });
+    await expect(createGame('chess')).rejects.toThrow(
+      /could not generate unique game code/i,
+    );
+    (Math.random as unknown as jest.Mock).mockRestore();
+  });
+
+  it('transactional create throws on a collision the retry check missed (TOCTOU)', async () => {
+    currentUser = host;
+    proStatus = true;
+    const firestore = jest.requireMock('@react-native-firebase/firestore');
+    // Simulate a race: the retry-loop getDoc always reports "free", but the
+    // doc actually exists when transaction.get reads it (another client won
+    // between the check and the create). The create-only transaction must throw
+    // rather than clobber the existing game.
+    firestore.getDoc.mockImplementation(async () => ({
+      exists: () => false,
+      data: () => undefined,
+    }));
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const collidingCode = generateGameCode();
+    seedGame(collidingCode, { players: ['other'], status: 'waiting' });
+
+    await expect(createGame('chess')).rejects.toThrow(
+      /could not generate unique game code/i,
+    );
+    // The existing game is untouched (not clobbered).
+    const stored = docs.get(collidingCode) as unknown as MultiplayerGame;
+    expect(stored.players).toEqual(['other']);
+
+    (Math.random as unknown as jest.Mock).mockRestore();
+    firestore.getDoc.mockImplementation(
+      async (ref: ReturnType<typeof makeDocRef>) => ref.get(),
+    );
+  });
 });
 
 // ── joinGame ─────────────────────────────────────────────────────────
@@ -589,6 +635,13 @@ describe('makeMove', () => {
     );
   });
 
+  it('throws if game not found', async () => {
+    currentUser = host;
+    await expect(makeMove('NOPEXX', 'e4', 'new-state')).rejects.toThrow(
+      /game not found/i,
+    );
+  });
+
   it('updates gameState, moves, turn and clears drawOffer/pauseRequest', async () => {
     currentUser = host;
     seedGame('ABC234', {
@@ -635,6 +688,21 @@ describe('resign', () => {
     currentUser = { uid: 'stranger', displayName: null, email: null };
     seedGame('ABC234');
     await expect(resign('ABC234')).rejects.toThrow(/participant/i);
+  });
+
+  it('is a no-op when the game is already finished (racing resign)', async () => {
+    currentUser = guest;
+    seedGame('ABC234', {
+      status: 'finished',
+      result: 'resigned',
+      winner: guest.uid,
+    });
+    await resign('ABC234');
+    const stored = docs.get('ABC234') as unknown as MultiplayerGame;
+    // The earlier result is preserved; the second resign must not overwrite it.
+    expect(stored.status).toBe('finished');
+    expect(stored.result).toBe('resigned');
+    expect(stored.winner).toBe(guest.uid);
   });
 });
 
@@ -746,6 +814,34 @@ describe('getMyGames', () => {
   it('returns empty list when user has no games', async () => {
     const result = await getMyGames('nobody');
     expect(result).toEqual([]);
+  });
+
+  it('includes chess, checkers and trivia games', async () => {
+    seedGame('CHESS1', {
+      type: 'chess',
+      players: [host.uid],
+      status: 'active',
+      lastMoveAt: '2026-01-01T00:00:00.000Z',
+    });
+    seedGame('CHECK1', {
+      type: 'checkers',
+      players: [host.uid],
+      status: 'active',
+      lastMoveAt: '2026-02-01T00:00:00.000Z',
+    });
+    seedGame('TRIV01', {
+      type: 'trivia',
+      players: [host.uid],
+      status: 'active',
+      lastMoveAt: '2026-03-01T00:00:00.000Z',
+    });
+
+    const result = await getMyGames(host.uid);
+    expect(result.map((g) => g.type).sort()).toEqual([
+      'checkers',
+      'chess',
+      'trivia',
+    ]);
   });
 });
 

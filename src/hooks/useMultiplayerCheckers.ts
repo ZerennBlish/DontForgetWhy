@@ -189,6 +189,10 @@ export function useMultiplayerCheckers({
         setIsConnected(false);
         return;
       }
+      if (game.type !== 'checkers') {
+        setIsConnected(false);
+        return;
+      }
       setIsConnected(true);
 
       // Derive player color

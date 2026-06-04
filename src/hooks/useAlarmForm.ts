@@ -175,7 +175,8 @@ export function useAlarmForm({ existingAlarm, initialDate }: UseAlarmFormParams)
     return hints[Math.floor(Math.random() * hints.length)];
   });
   const [mode, setMode] = useState<'recurring' | 'one-time'>(
-    existingAlarm?.mode || (initialDate ? 'one-time' : 'one-time')
+    // initialDate (calendar add-alarm) prefills the date; mode stays one-time
+    existingAlarm?.mode || 'one-time'
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(
     existingAlarm?.date || initialDate || null
