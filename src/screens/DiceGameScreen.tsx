@@ -54,7 +54,7 @@ import {
   hasUpperBonus,
 } from '../services/diceGameScoring';
 import { isProUser } from '../services/proStatus';
-import { hapticLight, hapticMedium, hapticHeavy, hapticError } from '../utils/haptics';
+import { hapticLight, hapticMedium, hapticHeavy } from '../utils/haptics';
 import { playGameSound } from '../utils/gameSounds';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -125,6 +125,12 @@ export default function DiceGameScreen({ navigation }: Props) {
   const bypassExitRef = useRef(false);
   const prevDiceKeyRef = useRef('');
 
+  // Keep the latest resetGame in a ref so the beforeRemove handler stays
+  // current without re-subscribing on every render (useDiceGame returns a
+  // fresh object literal each render).
+  const resetGameRef = useRef(game.resetGame);
+  resetGameRef.current = game.resetGame;
+
   useEffect(() => {
     if (diceMode === 'multiplayer') return;
     const inActiveGame = game.phase !== 'setup' && game.phase !== 'gameOver';
@@ -140,14 +146,14 @@ export default function DiceGameScreen({ navigation }: Props) {
           style: 'destructive',
           onPress: () => {
             bypassExitRef.current = true;
-            game.resetGame();
+            resetGameRef.current();
             navigation.dispatch(e.data.action);
           },
         },
       ]);
     });
     return unsubscribe;
-  }, [navigation, diceMode, game.phase, game]);
+  }, [navigation, diceMode, game.phase]);
 
   useEffect(() => {
     if (game.phase !== 'rolling' && game.phase !== 'stealWindow') return;

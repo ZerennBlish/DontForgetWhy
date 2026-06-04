@@ -4,7 +4,6 @@ import {
   collection,
   getDoc,
   getDocs,
-  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -160,7 +159,12 @@ export async function createGame(
     lastMoveAt: now,
   };
 
-  await setDoc(doc(gamesRef(), code), gameDoc);
+  const ref = doc(gamesRef(), code);
+  await runTransaction(getFirestore(), async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (snap.exists()) throw new Error('Could not generate unique game code');
+    transaction.set(ref, gameDoc);
+  });
   return { code, gameId: code };
 }
 
@@ -216,23 +220,26 @@ export async function makeMove(
 ): Promise<void> {
   const me = requireAuthedPlayer();
   const ref = doc(gamesRef(), code);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Game not found');
 
-  const game = snap.data() as MultiplayerGame;
-  if (game.status !== 'active') throw new Error('Game not active');
-  if (game.turn !== me.uid) throw new Error('Not your turn');
+  await runTransaction(getFirestore(), async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) throw new Error('Game not found');
 
-  const opponent = opponentOf(game, me.uid);
-  if (!opponent) throw new Error('Opponent not found');
+    const game = snap.data() as MultiplayerGame;
+    if (game.status !== 'active') throw new Error('Game not active');
+    if (game.turn !== me.uid) throw new Error('Not your turn');
 
-  await updateDoc(ref, {
-    gameState: newGameState,
-    moves: [...game.moves, moveSan],
-    turn: opponent,
-    lastMoveAt: new Date().toISOString(),
-    drawOffer: null,
-    pauseRequest: null,
+    const opponent = opponentOf(game, me.uid);
+    if (!opponent) throw new Error('Opponent not found');
+
+    transaction.update(ref, {
+      gameState: newGameState,
+      moves: [...game.moves, moveSan],
+      turn: opponent,
+      lastMoveAt: new Date().toISOString(),
+      drawOffer: null,
+      pauseRequest: null,
+    });
   });
 }
 
@@ -251,16 +258,27 @@ export async function endGame(
 
 export async function resign(code: string): Promise<void> {
   const me = requireAuthedPlayer();
-  const snap = await getDoc(doc(gamesRef(), code));
-  if (!snap.exists()) throw new Error('Game not found');
+  const ref = doc(gamesRef(), code);
 
-  const game = snap.data() as MultiplayerGame;
-  if (!game.players.includes(me.uid)) throw new Error('Not a participant');
+  await runTransaction(getFirestore(), async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) throw new Error('Game not found');
 
-  const opponent = opponentOf(game, me.uid);
-  if (!opponent) throw new Error('Opponent not found');
+    const game = snap.data() as MultiplayerGame;
+    if (!game.players.includes(me.uid)) throw new Error('Not a participant');
 
-  await endGame(code, 'resigned', opponent);
+    if (game.status !== 'active') return;
+
+    const opponent = opponentOf(game, me.uid);
+    if (!opponent) throw new Error('Opponent not found');
+
+    transaction.update(ref, {
+      status: 'finished',
+      result: 'resigned',
+      winner: opponent,
+      lastMoveAt: new Date().toISOString(),
+    });
+  });
 }
 
 export async function offerDraw(code: string): Promise<void> {
@@ -327,7 +345,10 @@ export async function getMyGames(uid: string): Promise<MultiplayerGame[]> {
     orderBy('lastMoveAt', 'desc'),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as MultiplayerGame);
+  const all = snap.docs.map((d) => d.data() as MultiplayerGame);
+  return all.filter(
+    (g) => g.type === 'chess' || g.type === 'checkers' || g.type === 'trivia',
+  );
 }
 
 export async function cleanupFinishedGames(uid: string): Promise<void> {

@@ -4,7 +4,6 @@ import {
   collection,
   getDoc,
   getDocs,
-  setDoc,
   updateDoc,
   query,
   where,
@@ -133,6 +132,18 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function isTriviaGame(v: unknown): v is TriviaMultiplayerGame {
+  if (typeof v !== 'object' || v === null) return false;
+  const o = v as Partial<TriviaMultiplayerGame>;
+  if (o.type !== 'trivia') return false;
+  if (!Array.isArray(o.triviaPlayers)) return false;
+  if (!Array.isArray(o.questions)) return false;
+  if (!Array.isArray(o.attemptsThisQuestion)) return false;
+  if (typeof o.host !== 'object' || o.host === null) return false;
+  if (typeof o.host.uid !== 'string') return false;
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -186,7 +197,12 @@ export async function createTriviaGame(
     lastMoveAt: now,
   };
 
-  await setDoc(doc(gamesRef(), code), gameDoc);
+  const ref = doc(gamesRef(), code);
+  await runTransaction(getFirestore(), async (transaction) => {
+    const existing = await transaction.get(ref);
+    if (existing.exists()) throw new Error('Could not generate unique game code');
+    transaction.set(ref, gameDoc);
+  });
   return { code };
 }
 
@@ -238,38 +254,50 @@ export async function joinTriviaGame(
 export async function startTriviaGame(code: string): Promise<void> {
   const me = requireAuthedPlayer();
   const ref = doc(gamesRef(), code);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Game not found');
 
-  const game = snap.data() as TriviaMultiplayerGame;
-  if (game.host.uid !== me.uid) throw new Error('Only the host can start the game');
-  if (game.triviaPlayers.length < MIN_PLAYERS) throw new Error('Need at least 2 players');
-  if (game.status !== 'waiting') throw new Error('Game already started');
+  // Read once outside the transaction to know which question pool to load.
+  // Question loading is non-idempotent (shuffle) and must not run inside the
+  // retryable transaction callback.
+  const preSnap = await getDoc(ref);
+  if (!preSnap.exists()) throw new Error('Game not found');
+  const preGame = preSnap.data();
+  if (!isTriviaGame(preGame)) throw new Error('Game not found');
 
   // Load questions from the local bank.
   let pool: TriviaQuestion[];
-  if (game.subcategory) {
-    pool = getQuestionsForSubcategory(game.subcategory);
-  } else if (game.category) {
-    pool = getQuestionsForCategory(game.category);
+  if (preGame.subcategory) {
+    pool = getQuestionsForSubcategory(preGame.subcategory);
+  } else if (preGame.category) {
+    pool = getQuestionsForCategory(preGame.category);
   } else {
     pool = getAllQuestions();
   }
 
-  const selected = shuffle(pool).slice(0, game.questionCount);
+  const selected = shuffle(pool).slice(0, preGame.questionCount);
   if (selected.length === 0) throw new Error('No questions available');
 
-  const now = nowIso();
-  await updateDoc(ref, {
-    questions: selected,
-    status: 'active',
-    phase: 'question',
-    currentQuestionIndex: 0,
-    activePlayerIndex: 0,
-    rotationStartIndex: 0,
-    attemptsThisQuestion: [],
-    lastAnswer: null,
-    lastMoveAt: now,
+  await runTransaction(getFirestore(), async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) throw new Error('Game not found');
+
+    const game = snap.data();
+    if (!isTriviaGame(game)) throw new Error('Game not found');
+    if (game.host.uid !== me.uid) throw new Error('Only the host can start the game');
+    if (game.triviaPlayers.length < MIN_PLAYERS) throw new Error('Need at least 2 players');
+    if (game.status !== 'waiting') throw new Error('Game already started');
+
+    const now = nowIso();
+    transaction.update(ref, {
+      questions: selected,
+      status: 'active',
+      phase: 'question',
+      currentQuestionIndex: 0,
+      activePlayerIndex: 0,
+      rotationStartIndex: 0,
+      attemptsThisQuestion: [],
+      lastAnswer: null,
+      lastMoveAt: now,
+    });
   });
 }
 
@@ -279,66 +307,70 @@ export async function submitAnswer(
 ): Promise<void> {
   const me = requireAuthedPlayer();
   const ref = doc(gamesRef(), code);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Game not found');
 
-  const game = snap.data() as TriviaMultiplayerGame;
-  if (game.status !== 'active') throw new Error('Game not active');
-  if (game.phase !== 'question') throw new Error('Not in question phase');
+  await runTransaction(getFirestore(), async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) throw new Error('Game not found');
 
-  const activePlayer = game.triviaPlayers[game.activePlayerIndex];
-  if (!activePlayer || activePlayer.uid !== me.uid) {
-    throw new Error('Not your turn');
-  }
+    const game = snap.data();
+    if (!isTriviaGame(game)) throw new Error('Game not found');
+    if (game.status !== 'active') throw new Error('Game not active');
+    if (game.phase !== 'question') throw new Error('Not in question phase');
 
-  const question = game.questions[game.currentQuestionIndex];
-  if (!question) throw new Error('Question not found');
+    const activePlayer = game.triviaPlayers[game.activePlayerIndex];
+    if (!activePlayer || activePlayer.uid !== me.uid) {
+      throw new Error('Not your turn');
+    }
 
-  const correctAnswer = question.correctAnswer;
-  const correct = answer === correctAnswer;
+    const question = game.questions[game.currentQuestionIndex];
+    if (!question) throw new Error('Question not found');
 
-  const newAttempts = game.attemptsThisQuestion.includes(me.uid)
-    ? game.attemptsThisQuestion
-    : [...game.attemptsThisQuestion, me.uid];
+    const correctAnswer = question.correctAnswer;
+    const correct = answer === correctAnswer;
 
-  const lastAnswer: TriviaLastAnswer = {
-    uid: me.uid,
-    answer,
-    correct,
-    correctAnswer,
-  };
+    const newAttempts = game.attemptsThisQuestion.includes(me.uid)
+      ? game.attemptsThisQuestion
+      : [...game.attemptsThisQuestion, me.uid];
 
-  const updates: Record<string, unknown> = {
-    attemptsThisQuestion: newAttempts,
-    lastAnswer,
-    phase: 'result',
-    lastMoveAt: nowIso(),
-  };
+    const lastAnswer: TriviaLastAnswer = {
+      uid: me.uid,
+      answer,
+      correct,
+      correctAnswer,
+    };
 
-  if (correct) {
-    const newPlayers = game.triviaPlayers.map((p, i) =>
-      i === game.activePlayerIndex ? { ...p, score: p.score + 1 } : p,
-    );
-    updates.triviaPlayers = newPlayers;
-  } else {
-    // Find next player who hasn't attempted this question, for steal.
-    const n = game.triviaPlayers.length;
-    let stealIdx = -1;
-    for (let i = 1; i <= n; i++) {
-      const candidate = (game.activePlayerIndex + i) % n;
-      if (!newAttempts.includes(game.triviaPlayers[candidate].uid)) {
-        stealIdx = candidate;
-        break;
+    const updates: Record<string, unknown> = {
+      attemptsThisQuestion: newAttempts,
+      lastAnswer,
+      phase: 'result',
+      lastMoveAt: nowIso(),
+    };
+
+    if (correct) {
+      const newPlayers = game.triviaPlayers.map((p, i) =>
+        i === game.activePlayerIndex ? { ...p, score: p.score + 1 } : p,
+      );
+      updates.triviaPlayers = newPlayers;
+    } else {
+      // Find next player who hasn't attempted this question, for steal.
+      const n = game.triviaPlayers.length;
+      let stealIdx = -1;
+      for (let i = 1; i <= n; i++) {
+        const candidate = (game.activePlayerIndex + i) % n;
+        if (!newAttempts.includes(game.triviaPlayers[candidate].uid)) {
+          stealIdx = candidate;
+          break;
+        }
       }
+      if (stealIdx !== -1) {
+        updates.activePlayerIndex = stealIdx;
+      }
+      // If no untried player remains, leave activePlayerIndex as-is;
+      // advanceToNextQuestion handles moving on.
     }
-    if (stealIdx !== -1) {
-      updates.activePlayerIndex = stealIdx;
-    }
-    // If no untried player remains, leave activePlayerIndex as-is;
-    // advanceToNextQuestion handles moving on.
-  }
 
-  await updateDoc(ref, updates);
+    transaction.update(ref, updates);
+  });
 }
 
 export async function advanceToNextQuestion(code: string): Promise<void> {
@@ -396,105 +428,109 @@ export async function advanceToNextQuestion(code: string): Promise<void> {
 export async function leaveTriviaGame(code: string): Promise<void> {
   const me = requireAuthedPlayer();
   const ref = doc(gamesRef(), code);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
 
-  const game = snap.data() as TriviaMultiplayerGame;
-  if (!game.players.includes(me.uid)) throw new Error('Not a participant');
+  await runTransaction(getFirestore(), async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
 
-  const now = nowIso();
+    const game = snap.data();
+    if (!isTriviaGame(game)) return;
+    if (!game.players.includes(me.uid)) throw new Error('Not a participant');
 
-  if (game.status === 'waiting') {
-    if (game.host.uid === me.uid) {
-      // Host aborting the lobby — mark finished (client-side deletes are blocked).
-      await updateDoc(ref, {
-        status: 'finished',
-        phase: 'final',
-        winner: null,
-        lastMoveAt: now,
-      });
-      return;
-    }
-    const newTriviaPlayers = game.triviaPlayers.filter(
-      (p) => p.uid !== me.uid,
-    );
-    const newPlayers = game.players.filter((uid) => uid !== me.uid);
-    await updateDoc(ref, {
-      triviaPlayers: newTriviaPlayers,
-      players: newPlayers,
-      lastMoveAt: now,
-    });
-    return;
-  }
+    const now = nowIso();
 
-  if (game.status === 'active') {
-    const remaining = game.triviaPlayers.filter((p) => p.uid !== me.uid);
-    if (remaining.length <= 1) {
-      const winner = remaining[0]?.uid ?? null;
-      await updateDoc(ref, {
-        status: 'finished',
-        phase: 'final',
-        winner,
-        lastMoveAt: now,
-      });
-      return;
-    }
-    // Remove from rotation and adjust indexes.
-    const myIdx = game.triviaPlayers.findIndex((p) => p.uid === me.uid);
-    const newPlayers = game.players.filter((uid) => uid !== me.uid);
-    const newAttempts = game.attemptsThisQuestion.filter(
-      (u) => u !== me.uid,
-    );
-
-    let newActiveIdx = game.activePlayerIndex;
-    if (myIdx < game.activePlayerIndex) {
-      newActiveIdx -= 1;
-    } else if (myIdx === game.activePlayerIndex) {
-      // Leaver was the active player — advance to the next player in
-      // rotation who hasn't attempted this question yet. If all remaining
-      // players have already tried, fall back to the natural wrap position
-      // (the question will resolve once the next host call to advance runs).
-      const attemptSet = new Set(newAttempts);
-      let found = -1;
-      for (let i = 0; i < remaining.length; i++) {
-        const candidateIdx = (myIdx + i) % remaining.length;
-        if (!attemptSet.has(remaining[candidateIdx].uid)) {
-          found = candidateIdx;
-          break;
-        }
+    if (game.status === 'waiting') {
+      if (game.host.uid === me.uid) {
+        // Host aborting the lobby — mark finished (client-side deletes are blocked).
+        transaction.update(ref, {
+          status: 'finished',
+          phase: 'final',
+          winner: null,
+          lastMoveAt: now,
+        });
+        return;
       }
-      newActiveIdx = found >= 0 ? found : myIdx % remaining.length;
+      const newTriviaPlayers = game.triviaPlayers.filter(
+        (p) => p.uid !== me.uid,
+      );
+      const newPlayers = game.players.filter((uid) => uid !== me.uid);
+      transaction.update(ref, {
+        triviaPlayers: newTriviaPlayers,
+        players: newPlayers,
+        lastMoveAt: now,
+      });
+      return;
     }
-    if (newActiveIdx >= remaining.length) newActiveIdx = 0;
 
-    let newRotationIdx = game.rotationStartIndex;
-    if (myIdx < game.rotationStartIndex) newRotationIdx -= 1;
-    else if (myIdx === game.rotationStartIndex) {
-      newRotationIdx = game.rotationStartIndex % remaining.length;
-    }
-    if (newRotationIdx >= remaining.length) newRotationIdx = 0;
+    if (game.status === 'active') {
+      const remaining = game.triviaPlayers.filter((p) => p.uid !== me.uid);
+      if (remaining.length <= 1) {
+        const winner = remaining[0]?.uid ?? null;
+        transaction.update(ref, {
+          status: 'finished',
+          phase: 'final',
+          winner,
+          lastMoveAt: now,
+        });
+        return;
+      }
+      // Remove from rotation and adjust indexes.
+      const myIdx = game.triviaPlayers.findIndex((p) => p.uid === me.uid);
+      const newPlayers = game.players.filter((uid) => uid !== me.uid);
+      const newAttempts = game.attemptsThisQuestion.filter(
+        (u) => u !== me.uid,
+      );
 
-    const updates: Record<string, unknown> = {
-      triviaPlayers: remaining,
-      players: newPlayers,
-      activePlayerIndex: newActiveIdx,
-      rotationStartIndex: newRotationIdx,
-      attemptsThisQuestion: newAttempts,
-      lastMoveAt: now,
-    };
+      let newActiveIdx = game.activePlayerIndex;
+      if (myIdx < game.activePlayerIndex) {
+        newActiveIdx -= 1;
+      } else if (myIdx === game.activePlayerIndex) {
+        // Leaver was the active player — advance to the next player in
+        // rotation who hasn't attempted this question yet. If all remaining
+        // players have already tried, fall back to the natural wrap position
+        // (the question will resolve once the next host call to advance runs).
+        const attemptSet = new Set(newAttempts);
+        let found = -1;
+        for (let i = 0; i < remaining.length; i++) {
+          const candidateIdx = (myIdx + i) % remaining.length;
+          if (!attemptSet.has(remaining[candidateIdx].uid)) {
+            found = candidateIdx;
+            break;
+          }
+        }
+        newActiveIdx = found >= 0 ? found : myIdx % remaining.length;
+      }
+      if (newActiveIdx >= remaining.length) newActiveIdx = 0;
 
-    // If the leaver was the host, promote the first remaining player so
-    // advanceToNextQuestion (host-only) can still run and the game doesn't
-    // deadlock on the result phase.
-    if (game.host.uid === me.uid) {
-      updates.host = {
-        uid: remaining[0].uid,
-        displayName: remaining[0].displayName,
+      let newRotationIdx = game.rotationStartIndex;
+      if (myIdx < game.rotationStartIndex) newRotationIdx -= 1;
+      else if (myIdx === game.rotationStartIndex) {
+        newRotationIdx = game.rotationStartIndex % remaining.length;
+      }
+      if (newRotationIdx >= remaining.length) newRotationIdx = 0;
+
+      const updates: Record<string, unknown> = {
+        triviaPlayers: remaining,
+        players: newPlayers,
+        activePlayerIndex: newActiveIdx,
+        rotationStartIndex: newRotationIdx,
+        attemptsThisQuestion: newAttempts,
+        lastMoveAt: now,
       };
-    }
 
-    await updateDoc(ref, updates);
-  }
+      // If the leaver was the host, promote the first remaining player so
+      // advanceToNextQuestion (host-only) can still run and the game doesn't
+      // deadlock on the result phase.
+      if (game.host.uid === me.uid) {
+        updates.host = {
+          uid: remaining[0].uid,
+          displayName: remaining[0].displayName,
+        };
+      }
+
+      transaction.update(ref, updates);
+    }
+  });
 }
 
 export async function getTriviaGames(

@@ -206,7 +206,6 @@ export async function validateBackup(fileUri: string): Promise<BackupMeta> {
     }
 
     if (
-      typeof meta.contents.database !== 'boolean' ||
       typeof meta.contents.voiceMemos !== 'number' ||
       typeof meta.contents.noteImages !== 'number' ||
       typeof meta.contents.alarmPhotos !== 'number' ||

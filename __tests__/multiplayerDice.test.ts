@@ -285,6 +285,15 @@ describe('joinDiceGame', () => {
     expect(g.playerDetails).toContainEqual(guest);
   });
 
+  it('returns the locally-merged game matching the persisted doc', async () => {
+    const { code } = await createDiceGame(host, 3);
+    const returned = await joinDiceGame(code, guest);
+    const persisted = getGame(code);
+    expect(returned.players).toEqual(persisted.players);
+    expect(returned.playerDetails).toEqual(persisted.playerDetails);
+    expect(returned.players).toEqual(['host-1', 'guest-1']);
+  });
+
   it('rejects wrong game type', async () => {
     docs.set('FAKE01', {
       type: 'trivia',
@@ -301,7 +310,12 @@ describe('joinDiceGame', () => {
   it('rejects when game is full', async () => {
     const { code } = await createDiceGame(host, 2);
     await joinDiceGame(code, guest);
+    // The capacity guard now lives inside the join transaction, so a second
+    // player attempting to claim the final seat after it is taken is rejected.
     await expect(joinDiceGame(code, guest2)).rejects.toThrow('full');
+    const g = getGame(code);
+    expect(g.players).not.toContain('guest-2');
+    expect(g.playerDetails).toHaveLength(2);
   });
 });
 

@@ -143,7 +143,7 @@ export function useMultiplayerDiceGame({
     const armAdvance = (baseDelayMs: number) => {
       const isScorer = myUid === game.lastScoredPlayerUid;
       const isHostFallback =
-        !isScorer && myUid === game.host.uid;
+        !isScorer && myUid === game.host?.uid;
       if (!isScorer && !isHostFallback) return;
       const delay = Math.max(
         0,
@@ -189,7 +189,7 @@ export function useMultiplayerDiceGame({
     game?.stealWindowEnd,
     game?.stealClaim,
     game?.lastScoredPlayerUid,
-    game?.host.uid,
+    game?.host?.uid,
     gameCode,
     myUid,
   ]);
@@ -213,15 +213,17 @@ export function useMultiplayerDiceGame({
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
-  const isHost = !!game && !!myUid && game.host.uid === myUid;
+  const isHost = !!game && !!myUid && game.host?.uid === myUid;
   const isMyTurn = !!game && game.currentPlayerUid === myUid;
   const myScorecard: Scorecard =
-    game?.scorecards[myUid] ?? createEmptyScorecard();
-  const myYahtzeeBonus = game?.yahtzeeBonuses[myUid] ?? 0;
+    game?.scorecards?.[myUid] ?? createEmptyScorecard();
+  const myYahtzeeBonus = game?.yahtzeeBonuses?.[myUid] ?? 0;
   const myTotal = calculateTotal(myScorecard, myYahtzeeBonus);
   const currentPlayerName = useMemo(() => {
     if (!game) return '';
-    const cp = game.playerDetails.find((p) => p.uid === game.currentPlayerUid);
+    const cp = (game?.playerDetails ?? []).find(
+      (p) => p.uid === game.currentPlayerUid,
+    );
     return cp?.displayName ?? '';
   }, [game]);
   const possibleScores =
@@ -286,7 +288,7 @@ export function useMultiplayerDiceGame({
 
   const opponents = useMemo<DiceMultiplayerPlayer[]>(() => {
     if (!game) return [];
-    return game.playerDetails.filter((p) => p.uid !== myUid);
+    return (game?.playerDetails ?? []).filter((p) => p.uid !== myUid);
   }, [game, myUid]);
 
   // ── Actions ────────────────────────────────────────────────────────────────

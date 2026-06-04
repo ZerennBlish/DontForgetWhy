@@ -530,24 +530,19 @@ export function useReminderForm({ editId, initialDate }: UseReminderFormParams):
       rawH = pickerHours;
       rawM = pickerMinutes;
     }
-    const hasTime = true;
-    let dueTime: string | null = null;
-
-    if (hasTime) {
-      let h: number;
-      if (timeFormat === '12h') {
-        let h12 = Math.min(12, Math.max(1, rawH || 12));
-        if (ampm === 'AM') {
-          h = h12 === 12 ? 0 : h12;
-        } else {
-          h = h12 === 12 ? 12 : h12 + 12;
-        }
+    let h: number;
+    if (timeFormat === '12h') {
+      let h12 = Math.min(12, Math.max(1, rawH || 12));
+      if (ampm === 'AM') {
+        h = h12 === 12 ? 0 : h12;
       } else {
-        h = Math.min(23, Math.max(0, rawH || 0));
+        h = h12 === 12 ? 12 : h12 + 12;
       }
-      const m = Math.min(59, Math.max(0, rawM || 0));
-      dueTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    } else {
+      h = Math.min(23, Math.max(0, rawH || 0));
     }
+    const m = Math.min(59, Math.max(0, rawM || 0));
+    const dueTime: string = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 
     let dueDate: string | null = null;
     if (mode === 'one-time') {

@@ -14,11 +14,11 @@ import {
   saveUserTimer,
 } from '../services/timerStorage';
 import { scheduleTimerNotification, cancelTimerNotification, showTimerCountdownNotification, cancelTimerCountdownNotification } from '../services/notifications';
-import { getPinnedPresets, togglePinPreset, isPinned, unpinPreset } from '../services/widgetPins';
+import { getPinnedPresets, togglePinPreset, isPinned } from '../services/widgetPins';
 import { refreshWidgets } from '../widget/updateWidget';
 import { loadSettings, getDefaultTimerSound, saveDefaultTimerSound } from '../services/settings';
 import { loadBackground, getOverlayOpacity } from '../services/backgroundStorage';
-import { hapticLight, hapticHeavy } from '../utils/haptics';
+import { hapticLight } from '../utils/haptics';
 import type { SystemSound } from '../components/SoundPickerModal';
 
 export function formatCountdown(seconds: number): string {
